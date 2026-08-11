@@ -19,7 +19,14 @@
       "Bash(command -v git)",
       "Bash(git --version)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 https://github.com)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 https://api.github.com)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 https://api.github.com)",
+      "Bash(mkdir -p ~/.local/gh-cli)",
+      "Read(//Users/karim/.local/**)",
+      "Bash(curl -sL https://github.com/cli/cli/releases/latest/download/gh_2.63.2_macOS_arm64.zip -o gh.zip)",
+      "Bash(curl -s https://api.github.com/repos/cli/cli/releases/latest)",
+      "Bash(rm -f gh.zip)",
+      "Bash(curl -sL https://github.com/cli/cli/releases/download/v2.97.0/gh_2.97.0_macOS_arm64.zip -o gh.zip)",
+      "Bash(unzip -q gh.zip)"
     ]
   }
 }

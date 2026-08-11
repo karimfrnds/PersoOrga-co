@@ -1,0 +1,11 @@
+{
+  "name": "Café Zeiten & Abrechnung",
+  "short_name": "Café Verwaltung",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#1f6f54",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

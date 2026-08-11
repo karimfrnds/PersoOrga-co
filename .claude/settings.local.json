@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ipconfig getifaddr *)",
+      "Bash(python3 -c \"import http.server, inspect; print\\(inspect.signature\\(http.server.test\\)\\)\")",
+      "Bash(lsof -iTCP:5173 -sTCP:LISTEN -P)",
+      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(command -v rsvg-convert)",
+      "Bash(command -v inkscape)",
+      "Bash(command -v convert)",
+      "Bash(command -v magick)",
+      "Bash(command -v qlmanage)",
+      "Bash(qlmanage -t -s 512 -o . icon-source.svg)",
+      "Bash(sips -g pixelWidth -g pixelHeight icon-source.svg.png)",
+      "Bash(mv icon-source.svg.png apple-touch-icon.png)",
+      "Bash(sips -z 32 32 apple-touch-icon.png --out favicon-32.png)",
+      "Bash(command -v gh)",
+      "Bash(gh --version)",
+      "Bash(command -v git)",
+      "Bash(git --version)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 https://github.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 https://api.github.com)"
+    ]
+  }
+}

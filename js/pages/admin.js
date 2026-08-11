@@ -1,0 +1,147 @@
+// ============================================================================
+// pages/admin.js – Geschützter Bereich: Mitarbeiter, Einstellungen, Stunden, Berichte.
+// PIN ist kein echter Passwortschutz (alles läuft lokal im Browser), sondern nur
+// ein Schutz gegen versehentliche Änderungen auf einem gemeinsam genutzten Gerät.
+// ============================================================================
+import { store } from "../store.js";
+import { renderEmployees } from "./employees.js";
+import { renderSettings } from "./settings.js";
+import { renderExport } from "./exportpage.js";
+import { renderHours } from "./hours.js";
+import { alertDialog, confirmDialog } from "../dialog.js";
+
+// Bleibt für die Dauer der Sitzung entsperrt (bis Seite neu geladen wird) – bewusst kein
+// dauerhaftes Speichern des Entsperrt-Zustands, damit ein Neuladen wieder sperrt.
+let unlockedThisSession = false;
+
+const TABS = [
+  { id: "employees", label: "Mitarbeiter", render: renderEmployees },
+  { id: "hours", label: "Stunden", render: renderHours },
+  { id: "export", label: "Berichte", render: renderExport },
+  { id: "settings", label: "Einstellungen", render: renderSettings },
+];
+
+function renderAdmin() {
+  const container = document.createElement("div");
+  container.className = "page admin-page";
+  let activeTab = "employees";
+
+  function rerender() {
+    container.innerHTML = "";
+    container.appendChild(build());
+  }
+
+  function build() {
+    if (!store.hasAdminPin()) return buildSetupPin();
+    if (!unlockedThisSession) return buildLockScreen();
+    return buildAdminHome();
+  }
+
+  function buildSetupPin() {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `
+      <h1>Admin-Bereich einrichten</h1>
+      <div class="card">
+        <p>Bevor ihr diesen Bereich zum ersten Mal nutzt, legt einen PIN fest. Er schützt vor versehentlichen
+        Änderungen an Mitarbeitern, Einstellungen und Berichten – kein echter Passwortschutz, aber genug,
+        damit nicht jeder aus Versehen etwas verstellt.</p>
+        <label class="field"><span>PIN (mind. 4 Zeichen)</span><input type="text" inputmode="numeric" id="setup-pin" /></label>
+        <label class="field"><span>Wiederholen</span><input type="text" inputmode="numeric" id="setup-pin-repeat" /></label>
+        <button class="btn btn-primary btn-huge" id="setup-save">PIN festlegen</button>
+      </div>
+    `;
+    wrap.querySelector("#setup-save").onclick = async () => {
+      const p1 = wrap.querySelector("#setup-pin").value.trim();
+      const p2 = wrap.querySelector("#setup-pin-repeat").value.trim();
+      if (p1.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (p1 !== p2) {
+        await alertDialog("Die beiden Eingaben stimmen nicht überein.");
+        return;
+      }
+      store.setAdminPin(p1);
+      unlockedThisSession = true;
+      rerender();
+    };
+    return wrap;
+  }
+
+  function buildLockScreen() {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `
+      <h1>🔒 Admin-Bereich</h1>
+      <div class="card">
+        <p class="muted">Bitte PIN eingeben.</p>
+        <label class="field"><span>PIN</span><input type="text" inputmode="numeric" id="lock-pin" /></label>
+        <button class="btn btn-primary btn-huge" id="lock-unlock">Entsperren</button>
+        <button class="btn btn-link" id="lock-forgot">PIN vergessen?</button>
+      </div>
+    `;
+    const tryUnlock = async () => {
+      const pin = wrap.querySelector("#lock-pin").value.trim();
+      if (store.checkAdminPin(pin)) {
+        unlockedThisSession = true;
+        rerender();
+      } else {
+        await alertDialog("PIN ist falsch.");
+      }
+    };
+    wrap.querySelector("#lock-unlock").onclick = tryUnlock;
+    wrap.querySelector("#lock-pin").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryUnlock();
+    });
+    wrap.querySelector("#lock-forgot").onclick = async () => {
+      if (
+        await confirmDialog(
+          "Der PIN kann nicht wiederhergestellt werden, nur zurückgesetzt werden – ihr müsst danach direkt einen neuen festlegen. Eure Mitarbeiter- und Tagesdaten bleiben dabei unangetastet. Jetzt zurücksetzen?",
+          { danger: true, okLabel: "PIN zurücksetzen", title: "PIN zurücksetzen" }
+        )
+      ) {
+        store.clearAdminPin();
+        rerender();
+      }
+    };
+    return wrap;
+  }
+
+  function buildAdminHome() {
+    const wrap = document.createElement("div");
+    const head = document.createElement("div");
+    head.className = "admin-head";
+    head.innerHTML = `<h1>Admin-Bereich</h1>`;
+    const lockBtn = document.createElement("button");
+    lockBtn.className = "btn btn-secondary";
+    lockBtn.textContent = "🔒 Sperren";
+    lockBtn.onclick = () => {
+      unlockedThisSession = false;
+      rerender();
+    };
+    head.appendChild(lockBtn);
+    wrap.appendChild(head);
+
+    const tabNav = document.createElement("div");
+    tabNav.className = "admin-tabs";
+    for (const tab of TABS) {
+      const btn = document.createElement("button");
+      btn.className = "admin-tab" + (tab.id === activeTab ? " active" : "");
+      btn.textContent = tab.label;
+      btn.onclick = () => {
+        activeTab = tab.id;
+        rerender();
+      };
+      tabNav.appendChild(btn);
+    }
+    wrap.appendChild(tabNav);
+
+    const activeRender = TABS.find((t) => t.id === activeTab)?.render || renderEmployees;
+    wrap.appendChild(activeRender());
+    return wrap;
+  }
+
+  rerender();
+  return container;
+}
+
+export { renderAdmin };

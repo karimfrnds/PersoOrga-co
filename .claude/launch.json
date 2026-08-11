@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cafe-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["devserver.py"],
+      "port": 5173
+    }
+  ]
+}

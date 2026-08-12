@@ -6,14 +6,41 @@
 import { store } from "../store.js";
 import { requireUnlock } from "../adminAuth.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
-import { escapeHtml, dateDe } from "../format.js";
+import { escapeHtml, dateDe, todayStr } from "../format.js";
 import { SHIFT_LABEL, SHIFT_KEYS } from "./checklist.js";
+
+const WEEKDAY_NAMES = {
+  montag: 0, mo: 0,
+  dienstag: 1, di: 1,
+  mittwoch: 2, mi: 2,
+  donnerstag: 3, do: 3,
+  freitag: 4, fr: 4,
+  samstag: 5, sa: 5,
+  sonntag: 6, so: 6,
+};
+
+function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+
+function mondayOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
 
 function renderBeta(navigate) {
   const container = document.createElement("div");
   container.className = "page";
 
   let parsedRows = null; // Vorschau nach CSV-Einlesen
+  let weekStart = mondayOf(todayStr()); // Montag der Zielwoche für den Wochenplan-Upload
 
   function rerender() {
     container.innerHTML = "";
@@ -40,11 +67,31 @@ function renderBeta(navigate) {
     card.innerHTML = `
       <h2>Wochenplan-Upload</h2>
       <p class="muted small">
-        CSV-Datei mit Spalten <b>Datum;Mitarbeiter;Von;Bis</b> hochladen (aus Excel/Numbers als CSV exportieren).
-        Für jede Zeile wird die Schicht automatisch in die passende Tageserfassung eingetragen – dort könnt ihr
-        sie danach ganz normal noch anpassen.
+        CSV-Datei mit Spalten <b>Wochentag;Mitarbeiter;Von;Bis</b> hochladen (aus Excel/Numbers als CSV exportieren) –
+        derselbe Plan lässt sich so für jede Woche wiederverwenden. Zuerst unten festlegen, für welche Woche er gelten soll,
+        dann die Datei hochladen. Für jede Zeile wird die Schicht automatisch in die passende Tageserfassung eingetragen –
+        dort könnt ihr sie danach ganz normal noch anpassen.
       </p>
     `;
+
+    const weekField = document.createElement("label");
+    weekField.className = "field";
+    weekField.innerHTML = `<span>Woche beginnt am (Montag)</span>`;
+    const weekInput = document.createElement("input");
+    weekInput.type = "date";
+    weekInput.value = weekStart;
+    weekInput.onchange = () => {
+      weekStart = weekInput.value;
+      if (parsedRows) parsedRows = reresolveRows(parsedRows);
+      rerender();
+    };
+    weekField.appendChild(weekInput);
+    card.appendChild(weekField);
+
+    const weekInfo = document.createElement("p");
+    weekInfo.className = "muted small";
+    weekInfo.textContent = `Zielwoche: ${dateDe(weekStart)} bis ${dateDe(addDays(weekStart, 6))}`;
+    card.appendChild(weekInfo);
 
     const templateBtn = document.createElement("button");
     templateBtn.className = "btn btn-secondary";
@@ -83,7 +130,7 @@ function renderBeta(navigate) {
   }
 
   function downloadTemplate() {
-    const csv = "Datum;Mitarbeiter;Von;Bis\r\n01.09.2026;Anna;10:00;18:00\r\n01.09.2026;Timm;09:00;17:00\r\n";
+    const csv = "Wochentag;Mitarbeiter;Von;Bis\r\nMontag;Anna;10:00;18:00\r\nDienstag;Timm;09:00;17:00\r\n";
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -91,6 +138,18 @@ function renderBeta(navigate) {
     a.download = "wochenplan-vorlage.csv";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function resolveDate(raw) {
+    const explicit = parseExplicitDate(raw);
+    if (explicit) return explicit;
+    const offset = parseWeekday(raw);
+    if (offset !== null) return addDays(weekStart, offset);
+    return null;
+  }
+
+  function reresolveRows(rows) {
+    return rows.map((r) => ({ ...r, date: resolveDate(r.dateRaw) }));
   }
 
   function parseScheduleCsv(text) {
@@ -102,27 +161,32 @@ function renderBeta(navigate) {
     const rows = [];
     for (const line of lines) {
       const cols = line.split(delimiter).map((c) => c.trim().replace(/^"|"$/g, ""));
-      const [rawDate, rawName, rawFrom, rawTo] = cols;
-      const date = parseDate(rawDate);
-      if (!date) continue; // Kopfzeile oder ungültige Zeile -> überspringen
+      const [rawDay, rawName, rawFrom, rawTo] = cols;
+      const date = resolveDate(rawDay);
       const from = normalizeTime(rawFrom);
       const to = normalizeTime(rawTo);
-      const match = employees.find((e) => e.name.trim().toLowerCase() === (rawName || "").trim().toLowerCase());
+      // Kopfzeile oder Zeilen ohne erkennbaren Wochentag/Datum überspringen
+      if (!date) continue;
       rows.push({
+        dateRaw: rawDay || "",
         date,
-        dateRaw: rawDate,
         name: rawName || "",
-        employeeId: match ? match.id : "",
+        employeeId: (employees.find((e) => e.name.trim().toLowerCase() === (rawName || "").trim().toLowerCase()) || {}).id || "",
         from: from || "",
         to: to || "",
-        valid: !!(date && from && to),
       });
     }
-    if (rows.length === 0) throw new Error("Keine gültigen Zeilen gefunden. Format: Datum;Mitarbeiter;Von;Bis");
+    if (rows.length === 0) throw new Error("Keine gültigen Zeilen gefunden. Format: Wochentag;Mitarbeiter;Von;Bis");
     return rows;
   }
 
-  function parseDate(raw) {
+  function parseWeekday(raw) {
+    if (!raw) return null;
+    const key = raw.trim().toLowerCase().replace(/\.$/, "");
+    return key in WEEKDAY_NAMES ? WEEKDAY_NAMES[key] : null;
+  }
+
+  function parseExplicitDate(raw) {
     if (!raw) return null;
     let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/); // YYYY-MM-DD
     if (m) return raw;
@@ -143,12 +207,16 @@ function renderBeta(navigate) {
     const employees = store.getEmployees(false);
     const table = document.createElement("table");
     table.className = "calc-table";
-    table.innerHTML = `<thead><tr><th>Datum</th><th>Mitarbeiter</th><th>Von</th><th>Bis</th><th></th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>Wochentag</th><th>Datum</th><th>Mitarbeiter</th><th>Von</th><th>Bis</th><th></th></tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const row of parsedRows) {
       const tr = document.createElement("tr");
+      const dayCell = document.createElement("td");
+      dayCell.textContent = row.dateRaw;
+      tr.appendChild(dayCell);
+
       const dateCell = document.createElement("td");
-      dateCell.textContent = row.date ? dateDe(row.date) : `⚠ "${escapeHtml(row.dateRaw)}" unlesbar`;
+      dateCell.textContent = row.date ? dateDe(row.date) : `⚠ unlesbar`;
       tr.appendChild(dateCell);
 
       const nameCell = document.createElement("td");
@@ -207,7 +275,7 @@ function renderBeta(navigate) {
       await alertDialog("Keine übernehmbaren Zeilen (Mitarbeiter zuordnen oder Format prüfen).");
       return;
     }
-    if (!(await confirmDialog(`${usable.length} Schicht(en) in die jeweilige Tageserfassung eintragen?`, { okLabel: "Übernehmen" }))) {
+    if (!(await confirmDialog(`${usable.length} Schicht(en) für die Woche ${dateDe(weekStart)} – ${dateDe(addDays(weekStart, 6))} in die jeweilige Tageserfassung eintragen?`, { okLabel: "Übernehmen" }))) {
       return;
     }
     let created = 0;

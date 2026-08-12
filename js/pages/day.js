@@ -311,6 +311,25 @@ function renderDay(dayId, navigate) {
     historyDetails.appendChild(historyList);
     frag.appendChild(historyDetails);
 
+    // ---- Tag löschen (Admin) ----
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn-link";
+    deleteBtn.style.color = "var(--red)";
+    deleteBtn.textContent = "🗑 Diesen Tag endgültig löschen";
+    deleteBtn.onclick = async () => {
+      if (!(await requireUnlock())) return;
+      if (
+        await confirmDialog(
+          `Tag ${dateDe(day.date)} inkl. aller Arbeitszeiten und Kassenabschluss-Daten endgültig löschen? Das kann nicht rückgängig gemacht werden.`,
+          { danger: true, okLabel: "Endgültig löschen" }
+        )
+      ) {
+        store.deleteDay(day.id);
+        navigate("");
+      }
+    };
+    frag.appendChild(deleteBtn);
+
     return frag;
   }
 

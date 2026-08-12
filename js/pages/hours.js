@@ -5,13 +5,14 @@
 import { store } from "../store.js";
 import { computeRange, ROLE_LABEL } from "../calc.js";
 import { euro, hours, todayStr, escapeHtml } from "../format.js";
+import { requireUnlock } from "../adminAuth.js";
 
 function firstOfMonth() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-function renderHours() {
+function renderHours(navigate) {
   const container = document.createElement("div");
   container.className = "page";
 
@@ -26,6 +27,42 @@ function renderHours() {
   function build() {
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Stunden-Übersicht</h1><p class="muted">Erfasste Arbeitszeit pro Mitarbeiter in einem Zeitraum – dient als Nachweis der Arbeitszeit (auch offene Tage werden mitgezählt).</p>`;
+
+    // Zeiten nachtragen / bearbeiten
+    const editCard = document.createElement("section");
+    editCard.className = "card";
+    editCard.innerHTML = `<h2>Arbeitszeit nachtragen oder bearbeiten</h2><p class="muted small">Tag auswählen – existiert er noch nicht, wird er angelegt; ist er schon abgeschlossen, wird er zum Bearbeiten automatisch wieder geöffnet.</p>`;
+    const editRow = document.createElement("div");
+    editRow.style.display = "flex";
+    editRow.style.gap = "10px";
+    editRow.style.alignItems = "flex-end";
+    editRow.style.flexWrap = "wrap";
+    const dateField = document.createElement("label");
+    dateField.className = "field";
+    dateField.innerHTML = `<span>Datum</span>`;
+    const dateInput = document.createElement("input");
+    dateInput.type = "date";
+    dateInput.value = todayStr();
+    dateField.appendChild(dateInput);
+    const goBtn = document.createElement("button");
+    goBtn.className = "btn btn-primary";
+    goBtn.textContent = "Öffnen / Anlegen";
+    goBtn.onclick = async () => {
+      if (!navigate) return;
+      const date = dateInput.value || todayStr();
+      let day = store.getDayByDate(date);
+      if (!day) {
+        day = store.createDay(date);
+      } else if (day.status === "abgeschlossen") {
+        if (!(await requireUnlock())) return;
+        store.reopenDay(day.id, "Über Admin-Bereich (Stunden nachtragen) geöffnet");
+      }
+      navigate(`day/${day.id}`);
+    };
+    editRow.appendChild(dateField);
+    editRow.appendChild(goBtn);
+    editCard.appendChild(editRow);
+    frag.appendChild(editCard);
 
     const rangeRow = document.createElement("div");
     rangeRow.className = "kb-grid";

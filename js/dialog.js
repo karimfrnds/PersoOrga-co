@@ -36,7 +36,7 @@ function confirmDialog(message, { title = "Bitte bestätigen", okLabel = "OK", c
 }
 
 /** Ersatz für window.prompt – gibt Promise<string|null> zurück. */
-function promptDialog(message, { title = "Eingabe", placeholder = "", type = "text", defaultValue = "" } = {}) {
+function promptDialog(message, { title = "Eingabe", placeholder = "", type = "text", defaultValue = "", okLabel = "Speichern" } = {}) {
   return openOverlay(
     `
       <h2>${title}</h2>
@@ -44,7 +44,7 @@ function promptDialog(message, { title = "Eingabe", placeholder = "", type = "te
       <input type="${type}" id="dlg-input" placeholder="${placeholder}" value="${defaultValue}" style="width:100%" />
       <div class="dialog-actions">
         <button class="btn btn-secondary" data-role="cancel">Abbrechen</button>
-        <button class="btn btn-primary" data-role="ok">Speichern</button>
+        <button class="btn btn-primary" data-role="ok">${okLabel}</button>
       </div>
     `,
     (overlay, close) => {

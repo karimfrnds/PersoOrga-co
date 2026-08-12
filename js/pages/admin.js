@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/admin.js – Geschützter Bereich: Mitarbeiter, Einstellungen, Stunden, Berichte.
+// pages/admin.js – Geschützter Bereich: Mitarbeiter, Stunden, Berichte, Einstellungen, Beta.
 // PIN ist kein echter Passwortschutz (alles läuft lokal im Browser), sondern nur
 // ein Schutz gegen versehentliche Änderungen auf einem gemeinsam genutzten Gerät.
 // ============================================================================
@@ -8,23 +8,22 @@ import { renderEmployees } from "./employees.js";
 import { renderSettings } from "./settings.js";
 import { renderExport } from "./exportpage.js";
 import { renderHours } from "./hours.js";
+import { renderBeta } from "./beta.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
+import { isUnlocked, unlockDirect, lock } from "../adminAuth.js";
 
-// Bleibt für die Dauer der Sitzung entsperrt (bis Seite neu geladen wird) – bewusst kein
-// dauerhaftes Speichern des Entsperrt-Zustands, damit ein Neuladen wieder sperrt.
-let unlockedThisSession = false;
-
-const TABS = [
-  { id: "employees", label: "Mitarbeiter", render: renderEmployees },
-  { id: "hours", label: "Stunden", render: renderHours },
-  { id: "export", label: "Berichte", render: renderExport },
-  { id: "settings", label: "Einstellungen", render: renderSettings },
-];
-
-function renderAdmin() {
+function renderAdmin(navigate) {
   const container = document.createElement("div");
   container.className = "page admin-page";
   let activeTab = "employees";
+
+  const TABS = [
+    { id: "employees", label: "Mitarbeiter", render: () => renderEmployees() },
+    { id: "hours", label: "Stunden", render: () => renderHours(navigate) },
+    { id: "export", label: "Berichte", render: () => renderExport() },
+    { id: "beta", label: "🧪 Beta", render: () => renderBeta(navigate) },
+    { id: "settings", label: "Einstellungen", render: () => renderSettings() },
+  ];
 
   function rerender() {
     container.innerHTML = "";
@@ -33,7 +32,7 @@ function renderAdmin() {
 
   function build() {
     if (!store.hasAdminPin()) return buildSetupPin();
-    if (!unlockedThisSession) return buildLockScreen();
+    if (!isUnlocked()) return buildLockScreen();
     return buildAdminHome();
   }
 
@@ -62,7 +61,7 @@ function renderAdmin() {
         return;
       }
       store.setAdminPin(p1);
-      unlockedThisSession = true;
+      unlockDirect();
       rerender();
     };
     return wrap;
@@ -74,7 +73,7 @@ function renderAdmin() {
       <h1>🔒 Admin-Bereich</h1>
       <div class="card">
         <p class="muted">Bitte PIN eingeben.</p>
-        <label class="field"><span>PIN</span><input type="text" inputmode="numeric" id="lock-pin" /></label>
+        <label class="field"><span>PIN</span><input type="password" inputmode="numeric" id="lock-pin" /></label>
         <button class="btn btn-primary btn-huge" id="lock-unlock">Entsperren</button>
         <button class="btn btn-link" id="lock-forgot">PIN vergessen?</button>
       </div>
@@ -82,7 +81,7 @@ function renderAdmin() {
     const tryUnlock = async () => {
       const pin = wrap.querySelector("#lock-pin").value.trim();
       if (store.checkAdminPin(pin)) {
-        unlockedThisSession = true;
+        unlockDirect();
         rerender();
       } else {
         await alertDialog("PIN ist falsch.");
@@ -115,7 +114,7 @@ function renderAdmin() {
     lockBtn.className = "btn btn-secondary";
     lockBtn.textContent = "🔒 Sperren";
     lockBtn.onclick = () => {
-      unlockedThisSession = false;
+      lock();
       rerender();
     };
     head.appendChild(lockBtn);
@@ -135,7 +134,7 @@ function renderAdmin() {
     }
     wrap.appendChild(tabNav);
 
-    const activeRender = TABS.find((t) => t.id === activeTab)?.render || renderEmployees;
+    const activeRender = TABS.find((t) => t.id === activeTab)?.render || TABS[0].render;
     wrap.appendChild(activeRender());
     return wrap;
   }

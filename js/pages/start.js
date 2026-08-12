@@ -29,6 +29,13 @@ function renderStart(navigate) {
     navigate(`day/${day.id}`);
   };
   header.appendChild(bigBtn);
+
+  const checklistLink = document.createElement("button");
+  checklistLink.className = "btn btn-link";
+  checklistLink.textContent = "📋 Checkliste (Beta)";
+  checklistLink.onclick = () => navigate("checklist");
+  header.appendChild(checklistLink);
+
   el.appendChild(header);
 
   if (employees.length === 0) {

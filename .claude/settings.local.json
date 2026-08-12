@@ -26,7 +26,11 @@
       "Bash(curl -s https://api.github.com/repos/cli/cli/releases/latest)",
       "Bash(rm -f gh.zip)",
       "Bash(curl -sL https://github.com/cli/cli/releases/download/v2.97.0/gh_2.97.0_macOS_arm64.zip -o gh.zip)",
-      "Bash(unzip -q gh.zip)"
+      "Bash(unzip -q gh.zip)",
+      "Bash(git push *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://karimfrnds.github.io/PersoOrga-co/js/app.js\")",
+      "Bash(rm -f \"/private/tmp/claude-501/-Users-karim-claude-projects-PersoApp/a564ffa7-5c71-4832-b0a8-8c4a209c5b0c/scratchpad/wochenplan-test.csv\")",
+      "Bash(git add *)"
     ]
   }
 }

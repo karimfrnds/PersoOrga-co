@@ -4,6 +4,7 @@
 import { renderStart } from "./pages/start.js";
 import { renderDay } from "./pages/day.js";
 import { renderAdmin } from "./pages/admin.js";
+import { renderChecklist } from "./pages/checklist.js";
 
 const outlet = document.getElementById("outlet");
 const navLinks = document.querySelectorAll(".nav-link");
@@ -33,8 +34,10 @@ function render() {
   } else if (route.startsWith("day/")) {
     const id = route.slice(4);
     outlet.appendChild(renderDay(id, navigate));
-  } else if (route === "admin") {
-    outlet.appendChild(renderAdmin());
+  } else if (route.startsWith("admin")) {
+    outlet.appendChild(renderAdmin(navigate));
+  } else if (route === "checklist") {
+    outlet.appendChild(renderChecklist(navigate));
   } else {
     outlet.appendChild(renderStart(navigate));
   }

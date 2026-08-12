@@ -17,8 +17,10 @@ function defaultData() {
       roundingMinutes: 15, // Rundung der Arbeitszeit
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
+      checklistTemplates: { fruh: [], mittel: [], spaet: [] }, // Beta: Checklisten-Vorlagen pro Schicht
     },
     days: [], // { id, date, status, shifts[], kassenabschluss{}, stornos[], auditLog[], closedAt }
+    checklistLog: {}, // Beta: date -> { checked: {fruh:{},mittel:{},spaet:{}}, notes: [{id,text,done,time}] }
   };
 }
 
@@ -30,8 +32,13 @@ function load() {
     const base = defaultData();
     return {
       employees: parsed.employees ?? base.employees,
-      settings: { ...base.settings, ...(parsed.settings ?? {}) },
+      settings: {
+        ...base.settings,
+        ...(parsed.settings ?? {}),
+        checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+      },
       days: parsed.days ?? base.days,
+      checklistLog: parsed.checklistLog ?? base.checklistLog,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -229,16 +236,62 @@ export const store = {
     persist();
   },
 
+  // ---- Checklisten (Beta) ----
+  getChecklistTemplates() {
+    return data.settings.checklistTemplates;
+  },
+  setChecklistTemplate(shiftType, items) {
+    data.settings.checklistTemplates[shiftType] = items;
+    persist();
+  },
+  getDayChecklist(date) {
+    return data.checklistLog[date] || { checked: { fruh: {}, mittel: {}, spaet: {} }, notes: [] };
+  },
+  ensureDayChecklist(date) {
+    if (!data.checklistLog[date]) {
+      data.checklistLog[date] = { checked: { fruh: {}, mittel: {}, spaet: {} }, notes: [] };
+    }
+    return data.checklistLog[date];
+  },
+  toggleChecklistItem(date, shiftType, itemText) {
+    const log = this.ensureDayChecklist(date);
+    if (!log.checked[shiftType]) log.checked[shiftType] = {};
+    log.checked[shiftType][itemText] = !log.checked[shiftType][itemText];
+    persist();
+  },
+  addChecklistNote(date, text) {
+    const log = this.ensureDayChecklist(date);
+    log.notes.push({ id: uid(), text, done: false, time: new Date().toISOString() });
+    persist();
+  },
+  toggleChecklistNoteDone(date, noteId) {
+    const log = this.ensureDayChecklist(date);
+    const note = log.notes.find((n) => n.id === noteId);
+    if (note) note.done = !note.done;
+    persist();
+  },
+  removeChecklistNote(date, noteId) {
+    const log = this.ensureDayChecklist(date);
+    log.notes = log.notes.filter((n) => n.id !== noteId);
+    persist();
+  },
+
   // ---- Backup ----
   exportJSON() {
     return JSON.stringify(data, null, 2);
   },
   importJSON(json) {
     const parsed = JSON.parse(json);
+    const base = defaultData();
     data = {
       employees: parsed.employees ?? [],
-      settings: { ...defaultData().settings, ...(parsed.settings ?? {}) },
+      settings: {
+        ...base.settings,
+        ...(parsed.settings ?? {}),
+        checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+      },
       days: parsed.days ?? [],
+      checklistLog: parsed.checklistLog ?? {},
     };
     persist();
   },

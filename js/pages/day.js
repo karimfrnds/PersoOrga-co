@@ -5,6 +5,7 @@ import { store } from "../store.js";
 import { computeDay, computeHours, ROLE_LABEL } from "../calc.js";
 import { euro, hours, dateDe, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
+import { requireUnlock } from "../adminAuth.js";
 
 function renderDay(dayId, navigate) {
   const container = document.createElement("div");
@@ -54,7 +55,9 @@ function renderDay(dayId, navigate) {
       const editBtn = document.createElement("button");
       editBtn.className = "btn btn-secondary";
       editBtn.textContent = "Trotzdem bearbeiten";
-      editBtn.onclick = () => openReopenDialog(day.id, rerender);
+      editBtn.onclick = async () => {
+        if (await requireUnlock()) openReopenDialog(day.id, rerender);
+      };
       info.appendChild(editBtn);
       frag.appendChild(info);
     }

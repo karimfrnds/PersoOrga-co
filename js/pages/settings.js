@@ -4,6 +4,8 @@
 import { store } from "../store.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
+import { performBackup } from "../backup.js";
+import { dateDe, todayStr } from "../format.js";
 
 function renderSettings() {
   const container = document.createElement("div");
@@ -122,10 +124,96 @@ function renderSettings() {
     `;
     frag.appendChild(taxCard);
 
-    // Backup
+    // Automatisches Tages-Backup nach GitHub
+    const autoBackupCard = document.createElement("section");
+    autoBackupCard.className = "card";
+    const ghCfg = store.getGithubBackupConfig();
+    autoBackupCard.innerHTML = `
+      <h2>Automatisches Tages-Backup (GitHub)</h2>
+      <p class="muted small">
+        Sichert einmal pro Tag automatisch alle Daten in euer GitHub-Repository (dasselbe, auf dem die App liegt) –
+        ihr müsst dafür nichts tun, es läuft beim Öffnen der App im Hintergrund mit. Braucht ein
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained Personal Access Token</a>
+        (bei GitHub selbst erstellt): Repository access → nur dieses eine Repo auswählen, Permissions →
+        „Contents" auf „Read and write" stellen. Sonst nichts freigeben.
+      </p>
+    `;
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "field-checkbox";
+    const enabledCb = document.createElement("input");
+    enabledCb.type = "checkbox";
+    enabledCb.checked = ghCfg.enabled;
+    enabledCb.onchange = () => store.updateGithubBackupConfig({ enabled: enabledCb.checked });
+    enabledLabel.appendChild(enabledCb);
+    enabledLabel.append(" Automatisches Backup aktivieren");
+    autoBackupCard.appendChild(enabledLabel);
+
+    const ghGrid = document.createElement("div");
+    ghGrid.className = "kb-grid";
+    const ownerField = document.createElement("label");
+    ownerField.className = "field";
+    ownerField.innerHTML = `<span>GitHub-Nutzername</span>`;
+    const ownerInput = document.createElement("input");
+    ownerInput.type = "text";
+    ownerInput.value = ghCfg.owner;
+    ownerInput.onchange = () => store.updateGithubBackupConfig({ owner: ownerInput.value.trim() });
+    ownerField.appendChild(ownerInput);
+
+    const repoField = document.createElement("label");
+    repoField.className = "field";
+    repoField.innerHTML = `<span>Repository-Name</span>`;
+    const repoInput = document.createElement("input");
+    repoInput.type = "text";
+    repoInput.value = ghCfg.repo;
+    repoInput.onchange = () => store.updateGithubBackupConfig({ repo: repoInput.value.trim() });
+    repoField.appendChild(repoInput);
+
+    const tokenField = document.createElement("label");
+    tokenField.className = "field";
+    tokenField.innerHTML = `<span>Personal Access Token</span>`;
+    const tokenInput = document.createElement("input");
+    tokenInput.type = "password";
+    tokenInput.value = ghCfg.token;
+    tokenInput.onchange = () => store.updateGithubBackupConfig({ token: tokenInput.value.trim() });
+    tokenField.appendChild(tokenInput);
+
+    ghGrid.appendChild(ownerField);
+    ghGrid.appendChild(repoField);
+    ghGrid.appendChild(tokenField);
+    autoBackupCard.appendChild(ghGrid);
+
+    const statusLine = document.createElement("p");
+    statusLine.className = ghCfg.lastError ? "callout callout-warn" : "muted small";
+    if (ghCfg.lastError) {
+      statusLine.textContent = `⚠ Letztes automatisches Backup fehlgeschlagen: ${ghCfg.lastError}`;
+    } else if (ghCfg.lastBackupDate) {
+      statusLine.textContent = `Letztes Backup: ${ghCfg.lastBackupDate === todayStr() ? "heute" : dateDe(ghCfg.lastBackupDate)}.`;
+    } else {
+      statusLine.textContent = "Noch kein Backup durchgeführt.";
+    }
+    autoBackupCard.appendChild(statusLine);
+
+    const testBtn = document.createElement("button");
+    testBtn.className = "btn btn-secondary";
+    testBtn.textContent = "Jetzt testen";
+    testBtn.onclick = async () => {
+      testBtn.disabled = true;
+      testBtn.textContent = "Sichere…";
+      try {
+        await performBackup();
+        await alertDialog("Backup erfolgreich. Zu finden im Repo unter „backups/“.");
+      } catch (e) {
+        await alertDialog("Backup fehlgeschlagen: " + e.message, { title: "Fehler" });
+      }
+      rerender();
+    };
+    autoBackupCard.appendChild(testBtn);
+    frag.appendChild(autoBackupCard);
+
+    // Manuelles Backup
     const backupCard = document.createElement("section");
     backupCard.className = "card";
-    backupCard.innerHTML = `<h2>Datensicherung</h2><p class="muted small">Die Daten liegen nur in diesem Browser. Regelmäßig sichern!</p>`;
+    backupCard.innerHTML = `<h2>Manuelle Datensicherung</h2><p class="muted small">Zusätzlich zum automatischen Backup – z.B. um eine Sicherung direkt auf diesem Gerät zu behalten.</p>`;
     const exportBtn = document.createElement("button");
     exportBtn.className = "btn btn-secondary";
     exportBtn.textContent = "⬇ Sicherung herunterladen (JSON)";

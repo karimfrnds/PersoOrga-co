@@ -18,6 +18,14 @@ function defaultData() {
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
       checklistTemplates: { fruh: [], mittel: [], spaet: [] }, // Beta: Checklisten-Vorlagen pro Schicht
+      githubBackup: {
+        enabled: false,
+        owner: "", // GitHub-Nutzername/Organisation
+        repo: "", // Repository-Name
+        token: "", // Fine-grained Personal Access Token, nur "Contents: Read and write" für dieses eine Repo
+        lastBackupDate: null, // YYYY-MM-DD des letzten erfolgreichen automatischen Backups
+        lastError: null, // Fehlermeldung des letzten fehlgeschlagenen Versuchs, für Warnhinweis im Admin
+      },
     },
     days: [], // { id, date, status, shifts[], kassenabschluss{}, stornos[], auditLog[], closedAt }
     checklistLog: {}, // Beta: date -> { checked: {fruh:{},mittel:{},spaet:{}}, notes: [{id,text,done,time}] }
@@ -36,6 +44,7 @@ function load() {
         ...base.settings,
         ...(parsed.settings ?? {}),
         checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+        githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
       },
       days: parsed.days ?? base.days,
       checklistLog: parsed.checklistLog ?? base.checklistLog,
@@ -106,6 +115,13 @@ export const store = {
   // ---- Einstellungen ----
   getSettings() {
     return data.settings;
+  },
+  getGithubBackupConfig() {
+    return data.settings.githubBackup;
+  },
+  updateGithubBackupConfig(patch) {
+    Object.assign(data.settings.githubBackup, patch);
+    persist();
   },
   updateSettings(patch) {
     Object.assign(data.settings, patch);
@@ -289,6 +305,7 @@ export const store = {
         ...base.settings,
         ...(parsed.settings ?? {}),
         checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+        githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
       },
       days: parsed.days ?? [],
       checklistLog: parsed.checklistLog ?? {},

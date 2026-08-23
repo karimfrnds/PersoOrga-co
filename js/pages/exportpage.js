@@ -2,7 +2,7 @@
 // pages/exportpage.js – Monatsübersicht & CSV-Export fürs Steuerbüro
 // ============================================================================
 import { store } from "../store.js";
-import { computeMonth, ROLE_LABEL } from "../calc.js";
+import { computeMonth, computeDayByDayRange, ROLE_LABEL } from "../calc.js";
 import { euro, hours, monthLabel, dateDe, escapeHtml } from "../format.js";
 
 function renderExport() {
@@ -74,6 +74,38 @@ function renderExport() {
     table.appendChild(tbody);
     frag.appendChild(table);
 
+    // Tagesgenaue Aufschlüsselung – aufklappbar, damit auf Wunsch jeder Tag einzeln nachvollziehbar ist
+    // (die CSV unten enthält diese Aufschlüsselung immer, unabhängig davon ob hier aufgeklappt).
+    const detailRows = computeDayByDayRange(days, employees, settings, `${selectedMonth}-01`, `${selectedMonth}-31`, { onlyClosed: true });
+    const details = document.createElement("details");
+    details.className = "history";
+    details.style.marginTop = "-8px";
+    details.innerHTML = `<summary>Tagesgenaue Aufschlüsselung anzeigen (${detailRows.length} Einträge)</summary>`;
+    const detailTable = document.createElement("table");
+    detailTable.className = "calc-table";
+    detailTable.style.marginTop = "10px";
+    detailTable.innerHTML = `<thead><tr><th>Datum</th><th>Mitarbeiter</th><th>Kommen–Gehen</th><th>Pause</th><th>Stunden</th><th>Lohn</th><th>Trinkgeld</th></tr></thead>`;
+    const detailBody = document.createElement("tbody");
+    for (const row of detailRows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(dateDe(row.date))}</td>
+        <td>${escapeHtml(row.employee.name)}</td>
+        <td class="muted small">${escapeHtml(row.timeRange)}</td>
+        <td class="muted small">${row.breakMinutes > 0 ? `−${row.breakMinutes} Min` : "–"}</td>
+        <td>${hours(row.hours)}</td>
+        <td>${euro(row.lohn)}</td>
+        <td>${euro(row.tip)}</td>
+      `;
+      detailBody.appendChild(tr);
+    }
+    detailTable.appendChild(detailBody);
+    const detailScroll = document.createElement("div");
+    detailScroll.style.overflowX = "auto";
+    detailScroll.appendChild(detailTable);
+    details.appendChild(detailScroll);
+    frag.appendChild(details);
+
     const umschlagInfo = document.createElement("p");
     umschlagInfo.className = "muted";
     umschlagInfo.innerHTML = `Summe Umschlag/Café in diesem Monat: <b>${euro(result.dayUmschlagTotal)}</b> (${result.days.length} abgeschlossene Tage)`;
@@ -121,19 +153,27 @@ function renderExport() {
     const csvBtn = document.createElement("button");
     csvBtn.className = "btn btn-primary";
     csvBtn.textContent = "⬇ Als CSV exportieren (Excel)";
-    csvBtn.onclick = () => downloadCsv(result, selectedMonth);
+    csvBtn.onclick = () => downloadCsv(result, detailRows, selectedMonth);
     frag.appendChild(csvBtn);
 
     return frag;
   }
 
-  function downloadCsv(result, month) {
+  function downloadCsv(result, detailRows, month) {
     const n = (x) => x.toFixed(2).replace(".", ",");
-    const lines = [["Mitarbeiter", "Rolle", "Stunden", "Lohn (steuerpflichtig)", "Trinkgeld (steuerfrei)", "Gesamt"]];
+    // 1) Tagesgenaue Aufschlüsselung – jede Zeile eindeutig einem Tag und Mitarbeiter zuordenbar
+    const lines = [["Datum", "Mitarbeiter", "Rolle", "Kommen-Gehen", "Pause (Min)", "Stunden (netto)", "Lohn (steuerpflichtig)", "Trinkgeld (steuerfrei)"]];
+    for (const row of detailRows) {
+      lines.push([row.date, row.employee.name, ROLE_LABEL[row.employee.role], row.timeRange, String(row.breakMinutes), n(row.hours), n(row.lohn), n(row.tip)]);
+    }
+    lines.push([]);
+    // 2) Summe je Mitarbeiter im Monat
+    lines.push(["Summe je Mitarbeiter", "Rolle", "Stunden", "Lohn (steuerpflichtig)", "Trinkgeld (steuerfrei)", "Gesamt"]);
     for (const row of result.rows) {
       lines.push([row.employee.name, ROLE_LABEL[row.employee.role], n(row.hours), n(row.lohn), n(row.tip), n(row.lohn + row.tip)]);
     }
     lines.push([]);
+    // 3) Umsatzsteuer
     lines.push(["Umsatzsteuer", "Umsatz (brutto)", "davon enthaltene USt."]);
     lines.push(["7 % ermäßigt", n(result.umsatz7), n(result.ust7)]);
     lines.push(["19 % regulär", n(result.umsatz19), n(result.ust19)]);

@@ -11,6 +11,7 @@ import { renderHours } from "./hours.js";
 import { renderBeta } from "./beta.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { isUnlocked, unlockDirect, lock } from "../adminAuth.js";
+import { todayStr } from "../format.js";
 
 function renderAdmin(navigate) {
   const container = document.createElement("div");
@@ -119,6 +120,24 @@ function renderAdmin(navigate) {
     };
     head.appendChild(lockBtn);
     wrap.appendChild(head);
+
+    const ghCfg = store.getGithubBackupConfig();
+    if (!ghCfg.enabled) {
+      const w = document.createElement("div");
+      w.className = "callout callout-warn";
+      w.innerHTML = `Kein automatisches Backup eingerichtet – eure Daten liegen nur in diesem Browser. Empfohlen unter <b>Einstellungen → Automatisches Tages-Backup</b>.`;
+      wrap.appendChild(w);
+    } else if (ghCfg.lastError) {
+      const w = document.createElement("div");
+      w.className = "callout callout-warn";
+      w.innerHTML = `⚠ Letztes automatisches Backup fehlgeschlagen: ${ghCfg.lastError} – bitte unter <b>Einstellungen</b> prüfen.`;
+      wrap.appendChild(w);
+    } else if (ghCfg.lastBackupDate !== todayStr()) {
+      const w = document.createElement("div");
+      w.className = "callout";
+      w.textContent = `Heute noch kein Backup gelaufen (letztes: ${ghCfg.lastBackupDate || "nie"}) – läuft automatisch beim nächsten Öffnen der App.`;
+      wrap.appendChild(w);
+    }
 
     const tabNav = document.createElement("div");
     tabNav.className = "admin-tabs";

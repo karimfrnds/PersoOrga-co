@@ -4,7 +4,7 @@
 // Arbeitszeiten (wer war wann da), nicht um Umsatz, Trinkgeld oder den Tages-Status.
 // ============================================================================
 import { store } from "../store.js";
-import { computeRange, computeHours, ROLE_LABEL } from "../calc.js";
+import { computeRange, computeDayByDayRange, computeHours, ROLE_LABEL } from "../calc.js";
 import { euro, hours, todayStr, dateDe, escapeHtml } from "../format.js";
 import { requireUnlock } from "../adminAuth.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
@@ -136,6 +136,13 @@ function renderHours() {
     }
     card.appendChild(shiftTable);
 
+    if (shifts.length > 0) {
+      const note = document.createElement("p");
+      note.className = "muted small";
+      note.textContent = "Hinweis: In der Abrechnung wird ab 6 Std. automatisch 30 Min Pause abgezogen (ab 9 Std. 45 Min) – hier stehen die reinen Kommen/Gehen-Zeiten.";
+      card.appendChild(note);
+    }
+
     const addBtn = document.createElement("button");
     addBtn.className = "btn btn-secondary";
     addBtn.textContent = "＋ Arbeitszeit hinzufügen";
@@ -253,12 +260,12 @@ function renderHours() {
   }
 
   // ---------------------------------------------------------------------
-  // 3) Stunden-Übersicht (Bericht)
+  // 3) Übersicht in einem Zeitraum: tagesgenau (wer wann gearbeitet hat) + Summe je Mitarbeiter
   // ---------------------------------------------------------------------
   function buildOverview() {
     const card = document.createElement("section");
     card.className = "card";
-    card.innerHTML = `<h2>Übersicht in einem Zeitraum</h2>`;
+    card.innerHTML = `<h2>Übersicht in einem Zeitraum</h2><p class="muted small">Tagesgenau, damit klar nachvollziehbar ist, wer wann da war.</p>`;
 
     const rangeRow = document.createElement("div");
     rangeRow.className = "kb-grid";
@@ -293,15 +300,59 @@ function renderHours() {
     const settings = store.getSettings();
     const employees = store.getEmployees(true);
     const days = store.getDays();
-    const result = computeRange(days, employees, settings, from, to);
+    const detailRows = computeDayByDayRange(days, employees, settings, from, to);
 
-    if (result.rows.length === 0) {
+    if (detailRows.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
       empty.textContent = "Keine Schichten in diesem Zeitraum.";
       card.appendChild(empty);
       return card;
     }
+
+    // Tagesgenaue Tabelle – ein Datum wird über alle Mitarbeiter dieses Tages hinweg zusammengefasst (rowspan),
+    // damit auf einen Blick klar ist, wer an welchem Tag zusammen gearbeitet hat.
+    const groups = [];
+    for (const row of detailRows) {
+      const last = groups[groups.length - 1];
+      if (last && last.date === row.date) last.rows.push(row);
+      else groups.push({ date: row.date, status: row.status, rows: [row] });
+    }
+
+    const detailTable = document.createElement("table");
+    detailTable.className = "calc-table";
+    detailTable.innerHTML = `<thead><tr><th>Datum</th><th>Status</th><th>Mitarbeiter</th><th>Rolle</th><th>Kommen–Gehen</th><th>Pause</th><th>Stunden</th><th>Lohn</th><th>Trinkgeld</th></tr></thead>`;
+    const detailBody = document.createElement("tbody");
+    for (const group of groups) {
+      group.rows.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        const dateCell = i === 0 ? `<td rowspan="${group.rows.length}"><b>${escapeHtml(dateDe(group.date))}</b></td><td rowspan="${group.rows.length}">${group.status === "abgeschlossen" ? '<span class="badge badge-green">Abgeschlossen</span>' : '<span class="badge badge-orange">Offen</span>'}</td>` : "";
+        tr.innerHTML = `
+          ${dateCell}
+          <td>${escapeHtml(row.employee.name)}</td>
+          <td>${ROLE_LABEL[row.employee.role]}</td>
+          <td class="muted small">${escapeHtml(row.timeRange)}</td>
+          <td class="muted small">${row.breakMinutes > 0 ? `−${row.breakMinutes} Min` : "–"}</td>
+          <td>${hours(row.hours)}</td>
+          <td>${euro(row.lohn)}</td>
+          <td>${euro(row.tip)}</td>
+        `;
+        if (i > 0) tr.style.borderTop = "none";
+        detailBody.appendChild(tr);
+      });
+    }
+    detailTable.appendChild(detailBody);
+    const scrollWrap = document.createElement("div");
+    scrollWrap.style.overflowX = "auto";
+    scrollWrap.appendChild(detailTable);
+    card.appendChild(scrollWrap);
+
+    // Summe je Mitarbeiter im Zeitraum
+    const result = computeRange(days, employees, settings, from, to);
+    const summaryHeading = document.createElement("h2");
+    summaryHeading.textContent = "Gesamt je Mitarbeiter";
+    summaryHeading.style.marginTop = "20px";
+    card.appendChild(summaryHeading);
 
     const table = document.createElement("table");
     table.className = "calc-table";

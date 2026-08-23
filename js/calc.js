@@ -40,6 +40,13 @@ function round2(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/** Gesetzliche Ruhepause (§4 ArbZG): über 6 Std. Arbeit -> 30 Min Pause, über 9 Std. -> 45 Min. */
+function breakDeductionMinutes(rawHours) {
+  if (rawHours > 9) return 45;
+  if (rawHours > 6) return 30;
+  return 0;
+}
+
 /**
  * Vollständige Berechnung eines Tages.
  * @param {object} day
@@ -51,19 +58,27 @@ function computeDay(day, employees, settings) {
   const empById = Object.fromEntries(employees.map((e) => [e.id, e]));
   const rounding = settings.roundingMinutes || 0;
 
-  // 1) Stunden & Lohn pro Schicht/Mitarbeiter (mehrere Schichten pro Mitarbeiter möglich -> aufsummieren)
-  const perEmployee = {}; // id -> { employee, hours, lohn, tip, cashPayout }
+  // 1) Stunden & Lohn pro Schicht/Mitarbeiter (mehrere Schichten pro Mitarbeiter möglich -> aufsummieren).
+  // Pro Schicht wird automatisch die gesetzliche Pause abgezogen (>6 Std. -30 Min, >9 Std. -45 Min, §4 ArbZG) –
+  // "hours" ist danach die bezahlte Nettozeit, "rawHours" die reine Kommen/Gehen-Zeit zur Kontrolle.
+  const perEmployee = {}; // id -> { employee, hours, rawHours, breakMinutes, lohn, tip, cashPayout }
   for (const shift of day.shifts) {
     const emp = empById[shift.employeeId];
     if (!emp) continue;
-    const hours = computeHours(shift.from, shift.to, rounding);
+    const rawHours = computeHours(shift.from, shift.to, rounding);
+    const breakMinutes = breakDeductionMinutes(rawHours);
+    const netHours = Math.max(0, rawHours - breakMinutes / 60);
     if (!perEmployee[emp.id]) {
-      perEmployee[emp.id] = { employee: emp, hours: 0, lohn: 0, tip: 0, cashPayout: 0 };
+      perEmployee[emp.id] = { employee: emp, hours: 0, rawHours: 0, breakMinutes: 0, lohn: 0, tip: 0, cashPayout: 0 };
     }
-    perEmployee[emp.id].hours += hours;
+    perEmployee[emp.id].hours += netHours;
+    perEmployee[emp.id].rawHours += rawHours;
+    perEmployee[emp.id].breakMinutes += breakMinutes;
   }
   for (const id in perEmployee) {
     const row = perEmployee[id];
+    row.hours = round2(row.hours);
+    row.rawHours = round2(row.rawHours);
     row.lohn = round2(row.hours * row.employee.hourlyWage);
   }
 
@@ -173,16 +188,17 @@ function computeMonth(days, employees, settings, yyyymm) {
  */
 function computeRange(days, employees, settings, fromDate, toDate) {
   const filtered = days.filter((d) => (!fromDate || d.date >= fromDate) && (!toDate || d.date <= toDate));
-  const totals = {}; // employeeId -> { employee, hours, lohn, tip }
+  const totals = {}; // employeeId -> { employee, hours, lohn, tip, breakMinutes }
   for (const day of filtered) {
     const b = computeDay(day, employees, settings);
     for (const row of b.perEmployee) {
       if (!totals[row.employee.id]) {
-        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0 };
+        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0, breakMinutes: 0 };
       }
       totals[row.employee.id].hours = round2(totals[row.employee.id].hours + row.hours);
       totals[row.employee.id].lohn = round2(totals[row.employee.id].lohn + row.lohn);
       totals[row.employee.id].tip = round2(totals[row.employee.id].tip + row.tip);
+      totals[row.employee.id].breakMinutes += row.breakMinutes;
     }
   }
   const rows = Object.values(totals).sort((a, b) => a.employee.name.localeCompare(b.employee.name));
@@ -190,4 +206,50 @@ function computeRange(days, employees, settings, fromDate, toDate) {
   return { rows, days: filtered, openCount, closedCount: filtered.length - openCount };
 }
 
-export { ROLES, ROLE_LABEL, VAT_RATES, computeHours, computeDay, computeMonth, computeRange, extractVat, round2, parseTimeToMinutes };
+/**
+ * Eine Zeile pro Mitarbeiter und Tag in einem Zeitraum (sortiert nach Datum, dann Name) –
+ * für die tagesgenaue Übersicht im Admin-Bereich und den CSV-Export fürs Steuerbüro.
+ */
+function computeDayByDayRange(days, employees, settings, fromDate, toDate, { onlyClosed = false } = {}) {
+  const filtered = days
+    .filter((d) => (!fromDate || d.date >= fromDate) && (!toDate || d.date <= toDate))
+    .filter((d) => !onlyClosed || d.status === "abgeschlossen")
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  const rows = [];
+  for (const day of filtered) {
+    const b = computeDay(day, employees, settings);
+    for (const row of b.perEmployee) {
+      const shiftsOfEmployee = day.shifts.filter((s) => s.employeeId === row.employee.id);
+      const timeRange = shiftsOfEmployee.map((s) => `${s.from}–${s.to}`).join(", ");
+      rows.push({
+        date: day.date,
+        status: day.status,
+        employee: row.employee,
+        timeRange,
+        hours: row.hours,
+        rawHours: row.rawHours,
+        breakMinutes: row.breakMinutes,
+        lohn: row.lohn,
+        tip: row.tip,
+      });
+    }
+  }
+  rows.sort((a, b) => (a.date === b.date ? a.employee.name.localeCompare(b.employee.name) : a.date < b.date ? -1 : 1));
+  return rows;
+}
+
+export {
+  ROLES,
+  ROLE_LABEL,
+  VAT_RATES,
+  computeHours,
+  breakDeductionMinutes,
+  computeDay,
+  computeMonth,
+  computeRange,
+  computeDayByDayRange,
+  extractVat,
+  round2,
+  parseTimeToMinutes,
+};

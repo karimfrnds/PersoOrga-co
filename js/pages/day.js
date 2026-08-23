@@ -248,14 +248,18 @@ function renderDay(dayId, navigate) {
     const table = document.createElement("table");
     table.className = "calc-table";
     table.innerHTML = `
-      <thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Stunden</th><th>Punkte</th><th>Lohn</th><th>Trinkgeld</th><th>Bar-Auszahlung</th></tr></thead>
+      <thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Kommen–Gehen</th><th>Pause</th><th>Stunden</th><th>Punkte</th><th>Lohn</th><th>Trinkgeld</th><th>Bar-Auszahlung</th></tr></thead>
     `;
     const tbody = document.createElement("tbody");
     for (const row of breakdown.perEmployee) {
+      const empShifts = day.shifts.filter((s) => s.employeeId === row.employee.id);
+      const timeRange = empShifts.map((s) => `${s.from}–${s.to}`).join(", ");
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(row.employee.name)}</td>
         <td>${ROLE_LABEL[row.employee.role]}</td>
+        <td class="muted small">${escapeHtml(timeRange)}</td>
+        <td class="muted small">${row.breakMinutes > 0 ? `−${row.breakMinutes} Min` : "–"}</td>
         <td>${hours(row.hours)}</td>
         <td class="muted">${row.points}${breakdown.totalPoints > 0 ? ` (${Math.round((row.points / breakdown.totalPoints) * 1000) / 10}%)` : ""}</td>
         <td>${euro(row.lohn)}</td>
@@ -266,6 +270,11 @@ function renderDay(dayId, navigate) {
     }
     table.appendChild(tbody);
     calcSection.appendChild(table);
+
+    const breakNote = document.createElement("p");
+    breakNote.className = "muted small";
+    breakNote.textContent = "Pause wird automatisch abgezogen: über 6 Std. Arbeit −30 Min, über 9 Std. −45 Min (§4 Arbeitszeitgesetz) – \"Stunden\" ist bereits die bezahlte Zeit danach.";
+    calcSection.appendChild(breakNote);
 
     const summary = document.createElement("div");
     summary.className = "summary-box";

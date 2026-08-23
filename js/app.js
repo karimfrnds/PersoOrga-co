@@ -5,6 +5,7 @@ import { renderStart } from "./pages/start.js";
 import { renderDay } from "./pages/day.js";
 import { renderAdmin } from "./pages/admin.js";
 import { renderChecklist } from "./pages/checklist.js";
+import { maybeRunDailyBackup } from "./backup.js";
 
 const outlet = document.getElementById("outlet");
 const navLinks = document.querySelectorAll(".nav-link");
@@ -53,3 +54,4 @@ navLinks.forEach((link) => {
 
 window.addEventListener("hashchange", render);
 render();
+maybeRunDailyBackup(); // still im Hintergrund, blockiert das Rendern nicht

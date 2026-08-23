@@ -32,7 +32,9 @@
       "Bash(rm -f \"/private/tmp/claude-501/-Users-karim-claude-projects-PersoApp/a564ffa7-5c71-4832-b0a8-8c4a209c5b0c/scratchpad/wochenplan-test.csv\")",
       "Bash(git add *)",
       "Bash(git commit -q -m 'Admin: Zeiten nachtragen/bearbeiten \\(PIN-Schutz\\) + Beta: Wochenplan-CSV-Upload und Checklisten *)",
-      "Bash(curl -s \"https://karimfrnds.github.io/PersoOrga-co/js/adminAuth.js\" -o /dev/null -w \"%{http_code}\")"
+      "Bash(curl -s \"https://karimfrnds.github.io/PersoOrga-co/js/adminAuth.js\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(git commit -q -m 'Stunden von Tagesabschluss entkoppeln, Tage löschen, Wochenplan-Upload mit Zielwoche *)",
+      "Bash(curl -s \"https://karimfrnds.github.io/PersoOrga-co/js/pages/beta.js\")"
     ]
   }
 }

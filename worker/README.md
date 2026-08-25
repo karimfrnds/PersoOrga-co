@@ -60,17 +60,27 @@ App → Admin → Einstellungen:
 
 ## Nutzung
 
-Der Bot versteht ganz normal formulierte Nachrichten (per KI zerlegt, siehe `ANTHROPIC_API_KEY` oben) – auch
-mehrere Aufgaben und mehrere Personen in einer einzigen Nachricht:
+Der Bot versteht ganz normal formulierte Nachrichten (per KI interpretiert). Er kennt dafür immer den aktuellen
+Stand (was gerade an Aufgaben existiert, welche Mitarbeiter es gibt) – die App lädt diesen Stand bei jedem
+Sync nach `data/state-snapshot.json` hoch, der Bot liest ihn vor jeder Antwort neu.
 
+**Aufgaben anlegen** – auch mehrere auf einmal, auch an verschiedene Personen:
 - `Kaffeemaschine reparieren lassen` → allgemeine Aufgabe für heute.
 - `Timm: Kasse nachzählen` oder `Arianna soll die Vitrine putzen` → Aufgabe für die genannte Person (muss zu
   einem aktiven Mitarbeiter passen, sonst bleibt sie unzugeordnet).
 - `Anna soll dran denken, Montag ist Inventur` → landet automatisch am Montag statt heute.
 - „Das ist dringend" / „priorisieren" → Priorität „hoch"; „kann warten" / „niedrig" → Priorität „niedrig".
-- `Timm soll die Vitrine putzen und Anna soll die Kasse zählen` → wird in **zwei** getrennte Aufgaben zerlegt.
+- `Timm soll die Vitrine putzen und Anna soll die Kasse zählen` → wird in **zwei** getrennte Aufgaben zerlegt,
+  auch bei längeren, frei formulierten Nachrichten mit mehreren Themen.
 
-Der Bot antwortet immer mit einer nummerierten Übersicht, was er wie eingetragen hat, z.B.:
+**Aufgaben ansehen:** `liste`, `was steht noch an`, `zeig mir alles offene` → antwortet mit der aktuellen
+Übersicht, gruppiert nach Tag, inkl. Zeitstempel wie aktuell der Stand ist.
+
+**Aufgaben löschen:** in eigenen Worten beschreiben, was weg soll, z.B. `lösch die Aufgabe Kasse zählen bei
+Anna` oder `entfern die Inventur-Aufgabe von Timm am Montag`. Der Bot sucht in der aktuellen Liste nach einem
+eindeutigen Treffer und bestätigt, was entfernt wird.
+
+Der Bot antwortet immer mit einer klaren Bestätigung, was er wie verstanden/eingetragen hat, z.B.:
 
 ```
 ✅ 2 Aufgaben notiert:
@@ -78,6 +88,13 @@ Der Bot antwortet immer mit einer nummerierten Übersicht, was er wie eingetrage
 2. Anna – Kasse zählen · 🔴 hoch
 ```
 
-Aufgaben erscheinen spätestens beim nächsten Öffnen des Kiosk-Bildschirms bzw. innerhalb von 90 Sekunden, falls
-er schon offen ist. Unter Admin → Aufgaben gibt es außerdem eine Übersicht aller zugeordneten Aufgaben, dort
-lassen sie sich auch manuell anlegen/bearbeiten.
+Neue/gelöschte Aufgaben wirken sich spätestens beim nächsten Öffnen des Kiosk-Bildschirms bzw. innerhalb von
+90 Sekunden aus, falls er schon offen ist – „liste" zeigt dabei immer den Stand vom letzten Sync (Zeitstempel
+steht mit dabei). Unter Admin → Aufgaben gibt es außerdem eine Übersicht aller zugeordneten Aufgaben, dort
+lassen sie sich auch manuell anlegen/bearbeiten/löschen.
+
+## Falls die KI-Aufteilung mal wieder nicht funktioniert
+
+Antwortet der Bot bei jeder Nachricht mit „⚠ Fehler: ..." oder kopiert er wieder nur den ganzen Text als eine
+Aufgabe, meist liegt es an `ANTHROPIC_API_KEY` (fehlt, falsch, oder kein Guthaben mehr auf dem Anthropic-Konto).
+Die Fehlermeldung im Chat zeigt normalerweise direkt an, woran es liegt.

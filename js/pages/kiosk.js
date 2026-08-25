@@ -7,10 +7,21 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr } from "../format.js";
 import { renderSession } from "./session.js";
+import { maybeSyncPendingTasks } from "../taskSync.js";
+
+const TASK_SYNC_INTERVAL_MS = 90 * 1000;
+let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
 
 function renderKiosk(navigate) {
   const container = document.createElement("div");
   container.className = "page kiosk-page";
+
+  // Neue Telegram-Aufgaben sofort abholen und danach im Leerlauf regelmäßig weiter prüfen, ohne dass
+  // am iPad etwas getan werden muss. Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden,
+  // damit sich beim Hin- und Herwechseln zwischen Kiosk/Admin nichts aufsummiert.
+  if (activeSyncInterval) clearInterval(activeSyncInterval);
+  maybeSyncPendingTasks();
+  activeSyncInterval = setInterval(maybeSyncPendingTasks, TASK_SYNC_INTERVAL_MS);
 
   let pin = "";
   let error = "";

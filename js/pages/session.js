@@ -60,7 +60,9 @@ function renderSession(employee, navigate) {
     } else {
       const list = document.createElement("div");
       list.className = "task-list";
-      for (const task of day.tasks) {
+      // Eigene zugeordnete Aufgaben zuerst, damit man sie nicht in der Liste suchen muss.
+      const sortedTasks = [...day.tasks].sort((a, b) => (a.assignedTo === employee.id ? 0 : 1) - (b.assignedTo === employee.id ? 0 : 1));
+      for (const task of sortedTasks) {
         const row = document.createElement("label");
         row.className = "task-row" + (task.done ? " done" : "");
         const cb = document.createElement("input");
@@ -76,6 +78,15 @@ function renderSession(employee, navigate) {
         const span = document.createElement("span");
         span.textContent = task.text;
         textWrap.appendChild(span);
+        if (task.assignedTo) {
+          const assignee = store.getEmployee(task.assignedTo);
+          if (assignee) {
+            const tag = document.createElement("span");
+            tag.className = "muted small task-row-meta";
+            tag.textContent = `→ für ${assignee.name}`;
+            textWrap.appendChild(tag);
+          }
+        }
         if (task.done && task.doneBy) {
           const meta = document.createElement("span");
           meta.className = "muted small task-row-meta";

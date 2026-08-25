@@ -33,6 +33,13 @@ function defaultData() {
         lastBackupDate: null, // YYYY-MM-DD des letzten erfolgreichen automatischen Backups
         lastError: null, // Fehlermeldung des letzten fehlgeschlagenen Versuchs, für Warnhinweis im Admin
       },
+      // Telegram-Aufgaben-Inbox: nutzt dieselbe GitHub-Verbindung (owner/repo/token) wie githubBackup oben.
+      taskInbox: {
+        enabled: false,
+        lastSyncAt: null, // ISO-Timestamp des letzten erfolgreichen Abrufs
+        lastError: null,
+        appliedIds: [], // zuletzt übernommene Nachrichten-IDs, verhindert doppeltes Anlegen (gedeckelt auf 200)
+      },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
     days: [],
@@ -70,6 +77,7 @@ function load() {
         ...(parsed.settings ?? {}),
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
+        taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
     };
@@ -197,7 +205,7 @@ export const store = {
       status: "offen",
       shifts: [],
       plannedShifts: [],
-      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template" })),
+      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template", assignedTo: null })),
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
@@ -377,7 +385,16 @@ export const store = {
   addAdhocDayTask(dayId, text, employeeName) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "adhoc", addedBy: employeeName || null };
+    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "adhoc", addedBy: employeeName || null, assignedTo: null };
+    d.tasks.push(t);
+    persist();
+    return t;
+  },
+  /** Aufgabe aus der Telegram-Inbox (taskSync.js) – optional einem Mitarbeiter zugeordnet. */
+  addRemoteDayTask(dayId, { text, assignedTo = null, addedBy = "Telegram" }) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "remote", addedBy, assignedTo };
     d.tasks.push(t);
     persist();
     return t;
@@ -387,6 +404,24 @@ export const store = {
     if (!d) return;
     d.tasks = d.tasks.filter((t) => t.id !== taskId);
     persist();
+  },
+
+  // ---- Telegram-Aufgaben-Inbox (nutzt githubBackup-Zugangsdaten) ----
+  getTaskInboxConfig() {
+    return data.settings.taskInbox;
+  },
+  updateTaskInboxConfig(patch) {
+    Object.assign(data.settings.taskInbox, patch);
+    persist();
+  },
+  /** Merkt sich verarbeitete Nachrichten-IDs (gedeckelt), damit nichts doppelt übernommen wird. */
+  markTaskInboxIdsApplied(ids) {
+    const cfg = data.settings.taskInbox;
+    cfg.appliedIds = [...cfg.appliedIds, ...ids].slice(-200);
+    persist();
+  },
+  isTaskInboxIdApplied(id) {
+    return data.settings.taskInbox.appliedIds.includes(id);
   },
 
   // ---- Backup ----
@@ -404,6 +439,7 @@ export const store = {
         ...(parsed.settings ?? {}),
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
+        taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
       },
       days: (parsed.days ?? []).map(normalizeDay),
     };

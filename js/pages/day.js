@@ -91,6 +91,15 @@ function renderDay(dayId, navigate) {
         const span = document.createElement("span");
         span.textContent = task.text;
         textWrap.appendChild(span);
+        if (task.assignedTo) {
+          const assignee = employees.find((e) => e.id === task.assignedTo) || store.getEmployee(task.assignedTo);
+          if (assignee) {
+            const tag = document.createElement("span");
+            tag.className = "muted small task-row-meta";
+            tag.textContent = `→ für ${assignee.name}`;
+            textWrap.appendChild(tag);
+          }
+        }
         if (task.done && task.doneBy) {
           const meta = document.createElement("span");
           meta.className = "muted small task-row-meta";

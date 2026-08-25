@@ -5,6 +5,7 @@ import { store } from "../store.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 import { performBackup } from "../backup.js";
+import { performTaskSync } from "../taskSync.js";
 import { dateDe, todayStr } from "../format.js";
 
 function renderSettings() {
@@ -209,6 +210,58 @@ function renderSettings() {
     };
     autoBackupCard.appendChild(testBtn);
     frag.appendChild(autoBackupCard);
+
+    // Telegram-Aufgaben abholen (nutzt dieselbe GitHub-Verbindung wie oben)
+    const inboxCard = document.createElement("section");
+    inboxCard.className = "card";
+    const inboxCfg = store.getTaskInboxConfig();
+    inboxCard.innerHTML = `
+      <h2>Telegram-Aufgaben abholen</h2>
+      <p class="muted small">
+        Holt Aufgaben ab, die per Telegram-Bot geschickt wurden (Einrichtung: siehe <code>worker/README.md</code> im Repo),
+        und trägt sie in die heutige Aufgabenliste ein. Nutzt dieselbe GitHub-Verbindung wie das Backup oben (Nutzername,
+        Repository, Token müssen dort ausgefüllt sein). Läuft automatisch beim Öffnen des Kiosk-Bildschirms und danach
+        alle 90 Sekunden im Leerlauf mit.
+      </p>
+    `;
+    const inboxEnabledLabel = document.createElement("label");
+    inboxEnabledLabel.className = "field-checkbox";
+    const inboxEnabledCb = document.createElement("input");
+    inboxEnabledCb.type = "checkbox";
+    inboxEnabledCb.checked = inboxCfg.enabled;
+    inboxEnabledCb.onchange = () => store.updateTaskInboxConfig({ enabled: inboxEnabledCb.checked });
+    inboxEnabledLabel.appendChild(inboxEnabledCb);
+    inboxEnabledLabel.append(" Telegram-Aufgaben abholen aktivieren");
+    inboxCard.appendChild(inboxEnabledLabel);
+
+    const inboxStatusLine = document.createElement("p");
+    inboxStatusLine.className = inboxCfg.lastError ? "callout callout-warn" : "muted small";
+    if (inboxCfg.lastError) {
+      inboxStatusLine.textContent = `⚠ Letzter Abruf fehlgeschlagen: ${inboxCfg.lastError}`;
+    } else if (inboxCfg.lastSyncAt) {
+      const t = new Date(inboxCfg.lastSyncAt);
+      inboxStatusLine.textContent = `Letzter Abruf: ${t.toLocaleDateString("de-DE")} ${t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr.`;
+    } else {
+      inboxStatusLine.textContent = "Noch kein Abruf durchgeführt.";
+    }
+    inboxCard.appendChild(inboxStatusLine);
+
+    const inboxTestBtn = document.createElement("button");
+    inboxTestBtn.className = "btn btn-secondary";
+    inboxTestBtn.textContent = "Jetzt abrufen";
+    inboxTestBtn.onclick = async () => {
+      inboxTestBtn.disabled = true;
+      inboxTestBtn.textContent = "Hole ab…";
+      try {
+        const result = await performTaskSync();
+        await alertDialog(result.applied > 0 ? `${result.applied} neue Aufgabe(n) übernommen.` : "Keine neuen Aufgaben gefunden.");
+      } catch (e) {
+        await alertDialog("Abruf fehlgeschlagen: " + e.message, { title: "Fehler" });
+      }
+      rerender();
+    };
+    inboxCard.appendChild(inboxTestBtn);
+    frag.appendChild(inboxCard);
 
     // Manuelles Backup
     const backupCard = document.createElement("section");

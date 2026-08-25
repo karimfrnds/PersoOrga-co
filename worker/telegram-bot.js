@@ -45,10 +45,30 @@ function formatDateDe(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
 }
+function addDaysISO(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+function mondayOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
+function euro(n) {
+  return (Number(n) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+function round2(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
 
 async function getState(env) {
   const raw = await env.TASKS_KV.get(STATE_KEY);
-  if (!raw) return { updatedAt: null, employees: [], tasks: [], shiftsInService: [] };
+  if (!raw) return { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [] };
   try {
     const parsed = JSON.parse(raw);
     return {
@@ -56,12 +76,13 @@ async function getState(env) {
       employees: Array.isArray(parsed.employees) ? parsed.employees : [],
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
       shiftsInService: Array.isArray(parsed.shiftsInService) ? parsed.shiftsInService : [],
+      financials: Array.isArray(parsed.financials) ? parsed.financials : [],
     };
   } catch {
-    return { updatedAt: null, employees: [], tasks: [], shiftsInService: [] };
+    return { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [] };
   }
 }
-async function putState(env, employees, tasks, shiftsInService) {
+async function putState(env, employees, tasks, shiftsInService, financials) {
   const current = await getState(env);
   await env.TASKS_KV.put(
     STATE_KEY,
@@ -70,6 +91,7 @@ async function putState(env, employees, tasks, shiftsInService) {
       employees,
       tasks,
       shiftsInService: shiftsInService !== undefined ? shiftsInService : current.shiftsInService,
+      financials: financials !== undefined ? financials : current.financials,
     })
   );
 }
@@ -93,7 +115,12 @@ async function interpretMessage(env, text, today, state) {
     input_schema: {
       type: "object",
       properties: {
-        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "other"] },
+        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "other"] },
+        stats_period: {
+          type: "string",
+          enum: ["today", "yesterday", "week", "month"],
+          description: "Nur bei action=stats: welcher Zeitraum gewünscht ist. Ohne klaren Hinweis: 'today'.",
+        },
         tasks_to_add: {
           type: "array",
           description: "Nur bei action=add. Jede einzelne neue Aufgabe als eigener Eintrag, niemals mehrere Themen zusammenfassen.",
@@ -138,6 +165,7 @@ Bestimme die Absicht der Nachricht:
 - "complete": eine oder mehrere der oben gelisteten (noch offenen) Aufgaben sind erledigt und sollen als erledigt markiert werden (z.B. "Kasse zählen ist erledigt", "hab die Vitrine geputzt") – NICHT löschen, nur abhaken.
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
+- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen.
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
@@ -217,6 +245,75 @@ function buildWhoReply(state) {
   return ["👥 Im Dienst:", ...lines].join("\n");
 }
 
+function periodRange(period, today) {
+  if (period === "yesterday") {
+    const d = addDaysISO(today, -1);
+    return { from: d, to: d };
+  }
+  if (period === "week") return { from: mondayOf(today), to: today };
+  if (period === "month") return { from: today.slice(0, 7) + "-01", to: today };
+  return { from: today, to: today };
+}
+const PERIOD_LABEL = { today: "Heute", yesterday: "Gestern", week: "Diese Woche", month: "Dieser Monat" };
+
+function buildStatsReply(state, period, today) {
+  const financials = state.financials || [];
+  if (financials.length === 0) {
+    return `Noch keine Kennzahlen freigegeben oder synchronisiert. Unter Admin → Einstellungen bei „Telegram-Aufgaben abgleichen" die Kennzahlen-Freigabe aktivieren, danach einmal die App öffnen.`;
+  }
+  const { from, to } = periodRange(period, today);
+  const rows = financials.filter((r) => r.date >= from && r.date <= to);
+  const label = PERIOD_LABEL[period] || "Heute";
+  if (rows.length === 0) {
+    return `${label}: für diesen Zeitraum liegen noch keine Daten vor (letzter Abgleich: ${financials[financials.length - 1]?.date || "-"}).`;
+  }
+  const sum = (key) => round2(rows.reduce((s, r) => s + (Number(r[key]) || 0), 0));
+  const umsatz = sum("umsatzGesamt");
+  const lohn = sum("totalLohn");
+  const stunden = sum("totalHours");
+  const umschlag = sum("umschlag");
+  const trinkgeld = sum("trinkgeldGesamt");
+  const lohnquote = umsatz > 0 ? round2((lohn / umsatz) * 100) : 0;
+  const openNote = rows.some((r) => r.status !== "abgeschlossen") ? " (inkl. heute, noch nicht final abgeschlossen)" : "";
+
+  return [
+    `📊 ${label}${openNote}`,
+    `Umsatz: ${euro(umsatz)}`,
+    `Trinkgeld: ${euro(trinkgeld)}`,
+    `Lohnkosten: ${euro(lohn)} (${String(lohnquote).replace(".", ",")}% vom Umsatz)`,
+    `Stunden: ${stunden.toFixed(2).replace(".", ",")} h`,
+    `Umschlag: ${euro(umschlag)}`,
+  ].join("\n");
+}
+
+/** Kurze, rein datenbasierte Beobachtungen (keine Finanz-/Steuerberatung) – optional, wenn genug Historie da ist. */
+async function generateInsights(env, financials) {
+  if (!Array.isArray(financials) || financials.length < 3 || !env.ANTHROPIC_API_KEY) return null;
+  const recent = financials.slice(-14);
+  const lines = recent
+    .map(
+      (r) =>
+        `${r.date}: Umsatz ${round2(r.umsatzGesamt)}€, Lohn ${round2(r.totalLohn)}€, Stunden ${round2(r.totalHours)}h, Umschlag ${round2(r.umschlag)}€${
+          r.status !== "abgeschlossen" ? " (offen)" : ""
+        }`
+    )
+    .join("\n");
+  const prompt = `Tageszahlen eines Cafés, letzte ${recent.length} Tage:\n${lines}\n\nGib 2-3 kurze, konkrete Beobachtungen auf Deutsch (z.B. Muster nach Wochentag, Lohnquote im Verhältnis zum Umsatz, auffällige Tage/Trends). Nur was aus den Zahlen tatsächlich erkennbar ist, nichts erfinden. Keine Finanz-, Steuer- oder Rechtsberatung, nur nüchterne Beobachtungen. Je Punkt maximal ein Satz, als Aufzählung mit "-", ohne Einleitung.`;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const block = (data.content || []).find((b) => b.type === "text");
+    return block?.text?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 async function handleTelegram(request, env) {
   const secretHeader = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
   if (!env.WEBHOOK_SECRET || secretHeader !== env.WEBHOOK_SECRET) {
@@ -259,6 +356,12 @@ async function handleTelegram(request, env) {
       await sendTelegramMessage(env, chatId, buildListReply(state, today));
     } else if (result.action === "who") {
       await sendTelegramMessage(env, chatId, buildWhoReply(state));
+    } else if (result.action === "stats") {
+      const period = ["today", "yesterday", "week", "month"].includes(result.stats_period) ? result.stats_period : "today";
+      let reply = buildStatsReply(state, period, today);
+      const insights = await generateInsights(env, state.financials);
+      if (insights) reply += `\n\n💡 ${insights}`;
+      await sendTelegramMessage(env, chatId, reply);
     } else if (result.action === "delete") {
       const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
       const removed = state.tasks.filter((t) => ids.includes(t.id));
@@ -296,7 +399,7 @@ async function handleTelegram(request, env) {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"`
       );
     }
   } catch (e) {
@@ -327,7 +430,8 @@ async function handleState(request, env) {
     const employees = Array.isArray(body.employees) ? body.employees : [];
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
     const shiftsInService = Array.isArray(body.shiftsInService) ? body.shiftsInService : undefined;
-    await putState(env, employees, tasks, shiftsInService);
+    const financials = Array.isArray(body.financials) ? body.financials : undefined;
+    await putState(env, employees, tasks, shiftsInService, financials);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
   }
   return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });

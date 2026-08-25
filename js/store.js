@@ -39,6 +39,7 @@ function defaultData() {
         enabled: false,
         workerUrl: "", // z.B. https://cafe-telegram-bot.deinname.workers.dev
         workerSecret: "", // derselbe Wert wie WEBHOOK_SECRET im Worker
+        shareFinancials: false, // separat opt-in: Umsatz/Lohn/Stunden-Historie für Kennzahlen-Abfragen im Bot freigeben
         lastSyncAt: null, // ISO-Timestamp des letzten erfolgreichen Abgleichs
         lastError: null,
         // Was wir beim letzten Abgleich selbst in die Cloud geschrieben haben: {id, done}[] (gedeckelt).

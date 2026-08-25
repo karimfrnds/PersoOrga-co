@@ -259,6 +259,20 @@ function renderSettings() {
     inboxGrid.appendChild(workerSecretField);
     inboxCard.appendChild(inboxGrid);
 
+    const financialsLabel = document.createElement("label");
+    financialsLabel.className = "field-checkbox";
+    const financialsCb = document.createElement("input");
+    financialsCb.type = "checkbox";
+    financialsCb.checked = inboxCfg.shareFinancials;
+    financialsCb.onchange = () => store.updateTaskInboxConfig({ shareFinancials: financialsCb.checked });
+    financialsLabel.appendChild(financialsCb);
+    financialsLabel.append(" Kennzahlen (Umsatz/Lohnkosten/Stunden der letzten ~5 Wochen) für Chat-Abfragen freigeben");
+    inboxCard.appendChild(financialsLabel);
+    const financialsNote = document.createElement("p");
+    financialsNote.className = "muted small";
+    financialsNote.textContent = "Separat, weil sensibler als reine Aufgaben-Texte – ohne Häkchen bleiben Umsatz/Löhne nur lokal auf dem iPad.";
+    inboxCard.appendChild(financialsNote);
+
     const inboxStatusLine = document.createElement("p");
     inboxStatusLine.className = inboxCfg.lastError ? "callout callout-warn" : "muted small";
     if (inboxCfg.lastError) {

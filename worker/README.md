@@ -43,7 +43,7 @@ Im Worker unter **Settings → Variables and Secrets** folgende **Secrets** (ver
 | `TELEGRAM_BOT_TOKEN` | Token von @BotFather aus Schritt 1 |
 | `WEBHOOK_SECRET` | ein frei erfundenes, langes Passwort. Wird doppelt genutzt: für Telegram UND als Zugriffsschlüssel, den die App gleich in den Einstellungen bekommt |
 | `OWNER_CHAT_ID` | **erstmal leer lassen** – kommt in Schritt 6 |
-| `ANTHROPIC_API_KEY` | API-Key von [console.anthropic.com](https://console.anthropic.com/settings/keys) (eigener, kostenpflichtiger Account nötig – Kosten sind bei diesem Nachrichtenaufkommen aber minimal, Bruchteile eines Cents pro Nachricht). Fehlt der Key oder ist die API mal nicht erreichbar, antwortet der Bot mit einer Fehlermeldung statt zu raten. |
+| `ANTHROPIC_API_KEY` | API-Key von [console.anthropic.com](https://console.anthropic.com/settings/keys) (eigener, kostenpflichtiger Account nötig – Kosten sind bei diesem Nachrichtenaufkommen aber minimal, Bruchteile eines Cents pro Nachricht). Fehlt der Key oder ist die API mal nicht erreichbar, antwortet der Bot mit einer Fehlermeldung statt zu raten. Wird auch für die kurzen Kennzahlen-Beobachtungen genutzt (siehe unten) – fehlt der Key, funktionieren „liste"/„kennzahlen" trotzdem, nur die Beobachtungen fallen dann weg. |
 
 ## 5. Telegram-Webhook registrieren (einmaliger Aufruf)
 
@@ -70,6 +70,10 @@ App → Admin → Einstellungen → „Telegram-Aufgaben abgleichen":
 - **Worker-URL**: die URL aus Schritt 2 (z.B. `https://cafe-telegram-bot.deinname.workers.dev`)
 - **Zugriffsschlüssel**: derselbe Wert wie `WEBHOOK_SECRET` aus Schritt 4
 - Häkchen bei „Telegram-Aufgaben-Abgleich aktivieren" setzen
+- Optional zusätzlich Häkchen bei „Kennzahlen … für Chat-Abfragen freigeben" – erst damit kann der Bot
+  „kennzahlen"/„wie war der Umsatz" beantworten (siehe unten). Separates Häkchen, weil sensibler als reine
+  Aufgaben-Texte: ohne Häkchen bleiben Umsatz/Löhne nur lokal auf dem iPad, es werden nur Aufgabentexte und wer
+  im Dienst ist synchronisiert.
 
 ## Nutzung
 
@@ -98,6 +102,13 @@ geputzt`. Wird beim nächsten Sync auch am iPad als abgehakt angezeigt (inkl. �
 
 **„Wer ist gerade da?"**: `wer ist im dienst`, `wer arbeitet gerade` → zeigt, wer laut letztem iPad-Abgleich
 gerade eingestempelt ist.
+
+**Kennzahlen-Übersicht** (nur wenn oben in der App freigegeben, siehe Schritt 7): `kennzahlen`, `wie war der
+Umsatz heute`, `wie lief die Woche`, `Zusammenfassung diesen Monat` → Umsatz, Trinkgeld, Lohnkosten (inkl.
+Lohnquote), Stunden und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„diesen Monat", plus – wenn
+genug Historie da ist – 2-3 kurze, rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡
+gekennzeichnet, **keine** Steuer- oder Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei
+jedem Abgleich mit hochlädt.
 
 **Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die

@@ -9,9 +9,42 @@
 // ============================================================================
 import { store } from "./store.js";
 import { todayStr } from "./format.js";
+import { computeDay } from "./calc.js";
+
+const FINANCIALS_DAYS = 35; // ca. 5 Wochen zurück, für Wochen-/Monatsvergleiche im Bot
 
 function workerUrl(cfg, path) {
   return `${cfg.workerUrl.replace(/\/+$/, "")}${path}`;
+}
+
+function isoDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Kompakte Tages-Kennzahlen der letzten Wochen (nur wenn der Nutzer das freigegeben hat). */
+function buildFinancialsPayload() {
+  const settings = store.getSettings();
+  const employees = store.getEmployees();
+  const from = isoDaysAgo(FINANCIALS_DAYS);
+  const rows = [];
+  for (const day of store.getDays()) {
+    if (day.date < from) continue;
+    const b = computeDay(day, employees, settings);
+    rows.push({
+      date: day.date,
+      status: day.status,
+      umsatzGesamt: Number(day.kassenabschluss?.umsatzGesamt) || 0,
+      umsatzBar: Number(day.kassenabschluss?.umsatzBar) || 0,
+      trinkgeldGesamt: b.tipPool,
+      totalLohn: b.totalLohn,
+      totalHours: b.totalHours,
+      umschlag: b.umschlag,
+    });
+  }
+  rows.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return rows;
 }
 
 async function fetchRemoteState(cfg) {
@@ -22,11 +55,11 @@ async function fetchRemoteState(cfg) {
   return res.json();
 }
 
-async function pushLocalState(cfg, employees, tasks, shiftsInService) {
+async function pushLocalState(cfg, employees, tasks, shiftsInService, financials) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ employees, tasks, shiftsInService }),
+    body: JSON.stringify({ employees, tasks, shiftsInService, financials }),
   });
   if (!res.ok) throw new Error(`Worker antwortete mit ${res.status} beim Hochladen`);
 }
@@ -113,7 +146,8 @@ async function performTaskSync() {
     name: store.getEmployee(s.employeeId)?.name || "?",
     since: s.from,
   }));
-  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks, shiftsInService);
+  const financials = cfg.shareFinancials ? buildFinancialsPayload() : [];
+  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks, shiftsInService, financials);
 
   store.updateTaskInboxConfig({
     lastSyncAt: new Date().toISOString(),

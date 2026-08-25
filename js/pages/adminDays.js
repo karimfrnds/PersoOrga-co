@@ -1,47 +1,44 @@
 // ============================================================================
-// pages/start.js – Startseite: Liste aller Tage
+// pages/adminDays.js – Admin-Tab „Tage": Übersicht aller Tage (früher die
+// öffentliche Startseite). Tage entstehen inzwischen automatisch beim ersten
+// Einstempeln – hier gibt es zusätzlich die Möglichkeit, einen Tag manuell
+// anzulegen (z.B. zum Nacherfassen).
 // ============================================================================
 import { store } from "../store.js";
 import { computeDay } from "../calc.js";
 import { euro, todayStr, dateDe, escapeHtml } from "../format.js";
+import { promptDialog } from "../dialog.js";
 
-function renderStart(navigate) {
+function renderAdminDays(navigate) {
   const el = document.createElement("div");
   el.className = "page";
 
-  const today = todayStr();
-  const existingToday = store.getDayByDate(today);
   const employees = store.getEmployees(false);
 
   const header = document.createElement("div");
   header.className = "start-header";
-  header.innerHTML = `
-    <div>
-      <h1>Schichten &amp; Abrechnung</h1>
-      <p class="muted">Alle vergangenen Tage im Überblick – tippe auf einen Tag für Details.</p>
-    </div>
-  `;
-  const bigBtn = document.createElement("button");
-  bigBtn.className = "btn btn-primary btn-huge";
-  bigBtn.textContent = existingToday ? "▶ Heute weiter bearbeiten" : "＋ Heute erfassen";
-  bigBtn.onclick = () => {
-    const day = existingToday || store.createDay(today);
+  header.innerHTML = `<h1>Tage</h1><p class="muted">Alle Tage im Überblick – tippe auf einen Tag für Details, Kassenabschluss und Aufgaben.</p>`;
+  const addBtn = document.createElement("button");
+  addBtn.className = "btn btn-secondary";
+  addBtn.textContent = "＋ Tag manuell anlegen";
+  addBtn.onclick = async () => {
+    const date = await promptDialog("Für welches Datum soll ein Tag angelegt werden?", {
+      title: "Tag anlegen",
+      type: "date",
+      defaultValue: todayStr(),
+      okLabel: "Anlegen",
+    });
+    if (!date) return;
+    const day = store.getOrCreateDayByDate(date);
     navigate(`day/${day.id}`);
   };
-  header.appendChild(bigBtn);
-
-  const checklistLink = document.createElement("button");
-  checklistLink.className = "btn btn-link";
-  checklistLink.textContent = "📋 Checkliste (Beta)";
-  checklistLink.onclick = () => navigate("checklist");
-  header.appendChild(checklistLink);
-
+  header.appendChild(addBtn);
   el.appendChild(header);
 
   if (employees.length === 0) {
     const warn = document.createElement("div");
     warn.className = "callout callout-warn";
-    warn.innerHTML = `Noch keine Mitarbeiter angelegt. Bitte zuerst unter <b>Mitarbeiter</b> das Team eintragen (Name, Rolle, Stundenlohn).`;
+    warn.innerHTML = `Noch keine Mitarbeiter angelegt. Bitte zuerst unter <b>Mitarbeiter</b> das Team eintragen (Name, Rolle, Stundenlohn, PIN).`;
     el.appendChild(warn);
   }
 
@@ -49,7 +46,7 @@ function renderStart(navigate) {
   if (days.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Noch keine Tage erfasst. Leg mit dem Button oben den ersten Tag an.";
+    empty.textContent = "Noch keine Tage erfasst. Tage entstehen automatisch, sobald sich jemand am Kiosk-Bildschirm einstempelt.";
     el.appendChild(empty);
     return el;
   }
@@ -66,10 +63,11 @@ function renderStart(navigate) {
     const badgeClass = day.status === "abgeschlossen" ? "badge badge-green" : "badge badge-orange";
     const badgeLabel = day.status === "abgeschlossen" ? "Abgeschlossen" : "Offen";
     const staffCount = new Set(day.shifts.map((s) => s.employeeId)).size;
+    const openTasks = day.tasks.filter((t) => !t.done).length;
     row.innerHTML = `
       <div class="day-row-main">
         <div class="day-row-date">${escapeHtml(dateDe(day.date))}</div>
-        <div class="muted small">${staffCount} Mitarbeiter · ${breakdown.totalHours.toFixed(2).replace(".", ",")} Std.</div>
+        <div class="muted small">${staffCount} Mitarbeiter · ${breakdown.totalHours.toFixed(2).replace(".", ",")} Std.${day.tasks.length ? ` · ${openTasks === 0 ? "✔ Aufgaben erledigt" : `${openTasks} Aufgabe(n) offen`}` : ""}</div>
       </div>
       <div class="day-row-numbers">
         <div><span class="muted small">Umsatz</span><br/>${euro(day.kassenabschluss.umsatzGesamt)}</div>
@@ -84,4 +82,4 @@ function renderStart(navigate) {
   return el;
 }
 
-export { renderStart };
+export { renderAdminDays };

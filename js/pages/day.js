@@ -62,6 +62,48 @@ function renderDay(dayId, navigate) {
       frag.appendChild(info);
     }
 
+    // ---- Aufgaben ----
+    const taskSection = document.createElement("section");
+    taskSection.className = "card";
+    const openTasks = day.tasks.filter((t) => !t.done).length;
+    taskSection.innerHTML = `<h2>0. Aufgaben${day.tasks.length ? ` <span class="muted small">(${openTasks} offen)</span>` : ""}</h2>`;
+    if (day.tasks.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Keine Aufgaben für diesen Tag (siehe Admin → Aufgaben für die Vorlage).";
+      taskSection.appendChild(empty);
+    } else {
+      const taskList = document.createElement("div");
+      taskList.className = "task-list";
+      for (const task of day.tasks) {
+        const row = document.createElement("label");
+        row.className = "task-row" + (task.done ? " done" : "");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = task.done;
+        cb.onchange = () => {
+          store.toggleDayTask(day.id, task.id, "Admin");
+          rerender();
+        };
+        row.appendChild(cb);
+        const textWrap = document.createElement("div");
+        textWrap.className = "task-row-text";
+        const span = document.createElement("span");
+        span.textContent = task.text;
+        textWrap.appendChild(span);
+        if (task.done && task.doneBy) {
+          const meta = document.createElement("span");
+          meta.className = "muted small task-row-meta";
+          meta.textContent = `✓ erledigt von ${task.doneBy}${task.doneAt ? ", " + new Date(task.doneAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr" : ""}`;
+          textWrap.appendChild(meta);
+        }
+        row.appendChild(textWrap);
+        taskList.appendChild(row);
+      }
+      taskSection.appendChild(taskList);
+    }
+    frag.appendChild(taskSection);
+
     // ---- Schichten ----
     const shiftSection = document.createElement("section");
     shiftSection.className = "card";
@@ -118,11 +160,18 @@ function renderDay(dayId, navigate) {
       const fromLabel = document.createElement("label");
       fromLabel.className = "inline-label";
       fromLabel.append("von ", fromInput);
-      const toLabel = document.createElement("label");
-      toLabel.className = "inline-label";
-      toLabel.append("bis ", toInput);
       row.appendChild(fromLabel);
-      row.appendChild(toLabel);
+      if (shift.source === "pin" && !shift.clockOutAt) {
+        const liveBadge = document.createElement("span");
+        liveBadge.className = "badge badge-green";
+        liveBadge.textContent = "🟢 läuft";
+        row.appendChild(liveBadge);
+      } else {
+        const toLabel = document.createElement("label");
+        toLabel.className = "inline-label";
+        toLabel.append("bis ", toInput);
+        row.appendChild(toLabel);
+      }
 
       const hoursSpan = document.createElement("span");
       hoursSpan.className = "shift-hours";

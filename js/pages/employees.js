@@ -17,11 +17,19 @@ function renderEmployees() {
 
   function build() {
     const frag = document.createElement("div");
-    frag.innerHTML = `<h1>Mitarbeiter</h1><p class="muted">Name, Rolle und Stundenlohn festlegen – wird für die automatische Berechnung gebraucht.</p>`;
+    frag.innerHTML = `<h1>Mitarbeiter</h1><p class="muted">Name, Rolle, Stundenlohn und PIN festlegen – der PIN wird zum Ein-/Ausstempeln am Kiosk-Bildschirm gebraucht.</p>`;
 
     const list = document.createElement("div");
     list.className = "employee-list";
     const employees = store.getEmployees(true).sort((a, b) => a.name.localeCompare(b.name));
+
+    const missingPin = employees.filter((e) => e.active && !e.pin);
+    if (missingPin.length > 0) {
+      const warn = document.createElement("div");
+      warn.className = "callout callout-warn";
+      warn.textContent = `${missingPin.length} Mitarbeiter ohne PIN: ${missingPin.map((e) => e.name).join(", ")} – können sich noch nicht am Kiosk-Bildschirm einstempeln.`;
+      frag.appendChild(warn);
+    }
 
     for (const emp of employees) {
       const row = document.createElement("div");
@@ -30,6 +38,7 @@ function renderEmployees() {
         <div class="employee-main">
           <b>${escapeHtml(emp.name)}</b>
           <span class="muted small">${ROLE_LABEL[emp.role]} · ${euro(emp.hourlyWage)}/Std.${emp.isMinijob ? ` · Minijob (Grenze ${euro(emp.minijobLimit)}/Monat)` : ""}</span>
+          <span class="muted small">PIN: ${emp.pin ? escapeHtml(emp.pin) : "– nicht vergeben –"}</span>
           ${!emp.active ? '<span class="badge badge-gray">inaktiv</span>' : ""}
         </div>
       `;
@@ -112,6 +121,7 @@ function renderEmployees() {
           </select>
         </label>
         <label class="field"><span>Stundenlohn (€)</span><input type="number" step="0.01" min="0" id="f-wage" value="${emp ? emp.hourlyWage : 12.82}" /></label>
+        <label class="field"><span>PIN (mind. 4 Zeichen, zum Ein-/Ausstempeln)</span><input type="text" inputmode="numeric" id="f-pin" value="${emp?.pin ? escapeHtml(emp.pin) : ""}" placeholder="z.B. 4711" /></label>
         <label class="field-checkbox"><input type="checkbox" id="f-minijob" ${emp?.isMinijob ? "checked" : ""} /> Minijob (Verdienstgrenze überwachen)</label>
         <label class="field" id="f-limit-wrap" style="display:${emp?.isMinijob ? "block" : "none"}">
           <span>Minijob-Grenze pro Monat (€)</span><input type="number" step="1" min="0" id="f-limit" value="${emp ? emp.minijobLimit : 556}" />
@@ -133,10 +143,20 @@ function renderEmployees() {
         await alertDialog("Bitte einen Namen eintragen.");
         return;
       }
+      const pinRaw = overlay.querySelector("#f-pin").value.trim();
+      if (pinRaw && pinRaw.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (pinRaw && store.isPinTaken(pinRaw, emp?.id)) {
+        await alertDialog("Dieser PIN wird schon von einer anderen Person (oder dem Admin-PIN) benutzt. Bitte einen anderen wählen.");
+        return;
+      }
       const payload = {
         name,
         role: overlay.querySelector("#f-role").value,
         hourlyWage: Number(overlay.querySelector("#f-wage").value) || 0,
+        pin: pinRaw || null,
         isMinijob: overlay.querySelector("#f-minijob").checked,
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
       };

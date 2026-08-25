@@ -2,6 +2,8 @@
 // store.js – Datenhaltung (localStorage). Ein Gerät, keine Cloud, kein Login.
 // ============================================================================
 
+import { todayStr } from "./format.js";
+
 const STORAGE_KEY = "cafeapp_v1";
 
 function uid() {
@@ -9,15 +11,20 @@ function uid() {
   return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
 }
 
+/** Aktuelle Uhrzeit als HH:MM in Ortszeit (für automatisch erzeugte Ein-/Ausstempelzeiten). */
+function hhmmLocal(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function defaultData() {
   return {
-    employees: [], // { id, name, role, hourlyWage, isMinijob, minijobLimit, active }
+    employees: [], // { id, name, role, hourlyWage, isMinijob, minijobLimit, active, pin }
     settings: {
       tipSplit: { service: 70, kueche: 20, bar: 10 }, // Gewichtung (Punkte/Std.) pro Rolle
       roundingMinutes: 15, // Rundung der Arbeitszeit
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
-      checklistTemplates: { fruh: [], mittel: [], spaet: [] }, // Beta: Checklisten-Vorlagen pro Schicht
+      taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert
       githubBackup: {
         enabled: false,
         owner: "", // GitHub-Nutzername/Organisation
@@ -27,8 +34,25 @@ function defaultData() {
         lastError: null, // Fehlermeldung des letzten fehlgeschlagenen Versuchs, für Warnhinweis im Admin
       },
     },
-    days: [], // { id, date, status, shifts[], kassenabschluss{}, stornos[], auditLog[], closedAt }
-    checklistLog: {}, // Beta: date -> { checked: {fruh:{},mittel:{},spaet:{}}, notes: [{id,text,done,time}] }
+    // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
+    days: [],
+  };
+}
+
+/** Migration: alte Beta-Checklisten-Vorlagen (fruh/mittel/spaet) in die neue flache taskTemplates-Liste überführen. */
+function migrateTaskTemplates(oldSettings) {
+  const legacy = oldSettings?.checklistTemplates;
+  if (!legacy) return null;
+  const merged = [...(legacy.fruh || []), ...(legacy.mittel || []), ...(legacy.spaet || [])];
+  return [...new Set(merged.map((s) => s.trim()).filter(Boolean))];
+}
+
+function normalizeDay(d) {
+  return {
+    ...d,
+    shifts: (d.shifts || []).map((s) => ({ source: "manual", ...s })),
+    plannedShifts: d.plannedShifts || [],
+    tasks: d.tasks || [],
   };
 }
 
@@ -38,16 +62,16 @@ function load() {
   try {
     const parsed = JSON.parse(raw);
     const base = defaultData();
+    const migratedTemplates = migrateTaskTemplates(parsed.settings);
     return {
       employees: parsed.employees ?? base.employees,
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
-        checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+        taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
       },
-      days: parsed.days ?? base.days,
-      checklistLog: parsed.checklistLog ?? base.checklistLog,
+      days: (parsed.days ?? base.days).map(normalizeDay),
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -83,6 +107,7 @@ export const store = {
       isMinijob: !!emp.isMinijob,
       minijobLimit: Number(emp.minijobLimit) || 556,
       active: true,
+      pin: emp.pin ? String(emp.pin) : null,
     };
     data.employees.push(e);
     persist();
@@ -93,6 +118,17 @@ export const store = {
     if (!e) return;
     Object.assign(e, patch);
     persist();
+  },
+  /** true, wenn der PIN schon von einem anderen aktiven Mitarbeiter oder dem Admin-PIN benutzt wird. */
+  isPinTaken(pin, excludingEmployeeId) {
+    const p = String(pin);
+    if (data.settings.adminPin === p) return true;
+    return data.employees.some((e) => e.active && e.id !== excludingEmployeeId && e.pin === p);
+  },
+  /** Findet den aktiven Mitarbeiter zu einem eingegebenen PIN (fürs Ein-/Ausstempeln am Kiosk). */
+  findEmployeeByPin(pin) {
+    const p = String(pin);
+    return data.employees.find((e) => e.active && e.pin && e.pin === p);
   },
   removeEmployee(id) {
     // Soft-delete: bleibt für alte Tage erhalten, verschwindet aus Auswahllisten
@@ -160,6 +196,8 @@ export const store = {
       date: dateStr,
       status: "offen",
       shifts: [],
+      plannedShifts: [],
+      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template" })),
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
@@ -168,6 +206,10 @@ export const store = {
     data.days.push(d);
     persist();
     return d;
+  },
+  /** Holt den heutigen Tag oder legt ihn an (inkl. Aufgaben aus den Vorlagen). */
+  getOrCreateDayByDate(dateStr) {
+    return this.getDayByDate(dateStr) || this.createDay(dateStr);
   },
   logAudit(dayId, action, detail) {
     const d = this.getDay(dayId);
@@ -205,7 +247,7 @@ export const store = {
   addShift(dayId, shift) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const s = { id: uid(), employeeId: shift.employeeId, from: shift.from, to: shift.to, note: shift.note || "" };
+    const s = { id: uid(), employeeId: shift.employeeId, from: shift.from, to: shift.to, note: shift.note || "", source: shift.source || "manual" };
     d.shifts.push(s);
     this.logAudit(dayId, "Schicht hinzugefügt", `${s.from}-${s.to}`);
     persist();
@@ -225,6 +267,62 @@ export const store = {
     if (!d) return;
     d.shifts = d.shifts.filter((s) => s.id !== shiftId);
     this.logAudit(dayId, "Schicht entfernt", shiftId);
+    persist();
+  },
+
+  // ---- Stempeluhr (PIN-Ein-/Ausstempeln am Kiosk) ----
+  /** Offene (noch nicht ausgestempelte) PIN-Schicht eines Mitarbeiters heute, falls vorhanden. */
+  getOpenShiftForEmployeeToday(employeeId, dateStr) {
+    const d = this.getDayByDate(dateStr || todayStr());
+    if (!d) return null;
+    return d.shifts.find((s) => s.employeeId === employeeId && s.source === "pin" && !s.clockOutAt) || null;
+  },
+  /** Alle aktuell offenen PIN-Schichten heute (um zu erkennen, ob gerade jemand sonst noch da ist). */
+  getOpenShiftsToday(dateStr) {
+    const d = this.getDayByDate(dateStr || todayStr());
+    if (!d) return [];
+    return d.shifts.filter((s) => s.source === "pin" && !s.clockOutAt);
+  },
+  /** Mitarbeiter stempelt ein: legt (bei Bedarf) den heutigen Tag an und startet eine offene Schicht. */
+  clockIn(employeeId) {
+    const dateStr = todayStr();
+    const d = this.getOrCreateDayByDate(dateStr);
+    const already = this.getOpenShiftForEmployeeToday(employeeId, dateStr);
+    if (already) return { day: d, shift: already };
+    const now = new Date();
+    const s = { id: uid(), employeeId, from: hhmmLocal(now), to: null, note: "", source: "pin", clockInAt: now.toISOString(), clockOutAt: null };
+    d.shifts.push(s);
+    this.logAudit(d.id, "eingestempelt", `${this.getEmployee(employeeId)?.name || employeeId} um ${s.from} Uhr`);
+    persist();
+    return { day: d, shift: s };
+  },
+  /** Mitarbeiter stempelt aus: schließt die offene Schicht mit der aktuellen Uhrzeit ab. */
+  clockOut(dayId, shiftId) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const s = d.shifts.find((x) => x.id === shiftId);
+    if (!s) return;
+    const now = new Date();
+    s.clockOutAt = now.toISOString();
+    s.to = hhmmLocal(now);
+    this.logAudit(dayId, "ausgestempelt", `${this.getEmployee(s.employeeId)?.name || s.employeeId} um ${s.to} Uhr`);
+    persist();
+    return s;
+  },
+
+  // ---- Geplante Schichten (Wochenplan/CSV) – reine Planung, zählt NICHT als gearbeitete Zeit ----
+  addPlannedShift(dayId, shift) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const s = { id: uid(), employeeId: shift.employeeId, from: shift.from, to: shift.to, note: shift.note || "" };
+    d.plannedShifts.push(s);
+    persist();
+    return s;
+  },
+  removePlannedShift(dayId, shiftId) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    d.plannedShifts = d.plannedShifts.filter((s) => s.id !== shiftId);
     persist();
   },
 
@@ -252,43 +350,42 @@ export const store = {
     persist();
   },
 
-  // ---- Checklisten (Beta) ----
-  getChecklistTemplates() {
-    return data.settings.checklistTemplates;
+  // ---- Aufgaben ----
+  getTaskTemplates() {
+    return data.settings.taskTemplates;
   },
-  setChecklistTemplate(shiftType, items) {
-    data.settings.checklistTemplates[shiftType] = items;
+  setTaskTemplates(items) {
+    data.settings.taskTemplates = items;
     persist();
   },
-  getDayChecklist(date) {
-    return data.checklistLog[date] || { checked: { fruh: {}, mittel: {}, spaet: {} }, notes: [] };
+  /** Alle Aufgaben eines Tages erledigt? (leere Liste zählt als erledigt.) */
+  allTasksDone(dayId) {
+    const d = this.getDay(dayId);
+    if (!d) return true;
+    return d.tasks.every((t) => t.done);
   },
-  ensureDayChecklist(date) {
-    if (!data.checklistLog[date]) {
-      data.checklistLog[date] = { checked: { fruh: {}, mittel: {}, spaet: {} }, notes: [] };
-    }
-    return data.checklistLog[date];
-  },
-  toggleChecklistItem(date, shiftType, itemText) {
-    const log = this.ensureDayChecklist(date);
-    if (!log.checked[shiftType]) log.checked[shiftType] = {};
-    log.checked[shiftType][itemText] = !log.checked[shiftType][itemText];
+  toggleDayTask(dayId, taskId, employeeName) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const t = d.tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    t.done = !t.done;
+    t.doneBy = t.done ? employeeName || null : null;
+    t.doneAt = t.done ? new Date().toISOString() : null;
     persist();
   },
-  addChecklistNote(date, text) {
-    const log = this.ensureDayChecklist(date);
-    log.notes.push({ id: uid(), text, done: false, time: new Date().toISOString() });
+  addAdhocDayTask(dayId, text, employeeName) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "adhoc", addedBy: employeeName || null };
+    d.tasks.push(t);
     persist();
+    return t;
   },
-  toggleChecklistNoteDone(date, noteId) {
-    const log = this.ensureDayChecklist(date);
-    const note = log.notes.find((n) => n.id === noteId);
-    if (note) note.done = !note.done;
-    persist();
-  },
-  removeChecklistNote(date, noteId) {
-    const log = this.ensureDayChecklist(date);
-    log.notes = log.notes.filter((n) => n.id !== noteId);
+  removeDayTask(dayId, taskId) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    d.tasks = d.tasks.filter((t) => t.id !== taskId);
     persist();
   },
 
@@ -299,16 +396,16 @@ export const store = {
   importJSON(json) {
     const parsed = JSON.parse(json);
     const base = defaultData();
+    const migratedTemplates = migrateTaskTemplates(parsed.settings);
     data = {
       employees: parsed.employees ?? [],
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
-        checklistTemplates: { ...base.settings.checklistTemplates, ...(parsed.settings?.checklistTemplates ?? {}) },
+        taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
       },
-      days: parsed.days ?? [],
-      checklistLog: parsed.checklistLog ?? {},
+      days: (parsed.days ?? []).map(normalizeDay),
     };
     persist();
   },

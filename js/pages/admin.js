@@ -4,7 +4,9 @@
 // ein Schutz gegen versehentliche Änderungen auf einem gemeinsam genutzten Gerät.
 // ============================================================================
 import { store } from "../store.js";
+import { renderAdminDays } from "./adminDays.js";
 import { renderEmployees } from "./employees.js";
+import { renderTasksAdmin } from "./tasksAdmin.js";
 import { renderSettings } from "./settings.js";
 import { renderExport } from "./exportpage.js";
 import { renderHours } from "./hours.js";
@@ -16,10 +18,12 @@ import { todayStr } from "../format.js";
 function renderAdmin(navigate) {
   const container = document.createElement("div");
   container.className = "page admin-page";
-  let activeTab = "employees";
+  let activeTab = "days";
 
   const TABS = [
+    { id: "days", label: "Tage", render: () => renderAdminDays(navigate) },
     { id: "employees", label: "Mitarbeiter", render: () => renderEmployees() },
+    { id: "tasks", label: "Aufgaben", render: () => renderTasksAdmin() },
     { id: "hours", label: "Stunden", render: () => renderHours(navigate) },
     { id: "export", label: "Berichte", render: () => renderExport() },
     { id: "beta", label: "🧪 Beta", render: () => renderBeta(navigate) },

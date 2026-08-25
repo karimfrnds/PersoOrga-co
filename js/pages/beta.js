@@ -1,13 +1,11 @@
 // ============================================================================
-// pages/beta.js – BETA-Testbereich für Admin: Wochenplan-Upload, Checklisten-Vorlagen.
+// pages/beta.js – BETA-Testbereich für Admin: Wochenplan-Upload (reine Planung).
 // Bewusst getrennt von den Kernfunktionen (Tageserfassung), damit die App für den
 // täglichen Betrieb einfach bleibt, während neue Ideen hier ausprobiert werden können.
 // ============================================================================
 import { store } from "../store.js";
-import { requireUnlock } from "../adminAuth.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { escapeHtml, dateDe, todayStr } from "../format.js";
-import { SHIFT_LABEL, SHIFT_KEYS } from "./checklist.js";
 
 const WEEKDAY_NAMES = {
   montag: 0, mo: 0,
@@ -54,7 +52,6 @@ function renderBeta(navigate) {
       <p class="muted">Ideen zum Ausprobieren, bevor sie (falls sinnvoll) fest in die App kommen. Wirkt sich nicht auf den normalen Tagesablauf aus, außer ihr nutzt es aktiv.</p>
     `;
     frag.appendChild(buildScheduleUpload());
-    frag.appendChild(buildChecklistAdmin());
     return frag;
   }
 
@@ -69,8 +66,8 @@ function renderBeta(navigate) {
       <p class="muted small">
         CSV-Datei mit Spalten <b>Wochentag;Mitarbeiter;Von;Bis</b> hochladen (aus Excel/Numbers als CSV exportieren) –
         derselbe Plan lässt sich so für jede Woche wiederverwenden. Zuerst unten festlegen, für welche Woche er gelten soll,
-        dann die Datei hochladen. Für jede Zeile wird die Schicht automatisch in die passende Tageserfassung eingetragen –
-        dort könnt ihr sie danach ganz normal noch anpassen.
+        dann die Datei hochladen. Das ist reine <b>Planung</b> („wer ist wann eingeteilt") – für die Abrechnung zählen
+        weiterhin nur die echten Ein-/Ausstempelzeiten vom Kiosk-Bildschirm.
       </p>
     `;
 
@@ -280,56 +277,13 @@ function renderBeta(navigate) {
     }
     let created = 0;
     for (const row of usable) {
-      let day = store.getDayByDate(row.date);
-      if (!day) {
-        day = store.createDay(row.date);
-      } else if (day.status === "abgeschlossen") {
-        if (!(await requireUnlock())) continue;
-        store.reopenDay(day.id, "Wochenplan-Upload");
-      }
-      store.addShift(day.id, { employeeId: row.employeeId, from: row.from, to: row.to });
+      const day = store.getOrCreateDayByDate(row.date);
+      store.addPlannedShift(day.id, { employeeId: row.employeeId, from: row.from, to: row.to });
       created++;
     }
     parsedRows = null;
     rerender();
-    await alertDialog(`${created} Schicht(en) übernommen. Die Tage findet ihr wie gewohnt in der Übersicht.`);
-  }
-
-  // ---------------------------------------------------------------------
-  // Checklisten-Vorlagen
-  // ---------------------------------------------------------------------
-  function buildChecklistAdmin() {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `
-      <h2>Checklisten-Vorlagen</h2>
-      <p class="muted small">
-        Ein Punkt pro Zeile. Mitarbeiter sehen und haken diese Liste unter „📋 Checkliste" auf der Startseite ab
-        (kein PIN nötig, damit es morgens schnell geht).
-      </p>
-    `;
-    const templates = store.getChecklistTemplates();
-    for (const key of SHIFT_KEYS) {
-      const field = document.createElement("label");
-      field.className = "field";
-      field.style.marginBottom = "12px";
-      field.innerHTML = `<span>${SHIFT_LABEL[key]}schicht</span>`;
-      const textarea = document.createElement("textarea");
-      textarea.rows = 4;
-      textarea.style.fontFamily = "inherit";
-      textarea.style.fontSize = "15px";
-      textarea.style.padding = "10px 12px";
-      textarea.style.borderRadius = "10px";
-      textarea.style.border = "1px solid var(--border)";
-      textarea.value = (templates[key] || []).join("\n");
-      textarea.onchange = () => {
-        const items = textarea.value.split("\n").map((s) => s.trim()).filter(Boolean);
-        store.setChecklistTemplate(key, items);
-      };
-      field.appendChild(textarea);
-      card.appendChild(field);
-    }
-    return card;
+    await alertDialog(`${created} geplante Schicht(en) übernommen. Zur Abrechnung zählt das noch nicht – dafür stempeln sich die Mitarbeiter am Kiosk-Bildschirm ein/aus.`);
   }
 
   rerender();

@@ -1,10 +1,9 @@
 // ============================================================================
 // app.js – Router & Navigation
 // ============================================================================
-import { renderStart } from "./pages/start.js";
+import { renderKiosk } from "./pages/kiosk.js";
 import { renderDay } from "./pages/day.js";
 import { renderAdmin } from "./pages/admin.js";
-import { renderChecklist } from "./pages/checklist.js";
 import { maybeRunDailyBackup } from "./backup.js";
 
 const outlet = document.getElementById("outlet");
@@ -31,16 +30,14 @@ function render() {
   setActiveNav(route);
 
   if (route === "" || route === "start") {
-    outlet.appendChild(renderStart(navigate));
+    outlet.appendChild(renderKiosk(navigate));
   } else if (route.startsWith("day/")) {
     const id = route.slice(4);
     outlet.appendChild(renderDay(id, navigate));
   } else if (route.startsWith("admin")) {
     outlet.appendChild(renderAdmin(navigate));
-  } else if (route === "checklist") {
-    outlet.appendChild(renderChecklist(navigate));
   } else {
-    outlet.appendChild(renderStart(navigate));
+    outlet.appendChild(renderKiosk(navigate));
   }
   window.scrollTo(0, 0);
 }

@@ -31,7 +31,7 @@ function computeHours(from, to, roundingMinutes) {
   const end = parseTimeToMinutes(to);
   if (start === null || end === null) return 0;
   let diff = end - start;
-  if (diff <= 0) diff += 24 * 60; // Schicht geht über Mitternacht
+  if (diff < 0) diff += 24 * 60; // Schicht geht über Mitternacht (from === to heißt 0 Std., nicht 24)
   diff = roundToStep(diff, roundingMinutes);
   return Math.max(0, diff / 60);
 }

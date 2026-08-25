@@ -308,6 +308,77 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .admin-tab:hover { background: var(--gray-light); }
 .admin-tab.active { color: var(--green-dark); background: var(--green-light); }
 
+/* ---- Kiosk (PIN-Pad / Ein-Ausstempeln) ---- */
+.kiosk-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding-top: 20px;
+  text-align: center;
+}
+.kiosk-head { display: flex; flex-direction: column; gap: 4px; }
+.kiosk-greeting { color: var(--gray); font-weight: 600; letter-spacing: 0.02em; }
+.kiosk-error { width: 100%; max-width: 340px; text-align: center; }
+.kiosk-admin-link { margin-top: 8px; }
+
+.pin-dots { display: flex; gap: 14px; }
+.pin-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+}
+.pin-dot.filled { background: var(--green); border-color: var(--green); }
+
+.pinpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+.pinpad-key {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 18px 0;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pinpad-key:hover { border-color: var(--green); }
+.pinpad-key-ok { background: var(--green); color: white; border-color: var(--green); }
+.pinpad-key-ok:hover { background: var(--green-dark); }
+.pinpad-key-del { background: var(--gray-light); color: var(--gray); }
+
+.kiosk-greet-card { align-items: center; text-align: center; gap: 6px; }
+.kiosk-greet-emoji { font-size: 44px; line-height: 1; }
+
+/* ---- Session (nach dem Einstempeln) ---- */
+.session-head { display: flex; flex-direction: column; gap: 2px; }
+
+/* ---- Aufgaben ---- */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+}
+.task-row input[type="checkbox"] { width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; }
+.task-row-text { display: flex; flex-direction: column; gap: 2px; }
+.task-row.done .task-row-text > span:first-child { text-decoration: line-through; color: var(--gray); }
+.task-row-meta { font-size: 13px; }
+.task-add-row { display: flex; gap: 8px; margin-top: 4px; }
+.task-add-row input { flex: 1; }
+
 @media (max-width: 600px) {
   .day-row { flex-wrap: wrap; }
   .day-row-numbers { width: 100%; justify-content: space-between; }

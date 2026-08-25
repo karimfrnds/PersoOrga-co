@@ -89,7 +89,7 @@ function renderDay(dayId, navigate) {
         const textWrap = document.createElement("div");
         textWrap.className = "task-row-text";
         const span = document.createElement("span");
-        span.textContent = task.text;
+        span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
         textWrap.appendChild(span);
         if (task.assignedTo) {
           const assignee = employees.find((e) => e.id === task.assignedTo) || store.getEmployee(task.assignedTo);

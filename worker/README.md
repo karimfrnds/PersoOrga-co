@@ -30,6 +30,7 @@ Im Worker unter **Settings → Variables and Secrets** folgende **Secrets** (ver
 | `GITHUB_OWNER` | dein GitHub-Nutzername |
 | `GITHUB_REPO` | `PersoOrga-co` |
 | `OWNER_CHAT_ID` | **erstmal leer lassen** – kommt in Schritt 5 |
+| `ANTHROPIC_API_KEY` | API-Key von [console.anthropic.com](https://console.anthropic.com/settings/keys) (eigener, kostenpflichtiger Account nötig – Kosten sind bei diesem Nachrichtenaufkommen aber minimal, Bruchteile eines Cents pro Nachricht). Fehlt der Key oder ist die API mal nicht erreichbar, erkennt der Bot Aufgaben trotzdem noch über einfachere Textmuster – nur weniger flexibel. |
 
 ## 4. Telegram-Webhook registrieren (einmaliger Aufruf)
 
@@ -59,8 +60,24 @@ App → Admin → Einstellungen:
 
 ## Nutzung
 
+Der Bot versteht ganz normal formulierte Nachrichten (per KI zerlegt, siehe `ANTHROPIC_API_KEY` oben) – auch
+mehrere Aufgaben und mehrere Personen in einer einzigen Nachricht:
+
 - `Kaffeemaschine reparieren lassen` → allgemeine Aufgabe für heute.
-- `Timm: Kasse nachzählen` → Aufgabe für Timm (Name muss zu einem aktiven Mitarbeiter passen, sonst wird die
-  ganze Nachricht als allgemeine Aufgabe übernommen).
-- Bot antwortet mit „✅ Notiert" – die Aufgabe erscheint spätestens beim nächsten Öffnen des Kiosk-Bildschirms
-  bzw. innerhalb von 90 Sekunden, falls er schon offen ist.
+- `Timm: Kasse nachzählen` oder `Arianna soll die Vitrine putzen` → Aufgabe für die genannte Person (muss zu
+  einem aktiven Mitarbeiter passen, sonst bleibt sie unzugeordnet).
+- `Anna soll dran denken, Montag ist Inventur` → landet automatisch am Montag statt heute.
+- „Das ist dringend" / „priorisieren" → Priorität „hoch"; „kann warten" / „niedrig" → Priorität „niedrig".
+- `Timm soll die Vitrine putzen und Anna soll die Kasse zählen` → wird in **zwei** getrennte Aufgaben zerlegt.
+
+Der Bot antwortet immer mit einer nummerierten Übersicht, was er wie eingetragen hat, z.B.:
+
+```
+✅ 2 Aufgaben notiert:
+1. Timm – Vitrine putzen
+2. Anna – Kasse zählen · 🔴 hoch
+```
+
+Aufgaben erscheinen spätestens beim nächsten Öffnen des Kiosk-Bildschirms bzw. innerhalb von 90 Sekunden, falls
+er schon offen ist. Unter Admin → Aufgaben gibt es außerdem eine Übersicht aller zugeordneten Aufgaben, dort
+lassen sie sich auch manuell anlegen/bearbeiten.

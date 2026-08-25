@@ -59,7 +59,7 @@ function normalizeDay(d) {
     ...d,
     shifts: (d.shifts || []).map((s) => ({ source: "manual", ...s })),
     plannedShifts: d.plannedShifts || [],
-    tasks: d.tasks || [],
+    tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
   };
 }
 
@@ -205,7 +205,7 @@ export const store = {
       status: "offen",
       shifts: [],
       plannedShifts: [],
-      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template", assignedTo: null })),
+      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template", assignedTo: null, priority: "normal" })),
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
@@ -382,28 +382,65 @@ export const store = {
     t.doneAt = t.done ? new Date().toISOString() : null;
     persist();
   },
-  addAdhocDayTask(dayId, text, employeeName) {
+  /** Zentrale Aufgaben-Erstellung – alle anderen addXDayTask-Methoden sind dünne Wrapper darum. */
+  addTask(dayId, { text, assignedTo = null, priority = "normal", source = "adhoc", addedBy = null }) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "adhoc", addedBy: employeeName || null, assignedTo: null };
+    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source, addedBy, assignedTo, priority };
     d.tasks.push(t);
     persist();
     return t;
   },
-  /** Aufgabe aus der Telegram-Inbox (taskSync.js) – optional einem Mitarbeiter zugeordnet. */
-  addRemoteDayTask(dayId, { text, assignedTo = null, addedBy = "Telegram" }) {
+  addAdhocDayTask(dayId, text, employeeName) {
+    return this.addTask(dayId, { text, addedBy: employeeName || null, source: "adhoc" });
+  },
+  /** Aufgabe aus der Telegram-Inbox (taskSync.js) – optional einem Mitarbeiter/einer Priorität zugeordnet. */
+  addRemoteDayTask(dayId, { text, assignedTo = null, priority = "normal", addedBy = "Telegram" }) {
+    return this.addTask(dayId, { text, assignedTo, priority, addedBy, source: "remote" });
+  },
+  /** Vom Admin manuell angelegte Aufgabe (Admin → Aufgaben). */
+  addAdminTask(dayId, { text, assignedTo = null, priority = "normal" }) {
+    return this.addTask(dayId, { text, assignedTo, priority, addedBy: "Admin", source: "admin" });
+  },
+  /** Bearbeiten (Text/Zuordnung/Priorität) einer bestehenden Aufgabe, unabhängig von der Quelle. */
+  updateTaskFields(dayId, taskId, patch) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source: "remote", addedBy, assignedTo };
-    d.tasks.push(t);
+    const t = d.tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    Object.assign(t, patch);
     persist();
     return t;
+  },
+  /** Aufgabe auf einen anderen Tag verschieben (z.B. beim Bearbeiten das Datum ändern). */
+  moveTaskToDay(fromDayId, taskId, toDateStr) {
+    const from = this.getDay(fromDayId);
+    if (!from) return;
+    const t = from.tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    if (from.date === toDateStr) return t;
+    from.tasks = from.tasks.filter((x) => x.id !== taskId);
+    const to = this.getOrCreateDayByDate(toDateStr);
+    const moved = { ...t };
+    to.tasks.push(moved);
+    persist();
+    return moved;
   },
   removeDayTask(dayId, taskId) {
     const d = this.getDay(dayId);
     if (!d) return;
     d.tasks = d.tasks.filter((t) => t.id !== taskId);
     persist();
+  },
+  /** Alle Aufgaben ab (inkl.) einem Datum, über alle Tage hinweg – für die Admin-Übersicht. */
+  getTasksFrom(dateStr) {
+    const rows = [];
+    for (const d of this.getDays()) {
+      if (d.date < dateStr) continue;
+      for (const t of d.tasks) rows.push({ ...t, dayId: d.id, date: d.date });
+    }
+    rows.sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? -1 : 1));
+    return rows;
   },
 
   // ---- Telegram-Aufgaben-Inbox (nutzt githubBackup-Zugangsdaten) ----

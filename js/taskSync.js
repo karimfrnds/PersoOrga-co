@@ -54,7 +54,8 @@ async function performTaskSync() {
       const match = item.assignedToName
         ? employees.find((e) => e.name.trim().toLowerCase() === String(item.assignedToName).trim().toLowerCase())
         : null;
-      store.addRemoteDayTask(day.id, { text: item.text, assignedTo: match ? match.id : null, addedBy: "Telegram" });
+      const priority = ["niedrig", "normal", "hoch"].includes(item.priority) ? item.priority : "normal";
+      store.addRemoteDayTask(day.id, { text: item.text, assignedTo: match ? match.id : null, priority, addedBy: "Telegram" });
     }
     store.markTaskInboxIdsApplied(unapplied.map((i) => i.id));
   }

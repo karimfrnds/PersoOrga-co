@@ -60,8 +60,13 @@ function renderSession(employee, navigate) {
     } else {
       const list = document.createElement("div");
       list.className = "task-list";
-      // Eigene zugeordnete Aufgaben zuerst, damit man sie nicht in der Liste suchen muss.
-      const sortedTasks = [...day.tasks].sort((a, b) => (a.assignedTo === employee.id ? 0 : 1) - (b.assignedTo === employee.id ? 0 : 1));
+      // Eigene zugeordnete Aufgaben zuerst, dann nach Priorität, damit Dringendes nicht untergeht.
+      const priorityOrder = { hoch: 0, normal: 1, niedrig: 2 };
+      const sortedTasks = [...day.tasks].sort((a, b) => {
+        const mine = (a.assignedTo === employee.id ? 0 : 1) - (b.assignedTo === employee.id ? 0 : 1);
+        if (mine !== 0) return mine;
+        return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+      });
       for (const task of sortedTasks) {
         const row = document.createElement("label");
         row.className = "task-row" + (task.done ? " done" : "");
@@ -76,7 +81,7 @@ function renderSession(employee, navigate) {
         const textWrap = document.createElement("div");
         textWrap.className = "task-row-text";
         const span = document.createElement("span");
-        span.textContent = task.text;
+        span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
         textWrap.appendChild(span);
         if (task.assignedTo) {
           const assignee = store.getEmployee(task.assignedTo);

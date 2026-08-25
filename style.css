@@ -359,6 +359,16 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .kiosk-greet-card { align-items: center; text-align: center; gap: 6px; }
 .kiosk-greet-emoji { font-size: 44px; line-height: 1; }
 
+.kiosk-inservice-card { width: 100%; max-width: 420px; text-align: left; }
+.kiosk-inservice-row {
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.kiosk-inservice-row:hover { border-color: var(--green); }
+
 /* ---- Session (nach dem Einstempeln) ---- */
 .session-head { display: flex; flex-direction: column; gap: 2px; }
 

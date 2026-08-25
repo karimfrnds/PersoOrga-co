@@ -1,67 +1,115 @@
 // ============================================================================
-// pages/kiosk.js – Startbildschirm des gemeinsamen Geräts: für jede aktuell
-// eingestempelte Person ein eigenes Panel mit ihren zugeordneten Aufgaben.
-// Mehrere Personen können gleichzeitig eingestempelt sein und unabhängig
-// voneinander abhaken/ausstempeln. Ausstempeln ist erst möglich, wenn die
-// eigenen Aufgaben erledigt oder weitergegeben wurden. Ein-/Ausstempeln läuft
-// über ein kleines PIN-Overlay (nur zum Einstempeln nötig – Ausstempeln
-// passiert direkt im eigenen Panel). Der Admin-Bereich ist über einen eigenen
-// Button erreichbar.
+// pages/kiosk.js – Startbildschirm des gemeinsamen Geräts.
+//
+// Leerlauf: einfaches PIN-Feld zum Einstempeln + darunter, wer gerade im
+// Dienst ist. Tippt man auf eine im Dienst stehende Person, muss deren PIN
+// noch einmal eingegeben werden – dann öffnet sich ihr eigenes Fenster
+// (Stunden/Trinkgeld-Übersicht + Aufgaben + Ausstempeln). Über "Zurück"
+// schließt sich dieses Fenster wieder, ohne auszustempeln, und man landet
+// wieder auf dem Leerlauf-Bildschirm.
+//
+// Ausstempeln ist erst möglich, wenn die eigenen zugeordneten Aufgaben
+// abgehakt/weitergegeben sind. Ist man zusätzlich die letzte im Dienst
+// verbliebene Person, müssen auch alle allgemeinen Aufgaben erledigt sein –
+// danach geht es automatisch weiter zum Kassenabschluss.
 // ============================================================================
 import { store } from "../store.js";
-import { escapeHtml, todayStr } from "../format.js";
-import { confirmDialog, alertDialog } from "../dialog.js";
+import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks } from "../taskSync.js";
+import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
 let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
+
+function mondayOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
 
 function renderKiosk(navigate) {
   const container = document.createElement("div");
   container.className = "page kiosk-page";
 
-  // Neue Telegram-Aufgaben sofort abholen und danach im Leerlauf regelmäßig weiter prüfen, Übersicht
-  // danach neu zeichnen. Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden.
+  let view = "idle"; // "idle" | "personal"
+  let personalEmployee = null;
+  let pin = "";
+  let error = "";
+  let greetEmployee = null; // erkannt am Leerlauf-Pad, wartet auf "Schicht starten?"-Bestätigung
+
+  // Neue Telegram-Aufgaben abholen, Leerlauf-Bildschirm danach neu zeichnen (falls gerade sichtbar).
+  // Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden, damit sich nichts aufsummiert.
   if (activeSyncInterval) clearInterval(activeSyncInterval);
-  const syncTick = () => maybeSyncPendingTasks().then(rerender, rerender);
+  const syncTick = () => maybeSyncPendingTasks().then(rerenderIfIdle, rerenderIfIdle);
   syncTick();
   activeSyncInterval = setInterval(syncTick, TASK_SYNC_INTERVAL_MS);
 
   function rerender() {
     container.innerHTML = "";
-    container.appendChild(buildPage());
+    container.appendChild(view === "personal" && personalEmployee ? buildPersonalWindow(personalEmployee) : buildIdle());
+  }
+  function rerenderIfIdle() {
+    if (view === "idle") rerender();
   }
 
-  function buildPage() {
+  // ---------------------------------------------------------------------
+  // Leerlauf-Bildschirm: PIN-Feld + wer im Dienst ist
+  // ---------------------------------------------------------------------
+  function buildIdle() {
+    if (greetEmployee) return buildGreet();
+
     const wrap = document.createElement("div");
+    wrap.className = "kiosk-wrap";
 
     const now = new Date();
     const hour = now.getHours();
     const greeting = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
-    const head = document.createElement("div");
-    head.innerHTML = `<p class="muted small kiosk-greeting">${greeting} ☕</p><h1>Aktuelle Schicht</h1>`;
-    wrap.appendChild(head);
+    wrap.innerHTML = `
+      <div class="kiosk-head">
+        <div class="kiosk-greeting">${greeting} ☕</div>
+        <h1>PIN eingeben zum Ein-/Ausstempeln</h1>
+      </div>
+    `;
 
-    const pinBtn = document.createElement("button");
-    pinBtn.className = "btn btn-primary btn-huge";
-    pinBtn.textContent = "🔢 PIN eingeben zum Einstempeln";
-    pinBtn.onclick = () => openPinOverlay();
-    wrap.appendChild(pinBtn);
+    wrap.appendChild(buildPinDots(pin));
 
-    const today = store.getDayByDate(todayStr());
-    const openShifts = store.getOpenShiftsToday();
-
-    if (openShifts.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.textContent = "Aktuell niemand eingestempelt.";
-      wrap.appendChild(empty);
-    } else {
-      for (const shift of openShifts) {
-        wrap.appendChild(buildPersonPanel(today, shift));
-      }
+    if (error) {
+      const errBox = document.createElement("div");
+      errBox.className = "callout callout-warn kiosk-error";
+      errBox.textContent = error;
+      wrap.appendChild(errBox);
     }
+
+    wrap.appendChild(buildPinKeypad(handleKey));
+
+    const openShifts = store.getOpenShiftsToday();
+    const shiftCard = document.createElement("section");
+    shiftCard.className = "card kiosk-inservice-card";
+    shiftCard.innerHTML = `<h2>Im Dienst</h2>`;
+    if (openShifts.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Aktuell niemand eingestempelt.";
+      shiftCard.appendChild(empty);
+    } else {
+      const list = document.createElement("div");
+      list.className = "employee-list";
+      for (const shift of openShifts) {
+        const emp = store.getEmployee(shift.employeeId);
+        if (!emp) continue;
+        const btn = document.createElement("button");
+        btn.className = "employee-row kiosk-inservice-row";
+        btn.innerHTML = `<div class="employee-main"><b>${escapeHtml(emp.name)}</b><span class="muted small">seit ${escapeHtml(shift.from)} Uhr</span></div>`;
+        btn.onclick = () => openVerifyOverlay(emp);
+        list.appendChild(btn);
+      }
+      shiftCard.appendChild(list);
+    }
+    wrap.appendChild(shiftCard);
 
     const adminBtn = document.createElement("button");
     adminBtn.className = "btn btn-link kiosk-admin-link";
@@ -72,60 +120,249 @@ function renderKiosk(navigate) {
     return wrap;
   }
 
-  // ---------------------------------------------------------------------
-  // Ein Panel pro eingestempelter Person: ihre zugeordneten Aufgaben (müssen
-  // erledigt/weitergegeben sein, bevor sie ausstempeln kann) + allgemeine
-  // Aufgaben (jeder kann abhaken, blockiert das Ausstempeln nicht).
-  // ---------------------------------------------------------------------
-  function buildPersonPanel(day, shift) {
-    const emp = store.getEmployee(shift.employeeId);
-    const card = document.createElement("section");
-    card.className = "card card-highlight";
-    card.innerHTML = `<h2>👤 ${escapeHtml(emp?.name || "?")} <span class="muted small">· seit ${escapeHtml(shift.from)} Uhr</span></h2>`;
+  function handleKey(key) {
+    error = "";
+    if (key === "⌫") {
+      pin = pin.slice(0, -1);
+      rerender();
+      return;
+    }
+    if (key === "✓") {
+      submitPin();
+      return;
+    }
+    if (pin.length < 8) pin += key;
+    rerender();
+  }
 
+  function submitPin() {
+    if (pin.length === 0) return;
+    const emp = store.findEmployeeByPin(pin);
+    if (!emp) {
+      error = "PIN nicht erkannt. Bitte noch einmal versuchen.";
+      pin = "";
+      rerender();
+      return;
+    }
+    pin = "";
+    error = "";
+    const openShift = store.getOpenShiftForEmployeeToday(emp.id);
+    if (openShift) {
+      openPersonal(emp);
+      return;
+    }
+    const today = store.getDayByDate(todayStr());
+    if (today && today.status === "abgeschlossen") {
+      error = "Der heutige Tag ist bereits abgeschlossen (Kassenabschluss erledigt). Bitte an den Admin wenden.";
+      rerender();
+      return;
+    }
+    greetEmployee = emp;
+    rerender();
+  }
+
+  function buildGreet() {
+    const wrap = document.createElement("div");
+    wrap.className = "kiosk-wrap";
+    wrap.innerHTML = `
+      <div class="kiosk-greet-card card card-highlight">
+        <div class="kiosk-greet-emoji">👋</div>
+        <h1>Hallo ${escapeHtml(greetEmployee.name)}!</h1>
+        <p class="muted">Schicht jetzt starten?</p>
+      </div>
+    `;
+    const startBtn = document.createElement("button");
+    startBtn.className = "btn btn-primary btn-huge";
+    startBtn.textContent = "▶ Schicht starten";
+    startBtn.onclick = () => {
+      const emp = greetEmployee;
+      greetEmployee = null;
+      store.clockIn(emp.id);
+      openPersonal(emp);
+    };
+    wrap.appendChild(startBtn);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-link";
+    cancelBtn.textContent = "← Abbrechen";
+    cancelBtn.onclick = () => {
+      greetEmployee = null;
+      rerender();
+    };
+    wrap.appendChild(cancelBtn);
+
+    return wrap;
+  }
+
+  function openPersonal(emp) {
+    personalEmployee = emp;
+    view = "personal";
+    rerender();
+  }
+
+  // ---------------------------------------------------------------------
+  // Kleines PIN-Overlay, um Zugriff auf das eigene Fenster einer bereits
+  // eingestempelten Person zu bestätigen (Tippen auf den Namen reicht nicht).
+  // ---------------------------------------------------------------------
+  function openVerifyOverlay(emp) {
+    let vpin = "";
+    let verr = "";
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const box = document.createElement("div");
+    box.className = "dialog pin-dialog";
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function renderBox() {
+      box.innerHTML = "";
+      box.innerHTML = `<h2>PIN von ${escapeHtml(emp.name)}</h2>`;
+      box.appendChild(buildPinDots(vpin));
+      if (verr) {
+        const err = document.createElement("div");
+        err.className = "callout callout-warn kiosk-error";
+        err.textContent = verr;
+        box.appendChild(err);
+      }
+      box.appendChild(buildPinKeypad(handleVerifyKey));
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn btn-link";
+      cancelBtn.textContent = "Abbrechen";
+      cancelBtn.onclick = () => overlay.remove();
+      box.appendChild(cancelBtn);
+    }
+
+    function handleVerifyKey(key) {
+      verr = "";
+      if (key === "⌫") {
+        vpin = vpin.slice(0, -1);
+        renderBox();
+        return;
+      }
+      if (key === "✓") {
+        if (String(vpin) === String(emp.pin)) {
+          overlay.remove();
+          openPersonal(emp);
+        } else {
+          verr = "PIN stimmt nicht überein.";
+          vpin = "";
+          renderBox();
+        }
+        return;
+      }
+      if (vpin.length < 8) vpin += key;
+      renderBox();
+    }
+
+    renderBox();
+  }
+
+  // ---------------------------------------------------------------------
+  // Eigenes Fenster einer eingestempelten Person: Übersicht + Aufgaben + Ausstempeln
+  // ---------------------------------------------------------------------
+  function buildPersonalWindow(emp) {
+    const wrap = document.createElement("div");
+    const day = store.getDayByDate(todayStr());
+    const shift = store.getOpenShiftForEmployeeToday(emp.id);
+
+    if (!day || !shift) {
+      // Kann eigentlich nicht passieren (nur erreichbar über eingestempelte Person) – Sicherheitsnetz.
+      view = "idle";
+      return buildIdle();
+    }
+
+    const head = document.createElement("div");
+    head.className = "session-head";
+    const backBtn = document.createElement("button");
+    backBtn.className = "btn btn-link";
+    backBtn.textContent = "← Zurück";
+    backBtn.onclick = () => {
+      view = "idle";
+      personalEmployee = null;
+      rerender();
+    };
+    head.appendChild(backBtn);
+    const h1 = document.createElement("h1");
+    h1.textContent = `Hallo ${emp.name}`;
+    head.appendChild(h1);
+    wrap.appendChild(head);
+
+    // ---- Persönliche Übersicht ----
+    const overviewCard = document.createElement("section");
+    overviewCard.className = "card";
+    const elapsedMin = Math.max(0, Math.round((Date.now() - new Date(shift.clockInAt).getTime()) / 60000));
+    const elapsedLabel = `${Math.floor(elapsedMin / 60)} Std ${elapsedMin % 60} Min`;
+    const settings = store.getSettings();
+    const from = mondayOf(todayStr());
+    const range = computeRange(store.getDays(), store.getEmployees(), settings, from, todayStr());
+    const myWeek = range.rows.find((r) => r.employee.id === emp.id);
+    overviewCard.innerHTML = `
+      <h2>Deine Übersicht</h2>
+      <div class="summary-line"><span>Im Dienst seit</span><span>${escapeHtml(shift.from)} Uhr (${elapsedLabel})</span></div>
+      <div class="summary-line"><span>Diese Woche · Stunden</span><span>${hours(myWeek?.hours || 0)}</span></div>
+      <div class="summary-line"><span>Diese Woche · Lohn</span><span>${euro(myWeek?.lohn || 0)}</span></div>
+      <div class="summary-line"><span>Diese Woche · Trinkgeld</span><span>${euro(myWeek?.tip || 0)}</span></div>
+    `;
+    wrap.appendChild(overviewCard);
+
+    // ---- Aufgaben ----
     const mine = day.tasks.filter((t) => t.assignedTo === emp.id);
     const general = day.tasks.filter((t) => !t.assignedTo);
 
-    if (mine.length > 0) {
-      const mineHead = document.createElement("p");
-      mineHead.className = "muted small";
-      mineHead.style.margin = "0";
-      mineHead.innerHTML = "<b>Deine Aufgaben</b>";
-      card.appendChild(mineHead);
-      card.appendChild(buildTaskList(day, mine, emp, true));
-    }
-
-    if (general.length > 0) {
-      const genHead = document.createElement("p");
-      genHead.className = "muted small";
-      genHead.style.margin = "0";
-      genHead.innerHTML = "<b>Allgemeine Aufgaben</b>";
-      card.appendChild(genHead);
-      card.appendChild(buildTaskList(day, general, emp, false));
-    }
-
+    const tasksCard = document.createElement("section");
+    tasksCard.className = "card";
+    tasksCard.innerHTML = `<h2>📋 Aufgaben heute</h2>`;
     if (mine.length === 0 && general.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
-      empty.textContent = "Keine Aufgaben.";
-      card.appendChild(empty);
+      empty.textContent = "Keine Aufgaben für heute.";
+      tasksCard.appendChild(empty);
+    } else {
+      if (mine.length > 0) {
+        const subHead = document.createElement("p");
+        subHead.className = "muted small";
+        subHead.style.margin = "0";
+        subHead.innerHTML = "<b>Deine Aufgaben</b>";
+        tasksCard.appendChild(subHead);
+        tasksCard.appendChild(buildTaskList(day, mine, emp, true));
+      }
+      if (general.length > 0) {
+        const subHead = document.createElement("p");
+        subHead.className = "muted small";
+        subHead.style.margin = "0";
+        subHead.innerHTML = "<b>Allgemeine Aufgaben</b>";
+        tasksCard.appendChild(subHead);
+        tasksCard.appendChild(buildTaskList(day, general, emp, false));
+      }
     }
+    wrap.appendChild(tasksCard);
 
+    // ---- Ausstempeln ----
     const openMine = mine.filter((t) => !t.done);
+    const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
+    const wouldBeLast = otherOpenShifts.length === 0;
+    const allDone = store.allTasksDone(day.id);
+    const blocked = openMine.length > 0 || (wouldBeLast && !allDone);
+
     const endBtn = document.createElement("button");
     endBtn.className = "btn btn-primary btn-huge";
-    endBtn.disabled = openMine.length > 0;
-    endBtn.textContent = openMine.length > 0 ? `Noch ${openMine.length} eigene Aufgabe(n) offen` : "🚪 Schicht beenden";
-    endBtn.onclick = () => clockOutFlow(day, emp, shift);
-    card.appendChild(endBtn);
-    if (openMine.length > 0) {
+    endBtn.disabled = blocked;
+    endBtn.textContent = "🚪 Schicht beenden";
+    endBtn.onclick = () => endShift(day, emp, shift, wouldBeLast);
+    wrap.appendChild(endBtn);
+
+    if (blocked) {
       const hint = document.createElement("p");
       hint.className = "muted small";
-      hint.textContent = "Erst abhaken oder weitergeben, dann kannst du dich ausstempeln.";
-      card.appendChild(hint);
+      hint.textContent =
+        openMine.length > 0
+          ? "Erst deine Aufgaben abhaken oder weitergeben, dann kannst du dich ausstempeln."
+          : "Du bist die Letzte/der Letzte im Dienst – erst müssen alle Aufgaben erledigt sein, bevor es zum Kassenabschluss geht.";
+      wrap.appendChild(hint);
     }
 
-    return card;
+    return wrap;
   }
 
   function buildTaskList(day, tasks, viewerEmp, allowHandoff) {
@@ -216,134 +453,15 @@ function renderKiosk(navigate) {
     document.body.appendChild(overlay);
   }
 
-  async function clockOutFlow(day, emp, shift) {
-    const stillOpenMine = day.tasks.filter((t) => t.assignedTo === emp.id && !t.done);
-    if (stillOpenMine.length > 0) return; // Sicherheitsnetz, Button ist eigentlich schon disabled
+  function endShift(day, emp, shift, wouldBeLast) {
     store.clockOut(day.id, shift.id);
-    rerender();
-    const stillOpen = store.getOpenShiftsToday();
-    if (stillOpen.length > 0 || day.status === "abgeschlossen") return;
-
-    // Letzte Person raus -> Tagesabschluss anbieten
-    if (!store.allTasksDone(day.id)) {
-      await alertDialog(
-        "Alle sind ausgestempelt, aber es sind noch allgemeine Aufgaben offen. Der Tag bleibt vorerst offen, bis die Aufgaben erledigt sind."
-      );
+    if (wouldBeLast && day.status !== "abgeschlossen") {
+      navigate(`day/${day.id}`);
       return;
     }
-    const wantsClose = await confirmDialog("Alle sind jetzt ausgestempelt. Jetzt den Tag abschließen (Kassenabschluss)?", {
-      title: "Tag abschließen?",
-      okLabel: "Ja, abschließen",
-      cancelLabel: "Später",
-    });
-    if (wantsClose) navigate(`day/${day.id}`);
-  }
-
-  // ---------------------------------------------------------------------
-  // PIN-Overlay: nur zum Einstempeln. Ausstempeln passiert direkt im eigenen Panel.
-  // ---------------------------------------------------------------------
-  function openPinOverlay() {
-    let pin = "";
-    let error = "";
-    let greetEmployee = null; // erkannt, wartet noch auf "Schicht starten?"-Bestätigung
-
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    const box = document.createElement("div");
-    box.className = "dialog pin-dialog";
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-
-    function renderBox() {
-      box.innerHTML = "";
-      box.appendChild(greetEmployee ? buildGreetBox() : buildPadBox());
-    }
-
-    function buildPadBox() {
-      const frag = document.createElement("div");
-      frag.innerHTML = `<h2>PIN eingeben</h2>`;
-      frag.appendChild(buildPinDots(pin));
-      if (error) {
-        const err = document.createElement("div");
-        err.className = "callout callout-warn kiosk-error";
-        err.textContent = error;
-        frag.appendChild(err);
-      }
-      frag.appendChild(buildPinKeypad(handleKey));
-      const cancelBtn = document.createElement("button");
-      cancelBtn.className = "btn btn-link";
-      cancelBtn.textContent = "Abbrechen";
-      cancelBtn.onclick = () => overlay.remove();
-      frag.appendChild(cancelBtn);
-      return frag;
-    }
-
-    function handleKey(key) {
-      error = "";
-      if (key === "⌫") {
-        pin = pin.slice(0, -1);
-        renderBox();
-        return;
-      }
-      if (key === "✓") {
-        submitPin();
-        return;
-      }
-      if (pin.length < 8) pin += key;
-      renderBox();
-    }
-
-    function submitPin() {
-      if (pin.length === 0) return;
-      const emp = store.findEmployeeByPin(pin);
-      if (!emp) {
-        error = "PIN nicht erkannt. Bitte noch einmal versuchen.";
-        pin = "";
-        renderBox();
-        return;
-      }
-      pin = "";
-      const openShift = store.getOpenShiftForEmployeeToday(emp.id);
-      if (openShift) {
-        error = `${emp.name} ist schon im Dienst – siehe eigenes Panel oben.`;
-        renderBox();
-        return;
-      }
-      const today = store.getDayByDate(todayStr());
-      if (today && today.status === "abgeschlossen") {
-        error = "Der heutige Tag ist bereits abgeschlossen (Kassenabschluss erledigt). Bitte an den Admin wenden.";
-        renderBox();
-        return;
-      }
-      greetEmployee = emp;
-      renderBox();
-    }
-
-    function buildGreetBox() {
-      const frag = document.createElement("div");
-      frag.innerHTML = `<h2>👋 Hallo ${escapeHtml(greetEmployee.name)}!</h2><p class="muted">Schicht jetzt starten?</p>`;
-      const startBtn = document.createElement("button");
-      startBtn.className = "btn btn-primary btn-huge";
-      startBtn.textContent = "▶ Schicht starten";
-      startBtn.onclick = () => {
-        store.clockIn(greetEmployee.id);
-        overlay.remove();
-        rerender();
-      };
-      frag.appendChild(startBtn);
-      const cancelBtn = document.createElement("button");
-      cancelBtn.className = "btn btn-link";
-      cancelBtn.textContent = "← Abbrechen";
-      cancelBtn.onclick = () => {
-        greetEmployee = null;
-        pin = "";
-        renderBox();
-      };
-      frag.appendChild(cancelBtn);
-      return frag;
-    }
-
-    renderBox();
+    view = "idle";
+    personalEmployee = null;
+    rerender();
   }
 
   rerender();

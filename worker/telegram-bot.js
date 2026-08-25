@@ -25,11 +25,52 @@ function base64ToUtf8(b64) {
   return decodeURIComponent(escape(atob(b64)));
 }
 
+const WEEKDAYS = ["sonntag", "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag"]; // Index = JS getUTCDay()
+
+/** Heutiges Datum in Berlin-Ortszeit als YYYY-MM-DD (Cloudflare Workers laufen sonst in UTC). */
+function todayBerlin() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+function addDaysISO(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Erkennt "heute"/"morgen"/"übermorgen" oder einen Wochentagsnamen irgendwo im Text -> Ziel-Datum (YYYY-MM-DD) oder null. */
+function extractTargetDate(text) {
+  const lower = text.toLowerCase();
+  const today = todayBerlin();
+  if (/\bheute\b/.test(lower)) return today;
+  if (/\bübermorgen\b/.test(lower)) return addDaysISO(today, 2);
+  if (/\bmorgen\b/.test(lower)) return addDaysISO(today, 1);
+  for (let i = 0; i < WEEKDAYS.length; i++) {
+    if (lower.includes(WEEKDAYS[i])) {
+      const todayDow = new Date(today + "T12:00:00Z").getUTCDay();
+      let diff = i - todayDow;
+      if (diff < 0) diff += 7; // nächstes Vorkommen dieses Wochentags (heute zählt, falls Wochentag = heute)
+      return addDaysISO(today, diff);
+    }
+  }
+  return null;
+}
+
 function parseMessage(text) {
-  // "Timm: Kasse nachzählen" oder "Timm - Kasse nachzählen" -> { assignedToName: "Timm", text: "Kasse nachzählen" }
-  const m = text.match(/^([\p{L} ]{1,30})\s*[:\-–]\s*(.+)$/su);
-  if (m) return { assignedToName: m[1].trim(), text: m[2].trim() };
-  return { assignedToName: null, text: text.trim() };
+  const trimmed = text.trim();
+  const targetDate = extractTargetDate(trimmed);
+  // "Timm: Kasse nachzählen" oder "Timm - Kasse nachzählen"
+  let m = trimmed.match(/^([\p{L} ]{1,30})\s*[:\-–]\s*(.+)$/su);
+  if (m) return { assignedToName: m[1].trim(), text: m[2].trim(), targetDate };
+  // "Arianna soll die Vitrine putzen" / "Anna soll dran denken, ..."
+  m = trimmed.match(/^([\p{Lu}][\p{L}]*(?:\s[\p{Lu}][\p{L}]*)?)\s+soll\s+(.+)$/su);
+  if (m) return { assignedToName: m[1].trim(), text: m[2].trim(), targetDate };
+  return { assignedToName: null, text: trimmed, targetDate };
+}
+
+function formatDateDe(iso) {
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
 }
 
 async function sendTelegramMessage(env, chatId, text) {
@@ -116,17 +157,21 @@ export default {
       return new Response("ok", { status: 200 });
     }
 
-    const { assignedToName, text: taskText } = parseMessage(text);
+    const { assignedToName, text: taskText, targetDate } = parseMessage(text);
     const item = {
       id: crypto.randomUUID(),
       text: taskText,
       assignedToName,
+      targetDate,
       createdAt: new Date().toISOString(),
     };
 
     try {
       await appendPendingTask(env, item);
-      await sendTelegramMessage(env, chatId, assignedToName ? `✅ Notiert für ${assignedToName}` : "✅ Notiert");
+      const today = todayBerlin();
+      const dateSuffix = targetDate && targetDate !== today ? ` (${formatDateDe(targetDate)})` : "";
+      const who = assignedToName ? ` für ${assignedToName}` : "";
+      await sendTelegramMessage(env, chatId, `✅ Notiert${who}${dateSuffix}`);
     } catch (e) {
       await sendTelegramMessage(env, chatId, `⚠ Fehler beim Speichern: ${e.message}`);
     }

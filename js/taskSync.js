@@ -47,8 +47,10 @@ async function performTaskSync() {
 
   if (unapplied.length > 0) {
     const employees = store.getEmployees(false);
-    const day = store.getOrCreateDayByDate(todayStr());
     for (const item of unapplied) {
+      // targetDate (vom Bot erkannt, z.B. "...ist am Montag") -> Aufgabe landet auf dem jeweiligen Tag,
+      // nicht zwingend heute. Ohne erkanntes Datum: heutiger Tag wie bisher.
+      const day = store.getOrCreateDayByDate(item.targetDate || todayStr());
       const match = item.assignedToName
         ? employees.find((e) => e.name.trim().toLowerCase() === String(item.assignedToName).trim().toLowerCase())
         : null;

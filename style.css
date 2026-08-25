@@ -337,8 +337,8 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  width: 100%;
-  max-width: 300px;
+  width: 300px;
+  max-width: 100%;
 }
 .pinpad-key {
   border: 1px solid var(--border);

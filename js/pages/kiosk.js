@@ -8,6 +8,7 @@ import { store } from "../store.js";
 import { escapeHtml, todayStr } from "../format.js";
 import { renderSession } from "./session.js";
 import { maybeSyncPendingTasks } from "../taskSync.js";
+import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
 let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
@@ -52,10 +53,7 @@ function renderKiosk(navigate) {
       </div>
     `;
 
-    const dots = document.createElement("div");
-    dots.className = "pin-dots";
-    renderDots(dots);
-    wrap.appendChild(dots);
+    wrap.appendChild(buildPinDots(pin));
 
     if (error) {
       const errBox = document.createElement("div");
@@ -64,7 +62,7 @@ function renderKiosk(navigate) {
       wrap.appendChild(errBox);
     }
 
-    wrap.appendChild(buildKeypad());
+    wrap.appendChild(buildPinKeypad(handleKey));
 
     const adminBtn = document.createElement("button");
     adminBtn.className = "btn btn-link kiosk-admin-link";
@@ -73,31 +71,6 @@ function renderKiosk(navigate) {
     wrap.appendChild(adminBtn);
 
     return wrap;
-  }
-
-  function renderDots(dots) {
-    dots.innerHTML = "";
-    const shown = Math.max(pin.length, 4);
-    for (let i = 0; i < shown; i++) {
-      const dot = document.createElement("span");
-      dot.className = "pin-dot" + (i < pin.length ? " filled" : "");
-      dots.appendChild(dot);
-    }
-  }
-
-  function buildKeypad() {
-    const grid = document.createElement("div");
-    grid.className = "pinpad-grid";
-    const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"];
-    for (const key of keys) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "pinpad-key" + (key === "✓" ? " pinpad-key-ok" : key === "⌫" ? " pinpad-key-del" : "");
-      btn.textContent = key;
-      btn.onclick = () => handleKey(key);
-      grid.appendChild(btn);
-    }
-    return grid;
   }
 
   function handleKey(key) {

@@ -376,6 +376,7 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .task-row-text { display: flex; flex-direction: column; gap: 2px; }
 .task-row.done .task-row-text > span:first-child { text-decoration: line-through; color: var(--gray); }
 .task-row-meta { font-size: 13px; }
+.task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }
 

@@ -83,7 +83,7 @@ function renderSession(employee, navigate) {
         const span = document.createElement("span");
         span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
         textWrap.appendChild(span);
-        if (task.assignedTo) {
+        if (task.assignedTo && task.assignedTo !== employee.id) {
           const assignee = store.getEmployee(task.assignedTo);
           if (assignee) {
             const tag = document.createElement("span");
@@ -91,6 +91,11 @@ function renderSession(employee, navigate) {
             tag.textContent = `→ für ${assignee.name}`;
             textWrap.appendChild(tag);
           }
+        } else if (task.assignedTo === employee.id && task.handoffFrom) {
+          const tag = document.createElement("span");
+          tag.className = "muted small task-row-meta";
+          tag.textContent = `↩ übergeben von ${task.handoffFrom}`;
+          textWrap.appendChild(tag);
         }
         if (task.done && task.doneBy) {
           const meta = document.createElement("span");
@@ -99,6 +104,18 @@ function renderSession(employee, navigate) {
           textWrap.appendChild(meta);
         }
         row.appendChild(textWrap);
+        if (!task.done) {
+          const handoffBtn = document.createElement("button");
+          handoffBtn.type = "button";
+          handoffBtn.className = "btn btn-secondary task-row-handoff";
+          handoffBtn.textContent = "↪ Weitergeben";
+          handoffBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openHandoffPicker(day, task);
+          };
+          row.appendChild(handoffBtn);
+        }
         list.appendChild(row);
       }
       tasksCard.appendChild(list);
@@ -154,6 +171,43 @@ function renderSession(employee, navigate) {
     }
 
     return wrap;
+  }
+
+  function openHandoffPicker(day, task) {
+    const others = store.getEmployees(false).filter((e) => e.id !== employee.id);
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const wrap = document.createElement("div");
+    wrap.className = "dialog";
+    wrap.innerHTML = `<h2>Weitergeben an?</h2><p class="muted small">„${escapeHtml(task.text)}" wird der ausgewählten Person zugeordnet.</p>`;
+    if (others.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Keine anderen aktiven Mitarbeiter vorhanden.";
+      wrap.appendChild(empty);
+    } else {
+      const list = document.createElement("div");
+      list.className = "employee-list";
+      for (const other of others) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-secondary btn-huge";
+        btn.textContent = other.name;
+        btn.onclick = () => {
+          store.handoffTask(day.id, task.id, other.id, employee.name);
+          overlay.remove();
+          rerender();
+        };
+        list.appendChild(btn);
+      }
+      wrap.appendChild(list);
+    }
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn btn-link";
+    cancelBtn.textContent = "Abbrechen";
+    cancelBtn.onclick = () => overlay.remove();
+    wrap.appendChild(cancelBtn);
+    overlay.appendChild(wrap);
+    document.body.appendChild(overlay);
   }
 
   async function endShift(day) {

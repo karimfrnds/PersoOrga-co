@@ -14,11 +14,14 @@ import { renderBeta } from "./beta.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { isUnlocked, unlockDirect, lock } from "../adminAuth.js";
 import { todayStr } from "../format.js";
+import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 
 function renderAdmin(navigate) {
   const container = document.createElement("div");
   container.className = "page admin-page";
   let activeTab = "days";
+  let lockPin = "";
+  let lockError = "";
 
   const TABS = [
     { id: "days", label: "Tage", render: () => renderAdminDays(navigate) },
@@ -74,29 +77,24 @@ function renderAdmin(navigate) {
 
   function buildLockScreen() {
     const wrap = document.createElement("div");
-    wrap.innerHTML = `
-      <h1>🔒 Admin-Bereich</h1>
-      <div class="card">
-        <p class="muted">Bitte PIN eingeben.</p>
-        <label class="field"><span>PIN</span><input type="password" inputmode="numeric" id="lock-pin" /></label>
-        <button class="btn btn-primary btn-huge" id="lock-unlock">Entsperren</button>
-        <button class="btn btn-link" id="lock-forgot">PIN vergessen?</button>
-      </div>
-    `;
-    const tryUnlock = async () => {
-      const pin = wrap.querySelector("#lock-pin").value.trim();
-      if (store.checkAdminPin(pin)) {
-        unlockDirect();
-        rerender();
-      } else {
-        await alertDialog("PIN ist falsch.");
-      }
-    };
-    wrap.querySelector("#lock-unlock").onclick = tryUnlock;
-    wrap.querySelector("#lock-pin").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") tryUnlock();
-    });
-    wrap.querySelector("#lock-forgot").onclick = async () => {
+    wrap.className = "kiosk-wrap";
+    wrap.innerHTML = `<h1>🔒 Admin-Bereich</h1><p class="muted">PIN eingeben</p>`;
+
+    wrap.appendChild(buildPinDots(lockPin));
+
+    if (lockError) {
+      const errBox = document.createElement("div");
+      errBox.className = "callout callout-warn kiosk-error";
+      errBox.textContent = lockError;
+      wrap.appendChild(errBox);
+    }
+
+    wrap.appendChild(buildPinKeypad(handleLockKey));
+
+    const forgotBtn = document.createElement("button");
+    forgotBtn.className = "btn btn-link";
+    forgotBtn.textContent = "PIN vergessen?";
+    forgotBtn.onclick = async () => {
       if (
         await confirmDialog(
           "Der PIN kann nicht wiederhergestellt werden, nur zurückgesetzt werden – ihr müsst danach direkt einen neuen festlegen. Eure Mitarbeiter- und Tagesdaten bleiben dabei unangetastet. Jetzt zurücksetzen?",
@@ -104,10 +102,42 @@ function renderAdmin(navigate) {
         )
       ) {
         store.clearAdminPin();
+        lockPin = "";
+        lockError = "";
         rerender();
       }
     };
+    wrap.appendChild(forgotBtn);
     return wrap;
+  }
+
+  function handleLockKey(key) {
+    lockError = "";
+    if (key === "⌫") {
+      lockPin = lockPin.slice(0, -1);
+      rerender();
+      return;
+    }
+    if (key === "✓") {
+      tryUnlock();
+      return;
+    }
+    if (lockPin.length < 8) lockPin += key;
+    rerender();
+  }
+
+  function tryUnlock() {
+    if (lockPin.length === 0) return;
+    if (store.checkAdminPin(lockPin)) {
+      unlockDirect();
+      lockPin = "";
+      lockError = "";
+      rerender();
+    } else {
+      lockError = "PIN ist falsch.";
+      lockPin = "";
+      rerender();
+    }
   }
 
   function buildAdminHome() {

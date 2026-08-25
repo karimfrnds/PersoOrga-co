@@ -96,7 +96,7 @@ function renderDay(dayId, navigate) {
           if (assignee) {
             const tag = document.createElement("span");
             tag.className = "muted small task-row-meta";
-            tag.textContent = `→ für ${assignee.name}`;
+            tag.textContent = `→ für ${assignee.name}${task.handoffFrom ? ` (übergeben von ${task.handoffFrom})` : ""}`;
             textWrap.appendChild(tag);
           }
         }

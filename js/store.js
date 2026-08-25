@@ -412,6 +412,18 @@ export const store = {
     persist();
     return t;
   },
+  /** Mitarbeiter gibt eine Aufgabe an eine andere Person weiter (z.B. schafft er sie nicht mehr in der Schicht). */
+  handoffTask(dayId, taskId, toEmployeeId, fromEmployeeName) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const t = d.tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    t.assignedTo = toEmployeeId;
+    t.handoffFrom = fromEmployeeName;
+    t.handoffAt = new Date().toISOString();
+    persist();
+    return t;
+  },
   /** Aufgabe auf einen anderen Tag verschieben (z.B. beim Bearbeiten das Datum ändern). */
   moveTaskToDay(fromDayId, taskId, toDateStr) {
     const from = this.getDay(fromDayId);

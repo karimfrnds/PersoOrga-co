@@ -33,12 +33,15 @@ function defaultData() {
         lastBackupDate: null, // YYYY-MM-DD des letzten erfolgreichen automatischen Backups
         lastError: null, // Fehlermeldung des letzten fehlgeschlagenen Versuchs, für Warnhinweis im Admin
       },
-      // Telegram-Aufgaben-Inbox: nutzt dieselbe GitHub-Verbindung (owner/repo/token) wie githubBackup oben.
+      // Telegram-Aufgaben-Inbox: Abgleich mit dem Cloudflare Worker (worker/telegram-bot.js), der die
+      // Aufgaben in einem KV-Speicher hält – so kennt der Bot den Stand auch, wenn das iPad gerade aus ist.
       taskInbox: {
         enabled: false,
-        lastSyncAt: null, // ISO-Timestamp des letzten erfolgreichen Abrufs
+        workerUrl: "", // z.B. https://cafe-telegram-bot.deinname.workers.dev
+        workerSecret: "", // derselbe Wert wie WEBHOOK_SECRET im Worker
+        lastSyncAt: null, // ISO-Timestamp des letzten erfolgreichen Abgleichs
         lastError: null,
-        appliedIds: [], // zuletzt übernommene Nachrichten-IDs, verhindert doppeltes Anlegen (gedeckelt auf 200)
+        knownRemoteIds: [], // Aufgaben-IDs, die beim letzten Abgleich im Cloud-Speicher lagen (gedeckelt)
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -382,11 +385,13 @@ export const store = {
     t.doneAt = t.done ? new Date().toISOString() : null;
     persist();
   },
-  /** Zentrale Aufgaben-Erstellung – alle anderen addXDayTask-Methoden sind dünne Wrapper darum. */
-  addTask(dayId, { text, assignedTo = null, priority = "normal", source = "adhoc", addedBy = null }) {
+  /** Zentrale Aufgaben-Erstellung – alle anderen addXDayTask-Methoden sind dünne Wrapper darum.
+   * Optionales `id` (z.B. vom Cloud-Abgleich vorgegeben), damit beide Seiten dieselbe ID für dieselbe
+   * Aufgabe verwenden. */
+  addTask(dayId, { id, text, assignedTo = null, priority = "normal", source = "adhoc", addedBy = null }) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const t = { id: uid(), text, done: false, doneBy: null, doneAt: null, source, addedBy, assignedTo, priority };
+    const t = { id: id || uid(), text, done: false, doneBy: null, doneAt: null, source, addedBy, assignedTo, priority };
     d.tasks.push(t);
     persist();
     return t;
@@ -394,9 +399,9 @@ export const store = {
   addAdhocDayTask(dayId, text, employeeName) {
     return this.addTask(dayId, { text, addedBy: employeeName || null, source: "adhoc" });
   },
-  /** Aufgabe aus der Telegram-Inbox (taskSync.js) – optional einem Mitarbeiter/einer Priorität zugeordnet. */
-  addRemoteDayTask(dayId, { text, assignedTo = null, priority = "normal", addedBy = "Telegram" }) {
-    return this.addTask(dayId, { text, assignedTo, priority, addedBy, source: "remote" });
+  /** Aufgabe aus dem Cloud-Abgleich (taskSync.js) – optional einem Mitarbeiter/einer Priorität zugeordnet. */
+  addRemoteDayTask(dayId, { id, text, assignedTo = null, priority = "normal", addedBy = "Telegram" }) {
+    return this.addTask(dayId, { id, text, assignedTo, priority, addedBy, source: "remote" });
   },
   /** Vom Admin manuell angelegte Aufgabe (Admin → Aufgaben). */
   addAdminTask(dayId, { text, assignedTo = null, priority = "normal" }) {
@@ -455,22 +460,13 @@ export const store = {
     return rows;
   },
 
-  // ---- Telegram-Aufgaben-Inbox (nutzt githubBackup-Zugangsdaten) ----
+  // ---- Telegram-Aufgaben-Inbox (Abgleich mit dem Cloudflare-Worker/KV-Speicher) ----
   getTaskInboxConfig() {
     return data.settings.taskInbox;
   },
   updateTaskInboxConfig(patch) {
     Object.assign(data.settings.taskInbox, patch);
     persist();
-  },
-  /** Merkt sich verarbeitete Nachrichten-IDs (gedeckelt), damit nichts doppelt übernommen wird. */
-  markTaskInboxIdsApplied(ids) {
-    const cfg = data.settings.taskInbox;
-    cfg.appliedIds = [...cfg.appliedIds, ...ids].slice(-200);
-    persist();
-  },
-  isTaskInboxIdApplied(id) {
-    return data.settings.taskInbox.appliedIds.includes(id);
   },
 
   // ---- Backup ----

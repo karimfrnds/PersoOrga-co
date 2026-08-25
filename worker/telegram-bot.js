@@ -1,43 +1,59 @@
 // ============================================================================
-// worker/telegram-bot.js – Cloudflare Worker: nimmt Telegram-Nachrichten des
-// Admins entgegen. Liest zuerst den aktuellen Stand (data/state-snapshot.json,
-// von der App geschrieben) und lässt Claude daraus bestimmen, ob Aufgaben
-// angelegt, gelöscht oder aufgelistet werden sollen:
-//   - "add"    -> ein oder mehrere neue Aufgaben in data/pending-tasks.json ablegen
-//   - "delete" -> Lösch-Befehle (dayId/taskId aus dem Snapshot) in derselben Datei ablegen
-//   - "list"   -> Antwort wird direkt aus dem Snapshot gebaut (keine KI-Erfindung)
-// Die App (js/taskSync.js) holt pending-tasks.json ab und schreibt den Snapshot.
+// worker/telegram-bot.js – Cloudflare Worker mit zwei Aufgaben:
 //
-// Wird NICHT automatisch deployed – dieses Skript in einen Cloudflare Worker
-// einfügen. Genaue Schritte: worker/README.md.
+//  1) Telegram-Webhook (POST /): nimmt Nachrichten des Admins entgegen, lässt
+//     Claude bestimmen ob Aufgaben angelegt/gelöscht werden sollen oder die
+//     aktuelle Liste gewünscht ist – arbeitet direkt auf dem KV-Speicher, der
+//     IMMER aktuell ist, unabhängig davon ob das iPad gerade an ist.
+//  2) /state-Endpunkt (GET+POST): die App (js/taskSync.js) liest/schreibt hier
+//     den aktuellen Aufgabenstand, um ihn mit dem iPad abzugleichen.
 //
-// Erwartete Secrets/Variablen im Worker (Cloudflare Dashboard → Settings → Variables):
+// Braucht eine an den Worker gebundene KV-Namespace mit dem Namen TASKS_KV
+// (Cloudflare Dashboard → Worker → Settings → Bindings → KV-Namespace-Binding
+// hinzufügen). Wird NICHT automatisch deployed – dieses Skript in einen
+// Cloudflare Worker einfügen. Genaue Schritte: worker/README.md.
+//
+// Erwartete Secrets im Worker (Settings → Variables and Secrets):
 //   TELEGRAM_BOT_TOKEN  – Token von @BotFather
-//   WEBHOOK_SECRET      – frei erfundener String, beim Setzen des Telegram-Webhooks mitgeben
-//   GITHUB_TOKEN        – Fine-grained PAT, "Contents: Read and write" nur für dieses Repo
-//   GITHUB_OWNER        – GitHub-Nutzername
-//   GITHUB_REPO         – Repository-Name
+//   WEBHOOK_SECRET      – frei erfundener String; doppelt genutzt: zur Prüfung des
+//                          Telegram-Webhooks UND als Zugriffsschlüssel, den die App
+//                          beim /state-Abgleich als "Authorization: Bearer ..." mitschickt
 //   OWNER_CHAT_ID       – Telegram-Chat-ID des Admins (anfangs leer lassen, siehe README)
 //   ANTHROPIC_API_KEY   – API-Key von console.anthropic.com, fürs Verstehen der Nachrichten
 // ============================================================================
 
-const PENDING_PATH = "data/pending-tasks.json";
-const SNAPSHOT_PATH = "data/state-snapshot.json";
-const MAX_PENDING_ITEMS = 50; // Sicherheitsnetz, falls die App mal länger nicht abruft
 const PRIORITIES = ["niedrig", "normal", "hoch"];
+const STATE_KEY = "state";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
-function utf8ToBase64(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-function base64ToUtf8(b64) {
-  return decodeURIComponent(escape(atob(b64)));
-}
 function todayBerlin() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 function formatDateDe(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
+}
+
+async function getState(env) {
+  const raw = await env.TASKS_KV.get(STATE_KEY);
+  if (!raw) return { updatedAt: null, employees: [], tasks: [] };
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      updatedAt: parsed.updatedAt || null,
+      employees: Array.isArray(parsed.employees) ? parsed.employees : [],
+      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+    };
+  } catch {
+    return { updatedAt: null, employees: [], tasks: [] };
+  }
+}
+async function putState(env, employees, tasks) {
+  await env.TASKS_KV.put(STATE_KEY, JSON.stringify({ updatedAt: new Date().toISOString(), employees, tasks }));
 }
 
 async function sendTelegramMessage(env, chatId, text) {
@@ -48,69 +64,12 @@ async function sendTelegramMessage(env, chatId, text) {
   }).catch(() => {});
 }
 
-function githubHeaders(env) {
-  return {
-    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-    Accept: "application/vnd.github+json",
-    "User-Agent": "PersoApp-Telegram-Worker",
-  };
-}
-function contentsUrl(env, path) {
-  return `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${path}`;
-}
-
-/** Liest den von der App geschriebenen Stand (Aufgaben ab heute + aktive Mitarbeiter). */
-async function readSnapshot(env) {
-  const res = await fetch(contentsUrl(env, SNAPSHOT_PATH), { headers: githubHeaders(env) });
-  if (res.status !== 200) return { updatedAt: null, employees: [], tasks: [] };
-  const body = await res.json();
-  try {
-    return JSON.parse(base64ToUtf8(body.content));
-  } catch {
-    return { updatedAt: null, employees: [], tasks: [] };
-  }
-}
-
-async function appendPendingItems(env, newItems) {
-  const url = contentsUrl(env, PENDING_PATH);
-  const headers = githubHeaders(env);
-  const getRes = await fetch(url, { headers });
-  let items = [];
-  let sha;
-  if (getRes.status === 200) {
-    const body = await getRes.json();
-    sha = body.sha;
-    try {
-      const parsed = JSON.parse(base64ToUtf8(body.content));
-      if (Array.isArray(parsed.items)) items = parsed.items;
-    } catch {
-      items = [];
-    }
-  } else if (getRes.status !== 404) {
-    throw new Error(`GitHub GET ${getRes.status}`);
-  }
-
-  items.push(...newItems);
-  if (items.length > MAX_PENDING_ITEMS) items = items.slice(items.length - MAX_PENDING_ITEMS);
-
-  const putRes = await fetch(url, {
-    method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: `${newItems.length} Befehl(e) per Telegram`,
-      content: utf8ToBase64(JSON.stringify({ items })),
-      ...(sha ? { sha } : {}),
-    }),
-  });
-  if (!putRes.ok) throw new Error(`GitHub PUT ${putRes.status}`);
-}
-
 // ---------------------------------------------------------------------
 // Claude entscheiden lassen, was die Nachricht will: Aufgaben anlegen,
 // löschen, oder die aktuelle Liste zeigen. Bekommt dafür den echten
-// aktuellen Stand (Snapshot) als Kontext, damit Löschen/Liste stimmen.
+// aktuellen Stand (aus dem KV-Speicher) als Kontext.
 // ---------------------------------------------------------------------
-async function interpretMessage(env, text, today, snapshot) {
+async function interpretMessage(env, text, today, state) {
   const tool = {
     name: "handle_message",
     description: "Interpretiert eine Nachricht des Café-Betreibers ans Team-Aufgaben-System.",
@@ -132,34 +91,28 @@ async function interpretMessage(env, text, today, snapshot) {
             required: ["text", "priority"],
           },
         },
-        tasks_to_delete: {
+        task_ids_to_delete: {
           type: "array",
-          description: "Nur bei action=delete. Exakt aus der unten gelisteten aktuellen Aufgaben-Liste übernehmen (dayId/taskId).",
-          items: {
-            type: "object",
-            properties: { dayId: { type: "string" }, taskId: { type: "string" } },
-            required: ["dayId", "taskId"],
-          },
+          description: "Nur bei action=delete. IDs exakt aus der unten gelisteten aktuellen Aufgaben-Liste übernehmen.",
+          items: { type: "string" },
         },
       },
       required: ["action"],
     },
   };
 
-  const taskLines = snapshot.tasks.length
-    ? snapshot.tasks
-        .map((t) => `- [${t.dayId}/${t.taskId}] ${t.date} · ${t.assignedToName || "Allgemein"} · ${t.done ? "erledigt" : "offen"}: ${t.text}`)
-        .join("\n")
+  const taskLines = state.tasks.length
+    ? state.tasks.map((t) => `- [${t.id}] ${t.date} · ${t.assignedToName || "Allgemein"} · ${t.done ? "erledigt" : "offen"}: ${t.text}`).join("\n")
     : "(aktuell keine)";
 
-  const system = `Heute ist ${today} (Europe/Berlin). Bekannte aktive Mitarbeiter: ${snapshot.employees.join(", ") || "(keine hinterlegt)"}.
+  const system = `Heute ist ${today} (Europe/Berlin). Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)"}.
 
 Aktuelle Aufgaben (ab heute), zum Nachschlagen für "delete" und "list":
 ${taskLines}
 
 Bestimme die Absicht der Nachricht:
 - "add": eine oder mehrere NEUE Aufgaben anlegen. Enthält die Nachricht mehrere Aufgaben oder mehrere Personen (getrennt durch "und", Komma, Zeilenumbruch, Aufzählung, mehrere Sätze), IMMER als mehrere einzelne Einträge in tasks_to_add auflisten – NIEMALS den ganzen Nachrichtentext als einen Eintrag kopieren oder mehrere Themen zusammenfassen. assignedToName nur setzen, wenn ein Name aus der Mitarbeiterliste eindeutig zuzuordnen ist. Wochentage/relative Angaben ("morgen", "Montag", ...) in ein absolutes Datum auflösen (nächstes Vorkommen ab heute).
-- "delete": eine oder mehrere der oben gelisteten Aufgaben sollen entfernt werden (Nutzer beschreibt sie in eigenen Worten, ggf. mit Person). Nur eindeutige, klar erkennbare Treffer übernehmen.
+- "delete": eine oder mehrere der oben gelisteten Aufgaben sollen entfernt werden (Nutzer beschreibt sie in eigenen Worten, ggf. mit Person). Nur eindeutige, klar erkennbare Treffer übernehmen (deren [id] aus der Liste oben in task_ids_to_delete).
 - "list": der Nutzer will die aktuelle Liste/Übersicht sehen (z.B. "was steht an", "liste mir alles auf", "was ist offen").
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.`;
 
@@ -189,12 +142,10 @@ Bestimme die Absicht der Nachricht:
   return toolUse.input;
 }
 
-function buildListReply(snapshot, today) {
-  if (snapshot.tasks.length === 0) return "📋 Aktuell keine Aufgaben hinterlegt.";
+function buildListReply(state, today) {
+  if (state.tasks.length === 0) return "📋 Aktuell keine Aufgaben hinterlegt.";
   const byDate = {};
-  for (const t of snapshot.tasks) {
-    (byDate[t.date] ||= []).push(t);
-  }
+  for (const t of state.tasks) (byDate[t.date] ||= []).push(t);
   const dates = Object.keys(byDate).sort();
   const lines = ["📋 Aktuelle Aufgaben:"];
   for (const date of dates) {
@@ -205,8 +156,8 @@ function buildListReply(snapshot, today) {
       lines.push(`${t.done ? "✅" : "⬜"} ${who}: ${t.text}${prio}`);
     }
   }
-  if (snapshot.updatedAt) {
-    const t = new Date(snapshot.updatedAt);
+  if (state.updatedAt) {
+    const t = new Date(state.updatedAt);
     lines.push(`\n(Stand: ${t.toLocaleDateString("de-DE")} ${t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr)`);
   }
   return lines.join("\n");
@@ -215,7 +166,7 @@ function buildListReply(snapshot, today) {
 function buildAddReply(items, today) {
   const lines = items.map((item, i) => {
     const who = item.assignedToName || "Alle";
-    const dateSuffix = item.targetDate && item.targetDate !== today ? ` · ${formatDateDe(item.targetDate)}` : "";
+    const dateSuffix = item.date && item.date !== today ? ` · ${formatDateDe(item.date)}` : "";
     const prioSuffix = item.priority === "hoch" ? " · 🔴 hoch" : item.priority === "niedrig" ? " · 🔵 niedrig" : "";
     return `${i + 1}. ${who} – ${item.text}${dateSuffix}${prioSuffix}`;
   });
@@ -223,96 +174,127 @@ function buildAddReply(items, today) {
   return [heading, ...lines].join("\n");
 }
 
-function buildDeleteReply(matched, snapshot) {
-  const lines = matched.map((m) => {
-    const found = snapshot.tasks.find((t) => t.dayId === m.dayId && t.taskId === m.taskId);
-    return found ? `- ${found.assignedToName || "Allgemein"}: ${found.text}` : "- (unbekannte Aufgabe)";
-  });
+function buildDeleteReply(removed) {
+  if (removed.length === 0) return `Habe dazu keine passende Aufgabe in der aktuellen Liste gefunden. Schick mir „liste" für die Übersicht.`;
+  const lines = removed.map((t) => `- ${t.assignedToName || "Allgemein"}: ${t.text}`);
   return ["🗑 Entfernt:", ...lines].join("\n");
+}
+
+async function handleTelegram(request, env) {
+  const secretHeader = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
+  if (!env.WEBHOOK_SECRET || secretHeader !== env.WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403 });
+  }
+
+  let update;
+  try {
+    update = await request.json();
+  } catch {
+    return new Response("bad request", { status: 400 });
+  }
+
+  const message = update.message;
+  const text = message?.text;
+  const chatId = message?.chat?.id;
+  if (!text || chatId === undefined) return new Response("ok", { status: 200 });
+
+  if (!env.OWNER_CHAT_ID) {
+    await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen.`);
+    return new Response("ok", { status: 200 });
+  }
+  if (String(chatId) !== String(env.OWNER_CHAT_ID)) {
+    return new Response("ok", { status: 200 });
+  }
+
+  const today = todayBerlin();
+
+  try {
+    const state = await getState(env);
+
+    if (!env.ANTHROPIC_API_KEY) {
+      await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten gerade nicht verstehen.");
+      return new Response("ok", { status: 200 });
+    }
+
+    const result = await interpretMessage(env, text, today, state);
+
+    if (result.action === "list") {
+      await sendTelegramMessage(env, chatId, buildListReply(state, today));
+    } else if (result.action === "delete") {
+      const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
+      const removed = state.tasks.filter((t) => ids.includes(t.id));
+      if (removed.length > 0) {
+        const remaining = state.tasks.filter((t) => !ids.includes(t.id));
+        await putState(env, state.employees, remaining);
+      }
+      await sendTelegramMessage(env, chatId, buildDeleteReply(removed));
+    } else if (result.action === "add") {
+      const newTasks = (Array.isArray(result.tasks_to_add) ? result.tasks_to_add : [])
+        .map((t) => ({
+          id: crypto.randomUUID(),
+          date: /^\d{4}-\d{2}-\d{2}$/.test(t.targetDate) ? t.targetDate : today,
+          text: String(t.text || "").trim(),
+          assignedToName: t.assignedToName ? String(t.assignedToName).trim() : null,
+          priority: PRIORITIES.includes(t.priority) ? t.priority : "normal",
+          done: false,
+        }))
+        .filter((t) => t.text);
+      if (newTasks.length === 0) {
+        await sendTelegramMessage(env, chatId, "Konnte daraus keine Aufgabe erkennen. Magst du es anders formulieren?");
+      } else {
+        await putState(env, state.employees, [...state.tasks, ...newTasks]);
+        await sendTelegramMessage(env, chatId, buildAddReply(newTasks, today));
+      }
+    } else {
+      await sendTelegramMessage(
+        env,
+        chatId,
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste" für die aktuelle Übersicht\n„lösch die Aufgabe Kasse zählen bei Anna"`
+      );
+    }
+  } catch (e) {
+    await sendTelegramMessage(env, chatId, `⚠ Fehler: ${e.message}`);
+  }
+
+  return new Response("ok", { status: 200 });
+}
+
+async function handleState(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403, headers: CORS_HEADERS });
+  }
+
+  if (request.method === "GET") {
+    const state = await getState(env);
+    return new Response(JSON.stringify(state), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+  }
+  if (request.method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+    }
+    const employees = Array.isArray(body.employees) ? body.employees : [];
+    const tasks = Array.isArray(body.tasks) ? body.tasks : [];
+    await putState(env, employees, tasks);
+    return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+  }
+  return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
 }
 
 export default {
   async fetch(request, env) {
-    if (request.method !== "POST") return new Response("ok", { status: 200 });
+    const url = new URL(request.url);
 
-    const secretHeader = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
-    if (!env.WEBHOOK_SECRET || secretHeader !== env.WEBHOOK_SECRET) {
-      return new Response("forbidden", { status: 403 });
+    if (url.pathname === "/state") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleState(request, env);
     }
 
-    let update;
-    try {
-      update = await request.json();
-    } catch {
-      return new Response("bad request", { status: 400 });
-    }
-
-    const message = update.message;
-    const text = message?.text;
-    const chatId = message?.chat?.id;
-    if (!text || chatId === undefined) return new Response("ok", { status: 200 });
-
-    if (!env.OWNER_CHAT_ID) {
-      await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen.`);
-      return new Response("ok", { status: 200 });
-    }
-    if (String(chatId) !== String(env.OWNER_CHAT_ID)) {
-      return new Response("ok", { status: 200 });
-    }
-
-    const today = todayBerlin();
-
-    try {
-      const snapshot = await readSnapshot(env);
-
-      if (!env.ANTHROPIC_API_KEY) {
-        await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten gerade nicht verstehen.");
-        return new Response("ok", { status: 200 });
-      }
-
-      const result = await interpretMessage(env, text, today, snapshot);
-
-      if (result.action === "list") {
-        await sendTelegramMessage(env, chatId, buildListReply(snapshot, today));
-      } else if (result.action === "delete") {
-        const candidates = Array.isArray(result.tasks_to_delete) ? result.tasks_to_delete : [];
-        const matched = candidates.filter((c) => snapshot.tasks.some((t) => t.dayId === c.dayId && t.taskId === c.taskId));
-        if (matched.length === 0) {
-          await sendTelegramMessage(env, chatId, `Habe dazu keine passende Aufgabe in der aktuellen Liste gefunden. Schick mir „liste" für die Übersicht.`);
-        } else {
-          await appendPendingItems(
-            env,
-            matched.map((m) => ({ id: crypto.randomUUID(), action: "delete", dayId: m.dayId, taskId: m.taskId, createdAt: new Date().toISOString() }))
-          );
-          await sendTelegramMessage(env, chatId, buildDeleteReply(matched, snapshot));
-        }
-      } else if (result.action === "add") {
-        const tasks = (Array.isArray(result.tasks_to_add) ? result.tasks_to_add : [])
-          .map((t) => ({
-            text: String(t.text || "").trim(),
-            assignedToName: t.assignedToName ? String(t.assignedToName).trim() : null,
-            targetDate: /^\d{4}-\d{2}-\d{2}$/.test(t.targetDate) ? t.targetDate : null,
-            priority: PRIORITIES.includes(t.priority) ? t.priority : "normal",
-          }))
-          .filter((t) => t.text);
-        if (tasks.length === 0) {
-          await sendTelegramMessage(env, chatId, "Konnte daraus keine Aufgabe erkennen. Magst du es anders formulieren?");
-        } else {
-          const items = tasks.map((t) => ({ id: crypto.randomUUID(), action: "add", ...t, createdAt: new Date().toISOString() }));
-          await appendPendingItems(env, items);
-          await sendTelegramMessage(env, chatId, buildAddReply(items, today));
-        }
-      } else {
-        await sendTelegramMessage(
-          env,
-          chatId,
-          `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste" für die aktuelle Übersicht\n„lösch die Aufgabe Kasse zählen bei Anna"`
-        );
-      }
-    } catch (e) {
-      await sendTelegramMessage(env, chatId, `⚠ Fehler: ${e.message}`);
-    }
-
+    if (request.method === "POST") return handleTelegram(request, env);
     return new Response("ok", { status: 200 });
   },
 };

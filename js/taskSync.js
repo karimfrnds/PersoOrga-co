@@ -1,142 +1,98 @@
 // ============================================================================
-// taskSync.js – Zwei-Wege-Abgleich mit dem Telegram-Bot (siehe worker/telegram-bot.js),
-// über kleine JSON-Dateien im GitHub-Repo (dieselbe Verbindung wie backup.js):
-//
-//  data/pending-tasks.json  – vom Bot geschrieben, hier gelesen+geleert: neue Aufgaben
-//                              (action "add", Standard) oder Lösch-Befehle (action "delete").
-//  data/state-snapshot.json – hier geschrieben, vom Bot gelesen: aktuelle Aufgaben + bekannte
-//                              Mitarbeiter, damit der Bot z.B. "liste mir alles auf" oder
-//                              "lösch die Aufgabe X bei Anna" beantworten kann.
-//
-// Läuft rein im Browser über die GitHub-API, kein eigener Server nötig.
+// taskSync.js – Gleicht Aufgaben mit dem Cloudflare Worker (worker/telegram-bot.js)
+// ab, der sie in einem KV-Speicher hält. Der Worker ist immer erreichbar (nicht
+// vom iPad abhängig) – so kann der Telegram-Bot jederzeit die aktuelle Liste
+// zeigen/ändern, auch wenn das iPad gerade aus ist. Das iPad übernimmt bei jedem
+// Sync neue/entfernte Cloud-Aufgaben und lädt danach seinen eigenen (jetzt
+// abgeglichenen) Stand wieder hoch – so bleiben beide Seiten in Sync.
 // ============================================================================
 import { store } from "./store.js";
 import { todayStr } from "./format.js";
 
-const PENDING_PATH = "data/pending-tasks.json";
-const SNAPSHOT_PATH = "data/state-snapshot.json";
-
-function utf8ToBase64(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-function base64ToUtf8(b64) {
-  return decodeURIComponent(escape(atob(b64)));
+function workerUrl(cfg, path) {
+  return `${cfg.workerUrl.replace(/\/+$/, "")}${path}`;
 }
 
-function githubHeaders(cfg) {
-  return { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json" };
-}
-function contentsUrl(cfg, path) {
-  return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${path}`;
-}
-
-/** Aktuelle Aufgaben (ab heute) + aktive Mitarbeiter nach GitHub schreiben, damit der Bot sie kennt. */
-async function publishStateSnapshot(cfg) {
-  const url = contentsUrl(cfg, SNAPSHOT_PATH);
-  const headers = githubHeaders(cfg);
-  const getRes = await fetch(url, { headers });
-  const sha = getRes.status === 200 ? (await getRes.json()).sha : undefined;
-
-  const tasks = store.getTasksFrom(todayStr()).map((t) => ({
-    dayId: t.dayId,
-    taskId: t.id,
-    date: t.date,
-    text: t.text,
-    assignedToName: t.assignedTo ? store.getEmployee(t.assignedTo)?.name || null : null,
-    priority: t.priority,
-    done: t.done,
-  }));
-  const employees = store.getEmployees(false).map((e) => e.name);
-
-  await fetch(url, {
-    method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: "Status aktualisiert",
-      content: utf8ToBase64(JSON.stringify({ updatedAt: new Date().toISOString(), employees, tasks })),
-      ...(sha ? { sha } : {}),
-    }),
+async function fetchRemoteState(cfg) {
+  const res = await fetch(workerUrl(cfg, "/state"), {
+    headers: { Authorization: `Bearer ${cfg.workerSecret}` },
   });
+  if (!res.ok) throw new Error(`Worker antwortete mit ${res.status} (URL/Zugriffsschlüssel prüfen)`);
+  return res.json();
 }
 
-/** Führt den Abruf jetzt durch (z.B. für den "Jetzt abrufen"-Button). Wirft bei echten Fehlern. */
+async function pushLocalState(cfg, employees, tasks) {
+  const res = await fetch(workerUrl(cfg, "/state"), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ employees, tasks }),
+  });
+  if (!res.ok) throw new Error(`Worker antwortete mit ${res.status} beim Hochladen`);
+}
+
+/** Führt den Abgleich jetzt durch (z.B. für den "Jetzt abrufen"-Button). Wirft bei echten Fehlern. */
 async function performTaskSync() {
-  const cfg = store.getGithubBackupConfig();
-  if (!cfg.owner || !cfg.repo || !cfg.token) {
-    throw new Error("Bitte zuerst GitHub-Nutzername, Repository und Token beim Backup weiter oben eintragen.");
+  const cfg = store.getTaskInboxConfig();
+  if (!cfg.workerUrl || !cfg.workerSecret) {
+    throw new Error("Bitte zuerst Worker-URL und Zugriffsschlüssel eintragen.");
   }
-  const url = contentsUrl(cfg, PENDING_PATH);
-  const headers = githubHeaders(cfg);
 
-  const res = await fetch(url, { headers });
+  const remote = await fetchRemoteState(cfg);
+  const remoteTasks = Array.isArray(remote.tasks) ? remote.tasks : [];
+  const remoteIds = new Set(remoteTasks.map((t) => t.id));
+  const knownIds = new Set(cfg.knownRemoteIds || []);
+
+  const localRows = store.getTasksFrom(todayStr());
+  const localIds = new Set(localRows.map((r) => r.id));
+  const employees = store.getEmployees(false);
+
   let applied = 0;
-  if (res.status === 200) {
-    const body = await res.json();
-    let parsed;
-    try {
-      parsed = JSON.parse(base64ToUtf8(body.content));
-    } catch {
-      throw new Error("pending-tasks.json ist kein gültiges JSON.");
-    }
-    const items = Array.isArray(parsed.items) ? parsed.items : [];
-    const unapplied = items.filter((i) => i.id && !store.isTaskInboxIdApplied(i.id));
 
-    if (unapplied.length > 0) {
-      const employees = store.getEmployees(false);
-      for (const item of unapplied) {
-        if (item.action === "delete") {
-          if (item.dayId && item.taskId) store.removeDayTask(item.dayId, item.taskId);
-          continue;
-        }
-        // action "add" (Standard): targetDate (vom Bot erkannt, z.B. "...ist am Montag") -> Aufgabe
-        // landet auf dem jeweiligen Tag, nicht zwingend heute. Ohne erkanntes Datum: heutiger Tag.
-        const day = store.getOrCreateDayByDate(item.targetDate || todayStr());
-        const match = item.assignedToName
-          ? employees.find((e) => e.name.trim().toLowerCase() === String(item.assignedToName).trim().toLowerCase())
-          : null;
-        const priority = ["niedrig", "normal", "hoch"].includes(item.priority) ? item.priority : "normal";
-        store.addRemoteDayTask(day.id, { text: item.text, assignedTo: match ? match.id : null, priority, addedBy: "Telegram" });
-      }
-      store.markTaskInboxIdsApplied(unapplied.map((i) => i.id));
-      applied = unapplied.length;
-    }
-
-    // Verarbeitete Datei leeren, damit sie nicht unbegrenzt wächst. Schlägt das fehl (z.B. zwischenzeitlich
-    // neue Nachricht angehängt -> sha stimmt nicht mehr), ist das kein Drama: appliedIds verhindert
-    // Duplikate, der nächste Abruf holt neue Einträge und versucht das Leeren erneut.
-    if (items.length > 0) {
-      try {
-        await fetch(url, {
-          method: "PUT",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: "Aufgaben übernommen",
-            content: utf8ToBase64(JSON.stringify({ items: [] })),
-            sha: body.sha,
-          }),
-        });
-      } catch {
-        // ignorieren, siehe Kommentar oben
-      }
-    }
-  } else if (res.status !== 404) {
-    const errBody = await res.text().catch(() => "");
-    throw new Error(`GitHub antwortete mit ${res.status}${errBody ? ": " + errBody.slice(0, 200) : ""}`);
+  // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
+  for (const rt of remoteTasks) {
+    if (localIds.has(rt.id)) continue;
+    const day = store.getOrCreateDayByDate(rt.date || todayStr());
+    const match = rt.assignedToName
+      ? employees.find((e) => e.name.trim().toLowerCase() === String(rt.assignedToName).trim().toLowerCase())
+      : null;
+    store.addRemoteDayTask(day.id, {
+      id: rt.id,
+      text: rt.text,
+      assignedTo: match ? match.id : null,
+      priority: ["niedrig", "normal", "hoch"].includes(rt.priority) ? rt.priority : "normal",
+    });
+    applied++;
   }
 
-  // Aktuellen Stand hochladen, damit der Bot bei der nächsten Nachricht weiß, was es schon gibt.
-  // Schlägt nur das fehl, soll der eigentliche Abruf oben trotzdem als Erfolg zählen.
-  try {
-    await publishStateSnapshot(cfg);
-  } catch {
-    // beim nächsten Sync erneut versucht
+  // War beim letzten Abgleich noch in der Cloud, jetzt nicht mehr (z.B. per Telegram gelöscht) -> lokal auch entfernen
+  for (const id of knownIds) {
+    if (remoteIds.has(id)) continue;
+    const row = localRows.find((r) => r.id === id);
+    if (row) store.removeDayTask(row.dayId, row.id);
   }
 
-  store.updateTaskInboxConfig({ lastSyncAt: new Date().toISOString(), lastError: null });
+  // Jetzt vollständig abgeglichenen lokalen Stand hochladen, damit die Cloud auch lokale
+  // Änderungen (abgehakt, manuell angelegt/gelöscht/bearbeitet) kennt.
+  const freshRows = store.getTasksFrom(todayStr());
+  const pushTasks = freshRows.map((r) => ({
+    id: r.id,
+    date: r.date,
+    text: r.text,
+    assignedToName: r.assignedTo ? store.getEmployee(r.assignedTo)?.name || null : null,
+    priority: r.priority,
+    done: r.done,
+  }));
+  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks);
+
+  store.updateTaskInboxConfig({
+    lastSyncAt: new Date().toISOString(),
+    lastError: null,
+    knownRemoteIds: pushTasks.map((t) => t.id).slice(-300),
+  });
   return { applied };
 }
 
-/** Beim App-Start / im Leerlauf aufrufen: holt still im Hintergrund neue Aufgaben ab, wenn aktiviert. */
+/** Beim App-Start / im Leerlauf aufrufen: gleicht still im Hintergrund ab, wenn aktiviert. */
 async function maybeSyncPendingTasks() {
   const cfg = store.getTaskInboxConfig();
   if (!cfg.enabled) return;

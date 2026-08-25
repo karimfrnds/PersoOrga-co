@@ -211,17 +211,16 @@ function renderSettings() {
     autoBackupCard.appendChild(testBtn);
     frag.appendChild(autoBackupCard);
 
-    // Telegram-Aufgaben abholen (nutzt dieselbe GitHub-Verbindung wie oben)
+    // Telegram-Aufgaben abgleichen (eigener Cloudflare Worker + KV-Speicher, unabhängig von GitHub)
     const inboxCard = document.createElement("section");
     inboxCard.className = "card";
     const inboxCfg = store.getTaskInboxConfig();
     inboxCard.innerHTML = `
-      <h2>Telegram-Aufgaben abholen</h2>
+      <h2>Telegram-Aufgaben abgleichen</h2>
       <p class="muted small">
-        Holt Aufgaben ab, die per Telegram-Bot geschickt wurden (Einrichtung: siehe <code>worker/README.md</code> im Repo),
-        und trägt sie in die heutige Aufgabenliste ein. Nutzt dieselbe GitHub-Verbindung wie das Backup oben (Nutzername,
-        Repository, Token müssen dort ausgefüllt sein). Läuft automatisch beim Öffnen des Kiosk-Bildschirms und danach
-        alle 90 Sekunden im Leerlauf mit.
+        Gleicht Aufgaben mit dem Telegram-Bot ab (Einrichtung: siehe <code>worker/README.md</code> im Repo) – neue/gelöschte
+        Aufgaben aus dem Chat werden übernommen, der eigene Stand wird hochgeladen, damit „liste" im Chat immer stimmt.
+        Läuft automatisch beim Öffnen des Kiosk-Bildschirms und danach alle 90 Sekunden im Leerlauf mit.
       </p>
     `;
     const inboxEnabledLabel = document.createElement("label");
@@ -231,32 +230,58 @@ function renderSettings() {
     inboxEnabledCb.checked = inboxCfg.enabled;
     inboxEnabledCb.onchange = () => store.updateTaskInboxConfig({ enabled: inboxEnabledCb.checked });
     inboxEnabledLabel.appendChild(inboxEnabledCb);
-    inboxEnabledLabel.append(" Telegram-Aufgaben abholen aktivieren");
+    inboxEnabledLabel.append(" Telegram-Aufgaben-Abgleich aktivieren");
     inboxCard.appendChild(inboxEnabledLabel);
+
+    const inboxGrid = document.createElement("div");
+    inboxGrid.className = "kb-grid";
+    const workerUrlField = document.createElement("label");
+    workerUrlField.className = "field";
+    workerUrlField.innerHTML = `<span>Worker-URL</span>`;
+    const workerUrlInput = document.createElement("input");
+    workerUrlInput.type = "text";
+    workerUrlInput.placeholder = "https://cafe-telegram-bot.deinname.workers.dev";
+    workerUrlInput.value = inboxCfg.workerUrl;
+    workerUrlInput.onchange = () => store.updateTaskInboxConfig({ workerUrl: workerUrlInput.value.trim() });
+    workerUrlField.appendChild(workerUrlInput);
+
+    const workerSecretField = document.createElement("label");
+    workerSecretField.className = "field";
+    workerSecretField.innerHTML = `<span>Zugriffsschlüssel</span>`;
+    const workerSecretInput = document.createElement("input");
+    workerSecretInput.type = "password";
+    workerSecretInput.placeholder = "derselbe Wert wie WEBHOOK_SECRET im Worker";
+    workerSecretInput.value = inboxCfg.workerSecret;
+    workerSecretInput.onchange = () => store.updateTaskInboxConfig({ workerSecret: workerSecretInput.value.trim() });
+    workerSecretField.appendChild(workerSecretInput);
+
+    inboxGrid.appendChild(workerUrlField);
+    inboxGrid.appendChild(workerSecretField);
+    inboxCard.appendChild(inboxGrid);
 
     const inboxStatusLine = document.createElement("p");
     inboxStatusLine.className = inboxCfg.lastError ? "callout callout-warn" : "muted small";
     if (inboxCfg.lastError) {
-      inboxStatusLine.textContent = `⚠ Letzter Abruf fehlgeschlagen: ${inboxCfg.lastError}`;
+      inboxStatusLine.textContent = `⚠ Letzter Abgleich fehlgeschlagen: ${inboxCfg.lastError}`;
     } else if (inboxCfg.lastSyncAt) {
       const t = new Date(inboxCfg.lastSyncAt);
-      inboxStatusLine.textContent = `Letzter Abruf: ${t.toLocaleDateString("de-DE")} ${t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr.`;
+      inboxStatusLine.textContent = `Letzter Abgleich: ${t.toLocaleDateString("de-DE")} ${t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr.`;
     } else {
-      inboxStatusLine.textContent = "Noch kein Abruf durchgeführt.";
+      inboxStatusLine.textContent = "Noch kein Abgleich durchgeführt.";
     }
     inboxCard.appendChild(inboxStatusLine);
 
     const inboxTestBtn = document.createElement("button");
     inboxTestBtn.className = "btn btn-secondary";
-    inboxTestBtn.textContent = "Jetzt abrufen";
+    inboxTestBtn.textContent = "Jetzt abgleichen";
     inboxTestBtn.onclick = async () => {
       inboxTestBtn.disabled = true;
-      inboxTestBtn.textContent = "Hole ab…";
+      inboxTestBtn.textContent = "Gleiche ab…";
       try {
         const result = await performTaskSync();
-        await alertDialog(result.applied > 0 ? `${result.applied} neue Aufgabe(n) übernommen.` : "Keine neuen Aufgaben gefunden.");
+        await alertDialog(result.applied > 0 ? `${result.applied} neue Aufgabe(n) übernommen.` : "Keine neuen Aufgaben aus der Cloud, eigener Stand ist hochgeladen.");
       } catch (e) {
-        await alertDialog("Abruf fehlgeschlagen: " + e.message, { title: "Fehler" });
+        await alertDialog("Abgleich fehlgeschlagen: " + e.message, { title: "Fehler" });
       }
       rerender();
     };

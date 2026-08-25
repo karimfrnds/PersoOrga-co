@@ -41,7 +41,10 @@ function defaultData() {
         workerSecret: "", // derselbe Wert wie WEBHOOK_SECRET im Worker
         lastSyncAt: null, // ISO-Timestamp des letzten erfolgreichen Abgleichs
         lastError: null,
-        knownRemoteIds: [], // Aufgaben-IDs, die beim letzten Abgleich im Cloud-Speicher lagen (gedeckelt)
+        // Was wir beim letzten Abgleich selbst in die Cloud geschrieben haben: {id, done}[] (gedeckelt).
+        // Weicht der nächste Cloud-Stand davon ab (z.B. Bot hat "erledigt" gesetzt oder eine Aufgabe entfernt),
+        // wird das als Änderung von außen erkannt und lokal übernommen statt beim nächsten Push überschrieben.
+        knownRemoteState: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -383,6 +386,17 @@ export const store = {
     t.done = !t.done;
     t.doneBy = t.done ? employeeName || null : null;
     t.doneAt = t.done ? new Date().toISOString() : null;
+    persist();
+  },
+  /** Explizit setzen statt umschalten (z.B. beim Cloud-Abgleich, wenn der Bot "erledigt" gesetzt hat). */
+  setDayTaskDone(dayId, taskId, done, doneBy) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const t = d.tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    t.done = done;
+    t.doneBy = done ? doneBy || null : null;
+    t.doneAt = done ? new Date().toISOString() : null;
     persist();
   },
   /** Zentrale Aufgaben-Erstellung – alle anderen addXDayTask-Methoden sind dünne Wrapper darum.

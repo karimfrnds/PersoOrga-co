@@ -93,6 +93,21 @@ aktuellen Übersicht, gruppiert nach Tag – funktioniert auch wenn das iPad ger
 Anna` oder `entfern die Inventur-Aufgabe von Timm am Montag`. Der Bot sucht in der aktuellen Liste nach einem
 eindeutigen Treffer, entfernt sie sofort im Speicher und bestätigt, was weg ist.
 
+**Aufgaben als erledigt markieren** (ohne zu löschen): z.B. `Kasse zählen ist erledigt` oder `hab die Vitrine
+geputzt`. Wird beim nächsten Sync auch am iPad als abgehakt angezeigt (inkl. „erledigt von Telegram").
+
+**„Wer ist gerade da?"**: `wer ist im dienst`, `wer arbeitet gerade` → zeigt, wer laut letztem iPad-Abgleich
+gerade eingestempelt ist.
+
+**Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
+in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die
+direkt bei dir in Telegram landet (z.B. „Minze bestellen").
+
+**Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
+Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst um 8 Uhr morgens (kurze
+Tagesübersicht) und um 19 Uhr abends (falls noch Aufgaben offen sind) – Ortszeit Europe/Berlin, DST-sicher. Die
+Uhrzeiten stehen als `MORNING_HOUR`/`EVENING_HOUR` ganz oben im Code, falls du sie ändern willst.
+
 Der Bot antwortet immer mit einer klaren Bestätigung, was er wie verstanden/eingetragen hat, z.B.:
 
 ```

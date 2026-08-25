@@ -1,12 +1,16 @@
 // ============================================================================
-// worker/telegram-bot.js – Cloudflare Worker mit zwei Aufgaben:
+// worker/telegram-bot.js – Cloudflare Worker mit mehreren Aufgaben:
 //
 //  1) Telegram-Webhook (POST /): nimmt Nachrichten des Admins entgegen, lässt
-//     Claude bestimmen ob Aufgaben angelegt/gelöscht werden sollen oder die
-//     aktuelle Liste gewünscht ist – arbeitet direkt auf dem KV-Speicher, der
-//     IMMER aktuell ist, unabhängig davon ob das iPad gerade an ist.
+//     Claude bestimmen was gewünscht ist (Aufgaben anlegen/löschen/als erledigt
+//     markieren, aktuelle Liste zeigen, wer im Dienst ist) – arbeitet direkt auf
+//     dem KV-Speicher, der IMMER aktuell ist, unabhängig davon ob das iPad an ist.
 //  2) /state-Endpunkt (GET+POST): die App (js/taskSync.js) liest/schreibt hier
-//     den aktuellen Aufgabenstand, um ihn mit dem iPad abzugleichen.
+//     den aktuellen Stand (Aufgaben + wer im Dienst ist), um mit dem iPad abzugleichen.
+//  3) /note-Endpunkt (POST): Mitarbeiter können darüber (aus ihrem Kiosk-Fenster)
+//     eine kurze Notiz direkt an den Chef schicken (Telegram-Nachricht).
+//  4) scheduled (Cron): schickt morgens/abends automatisch eine kurze Erinnerung,
+//     falls Cron Triggers im Worker eingerichtet sind (optional, siehe README).
 //
 // Braucht eine an den Worker gebundene KV-Namespace mit dem Namen TASKS_KV
 // (Cloudflare Dashboard → Worker → Settings → Bindings → KV-Namespace-Binding
@@ -15,15 +19,16 @@
 //
 // Erwartete Secrets im Worker (Settings → Variables and Secrets):
 //   TELEGRAM_BOT_TOKEN  – Token von @BotFather
-//   WEBHOOK_SECRET      – frei erfundener String; doppelt genutzt: zur Prüfung des
-//                          Telegram-Webhooks UND als Zugriffsschlüssel, den die App
-//                          beim /state-Abgleich als "Authorization: Bearer ..." mitschickt
+//   WEBHOOK_SECRET      – frei erfundener String; dreifach genutzt: zur Prüfung des
+//                          Telegram-Webhooks, als Zugriffsschlüssel für /state UND /note
 //   OWNER_CHAT_ID       – Telegram-Chat-ID des Admins (anfangs leer lassen, siehe README)
 //   ANTHROPIC_API_KEY   – API-Key von console.anthropic.com, fürs Verstehen der Nachrichten
 // ============================================================================
 
 const PRIORITIES = ["niedrig", "normal", "hoch"];
 const STATE_KEY = "state";
+const MORNING_HOUR = 8; // Europe/Berlin, Ortszeit
+const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -33,6 +38,9 @@ const CORS_HEADERS = {
 function todayBerlin() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
+function berlinHour() {
+  return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", hour12: false }).format(new Date()));
+}
 function formatDateDe(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
@@ -40,20 +48,30 @@ function formatDateDe(iso) {
 
 async function getState(env) {
   const raw = await env.TASKS_KV.get(STATE_KEY);
-  if (!raw) return { updatedAt: null, employees: [], tasks: [] };
+  if (!raw) return { updatedAt: null, employees: [], tasks: [], shiftsInService: [] };
   try {
     const parsed = JSON.parse(raw);
     return {
       updatedAt: parsed.updatedAt || null,
       employees: Array.isArray(parsed.employees) ? parsed.employees : [],
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+      shiftsInService: Array.isArray(parsed.shiftsInService) ? parsed.shiftsInService : [],
     };
   } catch {
-    return { updatedAt: null, employees: [], tasks: [] };
+    return { updatedAt: null, employees: [], tasks: [], shiftsInService: [] };
   }
 }
-async function putState(env, employees, tasks) {
-  await env.TASKS_KV.put(STATE_KEY, JSON.stringify({ updatedAt: new Date().toISOString(), employees, tasks }));
+async function putState(env, employees, tasks, shiftsInService) {
+  const current = await getState(env);
+  await env.TASKS_KV.put(
+    STATE_KEY,
+    JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      employees,
+      tasks,
+      shiftsInService: shiftsInService !== undefined ? shiftsInService : current.shiftsInService,
+    })
+  );
 }
 
 async function sendTelegramMessage(env, chatId, text) {
@@ -65,9 +83,8 @@ async function sendTelegramMessage(env, chatId, text) {
 }
 
 // ---------------------------------------------------------------------
-// Claude entscheiden lassen, was die Nachricht will: Aufgaben anlegen,
-// löschen, oder die aktuelle Liste zeigen. Bekommt dafür den echten
-// aktuellen Stand (aus dem KV-Speicher) als Kontext.
+// Claude entscheiden lassen, was die Nachricht will. Bekommt dafür den
+// echten aktuellen Stand (aus dem KV-Speicher) als Kontext.
 // ---------------------------------------------------------------------
 async function interpretMessage(env, text, today, state) {
   const tool = {
@@ -76,7 +93,7 @@ async function interpretMessage(env, text, today, state) {
     input_schema: {
       type: "object",
       properties: {
-        action: { type: "string", enum: ["add", "delete", "list", "other"] },
+        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "other"] },
         tasks_to_add: {
           type: "array",
           description: "Nur bei action=add. Jede einzelne neue Aufgabe als eigener Eintrag, niemals mehrere Themen zusammenfassen.",
@@ -96,6 +113,11 @@ async function interpretMessage(env, text, today, state) {
           description: "Nur bei action=delete. IDs exakt aus der unten gelisteten aktuellen Aufgaben-Liste übernehmen.",
           items: { type: "string" },
         },
+        task_ids_to_complete: {
+          type: "array",
+          description: "Nur bei action=complete. IDs exakt aus der unten gelisteten aktuellen Aufgaben-Liste übernehmen.",
+          items: { type: "string" },
+        },
       },
       required: ["action"],
     },
@@ -107,14 +129,17 @@ async function interpretMessage(env, text, today, state) {
 
   const system = `Heute ist ${today} (Europe/Berlin). Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)"}.
 
-Aktuelle Aufgaben (ab heute), zum Nachschlagen für "delete" und "list":
+Aktuelle Aufgaben (ab heute), zum Nachschlagen für "delete"/"complete"/"list":
 ${taskLines}
 
 Bestimme die Absicht der Nachricht:
 - "add": eine oder mehrere NEUE Aufgaben anlegen. Enthält die Nachricht mehrere Aufgaben oder mehrere Personen (getrennt durch "und", Komma, Zeilenumbruch, Aufzählung, mehrere Sätze), IMMER als mehrere einzelne Einträge in tasks_to_add auflisten – NIEMALS den ganzen Nachrichtentext als einen Eintrag kopieren oder mehrere Themen zusammenfassen. assignedToName nur setzen, wenn ein Name aus der Mitarbeiterliste eindeutig zuzuordnen ist. Wochentage/relative Angaben ("morgen", "Montag", ...) in ein absolutes Datum auflösen (nächstes Vorkommen ab heute).
-- "delete": eine oder mehrere der oben gelisteten Aufgaben sollen entfernt werden (Nutzer beschreibt sie in eigenen Worten, ggf. mit Person). Nur eindeutige, klar erkennbare Treffer übernehmen (deren [id] aus der Liste oben in task_ids_to_delete).
-- "list": der Nutzer will die aktuelle Liste/Übersicht sehen (z.B. "was steht an", "liste mir alles auf", "was ist offen").
-- "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.`;
+- "delete": eine oder mehrere der oben gelisteten Aufgaben sollen komplett entfernt werden.
+- "complete": eine oder mehrere der oben gelisteten (noch offenen) Aufgaben sind erledigt und sollen als erledigt markiert werden (z.B. "Kasse zählen ist erledigt", "hab die Vitrine geputzt") – NICHT löschen, nur abhaken.
+- "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
+- "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
+- "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
+Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -180,6 +205,18 @@ function buildDeleteReply(removed) {
   return ["🗑 Entfernt:", ...lines].join("\n");
 }
 
+function buildCompleteReply(completed) {
+  if (completed.length === 0) return `Habe dazu keine passende offene Aufgabe gefunden. Schick mir „liste" für die Übersicht.`;
+  const lines = completed.map((t) => `- ${t.assignedToName || "Allgemein"}: ${t.text}`);
+  return ["✅ Als erledigt markiert:", ...lines].join("\n");
+}
+
+function buildWhoReply(state) {
+  if (!state.shiftsInService || state.shiftsInService.length === 0) return "Aktuell ist niemand eingestempelt.";
+  const lines = state.shiftsInService.map((s) => `- ${s.name} (seit ${s.since} Uhr)`);
+  return ["👥 Im Dienst:", ...lines].join("\n");
+}
+
 async function handleTelegram(request, env) {
   const secretHeader = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
   if (!env.WEBHOOK_SECRET || secretHeader !== env.WEBHOOK_SECRET) {
@@ -220,6 +257,8 @@ async function handleTelegram(request, env) {
 
     if (result.action === "list") {
       await sendTelegramMessage(env, chatId, buildListReply(state, today));
+    } else if (result.action === "who") {
+      await sendTelegramMessage(env, chatId, buildWhoReply(state));
     } else if (result.action === "delete") {
       const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
       const removed = state.tasks.filter((t) => ids.includes(t.id));
@@ -228,6 +267,14 @@ async function handleTelegram(request, env) {
         await putState(env, state.employees, remaining);
       }
       await sendTelegramMessage(env, chatId, buildDeleteReply(removed));
+    } else if (result.action === "complete") {
+      const ids = Array.isArray(result.task_ids_to_complete) ? result.task_ids_to_complete : [];
+      const completed = state.tasks.filter((t) => ids.includes(t.id) && !t.done);
+      if (completed.length > 0) {
+        const updated = state.tasks.map((t) => (ids.includes(t.id) ? { ...t, done: true } : t));
+        await putState(env, state.employees, updated);
+      }
+      await sendTelegramMessage(env, chatId, buildCompleteReply(completed));
     } else if (result.action === "add") {
       const newTasks = (Array.isArray(result.tasks_to_add) ? result.tasks_to_add : [])
         .map((t) => ({
@@ -249,7 +296,7 @@ async function handleTelegram(request, env) {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste" für die aktuelle Übersicht\n„lösch die Aufgabe Kasse zählen bei Anna"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"`
       );
     }
   } catch (e) {
@@ -279,10 +326,59 @@ async function handleState(request, env) {
     }
     const employees = Array.isArray(body.employees) ? body.employees : [];
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
-    await putState(env, employees, tasks);
+    const shiftsInService = Array.isArray(body.shiftsInService) ? body.shiftsInService : undefined;
+    await putState(env, employees, tasks, shiftsInService);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
   }
   return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
+}
+
+/** Mitarbeiter schicken darüber (aus ihrem Kiosk-Fenster) eine kurze Notiz direkt an den Chef. */
+async function handleNote(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403, headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+  }
+  const employeeName = String(body.employeeName || "Unbekannt").trim();
+  const text = String(body.text || "").trim();
+  if (!text) return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+
+  if (env.OWNER_CHAT_ID) {
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📝 Notiz von ${employeeName}:\n${text}`);
+  }
+  return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+}
+
+/** Cron Trigger (optional, siehe README): morgens/abends eine kurze Erinnerung schicken. */
+async function handleScheduled(env) {
+  if (!env.OWNER_CHAT_ID) return;
+  const hour = berlinHour();
+  if (hour !== MORNING_HOUR && hour !== EVENING_HOUR) return;
+
+  const today = todayBerlin();
+  const state = await getState(env);
+  const todaysTasks = state.tasks.filter((t) => t.date === today);
+  const open = todaysTasks.filter((t) => !t.done);
+
+  if (hour === MORNING_HOUR) {
+    const text =
+      todaysTasks.length === 0
+        ? "☀️ Guten Morgen! Keine besonderen Aufgaben für heute hinterlegt."
+        : `☀️ Guten Morgen! ${todaysTasks.length} Aufgabe(n) für heute, davon ${open.length} noch offen.\n\n${buildListReply({ ...state, tasks: todaysTasks }, today)}`;
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
+  } else if (hour === EVENING_HOUR && open.length > 0) {
+    const text = `🌙 Heute Abend noch offen (${open.length}):\n\n${buildListReply({ ...state, tasks: open }, today)}`;
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
+  }
 }
 
 export default {
@@ -293,8 +389,16 @@ export default {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleState(request, env);
     }
+    if (url.pathname === "/note") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleNote(request, env);
+    }
 
     if (request.method === "POST") return handleTelegram(request, env);
     return new Response("ok", { status: 200 });
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(handleScheduled(env));
   },
 };

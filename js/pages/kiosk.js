@@ -16,7 +16,8 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
-import { maybeSyncPendingTasks } from "../taskSync.js";
+import { maybeSyncPendingTasks, sendNoteToBoss } from "../taskSync.js";
+import { alertDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -337,6 +338,43 @@ function renderKiosk(navigate) {
       }
     }
     wrap.appendChild(tasksCard);
+
+    // ---- Notiz an den Chef ----
+    const inboxCfg = store.getTaskInboxConfig();
+    if (inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret) {
+      const noteCard = document.createElement("section");
+      noteCard.className = "card";
+      noteCard.innerHTML = `<h2>📝 Notiz an den Chef</h2><p class="muted small">Geht direkt per Telegram raus, z.B. "Minze bestellen".</p>`;
+      const noteRow = document.createElement("div");
+      noteRow.className = "task-add-row";
+      const noteInput = document.createElement("input");
+      noteInput.type = "text";
+      noteInput.placeholder = "Nachricht…";
+      const noteBtn = document.createElement("button");
+      noteBtn.className = "btn btn-secondary";
+      noteBtn.textContent = "Senden";
+      const sendNote = async () => {
+        const text = noteInput.value.trim();
+        if (!text) return;
+        noteBtn.disabled = true;
+        try {
+          await sendNoteToBoss(emp.name, text);
+          noteInput.value = "";
+          await alertDialog("Notiz gesendet.");
+        } catch (e) {
+          await alertDialog("Konnte nicht gesendet werden: " + e.message, { title: "Fehler" });
+        }
+        noteBtn.disabled = false;
+      };
+      noteBtn.onclick = sendNote;
+      noteInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendNote();
+      });
+      noteRow.appendChild(noteInput);
+      noteRow.appendChild(noteBtn);
+      noteCard.appendChild(noteRow);
+      wrap.appendChild(noteCard);
+    }
 
     // ---- Ausstempeln ----
     const openMine = mine.filter((t) => !t.done);

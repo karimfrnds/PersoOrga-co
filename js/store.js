@@ -425,8 +425,15 @@ export const store = {
   },
 
   // ---- Backup ----
+  /**
+   * Der eigene GitHub-Token darf NIE Teil der gesicherten Daten sein – sonst committet das automatische
+   * Backup den Token, mit dem es selbst schreibt, ins Repo (GitHub blockiert das zurecht als Secret-Leak,
+   * s. Fehler "Secret detected in content"). Beim Wiederherstellen wird der Token ohnehin manuell neu
+   * eingetragen (ohne ihn hättet ihr die Sicherung gar nicht erst abrufen können).
+   */
   exportJSON() {
-    return JSON.stringify(data, null, 2);
+    const redacted = { ...data, settings: { ...data.settings, githubBackup: { ...data.settings.githubBackup, token: "" } } };
+    return JSON.stringify(redacted, null, 2);
   },
   importJSON(json) {
     const parsed = JSON.parse(json);

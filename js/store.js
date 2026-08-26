@@ -61,6 +61,11 @@ function defaultData() {
         // Weicht der nächste Cloud-Stand davon ab (z.B. Bot hat "erledigt" gesetzt oder eine Aufgabe entfernt),
         // wird das als Änderung von außen erkannt und lokal übernommen statt beim nächsten Push überschrieben.
         knownRemoteState: [],
+        // IDs vom Bot per Wochenplan-Nachricht anhand des Schicht-Namens (nicht Uhrzeit) zugewiesener
+        // Schichten, die schon per confirmAvailability() übernommen wurden (gedeckelt) – verhindert, dass
+        // eine spätere eigene Änderung am nächsten Sync wieder von der (weiter in der Cloud stehenden)
+        // alten Bot-Zuweisung überschrieben wird.
+        appliedShiftAssignmentIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -81,7 +86,9 @@ function normalizeDay(d) {
     ...d,
     shifts: (d.shifts || []).map((s) => ({ source: "manual", ...s })),
     plannedShifts: d.plannedShifts || [],
-    availability: d.availability || [],
+    // Vorsichtshalber Einträge im alten Kann/Kann-nicht-Format (available/from/to) auf das neue
+    // Slot-Modell normalisieren, statt beim ersten Zugriff auf ein fehlendes slotIds zu crashen.
+    availability: (d.availability || []).map((a) => ({ confirmedSlotId: null, ...a, slotIds: Array.isArray(a.slotIds) ? a.slotIds : [] })),
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
   };
 }
@@ -115,6 +122,66 @@ let data = load();
 
 function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
+function shiftSlotsForRole(role) {
+  return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
+}
+
+/** Rolle einer Person, für den Exklusivitäts-Vergleich ("wer konkurriert mit wem um dieselbe Schicht-ID").
+ * Wichtig: Service und Küche haben beide z.B. eine Schicht mit der ID "frueh1", aber zu unterschiedlichen
+ * Zeiten – das sind zwei verschiedene Schichten, die sich NICHT gegenseitig blockieren dürfen. */
+function roleOf(employeeId) {
+  return data.employees.find((e) => e.id === employeeId)?.role || null;
+}
+
+/**
+ * Löst Verfügbarkeits-Konflikte eines Tages auf (Kaskade): eine Person mit genau einer noch freien
+ * Kandidaten-Schicht wird automatisch darauf festgelegt; das kann wiederum bei anderen Personen eine
+ * Schicht wegfallen lassen, also wird das wiederholt, bis sich nichts mehr ändert. Läuft danach immer
+ * über die geplanten Schichten drüber, damit "Deine Schichten" und der Bot den aktuellen Stand zeigen.
+ */
+function resolveDayAvailability(d) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const taken = new Map(); // "rolle:slotId" -> employeeId, wer diese Schicht gerade fest hat
+    for (const a of d.availability) {
+      if (a.confirmedSlotId) taken.set(roleOf(a.employeeId) + ":" + a.confirmedSlotId, a.employeeId);
+    }
+    for (const a of d.availability) {
+      if (a.confirmedSlotId) continue;
+      const role = roleOf(a.employeeId);
+      const open = a.slotIds.filter((id) => !taken.has(role + ":" + id));
+      if (open.length === 1) {
+        a.confirmedSlotId = open[0];
+        taken.set(role + ":" + open[0], a.employeeId);
+        changed = true;
+      }
+    }
+  }
+  materializePlannedShiftsFromAvailability(d);
+}
+
+/** Bildet jede fest zugeteilte Verfügbarkeit als geplante Schicht ab (stabile ID "avail-<id>", damit
+ * wiederholtes Auflösen nichts verdoppelt) und entfernt sie wieder, falls die Zuteilung wegfällt. */
+function materializePlannedShiftsFromAvailability(d) {
+  for (const a of d.availability) {
+    const shiftId = "avail-" + a.id;
+    const idx = d.plannedShifts.findIndex((s) => s.id === shiftId);
+    if (a.confirmedSlotId) {
+      const emp = data.employees.find((e) => e.id === a.employeeId);
+      const slot = emp ? shiftSlotsForRole(emp.role).find((s) => s.id === a.confirmedSlotId) : null;
+      if (slot) {
+        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: "" };
+        if (idx >= 0) d.plannedShifts[idx] = shift;
+        else d.plannedShifts.push(shift);
+      }
+    } else if (idx >= 0) {
+      d.plannedShifts.splice(idx, 1);
+    }
+  }
 }
 
 export const store = {
@@ -377,31 +444,86 @@ export const store = {
   },
 
   // ---- Verfügbarkeit (Mitarbeiter tragen im Kiosk ein, für welche Schichten sie in der kommenden Woche
-  // bereitstehen würden – keine Buchung, nur eine Info für den Chef, der die Zuteilung selbst macht). ----
+  // bereitstehen würden). Wählt jemand genau EINE Schicht, ist die sofort fest und für alle anderen
+  // ausgegraut. Wählt jemand mehrere ("keine Präferenz"), bleibt das offen (keine ausgegraut), bis der
+  // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf eine reduziert. ----
   /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
   getShiftSlotsForRole(role) {
-    return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
-  },
-  /** Setzt/ersetzt, für welche Schichten (Slot-IDs) eine Person an einem Tag bereitstehen würde. */
-  setAvailability(dayId, employeeId, slotIds) {
-    const d = this.getDay(dayId);
-    if (!d) return;
-    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
-    const entry = {
-      id: idx >= 0 ? d.availability[idx].id : uid(),
-      employeeId,
-      slotIds: Array.isArray(slotIds) ? [...new Set(slotIds)] : [],
-      submittedAt: new Date().toISOString(),
-    };
-    if (idx >= 0) d.availability[idx] = entry;
-    else d.availability.push(entry);
-    persist();
-    return entry;
+    return shiftSlotsForRole(role);
   },
   getAvailability(dayId, employeeId) {
     const d = this.getDay(dayId);
     if (!d) return null;
     return d.availability.find((a) => a.employeeId === employeeId) || null;
+  },
+  /** true, wenn diese Schicht an diesem Tag bereits einer ANDEREN Person DERSELBEN Rolle fest zugeteilt
+   * ist (fürs Ausgrauen) – Rollen-Vergleich, weil z.B. Service und Küche beide eine Schicht "frueh1"
+   * haben, aber zu unterschiedlichen Zeiten, sich also nicht gegenseitig blockieren dürfen. */
+  isSlotTaken(dayId, slotId, excludingEmployeeId) {
+    const d = this.getDay(dayId);
+    if (!d) return false;
+    const role = roleOf(excludingEmployeeId);
+    return d.availability.some((a) => a.employeeId !== excludingEmployeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId) === role);
+  },
+  /** Reine Zwischenspeicherung während der Eingabe im Kiosk (noch nicht "abgeschickt") – löst noch
+   * keine Kaskade/Ausgraue-Wirkung für andere aus, das passiert erst bei commitAvailability. */
+  setAvailabilityDraft(dayId, employeeId, slotIds) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    const clean = Array.isArray(slotIds) ? [...new Set(slotIds)] : [];
+    if (idx >= 0) {
+      d.availability[idx].slotIds = clean;
+    } else {
+      d.availability.push({ id: uid(), employeeId, slotIds: clean, confirmedSlotId: null, submittedAt: null });
+    }
+    persist();
+  },
+  /** "An den Chef senden": macht die Auswahl verbindlich (1 Schicht -> sofort fest + ausgegraut für
+   * andere, mehrere -> offene Kandidaten) und stößt die Kaskaden-Auflösung an. Bereits anderweitig fest
+   * vergebene Schichten werden dabei aus der eigenen Auswahl entfernt (Sicherheitsnetz). */
+  commitAvailability(dayId, employeeId, slotIds) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const role = roleOf(employeeId);
+    const takenByOthers = new Set(
+      d.availability.filter((a) => a.employeeId !== employeeId && a.confirmedSlotId && roleOf(a.employeeId) === role).map((a) => a.confirmedSlotId)
+    );
+    const clean = [...new Set(Array.isArray(slotIds) ? slotIds : [])].filter((id) => !takenByOthers.has(id));
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    const entry = {
+      id: idx >= 0 ? d.availability[idx].id : uid(),
+      employeeId,
+      slotIds: clean,
+      confirmedSlotId: clean.length === 1 ? clean[0] : null,
+      submittedAt: new Date().toISOString(),
+    };
+    if (idx >= 0) d.availability[idx] = entry;
+    else d.availability.push(entry);
+    resolveDayAvailability(d);
+    persist();
+    return this.getAvailability(dayId, employeeId);
+  },
+  /** Chef legt per Bot explizit fest, welche Schicht eine Person bekommt (überstimmt alles, auch falls
+   * jemand anderes sie gerade fest hatte – die verliert sie dann wieder). Stößt die Kaskade erneut an. */
+  confirmAvailability(dayId, employeeId, slotId) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const role = roleOf(employeeId);
+    for (const a of d.availability) {
+      if (a.employeeId !== employeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId) === role) a.confirmedSlotId = null;
+    }
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    if (idx >= 0) {
+      const a = d.availability[idx];
+      if (!a.slotIds.includes(slotId)) a.slotIds.push(slotId);
+      a.confirmedSlotId = slotId;
+    } else {
+      d.availability.push({ id: uid(), employeeId, slotIds: [slotId], confirmedSlotId: slotId, submittedAt: new Date().toISOString() });
+    }
+    resolveDayAvailability(d);
+    persist();
+    return this.getAvailability(dayId, employeeId);
   },
 
   // Stornos

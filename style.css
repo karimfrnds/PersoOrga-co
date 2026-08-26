@@ -421,6 +421,9 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .avail-slot-btn span { color: var(--gray); font-size: 12px; }
 .avail-slot-btn.active { border-color: var(--green); background: var(--green-light); }
 .avail-slot-btn.active span { color: var(--green-dark); }
+.avail-slot-btn.taken { opacity: 0.5; background: var(--gray-light); cursor: not-allowed; }
+.avail-slot-btn .avail-taken-tag { color: var(--red); font-size: 11px; font-weight: 600; }
+.avail-status { margin: 0; }
 
 @media (max-width: 600px) {
   .day-row { flex-wrap: wrap; }

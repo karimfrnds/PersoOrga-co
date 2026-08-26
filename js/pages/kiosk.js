@@ -461,20 +461,23 @@ function renderKiosk(navigate) {
 
   // ---------------------------------------------------------------------
   // Verfügbarkeit für die kommende Woche: pro Tag beliebig viele Schichten antippen,
-  // für die man bereitstehen würde (keine Buchung, kein Ausgrauen – bei mehreren
-  // Interessenten wählt der Chef selbst aus). Wird direkt im Store gespeichert und
-  // beim Absenden gesammelt an den Bot geschickt.
+  // für die man bereitstehen würde. Genau EINE Schicht ausgewählt = sofort fest (für
+  // alle anderen ab da ausgegraut); mehrere = "keine Präferenz", bleibt offen, bis der
+  // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf
+  // eine reduziert. Auswahl passiert erst als Entwurf (nur lokal sichtbar), verbindlich
+  // wird sie erst mit "An den Chef senden".
   // ---------------------------------------------------------------------
   function buildAvailabilityCard(emp) {
     const weekStart = addDaysISO(mondayOf(todayStr()), 7);
     const weekEnd = addDaysISO(weekStart, 6);
     const slotDefs = store.getShiftSlotsForRole(emp.role);
+    const slotById = new Map(slotDefs.map((s) => [s.id, s]));
 
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `
       <h2>🗓 Verfügbarkeit für nächste Woche</h2>
-      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jede Schicht antippen, die du übernehmen könntest (bei keiner Präferenz einfach alle) – der Chef wählt dann aus.</p>
+      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jede Schicht antippen, die du übernehmen könntest (bei keiner Präferenz einfach alle). Wählst du nur eine, ist sie sofort fest deine – bei mehreren entscheidet der Chef.</p>
     `;
 
     const list = document.createElement("div");
@@ -483,8 +486,9 @@ function renderKiosk(navigate) {
       const date = addDaysISO(weekStart, i);
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      const selected = new Set(entry?.slotIds || []);
-      const allSelected = slotDefs.every((s) => selected.has(s.id));
+      const draftSelected = new Set(entry?.slotIds || []);
+      const selectableSlots = slotDefs.filter((s) => !(dayObj && store.isSlotTaken(dayObj.id, s.id, emp.id)));
+      const allSelected = selectableSlots.length > 0 && selectableSlots.every((s) => draftSelected.has(s.id));
 
       const row = document.createElement("div");
       row.className = "avail-row-col";
@@ -498,33 +502,58 @@ function renderKiosk(navigate) {
       const allBtn = document.createElement("button");
       allBtn.type = "button";
       allBtn.className = "btn btn-link avail-all-btn";
-      allBtn.textContent = allSelected ? "Keine auswählen" : "Alle auswählen";
-      allBtn.onclick = () => {
-        const d = store.getOrCreateDayByDate(date);
-        store.setAvailability(d.id, emp.id, allSelected ? [] : slotDefs.map((s) => s.id));
-        rerender();
-      };
+      if (selectableSlots.length === 0) {
+        allBtn.textContent = "Alle vergeben";
+        allBtn.disabled = true;
+      } else {
+        allBtn.textContent = allSelected ? "Keine auswählen" : "Alle auswählen";
+        allBtn.onclick = () => {
+          const d = store.getOrCreateDayByDate(date);
+          store.setAvailabilityDraft(d.id, emp.id, allSelected ? [] : selectableSlots.map((s) => s.id));
+          rerender();
+        };
+      }
       head.appendChild(allBtn);
       row.appendChild(head);
 
       const slotList = document.createElement("div");
       slotList.className = "avail-slot-list";
       for (const slot of slotDefs) {
+        const takenByOther = dayObj ? store.isSlotTaken(dayObj.id, slot.id, emp.id) : false;
         const slotBtn = document.createElement("button");
         slotBtn.type = "button";
-        slotBtn.className = "avail-slot-btn" + (selected.has(slot.id) ? " active" : "");
-        slotBtn.innerHTML = `<b>${escapeHtml(slot.label)}</b><span>${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>`;
-        slotBtn.onclick = () => {
-          const d = store.getOrCreateDayByDate(date);
-          const current = new Set(store.getAvailability(d.id, emp.id)?.slotIds || []);
-          if (current.has(slot.id)) current.delete(slot.id);
-          else current.add(slot.id);
-          store.setAvailability(d.id, emp.id, [...current]);
-          rerender();
-        };
+        slotBtn.className = "avail-slot-btn" + (draftSelected.has(slot.id) ? " active" : "") + (takenByOther ? " taken" : "");
+        slotBtn.disabled = takenByOther;
+        slotBtn.innerHTML =
+          `<b>${escapeHtml(slot.label)}</b><span>${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>` +
+          (takenByOther ? `<span class="avail-taken-tag">vergeben</span>` : "");
+        if (!takenByOther) {
+          slotBtn.onclick = () => {
+            const d = store.getOrCreateDayByDate(date);
+            const current = new Set(store.getAvailability(d.id, emp.id)?.slotIds || []);
+            if (current.has(slot.id)) current.delete(slot.id);
+            else current.add(slot.id);
+            store.setAvailabilityDraft(d.id, emp.id, [...current]);
+            rerender();
+          };
+        }
         slotList.appendChild(slotBtn);
       }
       row.appendChild(slotList);
+
+      // Status der zuletzt abgeschickten Verfügbarkeit für diesen Tag (bis zum nächsten Absenden).
+      if (entry?.submittedAt) {
+        const status = document.createElement("p");
+        status.className = "muted small avail-status";
+        if (entry.confirmedSlotId) {
+          const slot = slotById.get(entry.confirmedSlotId);
+          status.innerHTML = slot ? `✅ <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist fest deine Schicht.` : "";
+        } else if (entry.slotIds.length > 1) {
+          const labels = entry.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
+          status.textContent = `🕓 Gesendet: ${labels} – noch offen, der Chef entscheidet.`;
+        }
+        if (status.textContent || status.innerHTML) row.appendChild(status);
+      }
 
       list.appendChild(row);
     }
@@ -541,26 +570,47 @@ function renderKiosk(navigate) {
 
   async function submitAvailability(weekStart, emp, slotDefs, btn) {
     const slotById = new Map(slotDefs.map((s) => [s.id, s]));
-    const days = [];
+    const summaryLines = [];
+    const pushDays = [];
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
       const dayObj = store.getDayByDate(date);
-      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      const slots = (entry?.slotIds || []).map((id) => slotById.get(id)).filter(Boolean);
-      if (slots.length > 0) days.push({ date, slots: slots.map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to })) });
+      const draftEntry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
+      if (!draftEntry || draftEntry.slotIds.length === 0) continue;
+      const d = store.getOrCreateDayByDate(date);
+      const committed = store.commitAvailability(d.id, emp.id, draftEntry.slotIds);
+      const dayLabel = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
+      if (committed.confirmedSlotId) {
+        const slot = slotById.get(committed.confirmedSlotId);
+        summaryLines.push(`${dayLabel}: ✅ ${slot.label} (${slot.from}–${slot.to}) fest`);
+      } else if (committed.slotIds.length > 1) {
+        const labels = committed.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
+        summaryLines.push(`${dayLabel}: 🕓 ${labels} – noch offen, Chef entscheidet`);
+      } else {
+        summaryLines.push(`${dayLabel}: leider inzwischen vergeben, bitte andere Schicht wählen`);
+      }
+      if (committed.slotIds.length > 0) {
+        const slots = committed.slotIds.map((id) => slotById.get(id)).filter(Boolean).map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to }));
+        pushDays.push({ date, slots, confirmedSlotId: committed.confirmedSlotId || null });
+      }
     }
-    if (days.length === 0) {
+    if (summaryLines.length === 0) {
       await alertDialog("Bitte für mindestens einen Tag mindestens eine Schicht antippen.");
       return;
     }
     btn.disabled = true;
+    let pushError = null;
     try {
-      await pushAvailability(emp.name, weekStart, days);
-      await alertDialog("Verfügbarkeit gesendet. Danke!");
+      await pushAvailability(emp.name, weekStart, pushDays);
     } catch (e) {
-      await alertDialog("Konnte nicht gesendet werden: " + e.message, { title: "Fehler" });
+      pushError = e;
     }
-    btn.disabled = false;
+    rerender();
+    if (pushError) {
+      await alertDialog(["Lokal gespeichert, aber nicht an den Chef gesendet (" + pushError.message + "):", ...summaryLines].join("\n"), { title: "Fehler beim Senden" });
+    } else {
+      await alertDialog(["Verfügbarkeit gesendet:", ...summaryLines].join("\n"));
+    }
   }
 
   function buildTaskList(day, tasks, viewerEmp, allowHandoff) {

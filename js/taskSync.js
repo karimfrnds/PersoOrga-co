@@ -23,6 +23,14 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Nachsichtiger Vergleich für Schicht-Namen ("Früh1" vs "früh 1" vs "fruh1"), damit eine per Bot-Chat
+ * eingetippte Schicht trotz kleiner Tippabweichungen zum richtigen Slot passt. */
+function normalizeSlotLabel(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
 /** Kompakte Tages-Kennzahlen der letzten Wochen (nur wenn der Nutzer das freigegeben hat). */
 function buildFinancialsPayload() {
   const settings = store.getSettings();
@@ -113,15 +121,38 @@ async function performTaskSync() {
 
   let applied = 0;
 
-  // Vom Bot per Wochenplan-Nachricht angelegte geplante Schichten -> lokal übernehmen (nur neue, per ID
-  // erkannt). Nicht auflösbare Namen/Daten wurden vom Worker selbst schon gar nicht erst gespeichert.
+  // Vom Bot per Wochenplan-Nachricht angelegte geplante Schichten -> lokal übernehmen.
+  // Zwei Formen: freie Uhrzeit (from/to, per rs.id dedupliziert wie bisher) ODER Zuweisung anhand des
+  // Schicht-Namens (slotLabel, z.B. "Früh1" – der Chef sagt dem Bot "Anna bekommt Montag Früh1"). Letztere
+  // läuft über confirmAvailability(), damit Kaskade/Ausgrauen für andere korrekt greifen; dafür braucht es
+  // eine eigene Dedup-Liste (appliedShiftAssignmentIds), weil dabei keine Schicht mit exakt rs.id entsteht.
   const remotePlanned = Array.isArray(remote.plannedShifts) ? remote.plannedShifts : [];
+  const appliedAssignmentIds = new Set(cfg.appliedShiftAssignmentIds || []);
+  let newAssignmentIds = false;
   for (const rs of remotePlanned) {
-    if (!rs.id || store.hasPlannedShiftId(rs.id)) continue;
-    const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
-    if (!match || !rs.date || !rs.from || !rs.to) continue;
-    const day = store.getOrCreateDayByDate(rs.date);
-    store.addPlannedShift(day.id, { id: rs.id, employeeId: match.id, from: rs.from, to: rs.to });
+    if (!rs.id) continue;
+    if (rs.slotLabel) {
+      if (appliedAssignmentIds.has(rs.id)) continue;
+      const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
+      if (match && rs.date) {
+        const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(rs.slotLabel));
+        if (slot) {
+          const day = store.getOrCreateDayByDate(rs.date);
+          store.confirmAvailability(day.id, match.id, slot.id);
+        }
+      }
+      appliedAssignmentIds.add(rs.id);
+      newAssignmentIds = true;
+    } else {
+      if (store.hasPlannedShiftId(rs.id)) continue;
+      const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
+      if (!match || !rs.date || !rs.from || !rs.to) continue;
+      const day = store.getOrCreateDayByDate(rs.date);
+      store.addPlannedShift(day.id, { id: rs.id, employeeId: match.id, from: rs.from, to: rs.to });
+    }
+  }
+  if (newAssignmentIds) {
+    store.updateTaskInboxConfig({ appliedShiftAssignmentIds: [...appliedAssignmentIds].slice(-300) });
   }
 
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen

@@ -167,10 +167,15 @@ async function interpretMessage(env, text, today, state) {
             properties: {
               employeeName: { type: "string", description: "Name der Person, muss zu einem der unten genannten aktiven Mitarbeiter passen." },
               date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur unten genannten Zielwoche aufgelöst." },
-              from: { type: "string", description: "Beginn HH:MM" },
-              to: { type: "string", description: "Ende HH:MM" },
+              slotLabel: {
+                type: "string",
+                description:
+                  "Bevorzugt: Name der Schicht wie sie die Mitarbeiter im Kiosk sehen (z.B. 'Früh1', 'Mittel', 'Spät2'), falls der Chef so eine benennt (z.B. 'Anna bekommt Montag Früh1'). Dann from/to leer lassen.",
+              },
+              from: { type: "string", description: "Nur falls KEIN slotLabel genannt wurde und stattdessen eine konkrete Uhrzeit: Beginn HH:MM." },
+              to: { type: "string", description: "Nur falls KEIN slotLabel genannt wurde: Ende HH:MM." },
             },
-            required: ["employeeName", "date", "from", "to"],
+            required: ["employeeName", "date"],
           },
         },
       },
@@ -200,7 +205,7 @@ Bestimme die Absicht der Nachricht:
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
-- "plan_shifts": der Chef schickt den fertigen Schichtplan für eine Woche (mehrere Personen/Tage in einer Nachricht), z.B. "Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17, Mittwoch Anna 10-18". IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
+- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN (Früh1/Früh2/Mittel/Spät1/Spät2 o.ä.) statt einer Uhrzeit, IMMER slotLabel setzen und from/to leer lassen – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
@@ -282,7 +287,7 @@ function buildWhoReply(state) {
 }
 
 function buildPlanShiftsReply(items) {
-  const lines = items.map((s, i) => `${i + 1}. ${s.employeeName} – ${formatDateDe(s.date)} · ${s.from}-${s.to}`);
+  const lines = items.map((s, i) => `${i + 1}. ${s.employeeName} – ${formatDateDe(s.date)} · ${s.slotLabel || `${s.from}-${s.to}`}`);
   const heading = items.length === 1 ? "✅ Schicht eingetragen:" : `✅ ${items.length} Schichten eingetragen:`;
   return [heading, ...lines].join("\n");
 }
@@ -306,9 +311,11 @@ function buildAvailabilityReply(state, today) {
     const slots = new Map();
     for (const name of submittedNames) {
       const dayEntry = (entries[name].days || []).find((d) => d.date === date);
+      const isConfirmedHere = dayEntry?.confirmedSlotId;
       for (const s of dayEntry?.slots || []) {
         if (!slots.has(s.id)) slots.set(s.id, { label: s.label, from: s.from, to: s.to, names: [] });
-        slots.get(s.id).names.push(name);
+        const isFest = isConfirmedHere === s.id;
+        slots.get(s.id).names.push(isFest ? `${name} ✅fest` : name);
       }
     }
     lines.push(`\n${WEEKDAY_LABELS_DE[i]}, ${formatDateDe(date)}:`);
@@ -520,12 +527,13 @@ async function handleTelegram(request, env) {
           id: crypto.randomUUID(),
           employeeName: String(s.employeeName || "").trim(),
           date: /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : "",
+          slotLabel: String(s.slotLabel || "").trim(),
           from: String(s.from || "").trim(),
           to: String(s.to || "").trim(),
         }))
-        .filter((s) => s.employeeName && s.date && s.from && s.to);
+        .filter((s) => s.employeeName && s.date && (s.slotLabel || (s.from && s.to)));
       if (newShifts.length === 0) {
-        await sendTelegramMessage(env, chatId, `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Montag Anna 10-18")?`);
+        await sendTelegramMessage(env, chatId, `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Anna bekommt Montag Früh1")?`);
       } else {
         await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts] });
         const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));

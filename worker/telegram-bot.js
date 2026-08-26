@@ -85,6 +85,18 @@ function normalizeSlotLabelCheck(s) {
 }
 const KNOWN_SLOT_LABELS = new Set(["Früh1", "Früh2", "Mittel", "Spät1", "Spät2"].map(normalizeSlotLabelCheck));
 const REMINDER_WEEKDAY = 5; // Freitag – Erinnerung an alle, die für nächste Woche noch nichts eingetragen haben
+/** Wandelt ein per Telegram heruntergeladenes Foto (ArrayBuffer) in Base64 um, für die Anthropic Vision-API.
+ * In Chunks, damit String.fromCharCode bei großen Fotos nicht am Funktions-Argument-Limit scheitert. */
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function euro(n) {
   return (Number(n) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
@@ -106,6 +118,7 @@ const EMPTY_STATE = {
   staleOpenShifts: [], // [{date, employeeName, from}] – vergessenes Ausstempeln
   stock: [], // [{name, status}] – Vorräte-Ampel
   stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
+  stockDeliveries: [], // [{id, itemName, amount, date}] – per Lieferschein-Foto erkannte Lieferungen
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
 };
@@ -129,6 +142,7 @@ async function getState(env) {
       staleOpenShifts: Array.isArray(parsed.staleOpenShifts) ? parsed.staleOpenShifts : [],
       stock: Array.isArray(parsed.stock) ? parsed.stock : [],
       stockRestocks: Array.isArray(parsed.stockRestocks) ? parsed.stockRestocks : [],
+      stockDeliveries: Array.isArray(parsed.stockDeliveries) ? parsed.stockDeliveries : [],
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
     };
@@ -419,6 +433,119 @@ function buildRestockReply(items) {
   return [heading, ...lines].join("\n");
 }
 
+function buildDeliveryReply(items) {
+  const lines = items.map((it, i) => `${i + 1}. ${it.itemName} – ${it.amount || "(Menge unklar)"}`);
+  const heading = items.length === 1 ? "📦 Lieferung erkannt und geloggt:" : `📦 ${items.length} Artikel erkannt und geloggt:`;
+  return [heading, ...lines].join("\n");
+}
+
+/** Liest ein Foto eines Lieferscheins/einer Rechnung per Claude Vision aus (Artikel + Menge, Datum falls
+ * erkennbar). Wirft bei echten Fehlern (Anthropic nicht erreichbar o.ä.). */
+async function extractDeliveryFromImage(env, imageBase64, mimeType, caption, today) {
+  const tool = {
+    name: "extract_delivery",
+    description: "Extrahiert gelieferte/bestellte Artikel mit Menge aus einem Foto eines Lieferscheins oder einer Rechnung.",
+    input_schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          description: "Nur tatsächlich auf dem Beleg erkennbare Artikel, nichts erfinden.",
+          items: {
+            type: "object",
+            properties: {
+              itemName: { type: "string", description: "Artikelname, wie auf dem Beleg (kurz, ohne Mengenangabe)." },
+              amount: { type: "string", description: "Menge wie auf dem Beleg, z.B. '5 kg', '2 Kisten', '10 Stück'." },
+            },
+            required: ["itemName", "amount"],
+          },
+        },
+        date: { type: "string", description: "Datum auf dem Beleg als YYYY-MM-DD, falls erkennbar, sonst leerer String." },
+      },
+      required: ["items"],
+    },
+  };
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      tools: [tool],
+      tool_choice: { type: "tool", name: "extract_delivery" },
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } },
+            {
+              type: "text",
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Foto eines Lieferscheins oder einer Rechnung für ein Café.${
+                caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
+              } Extrahiere alle gelieferten/bestellten Artikel mit Menge.`,
+            },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Anthropic API ${res.status}${errText ? ": " + errText.slice(0, 300) : ""}`);
+  }
+  const data = await res.json();
+  const toolUse = (data.content || []).find((b) => b.type === "tool_use");
+  if (!toolUse?.input) throw new Error("Konnte den Beleg nicht auswerten.");
+  return toolUse.input;
+}
+
+/** Lädt das größte verfügbare Foto einer Telegram-Nachricht herunter und lässt es per Vision auswerten,
+ * matcht die erkannten Artikel gegen die Vorräte-Liste (nachsichtig) und loggt sie als Lieferung. */
+async function handleDeliveryPhoto(env, chatId, photoSizes, caption, today, state) {
+  try {
+    const largest = photoSizes[photoSizes.length - 1]; // Telegram sortiert aufsteigend nach Auflösung
+    const fileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${largest.file_id}`);
+    const fileData = await fileRes.json();
+    const filePath = fileData?.result?.file_path;
+    if (!filePath) throw new Error("Konnte das Foto nicht von Telegram laden.");
+    const imgRes = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
+    if (!imgRes.ok) throw new Error("Konnte das Foto nicht herunterladen.");
+    const buffer = await imgRes.arrayBuffer();
+    const base64 = arrayBufferToBase64(buffer);
+    const mimeType = filePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+
+    const extracted = await extractDeliveryFromImage(env, base64, mimeType, caption, today);
+    const items = (Array.isArray(extracted.items) ? extracted.items : [])
+      .map((it) => ({
+        id: crypto.randomUUID(),
+        itemName: String(it.itemName || "").trim(),
+        amount: String(it.amount || "").trim(),
+        date: /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today,
+      }))
+      .filter((it) => it.itemName);
+
+    if (items.length === 0) {
+      await sendTelegramMessage(env, chatId, "Konnte auf dem Foto keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung?");
+      return;
+    }
+
+    await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
+
+    const stock = state.stock || [];
+    const unresolved = items.filter((it) => {
+      const needle = it.itemName.toLowerCase();
+      return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
+    });
+    let reply = buildDeliveryReply(items);
+    if (unresolved.length > 0) {
+      reply += `\n\n⚠ Diese Artikel kenne ich nicht aus der Vorräte-Liste (Admin → Vorräte), bitte manuell prüfen: ${unresolved.map((it) => it.itemName).join(", ")}`;
+    }
+    await sendTelegramMessage(env, chatId, reply);
+  } catch (e) {
+    await sendTelegramMessage(env, chatId, `⚠ Fehler beim Verarbeiten des Fotos: ${e.message}`);
+  }
+}
+
 /** Zeigt, wer sich für welche Schicht an welchem Tag der Zielwoche bereit erklärt hat (keine Buchung –
  * mehrere Namen pro Schicht möglich, der Chef wählt selbst aus), plus wer noch gar nichts eingetragen hat. */
 function buildAvailabilityReply(state, today) {
@@ -582,8 +709,9 @@ async function handleTelegram(request, env) {
 
   const message = update.message;
   const text = message?.text;
+  const photo = Array.isArray(message?.photo) && message.photo.length > 0 ? message.photo : null;
   const chatId = message?.chat?.id;
-  if (!text || chatId === undefined) return new Response("ok", { status: 200 });
+  if ((!text && !photo) || chatId === undefined) return new Response("ok", { status: 200 });
 
   if (!env.OWNER_CHAT_ID) {
     await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen.`);
@@ -599,7 +727,12 @@ async function handleTelegram(request, env) {
     const state = await getState(env);
 
     if (!env.ANTHROPIC_API_KEY) {
-      await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten gerade nicht verstehen.");
+      await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten/Fotos gerade nicht verstehen.");
+      return new Response("ok", { status: 200 });
+    }
+
+    if (photo) {
+      await handleDeliveryPhoto(env, chatId, photo, message.caption, today, state);
       return new Response("ok", { status: 200 });
     }
 

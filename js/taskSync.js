@@ -285,6 +285,27 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRestockIds: [...appliedRestockIds].slice(-300) });
   }
 
+  // Vom Bot per Lieferschein-Foto erkannte Lieferungen -> als Verlauf beim jeweiligen Artikel anlegen
+  // (setzt den Status automatisch auf "ok"). Gleicher nachsichtiger Namens-Vergleich wie bei "restock".
+  const remoteDeliveries = Array.isArray(remote.stockDeliveries) ? remote.stockDeliveries : [];
+  const appliedDeliveryIds = new Set(cfg.appliedDeliveryIds || []);
+  let newDeliveryIds = false;
+  const stockForDelivery = store.getStockItems(); // frisch (evtl. schon durch die restock-Schleife verändert)
+  for (const d of remoteDeliveries) {
+    if (!d.id || appliedDeliveryIds.has(d.id)) continue;
+    const needle = String(d.itemName || "").trim().toLowerCase();
+    const match =
+      stockForDelivery.find((s) => s.name.trim().toLowerCase() === needle) ||
+      stockForDelivery.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    if (match) store.addStockDelivery(match.id, { date: d.date, amount: d.amount });
+    else syncWarnings.push(`Lieferung "${d.itemName}": kein passender Vorrats-Artikel gefunden.`);
+    appliedDeliveryIds.add(d.id);
+    newDeliveryIds = true;
+  }
+  if (newDeliveryIds) {
+    store.updateTaskInboxConfig({ appliedDeliveryIds: [...appliedDeliveryIds].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;

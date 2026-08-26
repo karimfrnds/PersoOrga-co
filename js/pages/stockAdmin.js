@@ -5,7 +5,7 @@
 // geändert – hier geht's nur um die Grundverwaltung der Artikel-Liste.
 // ============================================================================
 import { store } from "../store.js";
-import { escapeHtml } from "../format.js";
+import { escapeHtml, dateDe } from "../format.js";
 import { confirmDialog } from "../dialog.js";
 
 const STATUS_LABEL = { ok: "✅ Ok", knapp: "🟠 Wird knapp", leer: "🔴 Leer" };
@@ -88,6 +88,13 @@ function renderStockAdmin() {
       statusSpan.textContent =
         STATUS_LABEL[item.status] + (item.updatedBy ? ` · zuletzt geändert von ${item.updatedBy}` : "");
       textWrap.appendChild(statusSpan);
+      const lastDelivery = item.deliveries?.[0];
+      if (lastDelivery) {
+        const deliverySpan = document.createElement("span");
+        deliverySpan.className = "muted small task-row-meta";
+        deliverySpan.textContent = `📦 Zuletzt geliefert: ${dateDe(lastDelivery.date)}${lastDelivery.amount ? " · " + lastDelivery.amount : ""}`;
+        textWrap.appendChild(deliverySpan);
+      }
       row.appendChild(textWrap);
 
       const actions = document.createElement("div");

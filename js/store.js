@@ -76,6 +76,8 @@ function defaultData() {
         appliedRejectionIds: [],
         // IDs vom Bot per "X ist wieder da" wiederaufgefüllter Vorräte, die schon übernommen wurden.
         appliedRestockIds: [],
+        // IDs von per Lieferschein-Foto erkannten Lieferungen, die schon als Verlauf übernommen wurden.
+        appliedDeliveryIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -629,7 +631,7 @@ export const store = {
   },
   /** Admin legt einen neuen Artikel an (Status startet bei "ok"). */
   addStockItem(name) {
-    const item = { id: uid(), name: String(name || "").trim(), status: "ok", updatedAt: null, updatedBy: null };
+    const item = { id: uid(), name: String(name || "").trim(), status: "ok", updatedAt: null, updatedBy: null, deliveries: [] };
     if (!item.name) return null;
     data.stock.push(item);
     persist();
@@ -646,6 +648,21 @@ export const store = {
     item.status = status;
     item.updatedAt = new Date().toISOString();
     item.updatedBy = changedBy || null;
+    persist();
+    return item;
+  },
+  /** Loggt eine Lieferung (z.B. aus einem per Bot hochgeladenen Lieferschein-Foto) – reine Historie ("wann
+   * wurde wie viel bestellt"), keine Mengen-Buchhaltung. Setzt den Status automatisch auf "ok", da eine
+   * Lieferung angekommen ist. */
+  addStockDelivery(id, { date, amount, note }) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item) return;
+    if (!Array.isArray(item.deliveries)) item.deliveries = [];
+    item.deliveries.unshift({ id: uid(), date: date || todayStr(), amount: amount || "", note: note || "" });
+    item.deliveries = item.deliveries.slice(0, 20); // Historie nicht unbegrenzt wachsen lassen
+    item.status = "ok";
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = "Lieferschein";
     persist();
     return item;
   },

@@ -192,6 +192,13 @@ Stückzahlen, nur eine Ampel, das lässt sich im Alltag realistisch pflegen. Du 
 `einkaufsliste` ab und meldest per `Kaffeebohnen sind wieder da` (auch mehrere auf einmal), wenn was nachgekauft
 wurde – nachsichtiger Namensvergleich, muss nicht exakt passen.
 
+**Lieferschein-Foto**: ein Foto des Lieferscheins/der Rechnung direkt an den Bot schicken (mit oder ohne
+Bildunterschrift). Der Bot liest per KI-Bilderkennung heraus, welche Artikel mit welcher Menge geliefert
+wurden, gleicht sie mit der Vorräte-Liste ab und trägt sie automatisch als „bekommen" (Status zurück auf
+„Ok") plus als Liefer-Historie ein (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum · Menge"). Es
+wird **nichts gerechnet oder geschätzt** – nur abgeschrieben, was tatsächlich auf dem Beleg steht. Nur Fotos
+(keine PDF-Dokumente); braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von Textnachrichten.
+
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
 Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:
 - **Täglich um 8 Uhr**: kurze Tagesübersicht der Aufgaben.

@@ -205,7 +205,7 @@ Bestimme die Absicht der Nachricht:
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
-- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN (Früh1/Früh2/Mittel/Spät1/Spät2 o.ä.) statt einer Uhrzeit, IMMER slotLabel setzen und from/to leer lassen – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
+- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN (Früh1/Früh2/Mittel/Spät1/Spät2 o.ä.) statt einer Uhrzeit, IMMER slotLabel setzen und from/to leer lassen – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
@@ -311,11 +311,11 @@ function buildAvailabilityReply(state, today) {
     const slots = new Map();
     for (const name of submittedNames) {
       const dayEntry = (entries[name].days || []).find((d) => d.date === date);
-      const isConfirmedHere = dayEntry?.confirmedSlotId;
       for (const s of dayEntry?.slots || []) {
         if (!slots.has(s.id)) slots.set(s.id, { label: s.label, from: s.from, to: s.to, names: [] });
-        const isFest = isConfirmedHere === s.id;
-        slots.get(s.id).names.push(isFest ? `${name} ✅fest` : name);
+        const isConfirmedHere = dayEntry.confirmedSlotId === s.id;
+        const marker = !isConfirmedHere ? "" : dayEntry.bossConfirmed ? " ✅fest" : " 🔶wartet auf Bestätigung";
+        slots.get(s.id).names.push(`${name}${marker}`);
       }
     }
     lines.push(`\n${WEEKDAY_LABELS_DE[i]}, ${formatDateDe(date)}:`);

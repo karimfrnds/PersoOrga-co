@@ -2,7 +2,7 @@
 // store.js – Datenhaltung (localStorage). Ein Gerät, keine Cloud, kein Login.
 // ============================================================================
 
-import { todayStr } from "./format.js";
+import { todayStr, dateDe } from "./format.js";
 
 const STORAGE_KEY = "cafeapp_v1";
 
@@ -25,18 +25,20 @@ function defaultData() {
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
       taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert
-      // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar".
+      // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar"
+      // (teilen sich einen Plan, blockieren sich gegenseitig). allowedWeekdays: 0=Mo..6=So, fehlt = alle Tage.
+      // "mittel" braucht IMMER eine explizite Chef-Bestätigung, auch wenn sie automatisch fest wird.
       shiftSlots: {
         service: [
           { id: "frueh1", label: "Früh1", from: "08:30", to: "16:00" },
-          { id: "frueh2", label: "Früh2", from: "09:30", to: "17:00" },
+          { id: "frueh2", label: "Früh2", from: "09:30", to: "17:00", allowedWeekdays: [5, 6] }, // nur Sa/So
           { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
-          { id: "spaet1", label: "Spät1", from: "15:30", to: "23:00" },
-          { id: "spaet2", label: "Spät2", from: "18:00", to: "23:00" },
+          { id: "spaet1", label: "Spät1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
+          { id: "spaet2", label: "Spät2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
         ],
         kueche: [
           { id: "frueh1", label: "Früh1", from: "08:00", to: "15:30" },
-          { id: "frueh2", label: "Früh2", from: "10:00", to: "16:00" },
+          { id: "frueh2", label: "Früh2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
           { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
         ],
       },
@@ -70,6 +72,9 @@ function defaultData() {
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
     days: [],
+    // Kurze System-Nachrichten an einzelne Mitarbeiter (z.B. "Schicht vom Chef bestätigt"), erscheinen als
+    // Pop-up beim nächsten Öffnen ihres Kiosk-Fensters. { id, employeeId, text, createdAt, readAt }
+    notifications: [],
   };
 }
 
@@ -88,7 +93,12 @@ function normalizeDay(d) {
     plannedShifts: d.plannedShifts || [],
     // Vorsichtshalber Einträge im alten Kann/Kann-nicht-Format (available/from/to) auf das neue
     // Slot-Modell normalisieren, statt beim ersten Zugriff auf ein fehlendes slotIds zu crashen.
-    availability: (d.availability || []).map((a) => ({ confirmedSlotId: null, ...a, slotIds: Array.isArray(a.slotIds) ? a.slotIds : [] })),
+    availability: (d.availability || []).map((a) => ({
+      confirmedSlotId: null,
+      bossConfirmed: false,
+      ...a,
+      slotIds: Array.isArray(a.slotIds) ? a.slotIds : [],
+    })),
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
   };
 }
@@ -108,9 +118,10 @@ function load() {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
-        shiftSlots: parsed.settings?.shiftSlots ?? base.settings.shiftSlots,
+        shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
+      notifications: parsed.notifications ?? base.notifications,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -127,6 +138,19 @@ function persist() {
 /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
 function shiftSlotsForRole(role) {
   return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
+}
+
+/** 0=Montag..6=Sonntag, reiner Kalendertag. */
+function weekdayIndexOfDate(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=So..6=Sa
+  return wd === 0 ? 6 : wd - 1;
+}
+
+/** "mittel" braucht in JEDEM Fall eine explizite Chef-Bestätigung, auch wenn sie automatisch (durch
+ * Einzelauswahl oder Kaskade) fest zugeteilt wurde – alle anderen Schichten gelten sofort als bestätigt. */
+function autoConfirmsWithoutBoss(slotId) {
+  return slotId !== "mittel";
 }
 
 /** Konkurrenz-Pool einer Person, für den Exklusivitäts-Vergleich ("wer konkurriert mit wem um dieselbe
@@ -158,6 +182,7 @@ function resolveDayAvailability(d) {
       const open = a.slotIds.filter((id) => !taken.has(role + ":" + id));
       if (open.length === 1) {
         a.confirmedSlotId = open[0];
+        a.bossConfirmed = autoConfirmsWithoutBoss(open[0]);
         taken.set(role + ":" + open[0], a.employeeId);
         changed = true;
       }
@@ -176,7 +201,7 @@ function materializePlannedShiftsFromAvailability(d) {
       const emp = data.employees.find((e) => e.id === a.employeeId);
       const slot = emp ? shiftSlotsForRole(emp.role).find((s) => s.id === a.confirmedSlotId) : null;
       if (slot) {
-        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: "" };
+        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: "", bossConfirmed: !!a.bossConfirmed };
         if (idx >= 0) d.plannedShifts[idx] = shift;
         else d.plannedShifts.push(shift);
       }
@@ -449,9 +474,13 @@ export const store = {
   // bereitstehen würden). Wählt jemand genau EINE Schicht, ist die sofort fest und für alle anderen
   // ausgegraut. Wählt jemand mehrere ("keine Präferenz"), bleibt das offen (keine ausgegraut), bis der
   // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf eine reduziert. ----
-  /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
-  getShiftSlotsForRole(role) {
-    return shiftSlotsForRole(role);
+  /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). Mit dateStr nur die an
+   * diesem Wochentag tatsächlich angebotenen Schichten (manche gelten nur an bestimmten Tagen). */
+  getShiftSlotsForRole(role, dateStr) {
+    const all = shiftSlotsForRole(role);
+    if (!dateStr) return all;
+    const wd = weekdayIndexOfDate(dateStr);
+    return all.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(wd));
   },
   getAvailability(dayId, employeeId) {
     const d = this.getDay(dayId);
@@ -498,6 +527,7 @@ export const store = {
       employeeId,
       slotIds: clean,
       confirmedSlotId: clean.length === 1 ? clean[0] : null,
+      bossConfirmed: clean.length === 1 ? autoConfirmsWithoutBoss(clean[0]) : false,
       submittedAt: new Date().toISOString(),
     };
     if (idx >= 0) d.availability[idx] = entry;
@@ -507,7 +537,9 @@ export const store = {
     return this.getAvailability(dayId, employeeId);
   },
   /** Chef legt per Bot explizit fest, welche Schicht eine Person bekommt (überstimmt alles, auch falls
-   * jemand anderes sie gerade fest hatte – die verliert sie dann wieder). Stößt die Kaskade erneut an. */
+   * jemand anderes sie gerade fest hatte – die verliert sie dann wieder). Zählt IMMER als Chef-Bestätigung
+   * (auch für "mittel", die sonst nie automatisch bestätigt wird) und schickt der Person eine Nachricht,
+   * die beim nächsten Öffnen ihres Kiosk-Fensters als Pop-up erscheint. Stößt die Kaskade erneut an. */
   confirmAvailability(dayId, employeeId, slotId) {
     const d = this.getDay(dayId);
     if (!d) return;
@@ -520,12 +552,34 @@ export const store = {
       const a = d.availability[idx];
       if (!a.slotIds.includes(slotId)) a.slotIds.push(slotId);
       a.confirmedSlotId = slotId;
+      a.bossConfirmed = true;
     } else {
-      d.availability.push({ id: uid(), employeeId, slotIds: [slotId], confirmedSlotId: slotId, submittedAt: new Date().toISOString() });
+      d.availability.push({ id: uid(), employeeId, slotIds: [slotId], confirmedSlotId: slotId, bossConfirmed: true, submittedAt: new Date().toISOString() });
     }
     resolveDayAvailability(d);
     persist();
+
+    const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    this.addNotification(employeeId, `✅ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr)` : ""} ist vom Chef bestätigt.`);
+
     return this.getAvailability(dayId, employeeId);
+  },
+
+  // ---- Nachrichten an Mitarbeiter (Pop-up beim nächsten Öffnen des Kiosk-Fensters) ----
+  addNotification(employeeId, text) {
+    const n = { id: uid(), employeeId, text, createdAt: new Date().toISOString(), readAt: null };
+    data.notifications.push(n);
+    persist();
+    return n;
+  },
+  getUnreadNotifications(employeeId) {
+    return data.notifications.filter((n) => n.employeeId === employeeId && !n.readAt);
+  },
+  markNotificationRead(id) {
+    const n = data.notifications.find((x) => x.id === id);
+    if (!n) return;
+    n.readAt = new Date().toISOString();
+    persist();
   },
 
   // Stornos
@@ -694,9 +748,10 @@ export const store = {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
-        shiftSlots: parsed.settings?.shiftSlots ?? base.settings.shiftSlots,
+        shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? []).map(normalizeDay),
+      notifications: parsed.notifications ?? [],
     };
     persist();
   },

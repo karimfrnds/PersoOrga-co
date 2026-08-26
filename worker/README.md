@@ -135,28 +135,43 @@ bei keiner Präferenz einfach alle antippen) und sendet es ab. Feste Zeitfenster
 
 | Rolle | Schichten |
 |---|---|
-| Service / Bar | Früh1 08:30–16:00 · Früh2 09:30–17:00 · Mittel 10:00–14:00 · Spät1 15:30–23:00 · Spät2 18:00–23:00 |
-| Küche | Früh1 08:00–15:30 · Früh2 10:00–16:00 · Mittel 10:00–14:00 |
+| Service / Bar | Früh1 08:30–16:00 (alle Tage) · Früh2 09:30–17:00 (nur Sa/So) · Mittel 10:00–14:00 (alle Tage) · Spät1 15:30–23:00 (Mi-Sa) · Spät2 18:00–23:00 (Mi-Sa) |
+| Küche | Früh1 08:00–15:30 (alle Tage) · Früh2 10:00–16:00 (nur Fr/Sa/So) · Mittel 10:00–14:00 (alle Tage) |
 
-(Service und Bar teilen sich zwar dieselben Zeiten, konkurrieren aber NICHT um dieselbe Schicht – eine Bar- und
-eine Service-Person können beide "Früh1" haben. Gleiche Rolle = gleicher Slot = nur eine Person.)
+Service und Bar teilen sich EINEN Plan und blockieren sich gegenseitig (eine Bar- und eine Service-Person
+können nicht beide "Früh1" haben). Küche ist komplett unabhängig davon.
 
 So funktioniert die Zuteilung:
-- **Wählt jemand genau EINE Schicht**, ist sie **sofort fest** ihre – für alle anderen (gleiche Rolle) ab da
-  ausgegraut, direkt im System verbucht (taucht bei ihr unter "Deine Schichten" auf) und an dich weitergegeben.
+- **Wählt jemand genau EINE Schicht**, ist sie **sofort fest** ihre – für alle anderen (Service+Bar bzw. Küche)
+  ab da ausgegraut, direkt im System verbucht (taucht bei ihr unter "Deine Schichten" auf) und an dich
+  weitergegeben. Gilt automatisch als **bestätigt**, außer bei "Mittel" (siehe unten).
 - **Wählt jemand mehrere**, heißt das "keine Präferenz" – nichts wird ausgegraut, bleibt offen, bis entweder du
   entscheidest oder sich die Auswahl automatisch auf eine reduziert (weil eine der Optionen anderweitig vergeben
   wurde und nur noch eine übrig bleibt – **Kaskaden-Effekt**, kann auch mehrere Personen nacheinander betreffen).
-- **Du weist gezielt zu**: `Anna bekommt Montag Früh1` oder `Timm soll Mittwoch die Spät2 machen` – überstimmt
-  alles, auch falls die Schicht gerade wem anders fest gehört (die verliert sie dann wieder).
+- **"Mittel"-Schichten brauchen IMMER deine explizite Bestätigung**, selbst wenn sie automatisch (Einzelauswahl
+  oder Kaskade) fest wurden – erst dann gilt sie als bestätigt.
+- **Du weist gezielt zu / bestätigst**: `Anna bekommt Montag Früh1`, `Timm soll Mittwoch die Spät2 machen`,
+  `Anna bekommt Montag Mittel` (bestätigt eine bereits gehaltene Mittel-Schicht) – überstimmt alles, auch falls
+  die Schicht gerade wem anders fest gehört (die verliert sie dann wieder).
+- Die betroffene Person bekommt eine **Nachricht** ("📬 Nachricht vom Chef"), die als Pop-up erscheint, sobald
+  sie sich das nächste Mal im Kiosk anmeldet.
 
 Der Bot sammelt das im Hintergrund, ohne dich mit einer Nachricht pro Person zu nerven:
 - Meldet sich **automatisch**, sobald **alle** aktiven Mitarbeiter für die kommende Woche eingetragen haben.
 - Erinnert **freitags morgens** automatisch an alle, die noch fehlen (nur falls Cron Triggers eingerichtet sind,
   siehe oben).
 - Jederzeit auf Zuruf abrufbar: `wer kann wann`, `verfügbarkeiten`, `wie sieht die Verfügbarkeit für nächste
-  Woche aus` → Übersicht pro Tag und Schicht, wer sich bereit erklärt hat (✅fest markiert die bereits fixierten),
-  plus wer noch gar nichts eingetragen hat.
+  Woche aus` → Übersicht pro Tag und Schicht, wer sich bereit erklärt hat (✅fest = bestätigt, 🔶wartet auf
+  Bestätigung = fest, aber noch nicht von dir bestätigt), plus wer noch gar nichts eingetragen hat.
+
+Sobald jemand seine Verfügbarkeit für die Woche abgeschickt hat, klappt die Auswahl im Kiosk-Fenster zu einer
+kompakten Ansicht zusammen (die Schichten stehen weiter oben bei „Deine Schichten"). Für Änderungswünsche gibt
+es dort den Button „💬 Chef anfragen für Schichtänderung" – schickt dir eine Notiz und öffnet die Auswahl direkt
+wieder für die Person.
+
+**Hinweis zu WhatsApp**: Mitarbeiter-Benachrichtigungen laufen bewusst als In-App-Pop-up im Kiosk, nicht per
+WhatsApp – eine WhatsApp-Anbindung bräuchte eine eigene, kostenpflichtige WhatsApp-Business-API-Einrichtung
+plus hinterlegte Telefonnummern. Bei Bedarf lässt sich das später ergänzen.
 
 **Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die

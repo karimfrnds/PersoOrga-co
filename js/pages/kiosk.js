@@ -58,6 +58,7 @@ function renderKiosk(navigate) {
   let pin = "";
   let error = "";
   let greetEmployee = null; // erkannt am Leerlauf-Pad, wartet auf "Schicht starten?"-Bestätigung
+  const wantsToEditWeek = new Set(); // "empId:weekStart", die nach "Chef anfragen" nochmal bearbeiten wollen
 
   // Neue Telegram-Aufgaben abholen, Leerlauf-Bildschirm danach neu zeichnen (falls gerade sichtbar).
   // Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden, damit sich nichts aufsummiert.
@@ -216,6 +217,16 @@ function renderKiosk(navigate) {
     personalEmployee = emp;
     view = "personal";
     rerender();
+    showUnreadNotifications(emp); // absichtlich nicht awaited, läuft als Pop-up-Kette über der Ansicht
+  }
+
+  /** Zeigt neue Nachrichten vom Chef (z.B. "Schicht bestätigt") als Pop-up, einmal pro Öffnen des Fensters. */
+  async function showUnreadNotifications(emp) {
+    const unread = store.getUnreadNotifications(emp.id);
+    for (const n of unread) {
+      await alertDialog(n.text, { title: "📬 Nachricht vom Chef" });
+      store.markNotificationRead(n.id);
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -364,7 +375,12 @@ function renderKiosk(navigate) {
 
     // ---- Verfügbarkeit für nächste Woche (nur wenn Telegram-Abgleich eingerichtet, sonst käme sie nirgends an) ----
     if (inboxUsable) {
-      wrap.appendChild(buildAvailabilityCard(emp));
+      const weekStart = addDaysISO(mondayOf(todayStr()), 7);
+      const editKey = emp.id + ":" + weekStart;
+      const alreadySubmitted = weekHasSubmission(emp, weekStart);
+      wrap.appendChild(
+        alreadySubmitted && !wantsToEditWeek.has(editKey) ? buildAvailabilitySummaryCollapsed(emp, weekStart) : buildAvailabilityCard(emp)
+      );
     }
 
     // ---- Notiz an den Chef ----
@@ -451,11 +467,49 @@ function renderKiosk(navigate) {
         const row = document.createElement("div");
         row.className = "summary-line";
         const label = s.date === todayStr() ? "Heute" : `${WEEKDAY_LABELS[weekdayIndexOf(s.date)]}, ${dateDeShort(s.date)}`;
-        row.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr</span>`;
+        const statusTag = s.bossConfirmed === true ? " ✅ bestätigt" : s.bossConfirmed === false ? " ⏳ wartet auf Bestätigung" : "";
+        row.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr${statusTag}</span>`;
         list.appendChild(row);
       }
       card.appendChild(list);
     }
+    return card;
+  }
+
+  /** true, wenn für diese Zielwoche schon mindestens ein Tag "abgeschickt" wurde. */
+  function weekHasSubmission(emp, weekStart) {
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
+      const dayObj = store.getDayByDate(date);
+      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
+      if (entry?.submittedAt) return true;
+    }
+    return false;
+  }
+
+  /** Kompakte Ansicht, sobald für die Woche schon gesendet wurde – die große Auswahl bleibt zu, damit man
+   * sie nicht aus Versehen nochmal verändert. Änderungswunsch geht ausdrücklich über eine Anfrage an den Chef. */
+  function buildAvailabilitySummaryCollapsed(emp, weekStart) {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>🗓 Verfügbarkeit für nächste Woche</h2><p class="muted small">Gesendet – deine Schichten dazu stehen oben bei „Deine Schichten". Möchtest du noch etwas ändern, frag den Chef.</p>`;
+    const btn = document.createElement("button");
+    btn.className = "btn btn-secondary";
+    btn.textContent = "💬 Chef anfragen für Schichtänderung";
+    btn.onclick = async () => {
+      btn.disabled = true;
+      // Auswahl öffnet sich in jedem Fall wieder (sonst hängt die Person fest, falls die Nachricht mal
+      // nicht rausgeht) – nur die Erfolgs-/Fehlermeldung zur Chef-Benachrichtigung unterscheidet sich.
+      wantsToEditWeek.add(emp.id + ":" + weekStart);
+      try {
+        await sendNoteToBoss(emp.name, `Möchte die Verfügbarkeit für die Woche ab ${dateDeShort(weekStart)} noch ändern.`);
+        rerender();
+      } catch (e) {
+        rerender();
+        await alertDialog("Auswahl ist wieder offen, aber die Nachricht an den Chef kam nicht durch: " + e.message, { title: "Fehler" });
+      }
+    };
+    card.appendChild(btn);
     return card;
   }
 
@@ -465,13 +519,14 @@ function renderKiosk(navigate) {
   // alle anderen ab da ausgegraut); mehrere = "keine Präferenz", bleibt offen, bis der
   // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf
   // eine reduziert. Auswahl passiert erst als Entwurf (nur lokal sichtbar), verbindlich
-  // wird sie erst mit "An den Chef senden".
+  // wird sie erst mit "An den Chef senden". Manche Schichten gelten nur an bestimmten
+  // Wochentagen (z.B. Spät nur Mi-Sa) – pro Tag wird daher neu ermittelt, was angeboten wird.
   // ---------------------------------------------------------------------
   function buildAvailabilityCard(emp) {
     const weekStart = addDaysISO(mondayOf(todayStr()), 7);
     const weekEnd = addDaysISO(weekStart, 6);
-    const slotDefs = store.getShiftSlotsForRole(emp.role);
-    const slotById = new Map(slotDefs.map((s) => [s.id, s]));
+    const allSlotDefs = store.getShiftSlotsForRole(emp.role); // ungefiltert, für Namen-Nachschlagen egal an welchem Tag
+    const slotById = new Map(allSlotDefs.map((s) => [s.id, s]));
 
     const card = document.createElement("section");
     card.className = "card";
@@ -484,10 +539,11 @@ function renderKiosk(navigate) {
     list.className = "avail-list";
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
+      const dayDefSlots = store.getShiftSlotsForRole(emp.role, date); // an diesem Wochentag angebotene Schichten
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
       const draftSelected = new Set(entry?.slotIds || []);
-      const selectableSlots = slotDefs.filter((s) => !(dayObj && store.isSlotTaken(dayObj.id, s.id, emp.id)));
+      const selectableSlots = dayDefSlots.filter((s) => !(dayObj && store.isSlotTaken(dayObj.id, s.id, emp.id)));
       const allSelected = selectableSlots.length > 0 && selectableSlots.every((s) => draftSelected.has(s.id));
 
       const row = document.createElement("div");
@@ -518,7 +574,13 @@ function renderKiosk(navigate) {
 
       const slotList = document.createElement("div");
       slotList.className = "avail-slot-list";
-      for (const slot of slotDefs) {
+      if (dayDefSlots.length === 0) {
+        const none = document.createElement("p");
+        none.className = "muted small";
+        none.textContent = "An diesem Tag gibt es für deine Rolle keine dieser Schichten.";
+        slotList.appendChild(none);
+      }
+      for (const slot of dayDefSlots) {
         const takenByOther = dayObj ? store.isSlotTaken(dayObj.id, slot.id, emp.id) : false;
         const slotBtn = document.createElement("button");
         slotBtn.type = "button";
@@ -547,7 +609,11 @@ function renderKiosk(navigate) {
         status.className = "muted small avail-status";
         if (entry.confirmedSlotId) {
           const slot = slotById.get(entry.confirmedSlotId);
-          status.innerHTML = slot ? `✅ <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist fest deine Schicht.` : "";
+          if (slot) {
+            status.innerHTML = entry.bossConfirmed
+              ? `✅ <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist fest deine Schicht.`
+              : `🔶 <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist deine Schicht, wartet aber noch auf Bestätigung vom Chef.`;
+          }
         } else if (entry.slotIds.length > 1) {
           const labels = entry.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
           status.textContent = `🕓 Gesendet: ${labels} – noch offen, der Chef entscheidet.`;
@@ -562,7 +628,7 @@ function renderKiosk(navigate) {
     const submitBtn = document.createElement("button");
     submitBtn.className = "btn btn-primary";
     submitBtn.textContent = "An den Chef senden";
-    submitBtn.onclick = () => submitAvailability(weekStart, emp, slotDefs, submitBtn);
+    submitBtn.onclick = () => submitAvailability(weekStart, emp, allSlotDefs, submitBtn);
     card.appendChild(submitBtn);
 
     return card;
@@ -582,7 +648,11 @@ function renderKiosk(navigate) {
       const dayLabel = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
       if (committed.confirmedSlotId) {
         const slot = slotById.get(committed.confirmedSlotId);
-        summaryLines.push(`${dayLabel}: ✅ ${slot.label} (${slot.from}–${slot.to}) fest`);
+        summaryLines.push(
+          committed.bossConfirmed
+            ? `${dayLabel}: ✅ ${slot.label} (${slot.from}–${slot.to}) fest`
+            : `${dayLabel}: 🔶 ${slot.label} (${slot.from}–${slot.to}) – wartet noch auf Bestätigung vom Chef`
+        );
       } else if (committed.slotIds.length > 1) {
         const labels = committed.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
         summaryLines.push(`${dayLabel}: 🕓 ${labels} – noch offen, Chef entscheidet`);
@@ -591,7 +661,7 @@ function renderKiosk(navigate) {
       }
       if (committed.slotIds.length > 0) {
         const slots = committed.slotIds.map((id) => slotById.get(id)).filter(Boolean).map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to }));
-        pushDays.push({ date, slots, confirmedSlotId: committed.confirmedSlotId || null });
+        pushDays.push({ date, slots, confirmedSlotId: committed.confirmedSlotId || null, bossConfirmed: !!committed.bossConfirmed });
       }
     }
     if (summaryLines.length === 0) {
@@ -605,6 +675,7 @@ function renderKiosk(navigate) {
     } catch (e) {
       pushError = e;
     }
+    wantsToEditWeek.delete(emp.id + ":" + weekStart); // nach erfolgreichem Senden wieder einklappen
     rerender();
     if (pushError) {
       await alertDialog(["Lokal gespeichert, aber nicht an den Chef gesendet (" + pushError.message + "):", ...summaryLines].join("\n"), { title: "Fehler beim Senden" });

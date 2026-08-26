@@ -129,11 +129,13 @@ function shiftSlotsForRole(role) {
   return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
 }
 
-/** Rolle einer Person, für den Exklusivitäts-Vergleich ("wer konkurriert mit wem um dieselbe Schicht-ID").
- * Wichtig: Service und Küche haben beide z.B. eine Schicht mit der ID "frueh1", aber zu unterschiedlichen
- * Zeiten – das sind zwei verschiedene Schichten, die sich NICHT gegenseitig blockieren dürfen. */
+/** Konkurrenz-Pool einer Person, für den Exklusivitäts-Vergleich ("wer konkurriert mit wem um dieselbe
+ * Schicht-ID"). Service und Bar teilen sich einen Plan (blockieren sich gegenseitig), Küche hat einen
+ * eigenen – deren Schicht "frueh1" ist zeitlich eine ganz andere als die von Service/Bar, darf die also
+ * nicht blockieren. Entspricht genau der Aufteilung von shiftSlotsForRole(). */
 function roleOf(employeeId) {
-  return data.employees.find((e) => e.id === employeeId)?.role || null;
+  const role = data.employees.find((e) => e.id === employeeId)?.role || null;
+  return role === "kueche" ? "kueche" : role === null ? null : "service";
 }
 
 /**

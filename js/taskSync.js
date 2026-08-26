@@ -155,6 +155,23 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedShiftAssignmentIds: [...appliedAssignmentIds].slice(-300) });
   }
 
+  // Freie Nachrichten vom Chef ("notify" per Bot) -> als System-Benachrichtigung anlegen, die im Kiosk
+  // beim nächsten Öffnen des persönlichen Fensters als Pop-up erscheint. Eigene Dedup-Liste, damit ein
+  // erneuter Sync dieselbe Nachricht nicht nochmal zustellt.
+  const remoteMessages = Array.isArray(remote.employeeMessages) ? remote.employeeMessages : [];
+  const appliedMessageIds = new Set(cfg.appliedMessageIds || []);
+  let newMessageIds = false;
+  for (const m of remoteMessages) {
+    if (!m.id || appliedMessageIds.has(m.id)) continue;
+    const match = employees.find((e) => e.name.trim().toLowerCase() === String(m.employeeName || "").trim().toLowerCase());
+    if (match && m.text) store.addNotification(match.id, `💬 ${m.text}`);
+    appliedMessageIds.add(m.id);
+    newMessageIds = true;
+  }
+  if (newMessageIds) {
+    store.updateTaskInboxConfig({ appliedMessageIds: [...appliedMessageIds].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;

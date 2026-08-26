@@ -177,6 +177,12 @@ plus hinterlegte Telefonnummern. Bei Bedarf lässt sich das später ergänzen.
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die
 direkt bei dir in Telegram landet (z.B. „Minze bestellen").
 
+**Nachrichten an Mitarbeiter (umgekehrte Richtung)**: du schreibst dem Bot z.B. „Sag Anna, sie soll morgen 30
+Min früher kommen" oder „Richte allen aus, dass am Montag Inventur ist" (dann bekommt jede aktive Person eine
+eigene Nachricht) – landet beim nächsten iPad-Abgleich als Pop-up „📬 Nachricht vom Chef" im Kiosk-Fenster der
+jeweiligen Person, sobald sie sich anmeldet. Bewusst kein WhatsApp (siehe Hinweis oben), sondern dasselbe
+Pop-up-System wie bei Schicht-Bestätigungen.
+
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
 Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst um 8 Uhr morgens (kurze
 Tagesübersicht) und um 19 Uhr abends (falls noch Aufgaben offen sind) – Ortszeit Europe/Berlin, DST-sicher. Die

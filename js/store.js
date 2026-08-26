@@ -68,6 +68,9 @@ function defaultData() {
         // eine spätere eigene Änderung am nächsten Sync wieder von der (weiter in der Cloud stehenden)
         // alten Bot-Zuweisung überschrieben wird.
         appliedShiftAssignmentIds: [],
+        // IDs vom Bot per freier Nachricht ("notify") an Mitarbeiter geschickter Nachrichten, die schon als
+        // Pop-up-Benachrichtigung angelegt wurden (gedeckelt) – verhindert doppelte Zustellung bei erneutem Sync.
+        appliedMessageIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }

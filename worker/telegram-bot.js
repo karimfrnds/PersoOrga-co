@@ -77,7 +77,16 @@ function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 }
 
-const EMPTY_STATE = { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [], plannedShifts: [], availability: {} };
+const EMPTY_STATE = {
+  updatedAt: null,
+  employees: [],
+  tasks: [],
+  shiftsInService: [],
+  financials: [],
+  plannedShifts: [],
+  availability: {},
+  employeeMessages: [],
+};
 
 async function getState(env) {
   const raw = await env.TASKS_KV.get(STATE_KEY);
@@ -92,6 +101,7 @@ async function getState(env) {
       financials: Array.isArray(parsed.financials) ? parsed.financials : [],
       plannedShifts: Array.isArray(parsed.plannedShifts) ? parsed.plannedShifts : [],
       availability: parsed.availability && typeof parsed.availability === "object" ? parsed.availability : {},
+      employeeMessages: Array.isArray(parsed.employeeMessages) ? parsed.employeeMessages : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -124,7 +134,7 @@ async function interpretMessage(env, text, today, state) {
     input_schema: {
       type: "object",
       properties: {
-        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "other"] },
+        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "notify", "other"] },
         stats_period: {
           type: "string",
           enum: ["today", "yesterday", "week", "month"],
@@ -178,6 +188,19 @@ async function interpretMessage(env, text, today, state) {
             required: ["employeeName", "date"],
           },
         },
+        messages_to_send: {
+          type: "array",
+          description:
+            "Nur bei action=notify. Jede Nachricht an eine Person als eigener Eintrag, auch bei mehreren Empfängern (z.B. bei 'sag allen...' für jede bekannte aktive Person einen Eintrag).",
+          items: {
+            type: "object",
+            properties: {
+              employeeName: { type: "string", description: "Name der Person aus der Mitarbeiterliste." },
+              text: { type: "string", description: "Der Nachrichtentext, so wie er der Person angezeigt werden soll (kurz, klar, auf Deutsch)." },
+            },
+            required: ["employeeName", "text"],
+          },
+        },
       },
       required: ["action"],
     },
@@ -207,6 +230,7 @@ Bestimme die Absicht der Nachricht:
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
 - "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN (Früh1/Früh2/Mittel/Spät1/Spät2 o.ä.) statt einer Uhrzeit, IMMER slotLabel setzen und from/to leer lassen – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
+- "notify": der Chef will einer oder mehreren Personen eine freie Nachricht schicken, die im Kiosk als Pop-up erscheint, z.B. "Sag Anna, sie soll morgen 30 Min früher kommen", "Schreib Timm: Danke für die Vertretung gestern!", "Richte allen aus, dass am Montag Inventur ist" (dann für JEDE bekannte aktive Person einen eigenen Eintrag in messages_to_send anlegen). IMMER jede Nachricht als eigenen Eintrag, auch bei mehreren Empfängern.
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
@@ -289,6 +313,12 @@ function buildWhoReply(state) {
 function buildPlanShiftsReply(items) {
   const lines = items.map((s, i) => `${i + 1}. ${s.employeeName} – ${formatDateDe(s.date)} · ${s.slotLabel || `${s.from}-${s.to}`}`);
   const heading = items.length === 1 ? "✅ Schicht eingetragen:" : `✅ ${items.length} Schichten eingetragen:`;
+  return [heading, ...lines].join("\n");
+}
+
+function buildNotifyReply(items) {
+  const lines = items.map((m, i) => `${i + 1}. ${m.employeeName}: „${m.text}"`);
+  const heading = items.length === 1 ? "✅ Wird zugestellt, sobald sich die Person im Kiosk anmeldet:" : `✅ ${items.length} Nachrichten werden zugestellt:`;
   return [heading, ...lines].join("\n");
 }
 
@@ -543,11 +573,31 @@ async function handleTelegram(request, env) {
         }
         await sendTelegramMessage(env, chatId, reply);
       }
+    } else if (result.action === "notify") {
+      const knownNames = new Set(state.employees.map((n) => n.toLowerCase()));
+      const newMessages = (Array.isArray(result.messages_to_send) ? result.messages_to_send : [])
+        .map((m) => ({
+          id: crypto.randomUUID(),
+          employeeName: String(m.employeeName || "").trim(),
+          text: String(m.text || "").trim(),
+        }))
+        .filter((m) => m.employeeName && m.text);
+      if (newMessages.length === 0) {
+        await sendTelegramMessage(env, chatId, "Konnte daraus keine Nachricht erkennen. Für wen war die gedacht, und was soll drinstehen?");
+      } else {
+        await patchState(env, { employeeMessages: [...(state.employeeMessages || []), ...newMessages] });
+        const unresolved = newMessages.filter((m) => !knownNames.has(m.employeeName.toLowerCase()));
+        let reply = buildNotifyReply(newMessages);
+        if (unresolved.length > 0) {
+          reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((m) => m.employeeName).join(", ")}`;
+        }
+        await sendTelegramMessage(env, chatId, reply);
+      }
     } else {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"`
       );
     }
   } catch (e) {

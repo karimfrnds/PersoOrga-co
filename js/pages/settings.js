@@ -276,7 +276,10 @@ function renderSettings() {
     const inboxStatusLine = document.createElement("p");
     inboxStatusLine.className = inboxCfg.lastError ? "callout callout-warn" : "muted small";
     if (inboxCfg.lastError) {
-      inboxStatusLine.textContent = `⚠ Letzter Abgleich fehlgeschlagen: ${inboxCfg.lastError}`;
+      // Kann entweder ein echter Fehlschlag sein (Netzwerk/Worker nicht erreichbar) oder ein Hinweis,
+      // dass einzelne Bot-Zuweisungen/Nachrichten nicht zugeordnet werden konnten (Name/Schicht prüfen) –
+      // der Rest des Abgleichs (Aufgaben etc.) lief in beiden Fällen trotzdem durch.
+      inboxStatusLine.textContent = `⚠ Hinweis zum letzten Abgleich: ${inboxCfg.lastError}`;
     } else if (inboxCfg.lastSyncAt) {
       const t = new Date(inboxCfg.lastSyncAt);
       inboxStatusLine.textContent = `Letzter Abgleich: ${t.toLocaleDateString("de-DE")} ${t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr.`;

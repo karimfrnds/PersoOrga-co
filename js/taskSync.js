@@ -23,11 +23,16 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Nachsichtiger Vergleich für Schicht-Namen ("Früh1" vs "früh 1" vs "fruh1"), damit eine per Bot-Chat
- * eingetippte Schicht trotz kleiner Tippabweichungen zum richtigen Slot passt. */
+/** Nachsichtiger Vergleich für Schicht-Namen ("Früh1" vs "früh 1" vs "FRUEH1" ohne Umlaut-Taste), damit eine
+ * per Bot-Chat eingetippte Schicht trotz kleiner Tippabweichungen zum richtigen Slot passt. Muss exakt so
+ * auch im Worker (worker/telegram-bot.js: normalizeSlotLabelCheck) stehen, sonst laufen beide auseinander. */
 function normalizeSlotLabel(s) {
   return String(s || "")
     .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
     .replace(/[^a-z0-9]/g, "");
 }
 
@@ -120,6 +125,7 @@ async function performTaskSync() {
   const employees = store.getEmployees(false);
 
   let applied = 0;
+  const syncWarnings = []; // Zuweisungen/Nachrichten/Ablehnungen, die NICHT übernommen werden konnten (sichtbar in lastError)
 
   // Vom Bot per Wochenplan-Nachricht angelegte geplante Schichten -> lokal übernehmen.
   // Zwei Formen: freie Uhrzeit (from/to, per rs.id dedupliziert wie bisher) ODER Zuweisung anhand des
@@ -134,9 +140,15 @@ async function performTaskSync() {
     if (rs.slotLabel) {
       if (appliedAssignmentIds.has(rs.id)) continue;
       const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
-      if (match && rs.date) {
+      if (!match) {
+        syncWarnings.push(`Schicht-Zuweisung "${rs.employeeName}" ${rs.date || ""}: Mitarbeiter nicht gefunden (Name prüfen).`);
+      } else if (!rs.date) {
+        syncWarnings.push(`Schicht-Zuweisung für ${rs.employeeName}: kein gültiges Datum erkannt.`);
+      } else {
         const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(rs.slotLabel));
-        if (slot) {
+        if (!slot) {
+          syncWarnings.push(`Schicht-Zuweisung für ${rs.employeeName} am ${rs.date}: Schicht "${rs.slotLabel}" nicht erkannt (erwartet z.B. Früh1/Mittel/Spät2).`);
+        } else {
           const day = store.getOrCreateDayByDate(rs.date);
           store.confirmAvailability(day.id, match.id, slot.id);
         }
@@ -146,7 +158,10 @@ async function performTaskSync() {
     } else {
       if (store.hasPlannedShiftId(rs.id)) continue;
       const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
-      if (!match || !rs.date || !rs.from || !rs.to) continue;
+      if (!match || !rs.date || !rs.from || !rs.to) {
+        syncWarnings.push(`Wochenplan-Eintrag "${rs.employeeName}" ${rs.date || ""}: unvollständig oder Mitarbeiter nicht gefunden.`);
+        continue;
+      }
       const day = store.getOrCreateDayByDate(rs.date);
       store.addPlannedShift(day.id, { id: rs.id, employeeId: match.id, from: rs.from, to: rs.to });
     }
@@ -164,7 +179,11 @@ async function performTaskSync() {
   for (const m of remoteMessages) {
     if (!m.id || appliedMessageIds.has(m.id)) continue;
     const match = employees.find((e) => e.name.trim().toLowerCase() === String(m.employeeName || "").trim().toLowerCase());
-    if (match && m.text) store.addNotification(match.id, `💬 ${m.text}`);
+    if (match && m.text) {
+      store.addNotification(match.id, `💬 ${m.text}`);
+    } else {
+      syncWarnings.push(`Nachricht an "${m.employeeName}": Mitarbeiter nicht gefunden (Name prüfen).`);
+    }
     appliedMessageIds.add(m.id);
     newMessageIds = true;
   }
@@ -180,9 +199,15 @@ async function performTaskSync() {
   for (const r of remoteRejections) {
     if (!r.id || appliedRejectionIds.has(r.id)) continue;
     const match = employees.find((e) => e.name.trim().toLowerCase() === String(r.employeeName || "").trim().toLowerCase());
-    if (match && r.date) {
+    if (!match) {
+      syncWarnings.push(`Ablehnung "${r.employeeName}" ${r.date || ""}: Mitarbeiter nicht gefunden (Name prüfen).`);
+    } else if (!r.date) {
+      syncWarnings.push(`Ablehnung für ${r.employeeName}: kein gültiges Datum erkannt.`);
+    } else {
       const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(r.slotLabel));
-      if (slot) {
+      if (!slot) {
+        syncWarnings.push(`Ablehnung für ${r.employeeName} am ${r.date}: Schicht "${r.slotLabel}" nicht erkannt.`);
+      } else {
         const day = store.getOrCreateDayByDate(r.date);
         store.rejectAvailability(day.id, match.id, slot.id);
       }
@@ -249,10 +274,13 @@ async function performTaskSync() {
 
   store.updateTaskInboxConfig({
     lastSyncAt: new Date().toISOString(),
-    lastError: null,
+    // Kein harter throw, damit der Sync trotzdem als "erfolgreich" durchläuft (Aufgaben/Tasks etc. sind ja
+    // angekommen) – aber sichtbar in den Einstellungen, statt eine nicht zuordenbare Zuweisung/Nachricht/
+    // Ablehnung stillschweigend zu verwerfen.
+    lastError: syncWarnings.length > 0 ? syncWarnings.join(" · ") : null,
     knownRemoteState: pushTasks.map((t) => ({ id: t.id, done: t.done })).slice(-300),
   });
-  return { applied };
+  return { applied, warnings: syncWarnings };
 }
 
 /** Beim App-Start / im Leerlauf aufrufen: gleicht still im Hintergrund ab, wenn aktiviert. */

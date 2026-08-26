@@ -69,6 +69,21 @@ function weekdayOf(dateStr) {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 const WEEKDAY_LABELS_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+/** Nachsichtiger Vergleich für Schicht-Namen, exakt wie js/taskSync.js normalizeSlotLabel() – nur damit der
+ * Bot schon beim Absenden warnen kann, falls slotLabel nicht zu einer der bekannten Schichten passt (der
+ * Worker kennt die Zeiten selbst nicht, aber die 5 möglichen Namen sind fix genug für diese Vorprüfung).
+ * MUSS bei Änderungen synchron zu js/taskSync.js normalizeSlotLabel() bleiben. */
+function normalizeSlotLabelCheck(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]/g, "");
+}
+const KNOWN_SLOT_LABELS = new Set(["Früh1", "Früh2", "Mittel", "Spät1", "Spät2"].map(normalizeSlotLabelCheck));
 const REMINDER_WEEKDAY = 5; // Freitag – Erinnerung an alle, die für nächste Woche noch nichts eingetragen haben
 function euro(n) {
   return (Number(n) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -181,8 +196,9 @@ async function interpretMessage(env, text, today, state) {
               date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur unten genannten Zielwoche aufgelöst." },
               slotLabel: {
                 type: "string",
+                enum: ["", "Früh1", "Früh2", "Mittel", "Spät1", "Spät2"],
                 description:
-                  "Bevorzugt: Name der Schicht wie sie die Mitarbeiter im Kiosk sehen (z.B. 'Früh1', 'Mittel', 'Spät2'), falls der Chef so eine benennt (z.B. 'Anna bekommt Montag Früh1'). Dann from/to leer lassen.",
+                  "Bevorzugt: Name der Schicht wie sie die Mitarbeiter im Kiosk sehen, falls der Chef so eine benennt (z.B. 'Anna bekommt Montag Früh1'). Dann from/to leer lassen. Muss EXAKT einer dieser Werte sein, keine Abwandlung – sonst leerer String und stattdessen from/to nutzen.",
               },
               from: { type: "string", description: "Nur falls KEIN slotLabel genannt wurde und stattdessen eine konkrete Uhrzeit: Beginn HH:MM." },
               to: { type: "string", description: "Nur falls KEIN slotLabel genannt wurde: Ende HH:MM." },
@@ -211,7 +227,11 @@ async function interpretMessage(env, text, today, state) {
             properties: {
               employeeName: { type: "string", description: "Name der Person aus der Mitarbeiterliste." },
               date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur oben genannten Zielwoche aufgelöst." },
-              slotLabel: { type: "string", description: "Name der Schicht wie im Kiosk (z.B. 'Mittel', 'Früh1', 'Spät2')." },
+              slotLabel: {
+                type: "string",
+                enum: ["Früh1", "Früh2", "Mittel", "Spät1", "Spät2"],
+                description: "Name der Schicht wie im Kiosk. Muss EXAKT einer dieser Werte sein.",
+              },
             },
             required: ["employeeName", "date", "slotLabel"],
           },
@@ -243,7 +263,7 @@ Bestimme die Absicht der Nachricht:
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
-- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN (Früh1/Früh2/Mittel/Spät1/Spät2 o.ä.) statt einer Uhrzeit, IMMER slotLabel setzen und from/to leer lassen – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
+- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser fünf Werte sein: "Früh1", "Früh2", "Mittel", "Spät1", "Spät2" (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
 - "notify": der Chef will einer oder mehreren Personen eine freie Nachricht schicken, die im Kiosk als Pop-up erscheint, z.B. "Sag Anna, sie soll morgen 30 Min früher kommen", "Schreib Timm: Danke für die Vertretung gestern!", "Richte allen aus, dass am Montag Inventur ist" (dann für JEDE bekannte aktive Person einen eigenen Eintrag in messages_to_send anlegen). IMMER jede Nachricht als eigenen Eintrag, auch bei mehreren Empfängern.
@@ -589,9 +609,13 @@ async function handleTelegram(request, env) {
       } else {
         await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts] });
         const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));
+        const badLabels = newShifts.filter((s) => s.slotLabel && !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(s.slotLabel)));
         let reply = buildPlanShiftsReply(newShifts);
         if (unresolved.length > 0) {
           reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
+        }
+        if (badLabels.length > 0) {
+          reply += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((s) => `${s.employeeName}: „${s.slotLabel}"`).join(", ")}`;
         }
         await sendTelegramMessage(env, chatId, reply);
       }
@@ -630,9 +654,13 @@ async function handleTelegram(request, env) {
       } else {
         await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections] });
         const unresolved = newRejections.filter((r) => !knownNames.has(r.employeeName.toLowerCase()));
+        const badLabels = newRejections.filter((r) => !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(r.slotLabel)));
         let reply = buildRejectReply(newRejections);
         if (unresolved.length > 0) {
           reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((r) => r.employeeName).join(", ")}`;
+        }
+        if (badLabels.length > 0) {
+          reply += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((r) => `${r.employeeName}: „${r.slotLabel}"`).join(", ")}`;
         }
         await sendTelegramMessage(env, chatId, reply);
       }

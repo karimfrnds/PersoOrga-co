@@ -186,10 +186,26 @@ eigene Nachricht) – landet beim nächsten iPad-Abgleich als Pop-up „📬 Nac
 jeweiligen Person, sobald sie sich anmeldet. Bewusst kein WhatsApp (siehe Hinweis oben), sondern dasselbe
 Pop-up-System wie bei Schicht-Bestätigungen.
 
+**Vorräte (Einkaufsliste)**: Unter Admin → Vorräte legst du die Artikel-Liste an (z.B. Kaffeebohnen, Milch,
+Servietten). Mitarbeiter markieren im Kiosk-Fenster pro Artikel „Ok" / „Wird knapp" / „Leer" – bewusst keine
+Stückzahlen, nur eine Ampel, das lässt sich im Alltag realistisch pflegen. Du fragst jederzeit `was fehlt` oder
+`einkaufsliste` ab und meldest per `Kaffeebohnen sind wieder da` (auch mehrere auf einmal), wenn was nachgekauft
+wurde – nachsichtiger Namensvergleich, muss nicht exakt passen.
+
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
-Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst um 8 Uhr morgens (kurze
-Tagesübersicht) und um 19 Uhr abends (falls noch Aufgaben offen sind) – Ortszeit Europe/Berlin, DST-sicher. Die
-Uhrzeiten stehen als `MORNING_HOUR`/`EVENING_HOUR` ganz oben im Code, falls du sie ändern willst.
+Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:
+- **Täglich um 8 Uhr**: kurze Tagesübersicht der Aufgaben.
+- **Täglich um 19 Uhr**: falls noch Aufgaben offen sind.
+- **Freitags**: wer für die kommende Woche noch keine Verfügbarkeit eingetragen hat.
+- **Montags**: Wochenrückblick (Umsatz/Lohnkosten/Stunden der letzten Woche + kurze Beobachtungen) – nur wenn
+  Kennzahlen freigegeben sind (siehe oben).
+- **Täglich, einmalig pro Monat und Person**: Warnung, sobald ein Minijobber 85% seiner Verdienstgrenze erreicht
+  hat – nur wenn Kennzahlen freigegeben sind (die Minijob-Grenze selbst steht am Mitarbeiter, Admin → Mitarbeiter).
+- **Täglich, einmalig pro Tag und Person**: Hinweis, falls eine PIN-Schicht aus einem vergangenen Tag noch offen
+  ist (vermutlich vergessenes Ausstempeln).
+
+Ortszeit Europe/Berlin, DST-sicher. Die Uhrzeiten stehen als `MORNING_HOUR`/`EVENING_HOUR` ganz oben im Code,
+falls du sie ändern willst.
 
 Der Bot antwortet immer mit einer klaren Bestätigung, was er wie verstanden/eingetragen hat, z.B.:
 

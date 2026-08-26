@@ -114,11 +114,11 @@ async function fetchRemoteState(cfg) {
   return res.json();
 }
 
-async function pushLocalState(cfg, employees, tasks, shiftsInService, financials, availabilityUpdate) {
+async function pushLocalState(cfg, payload) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ employees, tasks, shiftsInService, financials, availabilityUpdate }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Worker antwortete mit ${res.status} beim Hochladen`);
 }
@@ -264,6 +264,27 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRejectionIds: [...appliedRejectionIds].slice(-300) });
   }
 
+  // Chef meldet per Bot "X ist wieder da" -> Artikel-Status zurück auf "ok". Nachsichtiger Namens-Vergleich
+  // (exakt, sonst Teilstring), da Artikel frei benannt sind (kein festes Enum wie bei Schichten).
+  const remoteRestocks = Array.isArray(remote.stockRestocks) ? remote.stockRestocks : [];
+  const appliedRestockIds = new Set(cfg.appliedRestockIds || []);
+  let newRestockIds = false;
+  const stockItems = store.getStockItems();
+  for (const rs of remoteRestocks) {
+    if (!rs.id || appliedRestockIds.has(rs.id)) continue;
+    const needle = String(rs.itemName || "").trim().toLowerCase();
+    const match =
+      stockItems.find((s) => s.name.trim().toLowerCase() === needle) ||
+      stockItems.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    if (match) store.setStockStatus(match.id, "ok", "Chef");
+    else syncWarnings.push(`"${rs.itemName}" ist wieder da: kein passender Vorrats-Artikel gefunden.`);
+    appliedRestockIds.add(rs.id);
+    newRestockIds = true;
+  }
+  if (newRestockIds) {
+    store.updateTaskInboxConfig({ appliedRestockIds: [...appliedRestockIds].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;
@@ -316,7 +337,23 @@ async function performTaskSync() {
   }));
   const financials = cfg.shareFinancials ? buildFinancialsPayload() : [];
   const availabilityUpdate = buildAvailabilityUpdatePayload();
-  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks, shiftsInService, financials, availabilityUpdate);
+  // Für die Minijob-Grenzen-Warnung braucht der Bot, wer Minijobber ist und wo die Grenze liegt (nur die
+  // Metadaten, die eigentlichen Lohnsummen kommen wie bisher aus financials -> nur wenn Kennzahlen freigegeben).
+  const employeeMeta = cfg.shareFinancials
+    ? employees.map((e) => ({ name: e.name, isMinijob: !!e.isMinijob, minijobLimit: Number(e.minijobLimit) || 556 }))
+    : [];
+  const staleOpenShifts = store.getStaleOpenShifts();
+  const stock = store.getStockItems().map((s) => ({ name: s.name, status: s.status }));
+  await pushLocalState(cfg, {
+    employees: employees.map((e) => e.name),
+    tasks: pushTasks,
+    shiftsInService,
+    financials,
+    availabilityUpdate,
+    employeeMeta,
+    staleOpenShifts,
+    stock,
+  });
 
   store.updateTaskInboxConfig({
     lastSyncAt: new Date().toISOString(),

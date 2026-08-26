@@ -425,6 +425,25 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .avail-slot-btn .avail-taken-tag { color: var(--red); font-size: 11px; font-weight: 600; }
 .avail-status { margin: 0; }
 
+/* ---- Vorräte (Kiosk) ---- */
+.stock-list { display: flex; flex-direction: column; gap: 8px; }
+.stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.stock-name { font-weight: 600; }
+.stock-toggle { display: flex; gap: 6px; }
+.stock-status-btn { padding: 8px 12px; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); }
+.stock-status-btn.active.stock-ok { border-color: var(--green); background: var(--green-light); color: var(--green-dark); font-weight: 600; }
+.stock-status-btn.active.stock-knapp { border-color: var(--orange); background: var(--orange-light); color: var(--orange); font-weight: 600; }
+.stock-status-btn.active.stock-leer { border-color: var(--red); background: var(--red-light); color: var(--red); font-weight: 600; }
+
 @media (max-width: 600px) {
   .day-row { flex-wrap: wrap; }
   .day-row-numbers { width: 100%; justify-content: space-between; }

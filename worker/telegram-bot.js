@@ -102,6 +102,12 @@ const EMPTY_STATE = {
   availability: {},
   employeeMessages: [],
   shiftRejections: [],
+  employeeMeta: [], // [{name, isMinijob, minijobLimit}] – nur für die Minijob-Grenzen-Warnung
+  staleOpenShifts: [], // [{date, employeeName, from}] – vergessenes Ausstempeln
+  stock: [], // [{name, status}] – Vorräte-Ampel
+  stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
+  minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
+  staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
 };
 
 async function getState(env) {
@@ -119,6 +125,12 @@ async function getState(env) {
       availability: parsed.availability && typeof parsed.availability === "object" ? parsed.availability : {},
       employeeMessages: Array.isArray(parsed.employeeMessages) ? parsed.employeeMessages : [],
       shiftRejections: Array.isArray(parsed.shiftRejections) ? parsed.shiftRejections : [],
+      employeeMeta: Array.isArray(parsed.employeeMeta) ? parsed.employeeMeta : [],
+      staleOpenShifts: Array.isArray(parsed.staleOpenShifts) ? parsed.staleOpenShifts : [],
+      stock: Array.isArray(parsed.stock) ? parsed.stock : [],
+      stockRestocks: Array.isArray(parsed.stockRestocks) ? parsed.stockRestocks : [],
+      minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
+      staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -160,10 +172,13 @@ async function interpretMessage(env, text, today, state) {
     input_schema: {
       type: "object",
       properties: {
-        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "other"] },
+        action: {
+          type: "string",
+          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "other"],
+        },
         stats_period: {
           type: "string",
-          enum: ["today", "yesterday", "week", "month"],
+          enum: ["today", "yesterday", "week", "lastweek", "month"],
           description: "Nur bei action=stats: welcher Zeitraum gewünscht ist. Ohne klaren Hinweis: 'today'.",
         },
         stats_employee_name: {
@@ -245,6 +260,17 @@ async function interpretMessage(env, text, today, state) {
             required: ["employeeName", "date", "slotLabel"],
           },
         },
+        items_to_restock: {
+          type: "array",
+          description: "Nur bei action=restock. Jeder wieder aufgefüllte Artikel als eigener Eintrag, auch bei mehreren auf einmal.",
+          items: {
+            type: "object",
+            properties: {
+              itemName: { type: "string", description: "Name des Artikels, wie ihn der Chef genannt hat (muss nicht exakt zur Liste passen)." },
+            },
+            required: ["itemName"],
+          },
+        },
       },
       required: ["action"],
     },
@@ -271,7 +297,9 @@ Bestimme die Absicht der Nachricht:
 - "complete": eine oder mehrere der oben gelisteten (noch offenen) Aufgaben sind erledigt und sollen als erledigt markiert werden (z.B. "Kasse zählen ist erledigt", "hab die Vitrine geputzt") – NICHT löschen, nur abhaken.
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
-- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
+- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "wie war letzte Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen (lastweek = die Woche VOR der aktuellen). Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
+- "stock_list": der Chef will wissen, was an Vorräten fehlt oder knapp ist, z.B. "was fehlt", "einkaufsliste", "was müssen wir nachkaufen".
+- "restock": der Chef meldet, dass ein oder mehrere Artikel wieder aufgefüllt/vorhanden sind, z.B. "Kaffeebohnen sind wieder da", "Milch und Servietten sind nachgefüllt" (zwei Einträge in items_to_restock).
 - "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser fünf Werte sein: "Früh1", "Früh2", "Mittel", "Spät1", "Spät2" (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
@@ -373,6 +401,24 @@ function buildRejectReply(items) {
   return [heading, ...lines].join("\n");
 }
 
+function buildStockListReply(state) {
+  const stock = state.stock || [];
+  const missing = stock.filter((s) => s.status !== "ok");
+  if (missing.length === 0) return "✅ Laut Kiosk ist aktuell alles ausreichend vorhanden.";
+  const leer = missing.filter((s) => s.status === "leer");
+  const knapp = missing.filter((s) => s.status === "knapp");
+  const lines = ["🛒 Einkaufsliste:"];
+  if (leer.length > 0) lines.push(`Leer: ${leer.map((s) => s.name).join(", ")}`);
+  if (knapp.length > 0) lines.push(`Wird knapp: ${knapp.map((s) => s.name).join(", ")}`);
+  return lines.join("\n");
+}
+
+function buildRestockReply(items) {
+  const lines = items.map((i, idx) => `${idx + 1}. ${i.itemName}`);
+  const heading = items.length === 1 ? "✅ Als wieder aufgefüllt markiert:" : `✅ ${items.length} Artikel als wieder aufgefüllt markiert:`;
+  return [heading, ...lines].join("\n");
+}
+
 /** Zeigt, wer sich für welche Schicht an welchem Tag der Zielwoche bereit erklärt hat (keine Buchung –
  * mehrere Namen pro Schicht möglich, der Chef wählt selbst aus), plus wer noch gar nichts eingetragen hat. */
 function buildAvailabilityReply(state, today) {
@@ -419,10 +465,14 @@ function periodRange(period, today) {
     return { from: d, to: d };
   }
   if (period === "week") return { from: mondayOf(today), to: today };
+  if (period === "lastweek") {
+    const thisMonday = mondayOf(today);
+    return { from: addDaysISO(thisMonday, -7), to: addDaysISO(thisMonday, -1) };
+  }
   if (period === "month") return { from: today.slice(0, 7) + "-01", to: today };
   return { from: today, to: today };
 }
-const PERIOD_LABEL = { today: "Heute", yesterday: "Gestern", week: "Diese Woche", month: "Dieser Monat" };
+const PERIOD_LABEL = { today: "Heute", yesterday: "Gestern", week: "Diese Woche", lastweek: "Letzte Woche", month: "Dieser Monat" };
 
 function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
   const needle = employeeName.trim().toLowerCase();
@@ -560,7 +610,7 @@ async function handleTelegram(request, env) {
     } else if (result.action === "who") {
       await sendTelegramMessage(env, chatId, buildWhoReply(state));
     } else if (result.action === "stats") {
-      const period = ["today", "yesterday", "week", "month"].includes(result.stats_period) ? result.stats_period : "today";
+      const period = ["today", "yesterday", "week", "lastweek", "month"].includes(result.stats_period) ? result.stats_period : "today";
       const employeeName = result.stats_employee_name ? String(result.stats_employee_name).trim() : "";
       let reply = buildStatsReply(state, period, today, employeeName);
       if (!employeeName) {
@@ -673,11 +723,23 @@ async function handleTelegram(request, env) {
         }
         await sendTelegramMessage(env, chatId, reply);
       }
+    } else if (result.action === "stock_list") {
+      await sendTelegramMessage(env, chatId, buildStockListReply(state));
+    } else if (result.action === "restock") {
+      const newRestocks = (Array.isArray(result.items_to_restock) ? result.items_to_restock : [])
+        .map((i) => ({ id: crypto.randomUUID(), itemName: String(i.itemName || "").trim() }))
+        .filter((i) => i.itemName);
+      if (newRestocks.length === 0) {
+        await sendTelegramMessage(env, chatId, "Konnte daraus keinen Artikel erkennen. Welcher Artikel ist wieder da?");
+      } else {
+        await patchState(env, { stockRestocks: [...(state.stockRestocks || []), ...newRestocks] });
+        await sendTelegramMessage(env, chatId, buildRestockReply(newRestocks));
+      }
     } else {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"`
       );
     }
   } catch (e) {
@@ -709,7 +771,10 @@ async function handleState(request, env) {
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
     const shiftsInService = Array.isArray(body.shiftsInService) ? body.shiftsInService : undefined;
     const financials = Array.isArray(body.financials) ? body.financials : undefined;
-    const patch = { employees, tasks, shiftsInService, financials };
+    const employeeMeta = Array.isArray(body.employeeMeta) ? body.employeeMeta : undefined;
+    const staleOpenShifts = Array.isArray(body.staleOpenShifts) ? body.staleOpenShifts : undefined;
+    const stock = Array.isArray(body.stock) ? body.stock : undefined;
+    const patch = { employees, tasks, shiftsInService, financials, employeeMeta, staleOpenShifts, stock };
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -813,6 +878,11 @@ async function handleScheduled(env) {
     if (weekdayOf(today) === REMINDER_WEEKDAY) {
       await remindMissingAvailability(env, state, today);
     }
+    if (weekdayOf(today) === 1) {
+      await sendWeeklySummary(env, state, today);
+    }
+    await warnMinijobLimits(env, state, today);
+    await warnStaleOpenShifts(env, state);
   } else if (hour === EVENING_HOUR && open.length > 0) {
     const text = `🌙 Heute Abend noch offen (${open.length}):\n\n${buildListReply({ ...state, tasks: open }, today)}`;
     await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
@@ -834,6 +904,70 @@ async function remindMissingAvailability(env, state, today) {
     env.OWNER_CHAT_ID,
     `📋 Diese Personen haben noch keine Verfügbarkeit für die Woche ab ${formatDateDe(weekStart)} eingetragen: ${missing.join(", ")}.`
   );
+}
+
+/** Montagmorgen: kurzer Rückblick auf die vergangene Woche (nur wenn Kennzahlen freigegeben sind, sonst
+ * still übersprungen statt jede Woche mit einer "nicht verfügbar"-Nachricht zu nerven). */
+async function sendWeeklySummary(env, state, today) {
+  if (!state.financials || state.financials.length === 0) return;
+  let reply = buildStatsReply(state, "lastweek", today);
+  const insights = await generateInsights(env, state.financials);
+  if (insights) reply += `\n\n💡 ${insights}`;
+  await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📅 Wochenrückblick\n\n${reply}`);
+}
+
+/** Warnt einmalig pro Person und Monat, sobald ein Minijobber diesen Monat 85% seiner Verdienstgrenze
+ * erreicht hat (nur wenn Kennzahlen freigegeben sind, sonst kennt der Worker die Lohnsummen nicht). */
+async function warnMinijobLimits(env, state, today) {
+  const minijobbers = (state.employeeMeta || []).filter((m) => m.isMinijob);
+  if (minijobbers.length === 0) return;
+  const monthKey = today.slice(0, 7);
+  const monthRows = (state.financials || []).filter((r) => r.date.startsWith(monthKey));
+  const warned = { ...(state.minijobWarned || {}) };
+  let changed = false;
+  const warnings = [];
+  for (const m of minijobbers) {
+    const key = `${monthKey}:${m.name}`;
+    if (warned[key]) continue;
+    let lohn = 0;
+    for (const row of monthRows) {
+      const pe = (row.perEmployee || []).find((p) => p.name === m.name);
+      if (pe) lohn += Number(pe.lohn) || 0;
+    }
+    lohn = round2(lohn);
+    const limit = Number(m.minijobLimit) || 556;
+    if (limit > 0 && lohn >= limit * 0.85) {
+      warnings.push(`${m.name}: ${euro(lohn)} von ${euro(limit)} (${round2((lohn / limit) * 100)}%)`);
+      warned[key] = true;
+      changed = true;
+    }
+  }
+  if (changed) await patchState(env, { minijobWarned: warned });
+  if (warnings.length > 0) {
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `⚠️ Minijob-Grenze rückt näher (dieser Monat):\n${warnings.join("\n")}`);
+  }
+}
+
+/** Warnt einmalig pro Person und Tag, wenn eine PIN-Schicht aus einem vergangenen Tag noch offen ist
+ * (vermutlich vergessenes Ausstempeln). */
+async function warnStaleOpenShifts(env, state) {
+  const stale = state.staleOpenShifts || [];
+  if (stale.length === 0) return;
+  const warned = { ...(state.staleShiftWarned || {}) };
+  const toWarn = [];
+  let changed = false;
+  for (const s of stale) {
+    const key = `${s.date}:${s.employeeName}`;
+    if (warned[key]) continue;
+    toWarn.push(s);
+    warned[key] = true;
+    changed = true;
+  }
+  if (changed) await patchState(env, { staleShiftWarned: warned });
+  if (toWarn.length > 0) {
+    const lines = toWarn.map((s) => `- ${s.employeeName}: seit ${formatDateDe(s.date)} ${s.from} Uhr noch eingestempelt`);
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `⏰ Vergessenes Ausstempeln?\n${lines.join("\n")}`);
+  }
 }
 
 export default {

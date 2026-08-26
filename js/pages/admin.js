@@ -7,6 +7,7 @@ import { store } from "../store.js";
 import { renderAdminDays } from "./adminDays.js";
 import { renderEmployees } from "./employees.js";
 import { renderTasksAdmin } from "./tasksAdmin.js";
+import { renderStockAdmin } from "./stockAdmin.js";
 import { renderSettings } from "./settings.js";
 import { renderExport } from "./exportpage.js";
 import { renderHours } from "./hours.js";
@@ -27,6 +28,7 @@ function renderAdmin(navigate) {
     { id: "days", label: "Tage", render: () => renderAdminDays(navigate) },
     { id: "employees", label: "Mitarbeiter", render: () => renderEmployees() },
     { id: "tasks", label: "Aufgaben", render: () => renderTasksAdmin() },
+    { id: "stock", label: "Vorräte", render: () => renderStockAdmin() },
     { id: "hours", label: "Stunden", render: () => renderHours(navigate) },
     { id: "export", label: "Berichte", render: () => renderExport() },
     { id: "beta", label: "🧪 Beta", render: () => renderBeta(navigate) },

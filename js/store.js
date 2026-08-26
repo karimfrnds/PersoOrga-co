@@ -74,6 +74,8 @@ function defaultData() {
         // IDs vom Bot per "reject_shift" abgelehnter Schichten, die schon per rejectAvailability()
         // übernommen wurden (gedeckelt) – verhindert doppelte Anwendung bei erneutem Sync.
         appliedRejectionIds: [],
+        // IDs vom Bot per "X ist wieder da" wiederaufgefüllter Vorräte, die schon übernommen wurden.
+        appliedRestockIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -81,6 +83,10 @@ function defaultData() {
     // Kurze System-Nachrichten an einzelne Mitarbeiter (z.B. "Schicht vom Chef bestätigt"), erscheinen als
     // Pop-up beim nächsten Öffnen ihres Kiosk-Fensters. { id, employeeId, text, createdAt, readAt }
     notifications: [],
+    // Vorräte – bewusst nur eine Ampel (kein Mengen-Tracking, das würde im Alltag nicht gepflegt werden).
+    // Mitarbeiter können im Kiosk den Status ändern, Admin verwaltet die Artikel-Liste selbst.
+    // { id, name, status: "ok"|"knapp"|"leer", updatedAt, updatedBy }
+    stock: [],
   };
 }
 
@@ -128,6 +134,7 @@ function load() {
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
       notifications: parsed.notifications ?? base.notifications,
+      stock: parsed.stock ?? base.stock,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -616,6 +623,53 @@ export const store = {
     persist();
   },
 
+  // ---- Vorräte (Ampel: ok/knapp/leer, kein Mengen-Tracking) ----
+  getStockItems() {
+    return [...data.stock].sort((a, b) => a.name.localeCompare(b.name));
+  },
+  /** Admin legt einen neuen Artikel an (Status startet bei "ok"). */
+  addStockItem(name) {
+    const item = { id: uid(), name: String(name || "").trim(), status: "ok", updatedAt: null, updatedBy: null };
+    if (!item.name) return null;
+    data.stock.push(item);
+    persist();
+    return item;
+  },
+  removeStockItem(id) {
+    data.stock = data.stock.filter((s) => s.id !== id);
+    persist();
+  },
+  /** Mitarbeiter (im Kiosk) oder Chef (per Bot) ändern den Status eines Artikels. */
+  setStockStatus(id, status, changedBy) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item) return;
+    item.status = status;
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = changedBy || null;
+    persist();
+    return item;
+  },
+
+  // ---- Vergessenes Ausstempeln erkennen (für die Bot-Erinnerung) ----
+  /** PIN-Schichten, die an einem VERGANGENEN Tag begonnen haben und noch offen sind (Ausstempeln vergessen).
+   * Betrachtet nur die letzten paar Tage, damit uralte/kaputte Daten nicht ewig als "offen" auftauchen. */
+  getStaleOpenShifts() {
+    const today = todayStr();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 3);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const rows = [];
+    for (const d of data.days) {
+      if (d.date >= today || d.date < cutoffStr) continue;
+      for (const s of d.shifts) {
+        if (s.source === "pin" && !s.clockOutAt) {
+          rows.push({ date: d.date, employeeName: this.getEmployee(s.employeeId)?.name || "?", from: s.from });
+        }
+      }
+    }
+    return rows;
+  },
+
   // Stornos
   addStorno(dayId, storno) {
     const d = this.getDay(dayId);
@@ -786,6 +840,7 @@ export const store = {
       },
       days: (parsed.days ?? []).map(normalizeDay),
       notifications: parsed.notifications ?? [],
+      stock: parsed.stock ?? [],
     };
     persist();
   },

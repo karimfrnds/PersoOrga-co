@@ -323,15 +323,25 @@ function renderKiosk(navigate) {
     const elapsedMin = Math.max(0, Math.round((Date.now() - new Date(shift.clockInAt).getTime()) / 60000));
     const elapsedLabel = `${Math.floor(elapsedMin / 60)} Std ${elapsedMin % 60} Min`;
     const settings = store.getSettings();
-    const from = mondayOf(todayStr());
-    const range = computeRange(store.getDays(), store.getEmployees(), settings, from, todayStr());
-    const myWeek = range.rows.find((r) => r.employee.id === emp.id);
+    const weekStart = mondayOf(todayStr());
+    const weekRange = computeRange(store.getDays(), store.getEmployees(), settings, weekStart, todayStr());
+    const myWeek = weekRange.rows.find((r) => r.employee.id === emp.id);
+    const monthStart = todayStr().slice(0, 7) + "-01";
+    const monthRange = computeRange(store.getDays(), store.getEmployees(), settings, monthStart, todayStr());
+    const myMonth = monthRange.rows.find((r) => r.employee.id === emp.id);
     overviewCard.innerHTML = `
       <h2>Deine Übersicht</h2>
       <div class="summary-line"><span>Im Dienst seit</span><span>${escapeHtml(shift.from)} Uhr (${elapsedLabel})</span></div>
       <div class="summary-line"><span>Diese Woche · Stunden</span><span>${hours(myWeek?.hours || 0)}</span></div>
       <div class="summary-line"><span>Diese Woche · Lohn</span><span>${euro(myWeek?.lohn || 0)}</span></div>
       <div class="summary-line"><span>Diese Woche · Trinkgeld</span><span>${euro(myWeek?.tip || 0)}</span></div>
+      <div class="summary-line"><span>Dieser Monat · Stunden</span><span>${hours(myMonth?.hours || 0)}</span></div>
+      <div class="summary-line"><span>Dieser Monat · Lohn</span><span>${euro(myMonth?.lohn || 0)}</span></div>
+      ${
+        emp.isMinijob
+          ? `<div class="summary-line"><span>Noch bis zur Minijob-Grenze</span><span>${euro(Math.max(0, (emp.minijobLimit || 556) - (myMonth?.lohn || 0)))}</span></div>`
+          : ""
+      }
     `;
     wrap.appendChild(overviewCard);
 
@@ -369,6 +379,9 @@ function renderKiosk(navigate) {
 
     // ---- Deine Schichten (Wochenplan) ----
     wrap.appendChild(buildShiftsCard(emp));
+
+    // ---- Vorräte ----
+    wrap.appendChild(buildStockCard(emp));
 
     const inboxCfg = store.getTaskInboxConfig();
     const inboxUsable = inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret;
@@ -444,6 +457,52 @@ function renderKiosk(navigate) {
     }
 
     return wrap;
+  }
+
+  // ---------------------------------------------------------------------
+  // Vorräte: einfache Ampel pro Artikel (kein Mengen-Tracking) – jede Person kann während der Schicht
+  // melden, wenn etwas knapp wird oder leer ist. Landet beim nächsten Sync als Einkaufsliste beim Chef.
+  // ---------------------------------------------------------------------
+  const STOCK_STATUS_LABEL = { ok: "Ok", knapp: "Wird knapp", leer: "Leer" };
+  function buildStockCard(emp) {
+    const items = store.getStockItems();
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>📦 Vorräte</h2>`;
+    if (items.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Noch keine Artikel hinterlegt (Admin → Vorräte).";
+      card.appendChild(empty);
+      return card;
+    }
+    const list = document.createElement("div");
+    list.className = "stock-list";
+    for (const item of items) {
+      const row = document.createElement("div");
+      row.className = "stock-row";
+      const label = document.createElement("div");
+      label.className = "stock-name";
+      label.textContent = item.name;
+      row.appendChild(label);
+      const toggles = document.createElement("div");
+      toggles.className = "stock-toggle";
+      for (const status of ["ok", "knapp", "leer"]) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `stock-status-btn stock-${status}` + (item.status === status ? " active" : "");
+        btn.textContent = STOCK_STATUS_LABEL[status];
+        btn.onclick = () => {
+          store.setStockStatus(item.id, status, emp.name);
+          rerender();
+        };
+        toggles.appendChild(btn);
+      }
+      row.appendChild(toggles);
+      list.appendChild(row);
+    }
+    card.appendChild(list);
+    return card;
   }
 
   // ---------------------------------------------------------------------

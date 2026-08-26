@@ -153,8 +153,11 @@ So funktioniert die Zuteilung:
 - **Du weist gezielt zu / bestätigst**: `Anna bekommt Montag Früh1`, `Timm soll Mittwoch die Spät2 machen`,
   `Anna bekommt Montag Mittel` (bestätigt eine bereits gehaltene Mittel-Schicht) – überstimmt alles, auch falls
   die Schicht gerade wem anders fest gehört (die verliert sie dann wieder).
-- Die betroffene Person bekommt eine **Nachricht** ("📬 Nachricht vom Chef"), die als Pop-up erscheint, sobald
-  sie sich das nächste Mal im Kiosk anmeldet.
+- **Du lehnst ab**: `Annas Mittel-Schicht am Montag ablehnen`, `Timms Früh1 am Mittwoch geht nicht` – die
+  Schicht wird ihr entzogen (fällt für andere wieder frei, springt aber niemandem automatisch zu) und sie
+  bekommt Bescheid, dass sie sich neu entscheiden muss.
+- Die betroffene Person bekommt in beiden Fällen eine **Nachricht** ("📬 Nachricht vom Chef"), die als Pop-up
+  erscheint, sobald sie sich das nächste Mal im Kiosk anmeldet.
 
 Der Bot sammelt das im Hintergrund, ohne dich mit einer Nachricht pro Person zu nerven:
 - Meldet sich **automatisch**, sobald **alle** aktiven Mitarbeiter für die kommende Woche eingetragen haben.

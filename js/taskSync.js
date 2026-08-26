@@ -172,6 +172,28 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedMessageIds: [...appliedMessageIds].slice(-300) });
   }
 
+  // Vom Chef per Bot abgelehnte Schichten ("reject_shift") -> Slot bei der Person entfernen (fällt für
+  // andere wieder frei) und sie per Pop-up informieren. Eigene Dedup-Liste wie bei den Zuweisungen.
+  const remoteRejections = Array.isArray(remote.shiftRejections) ? remote.shiftRejections : [];
+  const appliedRejectionIds = new Set(cfg.appliedRejectionIds || []);
+  let newRejectionIds = false;
+  for (const r of remoteRejections) {
+    if (!r.id || appliedRejectionIds.has(r.id)) continue;
+    const match = employees.find((e) => e.name.trim().toLowerCase() === String(r.employeeName || "").trim().toLowerCase());
+    if (match && r.date) {
+      const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(r.slotLabel));
+      if (slot) {
+        const day = store.getOrCreateDayByDate(r.date);
+        store.rejectAvailability(day.id, match.id, slot.id);
+      }
+    }
+    appliedRejectionIds.add(r.id);
+    newRejectionIds = true;
+  }
+  if (newRejectionIds) {
+    store.updateTaskInboxConfig({ appliedRejectionIds: [...appliedRejectionIds].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;

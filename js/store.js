@@ -71,6 +71,9 @@ function defaultData() {
         // IDs vom Bot per freier Nachricht ("notify") an Mitarbeiter geschickter Nachrichten, die schon als
         // Pop-up-Benachrichtigung angelegt wurden (gedeckelt) – verhindert doppelte Zustellung bei erneutem Sync.
         appliedMessageIds: [],
+        // IDs vom Bot per "reject_shift" abgelehnter Schichten, die schon per rejectAvailability()
+        // übernommen wurden (gedeckelt) – verhindert doppelte Anwendung bei erneutem Sync.
+        appliedRejectionIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -564,6 +567,34 @@ export const store = {
 
     const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
     this.addNotification(employeeId, `✅ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr)` : ""} ist vom Chef bestätigt.`);
+
+    return this.getAvailability(dayId, employeeId);
+  },
+  /** Chef lehnt eine gemeldete oder gehaltene Schicht ab: Slot wird aus der Auswahl der Person entfernt
+   * (fällt weg, taucht bei ihr nicht mehr auf und kann nicht wieder automatisch zurückfallen), eine
+   * eventuelle feste Zuteilung wird aufgehoben (Schicht damit für andere wieder frei) und die Person
+   * bekommt eine Nachricht, dass sie sich neu entscheiden muss. Stößt die Kaskade erneut an, falls
+   * dadurch bei jemand anderem eine offene Auswahl auf die letzte freie Option zusammenfällt. */
+  rejectAvailability(dayId, employeeId, slotId) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    if (idx < 0) return;
+    const a = d.availability[idx];
+    a.slotIds = a.slotIds.filter((id) => id !== slotId);
+    if (a.confirmedSlotId === slotId) {
+      a.confirmedSlotId = null;
+      a.bossConfirmed = false;
+    }
+    resolveDayAvailability(d);
+    persist();
+
+    const role = roleOf(employeeId);
+    const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    this.addNotification(
+      employeeId,
+      `❌ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label})` : ""} wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.`
+    );
 
     return this.getAvailability(dayId, employeeId);
   },

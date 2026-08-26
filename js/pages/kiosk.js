@@ -17,7 +17,7 @@ import { store } from "../store.js";
 import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability } from "../taskSync.js";
-import { alertDialog, confirmDialog } from "../dialog.js";
+import { alertDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -460,19 +460,21 @@ function renderKiosk(navigate) {
   }
 
   // ---------------------------------------------------------------------
-  // Verfügbarkeit für die kommende Woche: pro Tag Kann/Kann nicht (+ Zeitfenster).
-  // Wird direkt im Store gespeichert (damit nichts verloren geht) und beim
-  // Absenden gesammelt an den Bot geschickt, der den Chef informiert.
+  // Verfügbarkeit für die kommende Woche: pro Tag beliebig viele Schichten antippen,
+  // für die man bereitstehen würde (keine Buchung, kein Ausgrauen – bei mehreren
+  // Interessenten wählt der Chef selbst aus). Wird direkt im Store gespeichert und
+  // beim Absenden gesammelt an den Bot geschickt.
   // ---------------------------------------------------------------------
   function buildAvailabilityCard(emp) {
     const weekStart = addDaysISO(mondayOf(todayStr()), 7);
     const weekEnd = addDaysISO(weekStart, 6);
+    const slotDefs = store.getShiftSlotsForRole(emp.role);
 
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `
       <h2>🗓 Verfügbarkeit für nächste Woche</h2>
-      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jeden Tag angeben, ob du kannst.</p>
+      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jede Schicht antippen, die du übernehmen könntest (bei keiner Präferenz einfach alle) – der Chef wählt dann aus.</p>
     `;
 
     const list = document.createElement("div");
@@ -481,61 +483,48 @@ function renderKiosk(navigate) {
       const date = addDaysISO(weekStart, i);
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
+      const selected = new Set(entry?.slotIds || []);
+      const allSelected = slotDefs.every((s) => selected.has(s.id));
 
       const row = document.createElement("div");
-      row.className = "avail-row";
+      row.className = "avail-row-col";
 
+      const head = document.createElement("div");
+      head.className = "avail-day-head";
       const label = document.createElement("div");
       label.className = "avail-day-label";
       label.textContent = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
-      row.appendChild(label);
-
-      const toggles = document.createElement("div");
-      toggles.className = "avail-toggle";
-      const canBtn = document.createElement("button");
-      canBtn.type = "button";
-      canBtn.className = "btn btn-secondary" + (entry?.available === true ? " active" : "");
-      canBtn.textContent = "Kann";
-      canBtn.onclick = () => {
+      head.appendChild(label);
+      const allBtn = document.createElement("button");
+      allBtn.type = "button";
+      allBtn.className = "btn btn-link avail-all-btn";
+      allBtn.textContent = allSelected ? "Keine auswählen" : "Alle auswählen";
+      allBtn.onclick = () => {
         const d = store.getOrCreateDayByDate(date);
-        const prev = store.getAvailability(d.id, emp.id);
-        store.setAvailability(d.id, emp.id, { available: true, from: prev?.from || "10:00", to: prev?.to || "18:00" });
+        store.setAvailability(d.id, emp.id, allSelected ? [] : slotDefs.map((s) => s.id));
         rerender();
       };
-      const cantBtn = document.createElement("button");
-      cantBtn.type = "button";
-      cantBtn.className = "btn btn-secondary" + (entry?.available === false ? " active cant" : "");
-      cantBtn.textContent = "Kann nicht";
-      cantBtn.onclick = () => {
-        const d = store.getOrCreateDayByDate(date);
-        store.setAvailability(d.id, emp.id, { available: false });
-        rerender();
-      };
-      toggles.appendChild(canBtn);
-      toggles.appendChild(cantBtn);
-      row.appendChild(toggles);
+      head.appendChild(allBtn);
+      row.appendChild(head);
 
-      if (entry?.available === true) {
-        const times = document.createElement("div");
-        times.className = "avail-times";
-        const fromInput = document.createElement("input");
-        fromInput.type = "time";
-        fromInput.value = entry.from || "";
-        const toInput = document.createElement("input");
-        toInput.type = "time";
-        toInput.value = entry.to || "";
-        const saveTimes = () => {
+      const slotList = document.createElement("div");
+      slotList.className = "avail-slot-list";
+      for (const slot of slotDefs) {
+        const slotBtn = document.createElement("button");
+        slotBtn.type = "button";
+        slotBtn.className = "avail-slot-btn" + (selected.has(slot.id) ? " active" : "");
+        slotBtn.innerHTML = `<b>${escapeHtml(slot.label)}</b><span>${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>`;
+        slotBtn.onclick = () => {
           const d = store.getOrCreateDayByDate(date);
-          store.setAvailability(d.id, emp.id, { available: true, from: fromInput.value, to: toInput.value });
+          const current = new Set(store.getAvailability(d.id, emp.id)?.slotIds || []);
+          if (current.has(slot.id)) current.delete(slot.id);
+          else current.add(slot.id);
+          store.setAvailability(d.id, emp.id, [...current]);
           rerender();
         };
-        fromInput.onchange = saveTimes;
-        toInput.onchange = saveTimes;
-        times.appendChild(fromInput);
-        times.append(" – ");
-        times.appendChild(toInput);
-        row.appendChild(times);
+        slotList.appendChild(slotBtn);
       }
+      row.appendChild(slotList);
 
       list.appendChild(row);
     }
@@ -544,27 +533,25 @@ function renderKiosk(navigate) {
     const submitBtn = document.createElement("button");
     submitBtn.className = "btn btn-primary";
     submitBtn.textContent = "An den Chef senden";
-    submitBtn.onclick = () => submitAvailability(weekStart, emp, submitBtn);
+    submitBtn.onclick = () => submitAvailability(weekStart, emp, slotDefs, submitBtn);
     card.appendChild(submitBtn);
 
     return card;
   }
 
-  async function submitAvailability(weekStart, emp, btn) {
+  async function submitAvailability(weekStart, emp, slotDefs, btn) {
+    const slotById = new Map(slotDefs.map((s) => [s.id, s]));
     const days = [];
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      if (entry) days.push({ date, available: entry.available, from: entry.from, to: entry.to });
+      const slots = (entry?.slotIds || []).map((id) => slotById.get(id)).filter(Boolean);
+      if (slots.length > 0) days.push({ date, slots: slots.map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to })) });
     }
     if (days.length === 0) {
-      await alertDialog("Bitte für mindestens einen Tag angeben, ob du kannst oder nicht.");
+      await alertDialog("Bitte für mindestens einen Tag mindestens eine Schicht antippen.");
       return;
-    }
-    if (days.length < 7) {
-      const proceed = await confirmDialog(`Du hast erst ${days.length} von 7 Tagen angegeben. Trotzdem an den Chef senden?`, { okLabel: "Trotzdem senden" });
-      if (!proceed) return;
     }
     btn.disabled = true;
     try {

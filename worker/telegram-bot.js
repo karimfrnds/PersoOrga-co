@@ -287,7 +287,8 @@ function buildPlanShiftsReply(items) {
   return [heading, ...lines].join("\n");
 }
 
-/** Zeigt die für die Zielwoche gesammelten Verfügbarkeiten gruppiert nach Tag, plus wer noch fehlt. */
+/** Zeigt, wer sich für welche Schicht an welchem Tag der Zielwoche bereit erklärt hat (keine Buchung –
+ * mehrere Namen pro Schicht möglich, der Chef wählt selbst aus), plus wer noch gar nichts eingetragen hat. */
 function buildAvailabilityReply(state, today) {
   const weekStart = nextMondayFrom(today);
   const activeNames = state.employees || [];
@@ -300,13 +301,24 @@ function buildAvailabilityReply(state, today) {
   const lines = [`📅 Verfügbarkeit ab ${formatDateDe(weekStart)}:`];
   for (let i = 0; i < 7; i++) {
     const date = addDaysISO(weekStart, i);
-    const dayLines = [];
+    // slotId -> { label, from, to, names[] } – Reihenfolge/Zeiten kommen direkt aus den Einreichungen,
+    // der Worker kennt die Schicht-Definitionen selbst nicht (die leben nur in der App).
+    const slots = new Map();
     for (const name of submittedNames) {
-      const d = (entries[name].days || []).find((x) => x.date === date);
-      if (!d) continue;
-      dayLines.push(d.available ? `${name} (${d.from}-${d.to})` : `${name} ✗`);
+      const dayEntry = (entries[name].days || []).find((d) => d.date === date);
+      for (const s of dayEntry?.slots || []) {
+        if (!slots.has(s.id)) slots.set(s.id, { label: s.label, from: s.from, to: s.to, names: [] });
+        slots.get(s.id).names.push(name);
+      }
     }
-    lines.push(`${WEEKDAY_LABELS_DE[i]}: ${dayLines.length ? dayLines.join(", ") : "–"}`);
+    lines.push(`\n${WEEKDAY_LABELS_DE[i]}, ${formatDateDe(date)}:`);
+    if (slots.size === 0) {
+      lines.push("  – niemand bereit gemeldet –");
+    } else {
+      for (const s of slots.values()) {
+        lines.push(`  ${s.label} (${s.from}-${s.to}): ${s.names.join(", ")}`);
+      }
+    }
   }
   const missing = activeNames.filter((n) => !submittedNames.includes(n));
   if (missing.length > 0) lines.push(`\n⚠ Noch offen: ${missing.join(", ")}`);

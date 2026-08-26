@@ -124,17 +124,28 @@ iPad-Abgleich erscheinen die Schichten automatisch in der „Deine Schichten"-Ü
 jeweiligen Person – zählt weiterhin nur als **Planung**, nicht als Ist-Arbeitszeit (dafür stempeln sich die
 Mitarbeiter wie gewohnt ein/aus).
 
-**Verfügbarkeit der Mitarbeiter**: Jede Person trägt im eigenen Kiosk-Fenster (nach dem Einstempeln) für die
-kommende Woche pro Tag „Kann" (mit Uhrzeit) oder „Kann nicht" ein und sendet es ab. Der Bot sammelt das im
-Hintergrund, ohne dich mit einer Nachricht pro Person zu nerven:
+**Verfügbarkeit der Mitarbeiter**: Jede Person tippt im eigenen Kiosk-Fenster (nach dem Einstempeln) für die
+kommende Woche pro Tag auf **jede Schicht an, die sie übernehmen könnte** (feste Zeitfenster, siehe unten –
+bei keiner Präferenz einfach alle antippen) und sendet es ab. Es gibt **kein Ausgrauen und keine Buchung** –
+mehrere Personen können sich für dieselbe Schicht bereit erklären, du wählst am Ende selbst aus, wer sie
+bekommt (per Wochenplan-Nachricht, siehe oben). Feste Zeitfenster (in `js/store.js` unter
+`settings.shiftSlots` hinterlegt, bei Bedarf einfach sagen wenn sich die Zeiten ändern sollen):
+
+| Rolle | Schichten |
+|---|---|
+| Service / Bar | Früh1 08:30–16:00 · Früh2 09:30–17:00 · Mittel 10:00–14:00 · Spät1 15:30–23:00 · Spät2 18:00–23:00 |
+| Küche | Früh1 08:00–15:30 · Früh2 10:00–16:00 · Mittel 10:00–14:00 |
+
+Der Bot sammelt das im Hintergrund, ohne dich mit einer Nachricht pro Person zu nerven:
 - Meldet sich **automatisch**, sobald **alle** aktiven Mitarbeiter für die kommende Woche eingetragen haben.
 - Erinnert **freitags morgens** automatisch an alle, die noch fehlen (nur falls Cron Triggers eingerichtet sind,
   siehe oben).
 - Jederzeit auf Zuruf abrufbar: `wer kann wann`, `verfügbarkeiten`, `wie sieht die Verfügbarkeit für nächste
-  Woche aus` → Übersicht pro Tag, wer kann (mit Uhrzeit) und wer nicht, plus wer noch gar nichts eingetragen hat.
+  Woche aus` → Übersicht pro Tag und Schicht, wer sich bereit erklärt hat, plus wer noch gar nichts eingetragen
+  hat.
 
-Die Zuteilung selbst („wer arbeitet wann") bleibt bewusst **manuell** – du schickst den fertigen Plan per
-Wochenplan-Nachricht (siehe oben), der Bot schlägt nichts automatisch vor.
+Die Zuteilung selbst („wer arbeitet wann") bleibt bewusst **manuell** – du schaust dir die Verfügbarkeiten an
+und schickst dann den fertigen Plan per Wochenplan-Nachricht (siehe oben), der Bot schlägt nichts automatisch vor.
 
 **Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die

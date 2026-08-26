@@ -392,23 +392,35 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .task-add-row input { flex: 1; }
 
 /* ---- Verfügbarkeit (Kiosk) ---- */
-.avail-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.avail-row {
+.avail-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.avail-row-col {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   background: var(--gray-light);
   border-radius: 10px;
   padding: 10px 12px;
 }
-.avail-day-label { font-weight: 600; min-width: 90px; }
-.avail-toggle { display: flex; gap: 6px; }
-.avail-toggle button { padding: 8px 12px; font-size: 14px; }
-.avail-toggle button.active { border-color: var(--green); color: var(--green-dark); background: var(--green-light); font-weight: 600; }
-.avail-toggle button.active.cant { border-color: var(--red); color: var(--red); background: var(--red-light); }
-.avail-times { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-.avail-times input { width: 100px; }
+.avail-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.avail-day-label { font-weight: 600; }
+.avail-all-btn { padding: 4px 6px; font-size: 13px; }
+.avail-slot-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.avail-slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  font-size: 13px;
+  color: var(--text);
+  min-width: 84px;
+}
+.avail-slot-btn span { color: var(--gray); font-size: 12px; }
+.avail-slot-btn.active { border-color: var(--green); background: var(--green-light); }
+.avail-slot-btn.active span { color: var(--green-dark); }
 
 @media (max-width: 600px) {
   .day-row { flex-wrap: wrap; }

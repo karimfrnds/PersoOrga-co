@@ -25,6 +25,21 @@ function defaultData() {
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
       taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert
+      // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar".
+      shiftSlots: {
+        service: [
+          { id: "frueh1", label: "Früh1", from: "08:30", to: "16:00" },
+          { id: "frueh2", label: "Früh2", from: "09:30", to: "17:00" },
+          { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
+          { id: "spaet1", label: "Spät1", from: "15:30", to: "23:00" },
+          { id: "spaet2", label: "Spät2", from: "18:00", to: "23:00" },
+        ],
+        kueche: [
+          { id: "frueh1", label: "Früh1", from: "08:00", to: "15:30" },
+          { id: "frueh2", label: "Früh2", from: "10:00", to: "16:00" },
+          { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
+        ],
+      },
       githubBackup: {
         enabled: false,
         owner: "", // GitHub-Nutzername/Organisation
@@ -86,6 +101,7 @@ function load() {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
+        shiftSlots: parsed.settings?.shiftSlots ?? base.settings.shiftSlots,
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
     };
@@ -360,19 +376,21 @@ export const store = {
     return rows;
   },
 
-  // ---- Verfügbarkeit (Mitarbeiter tragen im Kiosk ein, wann sie in der kommenden Woche können) ----
-  /** Einträgt/ersetzt die Verfügbarkeit einer Person für einen Tag (ein Eintrag pro Mitarbeiter/Tag). */
-  setAvailability(dayId, employeeId, { available, from = "", to = "", note = "" }) {
+  // ---- Verfügbarkeit (Mitarbeiter tragen im Kiosk ein, für welche Schichten sie in der kommenden Woche
+  // bereitstehen würden – keine Buchung, nur eine Info für den Chef, der die Zuteilung selbst macht). ----
+  /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
+  getShiftSlotsForRole(role) {
+    return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
+  },
+  /** Setzt/ersetzt, für welche Schichten (Slot-IDs) eine Person an einem Tag bereitstehen würde. */
+  setAvailability(dayId, employeeId, slotIds) {
     const d = this.getDay(dayId);
     if (!d) return;
     const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
     const entry = {
       id: idx >= 0 ? d.availability[idx].id : uid(),
       employeeId,
-      available: !!available,
-      from: available ? from : "",
-      to: available ? to : "",
-      note,
+      slotIds: Array.isArray(slotIds) ? [...new Set(slotIds)] : [],
       submittedAt: new Date().toISOString(),
     };
     if (idx >= 0) d.availability[idx] = entry;
@@ -552,6 +570,7 @@ export const store = {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
+        shiftSlots: parsed.settings?.shiftSlots ?? base.settings.shiftSlots,
       },
       days: (parsed.days ?? []).map(normalizeDay),
     };

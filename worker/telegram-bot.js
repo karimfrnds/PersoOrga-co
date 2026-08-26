@@ -626,7 +626,7 @@ async function handleTelegram(request, env) {
         }))
         .filter((r) => r.employeeName && r.date && r.slotLabel);
       if (newRejections.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte daraus keine Ablehnung erkennen. Magst du es anders formulieren (z.B. „Annas Mittel-Schicht am Montag ablehnen")?");
+        await sendTelegramMessage(env, chatId, `Konnte daraus keine Ablehnung erkennen. Magst du es anders formulieren (z.B. „Annas Mittel-Schicht am Montag ablehnen")?`);
       } else {
         await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections] });
         const unresolved = newRejections.filter((r) => !knownNames.has(r.employeeName.toLowerCase()));

@@ -121,6 +121,11 @@ async function interpretMessage(env, text, today, state) {
           enum: ["today", "yesterday", "week", "month"],
           description: "Nur bei action=stats: welcher Zeitraum gewünscht ist. Ohne klaren Hinweis: 'today'.",
         },
+        stats_employee_name: {
+          type: "string",
+          description:
+            "Nur bei action=stats: Name der Person aus der Mitarbeiterliste, falls sich die Frage auf eine bestimmte Person bezieht (z.B. 'wie viele Stunden hat Anna diese Woche gemacht'). Sonst leerer String für die Gesamt-Kennzahlen des Cafés.",
+        },
         tasks_to_add: {
           type: "array",
           description: "Nur bei action=add. Jede einzelne neue Aufgabe als eigener Eintrag, niemals mehrere Themen zusammenfassen.",
@@ -165,7 +170,7 @@ Bestimme die Absicht der Nachricht:
 - "complete": eine oder mehrere der oben gelisteten (noch offenen) Aufgaben sind erledigt und sollen als erledigt markiert werden (z.B. "Kasse zählen ist erledigt", "hab die Vitrine geputzt") – NICHT löschen, nur abhaken.
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
-- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen.
+- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
@@ -256,7 +261,41 @@ function periodRange(period, today) {
 }
 const PERIOD_LABEL = { today: "Heute", yesterday: "Gestern", week: "Diese Woche", month: "Dieser Monat" };
 
-function buildStatsReply(state, period, today) {
+function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
+  const needle = employeeName.trim().toLowerCase();
+  let hours = 0;
+  let lohn = 0;
+  let days = 0;
+  let matchedName = null;
+  for (const r of rows) {
+    for (const pe of r.perEmployee || []) {
+      if (pe.name.trim().toLowerCase() === needle) {
+        hours += Number(pe.hours) || 0;
+        lohn += Number(pe.lohn) || 0;
+        days++;
+        matchedName = pe.name;
+      }
+    }
+  }
+  if (!matchedName) {
+    const knownNames = new Set();
+    for (const r of allFinancials) for (const pe of r.perEmployee || []) knownNames.add(pe.name);
+    if (![...knownNames].some((n) => n.toLowerCase() === needle)) {
+      return `Kenne niemanden namens "${employeeName}" in den Kennzahlen der letzten Wochen.`;
+    }
+    return `${label}: ${employeeName} hat in diesem Zeitraum keine Stunden erfasst.`;
+  }
+  hours = round2(hours);
+  lohn = round2(lohn);
+  return [
+    `📊 ${label} – ${matchedName}`,
+    `Stunden: ${hours.toFixed(2).replace(".", ",")} h`,
+    `Lohn: ${euro(lohn)}`,
+    `(${days} Tag${days === 1 ? "" : "e"} mit Schicht)`,
+  ].join("\n");
+}
+
+function buildStatsReply(state, period, today, employeeName) {
   const financials = state.financials || [];
   if (financials.length === 0) {
     return `Noch keine Kennzahlen freigegeben oder synchronisiert. Unter Admin → Einstellungen bei „Telegram-Aufgaben abgleichen" die Kennzahlen-Freigabe aktivieren, danach einmal die App öffnen.`;
@@ -264,6 +303,7 @@ function buildStatsReply(state, period, today) {
   const { from, to } = periodRange(period, today);
   const rows = financials.filter((r) => r.date >= from && r.date <= to);
   const label = PERIOD_LABEL[period] || "Heute";
+  if (employeeName) return buildEmployeeStatsReply(rows, employeeName, label, financials);
   if (rows.length === 0) {
     return `${label}: für diesen Zeitraum liegen noch keine Daten vor (letzter Abgleich: ${financials[financials.length - 1]?.date || "-"}).`;
   }
@@ -358,9 +398,12 @@ async function handleTelegram(request, env) {
       await sendTelegramMessage(env, chatId, buildWhoReply(state));
     } else if (result.action === "stats") {
       const period = ["today", "yesterday", "week", "month"].includes(result.stats_period) ? result.stats_period : "today";
-      let reply = buildStatsReply(state, period, today);
-      const insights = await generateInsights(env, state.financials);
-      if (insights) reply += `\n\n💡 ${insights}`;
+      const employeeName = result.stats_employee_name ? String(result.stats_employee_name).trim() : "";
+      let reply = buildStatsReply(state, period, today, employeeName);
+      if (!employeeName) {
+        const insights = await generateInsights(env, state.financials);
+        if (insights) reply += `\n\n💡 ${insights}`;
+      }
       await sendTelegramMessage(env, chatId, reply);
     } else if (result.action === "delete") {
       const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
@@ -399,7 +442,7 @@ async function handleTelegram(request, env) {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"`
       );
     }
   } catch (e) {

@@ -41,6 +41,7 @@ function buildFinancialsPayload() {
       totalLohn: b.totalLohn,
       totalHours: b.totalHours,
       umschlag: b.umschlag,
+      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn })),
     });
   }
   rows.sort((a, b) => (a.date < b.date ? -1 : 1));

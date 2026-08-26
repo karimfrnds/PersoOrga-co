@@ -110,6 +110,11 @@ genug Historie da ist – 2-3 kurze, rein aus den eigenen Zahlen abgeleitete Beo
 gekennzeichnet, **keine** Steuer- oder Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei
 jedem Abgleich mit hochlädt.
 
+**Stunden/Lohn einer einzelnen Person**: `wie viele Stunden hat Anna diese Woche gemacht`, `was hat Timm im
+August gearbeitet` → Summe der Arbeitsstunden und des Lohns dieser Person im genannten Zeitraum (gleiche
+Zeiträume wie oben: heute/gestern/Woche/Monat). Passt der Name zu niemandem in den letzten ~5 Wochen, sagt der
+Bot das auch so.
+
 **Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die
 direkt bei dir in Telegram landet (z.B. „Minze bestellen").

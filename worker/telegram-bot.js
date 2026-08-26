@@ -59,6 +59,17 @@ function mondayOf(dateStr) {
   dt.setUTCDate(dt.getUTCDate() + diff);
   return dt.toISOString().slice(0, 10);
 }
+/** Montag der Woche NACH der aktuellen – Default-Zielwoche für Wochenplan/Verfügbarkeit. */
+function nextMondayFrom(dateStr) {
+  return addDaysISO(mondayOf(dateStr), 7);
+}
+/** 0=Sonntag..6=Samstag, reiner Kalendertag (keine Zeitzonen-Feinheiten nötig). */
+function weekdayOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+const WEEKDAY_LABELS_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+const REMINDER_WEEKDAY = 5; // Freitag – Erinnerung an alle, die für nächste Woche noch nichts eingetragen haben
 function euro(n) {
   return (Number(n) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
@@ -66,9 +77,11 @@ function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 }
 
+const EMPTY_STATE = { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [], plannedShifts: [], availability: {} };
+
 async function getState(env) {
   const raw = await env.TASKS_KV.get(STATE_KEY);
-  if (!raw) return { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [] };
+  if (!raw) return { ...EMPTY_STATE };
   try {
     const parsed = JSON.parse(raw);
     return {
@@ -77,23 +90,19 @@ async function getState(env) {
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
       shiftsInService: Array.isArray(parsed.shiftsInService) ? parsed.shiftsInService : [],
       financials: Array.isArray(parsed.financials) ? parsed.financials : [],
+      plannedShifts: Array.isArray(parsed.plannedShifts) ? parsed.plannedShifts : [],
+      availability: parsed.availability && typeof parsed.availability === "object" ? parsed.availability : {},
     };
   } catch {
-    return { updatedAt: null, employees: [], tasks: [], shiftsInService: [], financials: [] };
+    return { ...EMPTY_STATE };
   }
 }
-async function putState(env, employees, tasks, shiftsInService, financials) {
+/** Schreibt nur die übergebenen Felder, alles andere bleibt unverändert (Merge auf den aktuellen Stand). */
+async function patchState(env, patch) {
   const current = await getState(env);
-  await env.TASKS_KV.put(
-    STATE_KEY,
-    JSON.stringify({
-      updatedAt: new Date().toISOString(),
-      employees,
-      tasks,
-      shiftsInService: shiftsInService !== undefined ? shiftsInService : current.shiftsInService,
-      financials: financials !== undefined ? financials : current.financials,
-    })
-  );
+  const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+  await env.TASKS_KV.put(STATE_KEY, JSON.stringify(next));
+  return next;
 }
 
 async function sendTelegramMessage(env, chatId, text) {
@@ -115,7 +124,7 @@ async function interpretMessage(env, text, today, state) {
     input_schema: {
       type: "object",
       properties: {
-        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "other"] },
+        action: { type: "string", enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "other"] },
         stats_period: {
           type: "string",
           enum: ["today", "yesterday", "week", "month"],
@@ -150,6 +159,20 @@ async function interpretMessage(env, text, today, state) {
           description: "Nur bei action=complete. IDs exakt aus der unten gelisteten aktuellen Aufgaben-Liste übernehmen.",
           items: { type: "string" },
         },
+        shifts_to_add: {
+          type: "array",
+          description: "Nur bei action=plan_shifts. Jede einzelne geplante Schicht als eigener Eintrag, niemals mehrere Personen/Tage zusammenfassen.",
+          items: {
+            type: "object",
+            properties: {
+              employeeName: { type: "string", description: "Name der Person, muss zu einem der unten genannten aktiven Mitarbeiter passen." },
+              date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur unten genannten Zielwoche aufgelöst." },
+              from: { type: "string", description: "Beginn HH:MM" },
+              to: { type: "string", description: "Ende HH:MM" },
+            },
+            required: ["employeeName", "date", "from", "to"],
+          },
+        },
       },
       required: ["action"],
     },
@@ -159,7 +182,13 @@ async function interpretMessage(env, text, today, state) {
     ? state.tasks.map((t) => `- [${t.id}] ${t.date} · ${t.assignedToName || "Allgemein"} · ${t.done ? "erledigt" : "offen"}: ${t.text}`).join("\n")
     : "(aktuell keine)";
 
+  const nextWeekStart = nextMondayFrom(today);
+  const nextWeekEnd = addDaysISO(nextWeekStart, 6);
   const system = `Heute ist ${today} (Europe/Berlin). Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)"}.
+
+Die nächste Woche (Ziel für Wochenplan und Verfügbarkeits-Fragen) beginnt am ${nextWeekStart} (Montag) und endet am
+${nextWeekEnd} (Sonntag). Wochentage im Zusammenhang mit Schichtplan/Verfügbarkeit beziehen sich per Default auf
+diese Woche, außer ein anderer Zeitraum ist klar genannt.
 
 Aktuelle Aufgaben (ab heute), zum Nachschlagen für "delete"/"complete"/"list":
 ${taskLines}
@@ -171,6 +200,8 @@ Bestimme die Absicht der Nachricht:
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen. Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
+- "plan_shifts": der Chef schickt den fertigen Schichtplan für eine Woche (mehrere Personen/Tage in einer Nachricht), z.B. "Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17, Mittwoch Anna 10-18". IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
+- "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
@@ -248,6 +279,38 @@ function buildWhoReply(state) {
   if (!state.shiftsInService || state.shiftsInService.length === 0) return "Aktuell ist niemand eingestempelt.";
   const lines = state.shiftsInService.map((s) => `- ${s.name} (seit ${s.since} Uhr)`);
   return ["👥 Im Dienst:", ...lines].join("\n");
+}
+
+function buildPlanShiftsReply(items) {
+  const lines = items.map((s, i) => `${i + 1}. ${s.employeeName} – ${formatDateDe(s.date)} · ${s.from}-${s.to}`);
+  const heading = items.length === 1 ? "✅ Schicht eingetragen:" : `✅ ${items.length} Schichten eingetragen:`;
+  return [heading, ...lines].join("\n");
+}
+
+/** Zeigt die für die Zielwoche gesammelten Verfügbarkeiten gruppiert nach Tag, plus wer noch fehlt. */
+function buildAvailabilityReply(state, today) {
+  const weekStart = nextMondayFrom(today);
+  const activeNames = state.employees || [];
+  const bucket = (state.availability || {})[weekStart];
+  const entries = bucket?.entries || {};
+  const submittedNames = Object.keys(entries);
+  if (submittedNames.length === 0) {
+    return `Für die Woche ab ${formatDateDe(weekStart)} hat noch niemand seine Verfügbarkeit eingetragen.`;
+  }
+  const lines = [`📅 Verfügbarkeit ab ${formatDateDe(weekStart)}:`];
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysISO(weekStart, i);
+    const dayLines = [];
+    for (const name of submittedNames) {
+      const d = (entries[name].days || []).find((x) => x.date === date);
+      if (!d) continue;
+      dayLines.push(d.available ? `${name} (${d.from}-${d.to})` : `${name} ✗`);
+    }
+    lines.push(`${WEEKDAY_LABELS_DE[i]}: ${dayLines.length ? dayLines.join(", ") : "–"}`);
+  }
+  const missing = activeNames.filter((n) => !submittedNames.includes(n));
+  if (missing.length > 0) lines.push(`\n⚠ Noch offen: ${missing.join(", ")}`);
+  return lines.join("\n");
 }
 
 function periodRange(period, today) {
@@ -409,16 +472,14 @@ async function handleTelegram(request, env) {
       const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
       const removed = state.tasks.filter((t) => ids.includes(t.id));
       if (removed.length > 0) {
-        const remaining = state.tasks.filter((t) => !ids.includes(t.id));
-        await putState(env, state.employees, remaining);
+        await patchState(env, { tasks: state.tasks.filter((t) => !ids.includes(t.id)) });
       }
       await sendTelegramMessage(env, chatId, buildDeleteReply(removed));
     } else if (result.action === "complete") {
       const ids = Array.isArray(result.task_ids_to_complete) ? result.task_ids_to_complete : [];
       const completed = state.tasks.filter((t) => ids.includes(t.id) && !t.done);
       if (completed.length > 0) {
-        const updated = state.tasks.map((t) => (ids.includes(t.id) ? { ...t, done: true } : t));
-        await putState(env, state.employees, updated);
+        await patchState(env, { tasks: state.tasks.map((t) => (ids.includes(t.id) ? { ...t, done: true } : t)) });
       }
       await sendTelegramMessage(env, chatId, buildCompleteReply(completed));
     } else if (result.action === "add") {
@@ -435,14 +496,38 @@ async function handleTelegram(request, env) {
       if (newTasks.length === 0) {
         await sendTelegramMessage(env, chatId, "Konnte daraus keine Aufgabe erkennen. Magst du es anders formulieren?");
       } else {
-        await putState(env, state.employees, [...state.tasks, ...newTasks]);
+        await patchState(env, { tasks: [...state.tasks, ...newTasks] });
         await sendTelegramMessage(env, chatId, buildAddReply(newTasks, today));
+      }
+    } else if (result.action === "availability") {
+      await sendTelegramMessage(env, chatId, buildAvailabilityReply(state, today));
+    } else if (result.action === "plan_shifts") {
+      const knownNames = new Set(state.employees.map((n) => n.toLowerCase()));
+      const newShifts = (Array.isArray(result.shifts_to_add) ? result.shifts_to_add : [])
+        .map((s) => ({
+          id: crypto.randomUUID(),
+          employeeName: String(s.employeeName || "").trim(),
+          date: /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : "",
+          from: String(s.from || "").trim(),
+          to: String(s.to || "").trim(),
+        }))
+        .filter((s) => s.employeeName && s.date && s.from && s.to);
+      if (newShifts.length === 0) {
+        await sendTelegramMessage(env, chatId, `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Montag Anna 10-18")?`);
+      } else {
+        await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts] });
+        const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));
+        let reply = buildPlanShiftsReply(newShifts);
+        if (unresolved.length > 0) {
+          reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
+        }
+        await sendTelegramMessage(env, chatId, reply);
       }
     } else {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"`
       );
     }
   } catch (e) {
@@ -474,10 +559,56 @@ async function handleState(request, env) {
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
     const shiftsInService = Array.isArray(body.shiftsInService) ? body.shiftsInService : undefined;
     const financials = Array.isArray(body.financials) ? body.financials : undefined;
-    await putState(env, employees, tasks, shiftsInService, financials);
+    await patchState(env, { employees, tasks, shiftsInService, financials });
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
   }
   return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
+}
+
+/** Mitarbeiter senden darüber (aus ihrem Kiosk-Fenster) ihre Verfügbarkeit für die kommende Woche.
+ * Wird still gesammelt (state.availability), keine Einzel-Benachrichtigung pro Person – der Chef bekommt
+ * nur eine Nachricht, sobald ALLE aktiven Mitarbeiter für die Zielwoche eingetragen haben (siehe unten),
+ * und kann den Stand jederzeit per Chat abfragen ("wer kann wann"). */
+async function handleAvailability(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403, headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+  }
+  const employeeName = String(body.employeeName || "").trim();
+  const weekStart = String(body.weekStart || "");
+  const days = Array.isArray(body.days) ? body.days : [];
+  if (!employeeName || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart) || days.length === 0) {
+    return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+  }
+
+  const current = await getState(env);
+  const bucket = current.availability[weekStart] || { entries: {}, notifiedComplete: false };
+  bucket.entries = { ...bucket.entries, [employeeName]: { submittedAt: new Date().toISOString(), days } };
+  const activeNames = current.employees || [];
+  const allSubmitted = activeNames.length > 0 && activeNames.every((n) => bucket.entries[n]);
+  const justCompleted = allSubmitted && !bucket.notifiedComplete;
+  if (justCompleted) bucket.notifiedComplete = true;
+
+  await patchState(env, { availability: { ...current.availability, [weekStart]: bucket } });
+
+  if (justCompleted && env.OWNER_CHAT_ID) {
+    await sendTelegramMessage(
+      env,
+      env.OWNER_CHAT_ID,
+      `✅ Alle ${activeNames.length} Mitarbeiter haben ihre Verfügbarkeit für die Woche ab ${formatDateDe(weekStart)} eingetragen. Schick mir „verfügbarkeiten" für die Übersicht.`
+    );
+  }
+
+  return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
 }
 
 /** Mitarbeiter schicken darüber (aus ihrem Kiosk-Fenster) eine kurze Notiz direkt an den Chef. */
@@ -522,10 +653,31 @@ async function handleScheduled(env) {
         ? "☀️ Guten Morgen! Keine besonderen Aufgaben für heute hinterlegt."
         : `☀️ Guten Morgen! ${todaysTasks.length} Aufgabe(n) für heute, davon ${open.length} noch offen.\n\n${buildListReply({ ...state, tasks: todaysTasks }, today)}`;
     await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
+
+    if (weekdayOf(today) === REMINDER_WEEKDAY) {
+      await remindMissingAvailability(env, state, today);
+    }
   } else if (hour === EVENING_HOUR && open.length > 0) {
     const text = `🌙 Heute Abend noch offen (${open.length}):\n\n${buildListReply({ ...state, tasks: open }, today)}`;
     await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
   }
+}
+
+/** Freitags-Erinnerung: wer hat für die kommende Woche noch keine Verfügbarkeit eingetragen? Meldet sich nur,
+ * wenn tatsächlich noch jemand fehlt (sonst kam schon die "alle da"-Meldung beim letzten Eintrag). */
+async function remindMissingAvailability(env, state, today) {
+  const activeNames = state.employees || [];
+  if (activeNames.length === 0) return;
+  const weekStart = nextMondayFrom(today);
+  const bucket = (state.availability || {})[weekStart];
+  const submitted = new Set(Object.keys(bucket?.entries || {}));
+  const missing = activeNames.filter((n) => !submitted.has(n));
+  if (missing.length === 0) return;
+  await sendTelegramMessage(
+    env,
+    env.OWNER_CHAT_ID,
+    `📋 Diese Personen haben noch keine Verfügbarkeit für die Woche ab ${formatDateDe(weekStart)} eingetragen: ${missing.join(", ")}.`
+  );
 }
 
 export default {
@@ -539,6 +691,10 @@ export default {
     if (url.pathname === "/note") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleNote(request, env);
+    }
+    if (url.pathname === "/availability") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleAvailability(request, env);
     }
 
     if (request.method === "POST") return handleTelegram(request, env);

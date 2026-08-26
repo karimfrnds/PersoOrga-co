@@ -79,6 +79,22 @@ async function sendNoteToBoss(employeeName, text) {
   if (!res.ok) throw new Error(`Worker antwortete mit ${res.status}`);
 }
 
+/** Sendet die Verfügbarkeit eines Mitarbeiters für eine Zielwoche (Montag-Datum) an den Bot.
+ * Der Worker sammelt das im Hintergrund und meldet sich beim Chef erst, wenn alle aktiven
+ * Mitarbeiter eingetragen haben (kein Spam pro einzelner Person). Wirft bei echten Fehlern. */
+async function pushAvailability(employeeName, weekStart, days) {
+  const cfg = store.getTaskInboxConfig();
+  if (!cfg.workerUrl || !cfg.workerSecret) {
+    throw new Error("Telegram-Aufgaben-Abgleich ist nicht eingerichtet (siehe Admin → Einstellungen).");
+  }
+  const res = await fetch(workerUrl(cfg, "/availability"), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ employeeName, weekStart, days }),
+  });
+  if (!res.ok) throw new Error(`Worker antwortete mit ${res.status}`);
+}
+
 /** Führt den Abgleich jetzt durch (z.B. für den "Jetzt abgleichen"-Button). Wirft bei echten Fehlern. */
 async function performTaskSync() {
   const cfg = store.getTaskInboxConfig();
@@ -96,6 +112,17 @@ async function performTaskSync() {
   const employees = store.getEmployees(false);
 
   let applied = 0;
+
+  // Vom Bot per Wochenplan-Nachricht angelegte geplante Schichten -> lokal übernehmen (nur neue, per ID
+  // erkannt). Nicht auflösbare Namen/Daten wurden vom Worker selbst schon gar nicht erst gespeichert.
+  const remotePlanned = Array.isArray(remote.plannedShifts) ? remote.plannedShifts : [];
+  for (const rs of remotePlanned) {
+    if (!rs.id || store.hasPlannedShiftId(rs.id)) continue;
+    const match = employees.find((e) => e.name.trim().toLowerCase() === String(rs.employeeName || "").trim().toLowerCase());
+    if (!match || !rs.date || !rs.from || !rs.to) continue;
+    const day = store.getOrCreateDayByDate(rs.date);
+    store.addPlannedShift(day.id, { id: rs.id, employeeId: match.id, from: rs.from, to: rs.to });
+  }
 
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
@@ -169,4 +196,4 @@ async function maybeSyncPendingTasks() {
   }
 }
 
-export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss };
+export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss, pushAvailability };

@@ -66,6 +66,7 @@ function normalizeDay(d) {
     ...d,
     shifts: (d.shifts || []).map((s) => ({ source: "manual", ...s })),
     plannedShifts: d.plannedShifts || [],
+    availability: d.availability || [],
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
   };
 }
@@ -212,6 +213,7 @@ export const store = {
       status: "offen",
       shifts: [],
       plannedShifts: [],
+      availability: [],
       tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template", assignedTo: null, priority: "normal" })),
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
@@ -325,11 +327,12 @@ export const store = {
     return s;
   },
 
-  // ---- Geplante Schichten (Wochenplan/CSV) – reine Planung, zählt NICHT als gearbeitete Zeit ----
+  // ---- Geplante Schichten (Wochenplan/CSV/Telegram-Bot) – reine Planung, zählt NICHT als gearbeitete Zeit ----
+  /** Optionales `id` (z.B. vom Bot-Abgleich vorgegeben), damit ein Sync dieselbe Schicht nicht doppelt anlegt. */
   addPlannedShift(dayId, shift) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const s = { id: uid(), employeeId: shift.employeeId, from: shift.from, to: shift.to, note: shift.note || "" };
+    const s = { id: shift.id || uid(), employeeId: shift.employeeId, from: shift.from, to: shift.to, note: shift.note || "" };
     d.plannedShifts.push(s);
     persist();
     return s;
@@ -339,6 +342,48 @@ export const store = {
     if (!d) return;
     d.plannedShifts = d.plannedShifts.filter((s) => s.id !== shiftId);
     persist();
+  },
+  /** true, wenn irgendein Tag bereits eine geplante Schicht mit dieser (vom Bot vergebenen) ID enthält. */
+  hasPlannedShiftId(shiftId) {
+    return data.days.some((d) => d.plannedShifts.some((s) => s.id === shiftId));
+  },
+  /** Alle geplanten Schichten eines Mitarbeiters ab (inkl.) einem Datum – für die "Deine Schichten"-Ansicht im Kiosk. */
+  getPlannedShiftsFrom(employeeId, dateStr) {
+    const rows = [];
+    for (const d of this.getDays()) {
+      if (d.date < dateStr) continue;
+      for (const s of d.plannedShifts) {
+        if (s.employeeId === employeeId) rows.push({ ...s, date: d.date });
+      }
+    }
+    rows.sort((a, b) => (a.date === b.date ? (a.from < b.from ? -1 : 1) : a.date < b.date ? -1 : 1));
+    return rows;
+  },
+
+  // ---- Verfügbarkeit (Mitarbeiter tragen im Kiosk ein, wann sie in der kommenden Woche können) ----
+  /** Einträgt/ersetzt die Verfügbarkeit einer Person für einen Tag (ein Eintrag pro Mitarbeiter/Tag). */
+  setAvailability(dayId, employeeId, { available, from = "", to = "", note = "" }) {
+    const d = this.getDay(dayId);
+    if (!d) return;
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    const entry = {
+      id: idx >= 0 ? d.availability[idx].id : uid(),
+      employeeId,
+      available: !!available,
+      from: available ? from : "",
+      to: available ? to : "",
+      note,
+      submittedAt: new Date().toISOString(),
+    };
+    if (idx >= 0) d.availability[idx] = entry;
+    else d.availability.push(entry);
+    persist();
+    return entry;
+  },
+  getAvailability(dayId, employeeId) {
+    const d = this.getDay(dayId);
+    if (!d) return null;
+    return d.availability.find((a) => a.employeeId === employeeId) || null;
   },
 
   // Stornos

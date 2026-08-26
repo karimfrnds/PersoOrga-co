@@ -115,6 +115,27 @@ August gearbeitet` → Summe der Arbeitsstunden und des Lohns dieser Person im g
 Zeiträume wie oben: heute/gestern/Woche/Monat). Passt der Name zu niemandem in den letzten ~5 Wochen, sagt der
 Bot das auch so.
 
+**Wochenplan per Chat eintragen**: den fertigen Plan als eine (auch längere) Nachricht schicken, z.B.
+„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17, Mittwoch Anna 10-18" – wird in einzelne Schichten zerlegt
+und direkt übernommen. Wochentage ohne explizites Datum beziehen sich automatisch auf die **nächste** Woche
+(Montag danach). Taucht ein Name in der Bestätigung mit einer ⚠-Warnung auf, kennt der Bot ihn nicht als
+aktiven Mitarbeiter (Tippfehler o.ä.) – trotzdem gespeichert, aber am besten kurz korrigieren. Beim nächsten
+iPad-Abgleich erscheinen die Schichten automatisch in der „Deine Schichten"-Übersicht im Kiosk-Fenster der
+jeweiligen Person – zählt weiterhin nur als **Planung**, nicht als Ist-Arbeitszeit (dafür stempeln sich die
+Mitarbeiter wie gewohnt ein/aus).
+
+**Verfügbarkeit der Mitarbeiter**: Jede Person trägt im eigenen Kiosk-Fenster (nach dem Einstempeln) für die
+kommende Woche pro Tag „Kann" (mit Uhrzeit) oder „Kann nicht" ein und sendet es ab. Der Bot sammelt das im
+Hintergrund, ohne dich mit einer Nachricht pro Person zu nerven:
+- Meldet sich **automatisch**, sobald **alle** aktiven Mitarbeiter für die kommende Woche eingetragen haben.
+- Erinnert **freitags morgens** automatisch an alle, die noch fehlen (nur falls Cron Triggers eingerichtet sind,
+  siehe oben).
+- Jederzeit auf Zuruf abrufbar: `wer kann wann`, `verfügbarkeiten`, `wie sieht die Verfügbarkeit für nächste
+  Woche aus` → Übersicht pro Tag, wer kann (mit Uhrzeit) und wer nicht, plus wer noch gar nichts eingetragen hat.
+
+Die Zuteilung selbst („wer arbeitet wann") bleibt bewusst **manuell** – du schickst den fertigen Plan per
+Wochenplan-Nachricht (siehe oben), der Bot schlägt nichts automatisch vor.
+
 **Mitarbeiter-Notizen an dich**: Mitarbeiter müssen dafür keinen eigenen Telegram-Zugang haben – sie schreiben
 in ihrem eigenen Kiosk-Fenster (nach dem Einstempeln) unter „📝 Notiz an den Chef" eine kurze Nachricht, die
 direkt bei dir in Telegram landet (z.B. „Minze bestellen").

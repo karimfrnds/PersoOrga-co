@@ -16,12 +16,14 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
-import { maybeSyncPendingTasks, sendNoteToBoss } from "../taskSync.js";
-import { alertDialog } from "../dialog.js";
+import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability } from "../taskSync.js";
+import { alertDialog, confirmDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
 let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
+
+const WEEKDAY_LABELS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
 function mondayOf(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -30,6 +32,21 @@ function mondayOf(dateStr) {
   const diff = day === 0 ? -6 : 1 - day;
   dt.setUTCDate(dt.getUTCDate() + diff);
   return dt.toISOString().slice(0, 10);
+}
+function addDaysISO(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+function dateDeShort(dateStr) {
+  const [y, m, d] = dateStr.split("-");
+  return `${d}.${m}.${y}`;
+}
+function weekdayIndexOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=So..6=Sa
+  return wd === 0 ? 6 : wd - 1; // Mo=0..So=6
 }
 
 function renderKiosk(navigate) {
@@ -339,9 +356,19 @@ function renderKiosk(navigate) {
     }
     wrap.appendChild(tasksCard);
 
-    // ---- Notiz an den Chef ----
+    // ---- Deine Schichten (Wochenplan) ----
+    wrap.appendChild(buildShiftsCard(emp));
+
     const inboxCfg = store.getTaskInboxConfig();
-    if (inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret) {
+    const inboxUsable = inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret;
+
+    // ---- Verfügbarkeit für nächste Woche (nur wenn Telegram-Abgleich eingerichtet, sonst käme sie nirgends an) ----
+    if (inboxUsable) {
+      wrap.appendChild(buildAvailabilityCard(emp));
+    }
+
+    // ---- Notiz an den Chef ----
+    if (inboxUsable) {
       const noteCard = document.createElement("section");
       noteCard.className = "card";
       noteCard.innerHTML = `<h2>📝 Notiz an den Chef</h2><p class="muted small">Geht direkt per Telegram raus, z.B. "Minze bestellen".</p>`;
@@ -401,6 +428,152 @@ function renderKiosk(navigate) {
     }
 
     return wrap;
+  }
+
+  // ---------------------------------------------------------------------
+  // Deine Schichten: geplante Schichten (aus CSV-Upload oder vom Bot per
+  // Wochenplan-Nachricht eingetragen) für die kommenden Tage – reine Anzeige.
+  // ---------------------------------------------------------------------
+  function buildShiftsCard(emp) {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>📅 Deine Schichten</h2>`;
+    const upcoming = store.getPlannedShiftsFrom(emp.id, todayStr()).slice(0, 14);
+    if (upcoming.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Für die kommenden Tage sind noch keine Schichten für dich eingetragen.";
+      card.appendChild(empty);
+    } else {
+      const list = document.createElement("div");
+      list.className = "task-list";
+      for (const s of upcoming) {
+        const row = document.createElement("div");
+        row.className = "summary-line";
+        const label = s.date === todayStr() ? "Heute" : `${WEEKDAY_LABELS[weekdayIndexOf(s.date)]}, ${dateDeShort(s.date)}`;
+        row.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr</span>`;
+        list.appendChild(row);
+      }
+      card.appendChild(list);
+    }
+    return card;
+  }
+
+  // ---------------------------------------------------------------------
+  // Verfügbarkeit für die kommende Woche: pro Tag Kann/Kann nicht (+ Zeitfenster).
+  // Wird direkt im Store gespeichert (damit nichts verloren geht) und beim
+  // Absenden gesammelt an den Bot geschickt, der den Chef informiert.
+  // ---------------------------------------------------------------------
+  function buildAvailabilityCard(emp) {
+    const weekStart = addDaysISO(mondayOf(todayStr()), 7);
+    const weekEnd = addDaysISO(weekStart, 6);
+
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `
+      <h2>🗓 Verfügbarkeit für nächste Woche</h2>
+      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jeden Tag angeben, ob du kannst.</p>
+    `;
+
+    const list = document.createElement("div");
+    list.className = "avail-list";
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
+      const dayObj = store.getDayByDate(date);
+      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
+
+      const row = document.createElement("div");
+      row.className = "avail-row";
+
+      const label = document.createElement("div");
+      label.className = "avail-day-label";
+      label.textContent = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
+      row.appendChild(label);
+
+      const toggles = document.createElement("div");
+      toggles.className = "avail-toggle";
+      const canBtn = document.createElement("button");
+      canBtn.type = "button";
+      canBtn.className = "btn btn-secondary" + (entry?.available === true ? " active" : "");
+      canBtn.textContent = "Kann";
+      canBtn.onclick = () => {
+        const d = store.getOrCreateDayByDate(date);
+        const prev = store.getAvailability(d.id, emp.id);
+        store.setAvailability(d.id, emp.id, { available: true, from: prev?.from || "10:00", to: prev?.to || "18:00" });
+        rerender();
+      };
+      const cantBtn = document.createElement("button");
+      cantBtn.type = "button";
+      cantBtn.className = "btn btn-secondary" + (entry?.available === false ? " active cant" : "");
+      cantBtn.textContent = "Kann nicht";
+      cantBtn.onclick = () => {
+        const d = store.getOrCreateDayByDate(date);
+        store.setAvailability(d.id, emp.id, { available: false });
+        rerender();
+      };
+      toggles.appendChild(canBtn);
+      toggles.appendChild(cantBtn);
+      row.appendChild(toggles);
+
+      if (entry?.available === true) {
+        const times = document.createElement("div");
+        times.className = "avail-times";
+        const fromInput = document.createElement("input");
+        fromInput.type = "time";
+        fromInput.value = entry.from || "";
+        const toInput = document.createElement("input");
+        toInput.type = "time";
+        toInput.value = entry.to || "";
+        const saveTimes = () => {
+          const d = store.getOrCreateDayByDate(date);
+          store.setAvailability(d.id, emp.id, { available: true, from: fromInput.value, to: toInput.value });
+          rerender();
+        };
+        fromInput.onchange = saveTimes;
+        toInput.onchange = saveTimes;
+        times.appendChild(fromInput);
+        times.append(" – ");
+        times.appendChild(toInput);
+        row.appendChild(times);
+      }
+
+      list.appendChild(row);
+    }
+    card.appendChild(list);
+
+    const submitBtn = document.createElement("button");
+    submitBtn.className = "btn btn-primary";
+    submitBtn.textContent = "An den Chef senden";
+    submitBtn.onclick = () => submitAvailability(weekStart, emp, submitBtn);
+    card.appendChild(submitBtn);
+
+    return card;
+  }
+
+  async function submitAvailability(weekStart, emp, btn) {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
+      const dayObj = store.getDayByDate(date);
+      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
+      if (entry) days.push({ date, available: entry.available, from: entry.from, to: entry.to });
+    }
+    if (days.length === 0) {
+      await alertDialog("Bitte für mindestens einen Tag angeben, ob du kannst oder nicht.");
+      return;
+    }
+    if (days.length < 7) {
+      const proceed = await confirmDialog(`Du hast erst ${days.length} von 7 Tagen angegeben. Trotzdem an den Chef senden?`, { okLabel: "Trotzdem senden" });
+      if (!proceed) return;
+    }
+    btn.disabled = true;
+    try {
+      await pushAvailability(emp.name, weekStart, days);
+      await alertDialog("Verfügbarkeit gesendet. Danke!");
+    } catch (e) {
+      await alertDialog("Konnte nicht gesendet werden: " + e.message, { title: "Fehler" });
+    }
+    btn.disabled = false;
   }
 
   function buildTaskList(day, tasks, viewerEmp, allowHandoff) {

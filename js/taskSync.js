@@ -23,6 +23,25 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+function mondayOf(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
+function addDaysISO(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+/** Montag der Woche NACH der aktuellen – dieselbe Zielwoche, die Kiosk und Bot überall verwenden. */
+function nextMondayFrom(dateStr) {
+  return addDaysISO(mondayOf(dateStr), 7);
+}
+
 /** Nachsichtiger Vergleich für Schicht-Namen ("Früh1" vs "früh 1" vs "FRUEH1" ohne Umlaut-Taste), damit eine
  * per Bot-Chat eingetippte Schicht trotz kleiner Tippabweichungen zum richtigen Slot passt. Muss exakt so
  * auch im Worker (worker/telegram-bot.js: normalizeSlotLabelCheck) stehen, sonst laufen beide auseinander. */
@@ -61,6 +80,32 @@ function buildFinancialsPayload() {
   return rows;
 }
 
+/** Aktueller Verfügbarkeits-Stand der Zielwoche (nächste Woche) für den Bot. Wichtig, damit "wer kann wann"
+ * auch nach einer Chef-Zuweisung/-Ablehnung per Bot aktuell bleibt – die wird nur LOKAL übernommen
+ * (confirmAvailability/rejectAvailability), landet sonst nirgends automatisch wieder in der Cloud. Nur
+ * Personen mit tatsächlich abgeschickter Verfügbarkeit werden mitgeschickt. */
+function buildAvailabilityUpdatePayload() {
+  const weekStart = nextMondayFrom(todayStr());
+  const employees = store.getEmployees(false);
+  const entries = {};
+  for (const emp of employees) {
+    const slotById = new Map(store.getShiftSlotsForRole(emp.role).map((s) => [s.id, s]));
+    const days = [];
+    let submittedAt = null;
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
+      const day = store.getDayByDate(date);
+      const entry = day ? store.getAvailability(day.id, emp.id) : null;
+      if (!entry || !entry.submittedAt || entry.slotIds.length === 0) continue;
+      submittedAt = entry.submittedAt;
+      const slots = entry.slotIds.map((id) => slotById.get(id)).filter(Boolean).map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to }));
+      if (slots.length > 0) days.push({ date, slots, confirmedSlotId: entry.confirmedSlotId || null, bossConfirmed: !!entry.bossConfirmed });
+    }
+    if (submittedAt) entries[emp.name] = { submittedAt, days };
+  }
+  return { weekStart, entries };
+}
+
 async function fetchRemoteState(cfg) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     headers: { Authorization: `Bearer ${cfg.workerSecret}` },
@@ -69,11 +114,11 @@ async function fetchRemoteState(cfg) {
   return res.json();
 }
 
-async function pushLocalState(cfg, employees, tasks, shiftsInService, financials) {
+async function pushLocalState(cfg, employees, tasks, shiftsInService, financials, availabilityUpdate) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ employees, tasks, shiftsInService, financials }),
+    body: JSON.stringify({ employees, tasks, shiftsInService, financials, availabilityUpdate }),
   });
   if (!res.ok) throw new Error(`Worker antwortete mit ${res.status} beim Hochladen`);
 }
@@ -270,7 +315,8 @@ async function performTaskSync() {
     since: s.from,
   }));
   const financials = cfg.shareFinancials ? buildFinancialsPayload() : [];
-  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks, shiftsInService, financials);
+  const availabilityUpdate = buildAvailabilityUpdatePayload();
+  await pushLocalState(cfg, employees.map((e) => e.name), pushTasks, shiftsInService, financials, availabilityUpdate);
 
   store.updateTaskInboxConfig({
     lastSyncAt: new Date().toISOString(),

@@ -132,6 +132,15 @@ async function patchState(env, patch) {
   return next;
 }
 
+/** Merged die Einträge EINER Zielwoche in die bestehende Verfügbarkeit ein (App-Sync nach Chef-Zuweisung/
+ * -Ablehnung, damit "wer kann wann" aktuell bleibt) – überschreibt nur die genannten Personen dieser einen
+ * Woche, lässt andere Wochen und das notifiedComplete-Flag (steuert die "alle da"-Meldung) unangetastet. */
+function mergeAvailabilityWeek(currentAvailability, weekStart, entries) {
+  const bucket = currentAvailability[weekStart] || { entries: {}, notifiedComplete: false };
+  const nextBucket = { ...bucket, entries: { ...bucket.entries, ...entries } };
+  return { ...currentAvailability, [weekStart]: nextBucket };
+}
+
 async function sendTelegramMessage(env, chatId, text) {
   await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -700,7 +709,13 @@ async function handleState(request, env) {
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
     const shiftsInService = Array.isArray(body.shiftsInService) ? body.shiftsInService : undefined;
     const financials = Array.isArray(body.financials) ? body.financials : undefined;
-    await patchState(env, { employees, tasks, shiftsInService, financials });
+    const patch = { employees, tasks, shiftsInService, financials };
+    const au = body.availabilityUpdate;
+    if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
+      const current = await getState(env);
+      patch.availability = mergeAvailabilityWeek(current.availability, au.weekStart, au.entries);
+    }
+    await patchState(env, patch);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
   }
   return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });

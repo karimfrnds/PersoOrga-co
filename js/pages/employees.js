@@ -10,20 +10,86 @@ function renderEmployees() {
   const container = document.createElement("div");
   container.className = "page";
 
+  // Überlebt Rerenders: inaktive Mitarbeiter starten eingeklappt (werden selten gebraucht).
+  let showInactive = false;
+
   function rerender() {
     container.innerHTML = "";
     container.appendChild(build());
+  }
+
+  function buildRow(emp) {
+    const row = document.createElement("div");
+    row.className = "employee-row" + (emp.active ? "" : " inactive");
+    row.innerHTML = `
+      <div class="employee-main">
+        <b>${escapeHtml(emp.name)}</b>
+        <span class="muted small">${ROLE_LABEL[emp.role]} · ${euro(emp.hourlyWage)}/Std.${emp.isMinijob ? ` · Minijob (Grenze ${euro(emp.minijobLimit)}/Monat)` : ""}</span>
+        <span class="muted small">PIN: ${emp.pin ? escapeHtml(emp.pin) : "– nicht vergeben –"}</span>
+      </div>
+    `;
+    const actions = document.createElement("div");
+    actions.className = "employee-actions";
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn btn-secondary";
+    editBtn.textContent = "Bearbeiten";
+    editBtn.onclick = () => openForm(emp);
+    actions.appendChild(editBtn);
+    if (emp.active) {
+      const deactivateBtn = document.createElement("button");
+      deactivateBtn.className = "btn btn-secondary";
+      deactivateBtn.textContent = "Deaktivieren";
+      deactivateBtn.title = "Vorübergehend ausblenden – alte Tage bleiben unverändert erhalten";
+      deactivateBtn.onclick = async () => {
+        if (await confirmDialog(`${escapeHtml(emp.name)} deaktivieren? Vergangene Tage bleiben unverändert erhalten, aber ${escapeHtml(emp.name)} taucht bei neuen Schichten nicht mehr in der Auswahl auf.`, { danger: true, okLabel: "Deaktivieren" })) {
+          store.removeEmployee(emp.id);
+          rerender();
+        }
+      };
+      actions.appendChild(deactivateBtn);
+    } else {
+      const reactivateBtn = document.createElement("button");
+      reactivateBtn.className = "btn btn-secondary";
+      reactivateBtn.textContent = "Aktivieren";
+      reactivateBtn.onclick = () => {
+        store.updateEmployee(emp.id, { active: true });
+        rerender();
+      };
+      actions.appendChild(reactivateBtn);
+    }
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn-icon-danger";
+    deleteBtn.textContent = "✕";
+    deleteBtn.title = "Endgültig löschen";
+    deleteBtn.onclick = async () => {
+      if (store.employeeHasHistory(emp.id)) {
+        await alertDialog(
+          `${escapeHtml(emp.name)} hat bereits erfasste Schichten und kann deshalb nicht endgültig gelöscht werden – das würde vergangene Abrechnungen verfälschen. Bitte stattdessen deaktivieren, dann verschwindet die Person aus der Auswahl für neue Tage.`,
+          { title: "Löschen nicht möglich" }
+        );
+        return;
+      }
+      if (await confirmDialog(`${escapeHtml(emp.name)} endgültig löschen? Das kann nicht rückgängig gemacht werden.`, { danger: true, okLabel: "Endgültig löschen" })) {
+        store.deleteEmployee(emp.id);
+        rerender();
+      }
+    };
+    actions.appendChild(deleteBtn);
+
+    row.appendChild(actions);
+    return row;
   }
 
   function build() {
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Mitarbeiter</h1><p class="muted">Name, Rolle, Stundenlohn und PIN festlegen – der PIN wird zum Ein-/Ausstempeln am Kiosk-Bildschirm gebraucht.</p>`;
 
-    const list = document.createElement("div");
-    list.className = "employee-list";
-    const employees = store.getEmployees(true).sort((a, b) => a.name.localeCompare(b.name));
+    const all = store.getEmployees(true).sort((a, b) => a.name.localeCompare(b.name));
+    const active = all.filter((e) => e.active);
+    const inactive = all.filter((e) => !e.active);
 
-    const missingPin = employees.filter((e) => e.active && !e.pin);
+    const missingPin = active.filter((e) => !e.pin);
     if (missingPin.length > 0) {
       const warn = document.createElement("div");
       warn.className = "callout callout-warn";
@@ -31,69 +97,9 @@ function renderEmployees() {
       frag.appendChild(warn);
     }
 
-    for (const emp of employees) {
-      const row = document.createElement("div");
-      row.className = "employee-row" + (emp.active ? "" : " inactive");
-      row.innerHTML = `
-        <div class="employee-main">
-          <b>${escapeHtml(emp.name)}</b>
-          <span class="muted small">${ROLE_LABEL[emp.role]} · ${euro(emp.hourlyWage)}/Std.${emp.isMinijob ? ` · Minijob (Grenze ${euro(emp.minijobLimit)}/Monat)` : ""}</span>
-          <span class="muted small">PIN: ${emp.pin ? escapeHtml(emp.pin) : "– nicht vergeben –"}</span>
-          ${!emp.active ? '<span class="badge badge-gray">inaktiv</span>' : ""}
-        </div>
-      `;
-      const actions = document.createElement("div");
-      actions.className = "employee-actions";
-      const editBtn = document.createElement("button");
-      editBtn.className = "btn btn-secondary";
-      editBtn.textContent = "Bearbeiten";
-      editBtn.onclick = () => openForm(emp);
-      actions.appendChild(editBtn);
-      if (emp.active) {
-        const deactivateBtn = document.createElement("button");
-        deactivateBtn.className = "btn btn-secondary";
-        deactivateBtn.textContent = "Deaktivieren";
-        deactivateBtn.title = "Vorübergehend ausblenden – alte Tage bleiben unverändert erhalten";
-        deactivateBtn.onclick = async () => {
-          if (await confirmDialog(`${escapeHtml(emp.name)} deaktivieren? Vergangene Tage bleiben unverändert erhalten, aber ${escapeHtml(emp.name)} taucht bei neuen Schichten nicht mehr in der Auswahl auf.`, { danger: true, okLabel: "Deaktivieren" })) {
-            store.removeEmployee(emp.id);
-            rerender();
-          }
-        };
-        actions.appendChild(deactivateBtn);
-      } else {
-        const reactivateBtn = document.createElement("button");
-        reactivateBtn.className = "btn btn-secondary";
-        reactivateBtn.textContent = "Aktivieren";
-        reactivateBtn.onclick = () => {
-          store.updateEmployee(emp.id, { active: true });
-          rerender();
-        };
-        actions.appendChild(reactivateBtn);
-      }
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "btn btn-icon-danger";
-      deleteBtn.textContent = "✕";
-      deleteBtn.title = "Endgültig löschen";
-      deleteBtn.onclick = async () => {
-        if (store.employeeHasHistory(emp.id)) {
-          await alertDialog(
-            `${escapeHtml(emp.name)} hat bereits erfasste Schichten und kann deshalb nicht endgültig gelöscht werden – das würde vergangene Abrechnungen verfälschen. Bitte stattdessen deaktivieren, dann verschwindet die Person aus der Auswahl für neue Tage.`,
-            { title: "Löschen nicht möglich" }
-          );
-          return;
-        }
-        if (await confirmDialog(`${escapeHtml(emp.name)} endgültig löschen? Das kann nicht rückgängig gemacht werden.`, { danger: true, okLabel: "Endgültig löschen" })) {
-          store.deleteEmployee(emp.id);
-          rerender();
-        }
-      };
-      actions.appendChild(deleteBtn);
-
-      row.appendChild(actions);
-      list.appendChild(row);
-    }
+    const list = document.createElement("div");
+    list.className = "employee-list";
+    for (const emp of active) list.appendChild(buildRow(emp));
     frag.appendChild(list);
 
     const addBtn = document.createElement("button");
@@ -101,6 +107,31 @@ function renderEmployees() {
     addBtn.textContent = "＋ Mitarbeiter hinzufügen";
     addBtn.onclick = () => openForm(null);
     frag.appendChild(addBtn);
+
+    if (inactive.length > 0) {
+      const headerBtn = document.createElement("button");
+      headerBtn.className = "group-header" + (showInactive ? " open" : "");
+      headerBtn.style.marginTop = "16px";
+      headerBtn.innerHTML = `
+        <span class="group-header-chevron">▶</span>
+        <span class="group-header-name">Inaktive Mitarbeiter</span>
+        <span class="group-header-meta">${inactive.length}</span>
+      `;
+      headerBtn.onclick = () => {
+        showInactive = !showInactive;
+        rerender();
+      };
+      frag.appendChild(headerBtn);
+      if (showInactive) {
+        const body = document.createElement("div");
+        body.className = "group-body";
+        const inactiveList = document.createElement("div");
+        inactiveList.className = "employee-list";
+        for (const emp of inactive) inactiveList.appendChild(buildRow(emp));
+        body.appendChild(inactiveList);
+        frag.appendChild(body);
+      }
+    }
 
     return frag;
   }

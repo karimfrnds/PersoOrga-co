@@ -47,6 +47,11 @@ function renderExport() {
       return frag;
     }
 
+    // Summe je Mitarbeiter – in eine Karte gefasst, damit die Seite nicht als freischwebende Tabellen
+    // und Absätze wirkt, sondern wie die anderen Admin-Seiten aus klar abgegrenzten Karten besteht.
+    const summaryCard = document.createElement("section");
+    summaryCard.className = "card";
+    summaryCard.innerHTML = `<h2>Summe je Mitarbeiter</h2>`;
     const table = document.createElement("table");
     table.className = "calc-table";
     table.innerHTML = `<thead><tr><th>Mitarbeiter</th><th>Rolle</th><th>Stunden</th><th>Lohn (steuerpflichtig)</th><th>Trinkgeld (steuerfrei)</th><th>Gesamt</th></tr></thead>`;
@@ -72,14 +77,14 @@ function renderExport() {
     trTotal.innerHTML = `<td><b>Gesamt</b></td><td></td><td><b>${hours(sumHours)}</b></td><td><b>${euro(sumLohn)}</b></td><td><b>${euro(sumTip)}</b></td><td><b>${euro(sumLohn + sumTip)}</b></td>`;
     tbody.appendChild(trTotal);
     table.appendChild(tbody);
-    frag.appendChild(table);
+    summaryCard.appendChild(table);
 
     // Tagesgenaue Aufschlüsselung – aufklappbar, damit auf Wunsch jeder Tag einzeln nachvollziehbar ist
     // (die CSV unten enthält diese Aufschlüsselung immer, unabhängig davon ob hier aufgeklappt).
     const detailRows = computeDayByDayRange(days, employees, settings, `${selectedMonth}-01`, `${selectedMonth}-31`, { onlyClosed: true });
     const details = document.createElement("details");
     details.className = "history";
-    details.style.marginTop = "-8px";
+    details.style.marginTop = "12px";
     details.innerHTML = `<summary>Tagesgenaue Aufschlüsselung anzeigen (${detailRows.length} Einträge)</summary>`;
     const detailTable = document.createElement("table");
     detailTable.className = "calc-table";
@@ -104,12 +109,14 @@ function renderExport() {
     detailScroll.style.overflowX = "auto";
     detailScroll.appendChild(detailTable);
     details.appendChild(detailScroll);
-    frag.appendChild(details);
+    summaryCard.appendChild(details);
 
     const umschlagInfo = document.createElement("p");
-    umschlagInfo.className = "muted";
+    umschlagInfo.className = "muted small";
+    umschlagInfo.style.marginTop = "10px";
     umschlagInfo.innerHTML = `Summe Umschlag/Café in diesem Monat: <b>${euro(result.dayUmschlagTotal)}</b> (${result.days.length} abgeschlossene Tage)`;
-    frag.appendChild(umschlagInfo);
+    summaryCard.appendChild(umschlagInfo);
+    frag.appendChild(summaryCard);
 
     // Umsatzsteuer-Aufteilung fürs Steuerbüro
     const vatSection = document.createElement("section");

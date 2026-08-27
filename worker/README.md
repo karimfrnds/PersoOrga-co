@@ -227,6 +227,14 @@ hinterlegt ist. Fotos **und PDF-Dateien** werden beide unterstützt (z.B. eine a
 andere Dateiformate (Word, Excel, …) werden mit einer klaren Fehlermeldung abgelehnt statt stillschweigend
 ignoriert. Braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von Textnachrichten.
 
+**Artikel müssen nicht vorher angelegt sein**: kennt die Vorräte-Liste einen auf dem Beleg erkannten Artikel
+noch nicht (auch bei „X ist wieder da"), wird er automatisch neu angelegt statt die Lieferung/Meldung nur als
+Warnung zu verwerfen. Bei einer Lieferung mit Menge+Einheit wird der Artikel gleich mengengeführt angelegt
+(Warnschwelle testweise auf 20 % der ersten Liefermenge geschätzt – unter Admin → Vorräte jederzeit anpassbar).
+Nur bei **Rezepten** geht das nicht automatisch: der Bot kann aus einem Verkaufsbericht nicht wissen, wie viel
+Milch/Kaffee etc. in einem „Cappuccino" stecken – das musst du einmalig unter Admin → Vorräte → Rezepte
+eintragen, danach rechnet das System jeden weiteren Verkauf automatisch dagegen.
+
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
 Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:
 - **Täglich um 8 Uhr**: kurze Tagesübersicht der Aufgaben.

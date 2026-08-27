@@ -309,17 +309,26 @@ async function performTaskSync() {
   }
 
   // Chef meldet per Bot "X ist wieder da" -> Artikel-Status zurück auf "ok". Nachsichtiger Namens-Vergleich
-  // (exakt, sonst Teilstring), da Artikel frei benannt sind (kein festes Enum wie bei Schichten).
+  // (exakt, sonst Teilstring), da Artikel frei benannt sind (kein festes Enum wie bei Schichten). Kennt die
+  // Vorräte-Liste den Artikel noch gar nicht, wird er automatisch neu angelegt (reine Ampel, Status "ok") -
+  // spart das manuelle Vorab-Anlegen in Admin -> Vorräte.
   const remoteRestocks = Array.isArray(remote.stockRestocks) ? remote.stockRestocks : [];
   const appliedRestockIds = new Set(cfg.appliedRestockIds || []);
   let newRestockIds = false;
-  const stockItems = store.getStockItems();
+  let stockItems = store.getStockItems();
   for (const rs of remoteRestocks) {
     if (!rs.id || appliedRestockIds.has(rs.id)) continue;
     const needle = String(rs.itemName || "").trim().toLowerCase();
-    const match =
+    let match =
       stockItems.find((s) => s.name.trim().toLowerCase() === needle) ||
       stockItems.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    if (!match && rs.itemName) {
+      match = store.addStockItem(rs.itemName);
+      if (match) {
+        stockItems = [...stockItems, match];
+        syncWarnings.push(`Neuer Artikel "${rs.itemName}" automatisch angelegt (per Bot-Nachricht "ist wieder da").`);
+      }
+    }
     if (match) store.setStockStatus(match.id, "ok", "Chef");
     else syncWarnings.push(`"${rs.itemName}" ist wieder da: kein passender Vorrats-Artikel gefunden.`);
     appliedRestockIds.add(rs.id);
@@ -329,18 +338,34 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRestockIds: [...appliedRestockIds].slice(-300) });
   }
 
-  // Vom Bot per Lieferschein-Foto erkannte Lieferungen -> als Verlauf beim jeweiligen Artikel anlegen
-  // (setzt den Status automatisch auf "ok"). Gleicher nachsichtiger Namens-Vergleich wie bei "restock".
+  // Vom Bot per Lieferschein-Foto/PDF erkannte Lieferungen -> als Verlauf beim jeweiligen Artikel anlegen
+  // (setzt den Status automatisch auf "ok"). Gleicher nachsichtiger Namens-Vergleich wie bei "restock". Kennt
+  // die Vorräte-Liste den Artikel noch nicht, wird er automatisch neu angelegt (mit der auf dem Beleg
+  // erkannten Einheit, Start-Bestand 0 - die Menge kommt gleich im nächsten Schritt über addStockDelivery
+  // dazu) statt die Lieferung nur als Warnung zu verwerfen. Warnschwelle testweise auf 20% der ersten
+  // gelieferten Menge, bei Bedarf unter Admin -> Vorräte anpassen.
   const remoteDeliveries = Array.isArray(remote.stockDeliveries) ? remote.stockDeliveries : [];
   const appliedDeliveryIds = new Set(cfg.appliedDeliveryIds || []);
   let newDeliveryIds = false;
-  const stockForDelivery = store.getStockItems(); // frisch (evtl. schon durch die restock-Schleife verändert)
+  let stockForDelivery = store.getStockItems(); // frisch (evtl. schon durch die restock-Schleife verändert)
   for (const d of remoteDeliveries) {
     if (!d.id || appliedDeliveryIds.has(d.id)) continue;
     const needle = String(d.itemName || "").trim().toLowerCase();
-    const match =
+    let match =
       stockForDelivery.find((s) => s.name.trim().toLowerCase() === needle) ||
       stockForDelivery.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    if (!match && d.itemName) {
+      const qty = Number(d.quantity);
+      match = store.addStockItem(d.itemName, {
+        unit: d.unit || "",
+        currentAmount: 0,
+        lowThreshold: Number.isFinite(qty) ? Math.round(qty * 0.2 * 10) / 10 : 0,
+      });
+      if (match) {
+        stockForDelivery = [...stockForDelivery, match];
+        syncWarnings.push(`Neuer Artikel "${d.itemName}" automatisch angelegt (Warnschwelle testweise geschätzt, bei Bedarf unter Admin → Vorräte anpassen).`);
+      }
+    }
     if (match) store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
     else syncWarnings.push(`Lieferung "${d.itemName}": kein passender Vorrats-Artikel gefunden.`);
     appliedDeliveryIds.add(d.id);

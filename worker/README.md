@@ -175,8 +175,10 @@ Der Bot sammelt das im Hintergrund, ohne dich mit einer Nachricht pro Person zu 
 - Erinnert **freitags morgens** automatisch an alle, die noch fehlen (nur falls Cron Triggers eingerichtet sind,
   siehe oben).
 - Jederzeit auf Zuruf abrufbar: `wer kann wann`, `verfügbarkeiten`, `wie sieht die Verfügbarkeit für nächste
-  Woche aus` → Übersicht pro Tag und Schicht, wer sich bereit erklärt hat (✅fest = bestätigt, 🔶wartet auf
-  Bestätigung = fest, aber noch nicht von dir bestätigt), plus wer noch gar nichts eingetragen hat.
+  Woche aus` → als Tabelle (eine Zeile pro Mitarbeiter, eine Spalte pro Wochentag): `F1`/`F2` = Früh, `M` =
+  Mittel, `S1`/`S2` = Spät, ein `?` dahinter (z.B. `M?`) heißt „fest, aber noch nicht von dir bestätigt", `Zx`
+  (z.B. `3x`) heißt „Z Kandidaten, noch offen – du musst entscheiden" (dafür gibt es jetzt auch die Tabelle
+  unter Admin → Schichtplanung zum Antippen). Am Ende steht, wer noch gar nichts eingetragen hat.
 
 Sobald jemand seine Verfügbarkeit für die Woche abgeschickt hat, klappt die Auswahl im Kiosk-Fenster zu einer
 kompakten Ansicht zusammen (die Schichten stehen weiter oben bei „Deine Schichten"). Für Änderungswünsche gibt

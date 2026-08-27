@@ -485,6 +485,12 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
       required: ["documentType", "items"],
     },
   };
+  // PDFs gehen als "document"-Content-Block rein, Fotos als "image" – beides von Claude direkt unterstützt
+  // (kein Beta-Header nötig, alle aktiven Modelle können PDFs visuell auswerten).
+  const fileBlock =
+    mimeType === "application/pdf"
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: imageBase64 } }
+      : { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } };
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -497,10 +503,10 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
         {
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } },
+            fileBlock,
             {
               type: "text",
-              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Foto für ein Café: entweder ein Lieferschein/eine Rechnung (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF): entweder ein Lieferschein/eine Rechnung (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
               } Bestimme zuerst documentType, extrahiere dann die passenden Positionen.`,
             },
@@ -519,21 +525,21 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
   return toolUse.input;
 }
 
-/** Lädt das größte verfügbare Foto einer Telegram-Nachricht herunter, lässt es per Vision auswerten und
- * verarbeitet es je nach erkanntem Dokument-Typ als Lieferung (Bestand rauf) oder Verkaufsbericht (Bestand
- * über die Rezept-Zutaten runter). */
-async function handleStockPhoto(env, chatId, photoSizes, caption, today, state) {
+/** Lädt eine Foto- oder PDF-Datei einer Telegram-Nachricht (per file_id) herunter, lässt sie per Vision
+ * auswerten und verarbeitet sie je nach erkanntem Dokument-Typ als Lieferung (Bestand rauf) oder
+ * Verkaufsbericht (Bestand über die Rezept-Zutaten runter). knownMimeType kommt bei Dokumenten direkt von
+ * Telegram mit; bei Fotos gibt es das nicht, dort wird die Endung der heruntergeladenen Datei geraten. */
+async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, today, state) {
   try {
-    const largest = photoSizes[photoSizes.length - 1]; // Telegram sortiert aufsteigend nach Auflösung
-    const fileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${largest.file_id}`);
+    const fileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData?.result?.file_path;
-    if (!filePath) throw new Error("Konnte das Foto nicht von Telegram laden.");
-    const imgRes = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
-    if (!imgRes.ok) throw new Error("Konnte das Foto nicht herunterladen.");
-    const buffer = await imgRes.arrayBuffer();
+    if (!filePath) throw new Error("Konnte die Datei nicht von Telegram laden.");
+    const fileDownload = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
+    if (!fileDownload.ok) throw new Error("Konnte die Datei nicht herunterladen.");
+    const buffer = await fileDownload.arrayBuffer();
     const base64 = arrayBufferToBase64(buffer);
-    const mimeType = filePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+    const mimeType = knownMimeType || (filePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg");
 
     const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
     const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
@@ -578,7 +584,7 @@ async function handleStockPhoto(env, chatId, photoSizes, caption, today, state) 
       await sendTelegramMessage(env, chatId, reply);
     }
   } catch (e) {
-    await sendTelegramMessage(env, chatId, `⚠ Fehler beim Verarbeiten des Fotos: ${e.message}`);
+    await sendTelegramMessage(env, chatId, `⚠ Fehler beim Verarbeiten der Datei: ${e.message}`);
   }
 }
 
@@ -758,8 +764,9 @@ async function handleTelegram(request, env) {
   const message = update.message;
   const text = message?.text;
   const photo = Array.isArray(message?.photo) && message.photo.length > 0 ? message.photo : null;
+  const doc = message?.document || null; // z.B. als PDF oder "als Datei" verschicktes Foto
   const chatId = message?.chat?.id;
-  if ((!text && !photo) || chatId === undefined) return new Response("ok", { status: 200 });
+  if ((!text && !photo && !doc) || chatId === undefined) return new Response("ok", { status: 200 });
 
   if (!env.OWNER_CHAT_ID) {
     await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen.`);
@@ -775,12 +782,23 @@ async function handleTelegram(request, env) {
     const state = await getState(env);
 
     if (!env.ANTHROPIC_API_KEY) {
-      await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten/Fotos gerade nicht verstehen.");
+      await sendTelegramMessage(env, chatId, "⚠ ANTHROPIC_API_KEY fehlt im Worker – ich kann Nachrichten/Fotos/PDFs gerade nicht verstehen.");
       return new Response("ok", { status: 200 });
     }
 
-    if (photo) {
-      await handleStockPhoto(env, chatId, photo, message.caption, today, state);
+    if (photo || doc) {
+      const ACCEPTED_DOC_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+      if (doc && !ACCEPTED_DOC_TYPES.includes(doc.mime_type)) {
+        await sendTelegramMessage(
+          env,
+          chatId,
+          "⚠ Diese Datei kann ich nicht auswerten – bitte als Foto oder PDF schicken (Lieferschein/Rechnung oder SumUp-Verkaufsbericht)."
+        );
+        return new Response("ok", { status: 200 });
+      }
+      const fileId = photo ? photo[photo.length - 1].file_id : doc.file_id; // Telegram sortiert Fotos aufsteigend nach Auflösung
+      const knownMimeType = doc ? doc.mime_type : null;
+      await handleStockDocument(env, chatId, fileId, knownMimeType, message.caption, today, state);
       return new Response("ok", { status: 200 });
     }
 

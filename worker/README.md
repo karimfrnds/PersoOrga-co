@@ -223,8 +223,9 @@ Bildunterschrift) – der Bot erkennt per KI-Bilderkennung selbst, um welche Art
   – ohne Rezept passiert nichts, keine Schätzung).
 
 Es wird **nichts erfunden oder geschätzt** – nur verrechnet, was tatsächlich auf dem Beleg steht bzw. im Rezept
-hinterlegt ist. Nur Fotos (keine PDF-Dokumente); braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von
-Textnachrichten.
+hinterlegt ist. Fotos **und PDF-Dateien** werden beide unterstützt (z.B. eine als PDF exportierte Bestellung);
+andere Dateiformate (Word, Excel, …) werden mit einer klaren Fehlermeldung abgelehnt statt stillschweigend
+ignoriert. Braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von Textnachrichten.
 
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
 Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:

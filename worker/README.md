@@ -77,9 +77,18 @@ App → Admin → Einstellungen → „Telegram-Aufgaben abgleichen":
 
 ## Nutzung
 
-Der Bot versteht ganz normal formulierte Nachrichten (per KI interpretiert) und kennt dabei immer den aktuellen
-Stand – der liegt im KV-Speicher, den Bot und App beide direkt lesen/schreiben, unabhängig davon ob das iPad
-gerade an ist.
+Der Bot versteht ganz normal formulierte Nachrichten (per KI interpretiert, Modell **Claude Sonnet 5** – versteht
+auch komplexere/mehrdeutige Formulierungen deutlich besser als ein kleines Modell) und kennt dabei immer den
+aktuellen Stand – der liegt im KV-Speicher, den Bot und App beide direkt lesen/schreiben, unabhängig davon ob das
+iPad gerade an ist.
+
+**Frag ihn einfach direkt etwas**: passt eine Nachricht zu keinem der unten aufgelisteten festen Befehle, aber
+ist erkennbar eine echte Frage oder Bitte um Einschätzung (z.B. „wieso war der Umschlag diese Woche schlechter",
+„vergleich diesen Monat mit letztem", „sollten wir am Wochenende mehr Personal einplanen"), beantwortet der Bot
+sie in eigenen Worten – auf Basis der tatsächlich vorhandenen Kennzahlen/Aufgaben/Vorräte, **nichts erfunden
+oder geschätzt**, was nicht aus den Daten hervorgeht (fehlen Infos, sagt er das ehrlich). Er merkt sich dafür
+auch die letzten paar Nachrichten des Gesprächs, Rückfragen wie „und was können wir dagegen tun" funktionieren
+also im Kontext der vorherigen Antwort, ohne dass du alles nochmal wiederholen musst.
 
 **Aufgaben anlegen** – auch mehrere auf einmal, auch an verschiedene Personen:
 - `Kaffeemaschine reparieren lassen` → allgemeine Aufgabe für heute.

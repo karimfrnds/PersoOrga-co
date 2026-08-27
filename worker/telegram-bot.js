@@ -26,6 +26,11 @@
 // ============================================================================
 
 const PRIORITIES = ["niedrig", "normal", "hoch"];
+// Zentrale Modell-Wahl für alle Claude-Aufrufe (Nachrichten verstehen, Fotos/PDFs auswerten, freie Fragen
+// beantworten) – an einer Stelle austauschbar. Sonnet 5 versteht Nuancen/komplexere Formulierungen spürbar
+// besser als Haiku, kostet aber etwa das Doppelte pro Nachricht (bei diesem Nachrichtenvolumen weiterhin
+// im Cent-Bereich pro Monat).
+const AI_MODEL = "claude-sonnet-5";
 const STATE_KEY = "state";
 const MORNING_HOUR = 8; // Europe/Berlin, Ortszeit
 const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
@@ -123,6 +128,10 @@ const EMPTY_STATE = {
   employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
+  // Letzte Chat-Nachrichten (nur Text-Nachrichten, keine Foto/PDF-Auswertungen), damit der Bot bei
+  // Rückfragen ("und letzte Woche?") den Zusammenhang kennt. [{role:"user"|"assistant", text}], gedeckelt
+  // auf die letzten 20 Einträge (~10 Austausche), damit KV-Größe und Tokenkosten begrenzt bleiben.
+  conversationHistory: [],
 };
 
 async function getState(env) {
@@ -149,6 +158,7 @@ async function getState(env) {
       employeeNotes: Array.isArray(parsed.employeeNotes) ? parsed.employeeNotes : [],
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
+      conversationHistory: Array.isArray(parsed.conversationHistory) ? parsed.conversationHistory : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -192,7 +202,7 @@ async function interpretMessage(env, text, today, state) {
       properties: {
         action: {
           type: "string",
-          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "notes", "other"],
+          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "notes", "ask_anything", "other"],
         },
         stats_period: {
           type: "string",
@@ -323,9 +333,12 @@ Bestimme die Absicht der Nachricht:
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
 - "notify": der Chef will einer oder mehreren Personen eine freie Nachricht schicken, die im Kiosk als Pop-up erscheint, z.B. "Sag Anna, sie soll morgen 30 Min früher kommen", "Schreib Timm: Danke für die Vertretung gestern!", "Richte allen aus, dass am Montag Inventur ist" (dann für JEDE bekannte aktive Person einen eigenen Eintrag in messages_to_send anlegen). IMMER jede Nachricht als eigenen Eintrag, auch bei mehreren Empfängern.
-- "other": nichts davon eindeutig, z.B. Small Talk oder unklare Nachricht.
+- "ask_anything": eine Frage, Bitte um Einschätzung/Vergleich/Erklärung oder etwas Analytisches, das sich mit den vorhandenen Daten beantworten lässt, aber zu keiner der obigen festen Aktionen passt (z.B. "wieso war der Umschlag diese Woche schlechter", "vergleich diesen Monat mit letztem", "was denkst du, sollten wir mehr Personal am Wochenende einplanen", offene Rückfragen zu einer vorherigen Antwort). Auch nutzen, wenn eine der festen Aktionen zwar thematisch passen würde, die Frage aber offensichtlich mehr Kontext/Begründung will als die feste Antwort liefert.
+- "other": wirklich nichts davon, z.B. Small Talk, Test-Nachricht, oder komplett unverständlich.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
+  // Letzte Nachrichten als Kontext mitgeben, damit Rückfragen ("und Timm?") richtig aufgelöst werden.
+  const history = (state.conversationHistory || []).slice(-10).map((h) => ({ role: h.role, content: h.text }));
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -334,12 +347,12 @@ Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_del
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: AI_MODEL,
       max_tokens: 1536,
       system,
       tools: [tool],
       tool_choice: { type: "tool", name: "handle_message" },
-      messages: [{ role: "user", content: text }],
+      messages: [...history, { role: "user", content: text }],
     }),
   });
   if (!res.ok) {
@@ -495,7 +508,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
     method: "POST",
     headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: AI_MODEL,
       max_tokens: 1536,
       tools: [tool],
       tool_choice: { type: "tool", name: "extract_stock_document" },
@@ -737,7 +750,7 @@ async function generateInsights(env, financials) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -746,6 +759,68 @@ async function generateInsights(env, financials) {
   } catch {
     return null;
   }
+}
+
+/** Beantwortet eine freie Frage/Bitte des Chefs (action="ask_anything"), die zu keiner der festen Aktionen
+ * passt, in eigenen Worten – auf Basis der tatsächlich vorhandenen Daten (Kennzahlen, Aufgaben, Vorräte),
+ * plus dem bisherigen Gesprächsverlauf für Rückfragen. Erfindet/schätzt nichts, was nicht aus den Daten
+ * hervorgeht – sagt stattdessen ehrlich, wenn Informationen fehlen. */
+async function buildAskAnythingReply(env, state, text) {
+  const financials = Array.isArray(state.financials) ? state.financials : [];
+  const finLines = financials.length
+    ? financials
+        .slice(-35)
+        .map(
+          (r) =>
+            `${r.date}: Umsatz ${round2(r.umsatzGesamt)}€, Lohn ${round2(r.totalLohn)}€, Lohnnebenkosten ${round2(r.totalLohnnebenkosten || 0)}€, Stunden ${round2(r.totalHours)}h, Umschlag ${round2(r.umschlag)}€${
+              r.status !== "abgeschlossen" ? " (offen)" : ""
+            }`
+        )
+        .join("\n")
+    : "(keine Kennzahlen freigegeben oder noch nicht synchronisiert – siehe Admin → Einstellungen)";
+
+  const openTasks = (state.tasks || []).filter((t) => !t.done);
+  const taskLines = openTasks.length ? openTasks.map((t) => `- ${t.date} · ${t.assignedToName || "Allgemein"}: ${t.text}`).join("\n") : "(keine offenen Aufgaben)";
+
+  const stockLines = (state.stock || []).length
+    ? state.stock.map((s) => `- ${s.name}: ${s.status}${s.unit ? ` (${s.currentAmount ?? "?"} ${s.unit})` : ""}`).join("\n")
+    : "(keine Vorräte hinterlegt)";
+
+  const system = `Du bist der Assistent für die Café-Verwaltung eines kleinen Cafés. Antworte auf Deutsch, kurz und
+konkret, ohne Einleitung direkt zur Sache. Nutze NUR die unten stehenden Daten – wenn sie für eine Frage nicht
+reichen, sag das ehrlich statt zu raten oder zu schätzen. Keine Finanz-, Steuer- oder Rechtsberatung, nur
+nüchterne Beobachtungen und Einschätzungen anhand der Zahlen. Bekannte aktive Mitarbeiter: ${
+    state.employees.join(", ") || "(keine hinterlegt)"
+  }.
+
+Kennzahlen der letzten Tage (soweit freigegeben/synchronisiert):
+${finLines}
+
+Offene Aufgaben:
+${taskLines}
+
+Vorräte:
+${stockLines}`;
+
+  const history = (state.conversationHistory || []).slice(-10).map((h) => ({ role: h.role, content: h.text }));
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: 700,
+      system,
+      messages: [...history, { role: "user", content: text }],
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Anthropic API ${res.status}${errText ? ": " + errText.slice(0, 300) : ""}`);
+  }
+  const data = await res.json();
+  const block = (data.content || []).find((b) => b.type === "text");
+  return block?.text?.trim() || "Dazu konnte ich gerade keine Antwort finden.";
 }
 
 async function handleTelegram(request, env) {
@@ -803,34 +878,34 @@ async function handleTelegram(request, env) {
     }
 
     const result = await interpretMessage(env, text, today, state);
+    let replyText = "";
 
     if (result.action === "list") {
-      await sendTelegramMessage(env, chatId, buildListReply(state, today));
+      replyText = buildListReply(state, today);
     } else if (result.action === "who") {
-      await sendTelegramMessage(env, chatId, buildWhoReply(state));
+      replyText = buildWhoReply(state);
     } else if (result.action === "stats") {
       const period = ["today", "yesterday", "week", "lastweek", "month"].includes(result.stats_period) ? result.stats_period : "today";
       const employeeName = result.stats_employee_name ? String(result.stats_employee_name).trim() : "";
-      let reply = buildStatsReply(state, period, today, employeeName);
+      replyText = buildStatsReply(state, period, today, employeeName);
       if (!employeeName) {
         const insights = await generateInsights(env, state.financials);
-        if (insights) reply += `\n\n💡 ${insights}`;
+        if (insights) replyText += `\n\n💡 ${insights}`;
       }
-      await sendTelegramMessage(env, chatId, reply);
     } else if (result.action === "delete") {
       const ids = Array.isArray(result.task_ids_to_delete) ? result.task_ids_to_delete : [];
       const removed = state.tasks.filter((t) => ids.includes(t.id));
       if (removed.length > 0) {
         await patchState(env, { tasks: state.tasks.filter((t) => !ids.includes(t.id)) });
       }
-      await sendTelegramMessage(env, chatId, buildDeleteReply(removed));
+      replyText = buildDeleteReply(removed);
     } else if (result.action === "complete") {
       const ids = Array.isArray(result.task_ids_to_complete) ? result.task_ids_to_complete : [];
       const completed = state.tasks.filter((t) => ids.includes(t.id) && !t.done);
       if (completed.length > 0) {
         await patchState(env, { tasks: state.tasks.map((t) => (ids.includes(t.id) ? { ...t, done: true } : t)) });
       }
-      await sendTelegramMessage(env, chatId, buildCompleteReply(completed));
+      replyText = buildCompleteReply(completed);
     } else if (result.action === "add") {
       const newTasks = (Array.isArray(result.tasks_to_add) ? result.tasks_to_add : [])
         .map((t) => ({
@@ -843,13 +918,13 @@ async function handleTelegram(request, env) {
         }))
         .filter((t) => t.text);
       if (newTasks.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte daraus keine Aufgabe erkennen. Magst du es anders formulieren?");
+        replyText = "Konnte daraus keine Aufgabe erkennen. Magst du es anders formulieren?";
       } else {
         await patchState(env, { tasks: [...state.tasks, ...newTasks] });
-        await sendTelegramMessage(env, chatId, buildAddReply(newTasks, today));
+        replyText = buildAddReply(newTasks, today);
       }
     } else if (result.action === "availability") {
-      await sendTelegramMessage(env, chatId, buildAvailabilityReply(state, today));
+      replyText = buildAvailabilityReply(state, today);
     } else if (result.action === "plan_shifts") {
       const knownNames = new Set(state.employees.map((n) => n.toLowerCase()));
       const newShifts = (Array.isArray(result.shifts_to_add) ? result.shifts_to_add : [])
@@ -863,19 +938,18 @@ async function handleTelegram(request, env) {
         }))
         .filter((s) => s.employeeName && s.date && (s.slotLabel || (s.from && s.to)));
       if (newShifts.length === 0) {
-        await sendTelegramMessage(env, chatId, `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Anna bekommt Montag Früh1")?`);
+        replyText = `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Anna bekommt Montag Früh1")?`;
       } else {
         await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts] });
         const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));
         const badLabels = newShifts.filter((s) => s.slotLabel && !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(s.slotLabel)));
-        let reply = buildPlanShiftsReply(newShifts);
+        replyText = buildPlanShiftsReply(newShifts);
         if (unresolved.length > 0) {
-          reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
+          replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
         }
         if (badLabels.length > 0) {
-          reply += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((s) => `${s.employeeName}: „${s.slotLabel}"`).join(", ")}`;
+          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((s) => `${s.employeeName}: „${s.slotLabel}"`).join(", ")}`;
         }
-        await sendTelegramMessage(env, chatId, reply);
       }
     } else if (result.action === "notify") {
       const knownNames = new Set(state.employees.map((n) => n.toLowerCase()));
@@ -887,15 +961,14 @@ async function handleTelegram(request, env) {
         }))
         .filter((m) => m.employeeName && m.text);
       if (newMessages.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte daraus keine Nachricht erkennen. Für wen war die gedacht, und was soll drinstehen?");
+        replyText = "Konnte daraus keine Nachricht erkennen. Für wen war die gedacht, und was soll drinstehen?";
       } else {
         await patchState(env, { employeeMessages: [...(state.employeeMessages || []), ...newMessages] });
         const unresolved = newMessages.filter((m) => !knownNames.has(m.employeeName.toLowerCase()));
-        let reply = buildNotifyReply(newMessages);
+        replyText = buildNotifyReply(newMessages);
         if (unresolved.length > 0) {
-          reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((m) => m.employeeName).join(", ")}`;
+          replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((m) => m.employeeName).join(", ")}`;
         }
-        await sendTelegramMessage(env, chatId, reply);
       }
     } else if (result.action === "reject_shift") {
       const knownNames = new Set(state.employees.map((n) => n.toLowerCase()));
@@ -908,41 +981,44 @@ async function handleTelegram(request, env) {
         }))
         .filter((r) => r.employeeName && r.date && r.slotLabel);
       if (newRejections.length === 0) {
-        await sendTelegramMessage(env, chatId, `Konnte daraus keine Ablehnung erkennen. Magst du es anders formulieren (z.B. „Annas Mittel-Schicht am Montag ablehnen")?`);
+        replyText = `Konnte daraus keine Ablehnung erkennen. Magst du es anders formulieren (z.B. „Annas Mittel-Schicht am Montag ablehnen")?`;
       } else {
         await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections] });
         const unresolved = newRejections.filter((r) => !knownNames.has(r.employeeName.toLowerCase()));
         const badLabels = newRejections.filter((r) => !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(r.slotLabel)));
-        let reply = buildRejectReply(newRejections);
+        replyText = buildRejectReply(newRejections);
         if (unresolved.length > 0) {
-          reply += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((r) => r.employeeName).join(", ")}`;
+          replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((r) => r.employeeName).join(", ")}`;
         }
         if (badLabels.length > 0) {
-          reply += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((r) => `${r.employeeName}: „${r.slotLabel}"`).join(", ")}`;
+          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((r) => `${r.employeeName}: „${r.slotLabel}"`).join(", ")}`;
         }
-        await sendTelegramMessage(env, chatId, reply);
       }
     } else if (result.action === "stock_list") {
-      await sendTelegramMessage(env, chatId, buildStockListReply(state));
+      replyText = buildStockListReply(state);
     } else if (result.action === "restock") {
       const newRestocks = (Array.isArray(result.items_to_restock) ? result.items_to_restock : [])
         .map((i) => ({ id: crypto.randomUUID(), itemName: String(i.itemName || "").trim() }))
         .filter((i) => i.itemName);
       if (newRestocks.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte daraus keinen Artikel erkennen. Welcher Artikel ist wieder da?");
+        replyText = "Konnte daraus keinen Artikel erkennen. Welcher Artikel ist wieder da?";
       } else {
         await patchState(env, { stockRestocks: [...(state.stockRestocks || []), ...newRestocks] });
-        await sendTelegramMessage(env, chatId, buildRestockReply(newRestocks));
+        replyText = buildRestockReply(newRestocks);
       }
     } else if (result.action === "notes") {
-      await sendTelegramMessage(env, chatId, buildNotesDigestReply(state));
+      replyText = buildNotesDigestReply(state);
+    } else if (result.action === "ask_anything") {
+      replyText = await buildAskAnythingReply(env, state, text);
     } else {
-      await sendTelegramMessage(
-        env,
-        chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"\n„nachrichten"`
-      );
+      replyText = `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"\n„nachrichten"\nOder frag mich einfach direkt etwas, z.B. „wieso war der Umschlag diese Woche schlechter".`;
     }
+
+    await sendTelegramMessage(env, chatId, replyText);
+
+    // Verlauf merken (nur Text-Austausch, gedeckelt), damit Rückfragen den Zusammenhang kennen.
+    const newHistory = [...(state.conversationHistory || []), { role: "user", text }, { role: "assistant", text: replyText }].slice(-20);
+    await patchState(env, { conversationHistory: newHistory });
   } catch (e) {
     await sendTelegramMessage(env, chatId, `⚠ Fehler: ${e.message}`);
   }

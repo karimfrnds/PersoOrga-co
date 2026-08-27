@@ -584,10 +584,6 @@ async function handleStockPhoto(env, chatId, photoSizes, caption, today, state) 
 
 /** Zeigt, wer sich für welche Schicht an welchem Tag der Zielwoche bereit erklärt hat (keine Buchung –
  * mehrere Namen pro Schicht möglich, der Chef wählt selbst aus), plus wer noch gar nichts eingetragen hat. */
-// Kurz-Codes für die Tabellen-Ansicht, da im Chat nur wenig Breite zur Verfügung steht.
-const SLOT_CODE = { frueh1: "F1", frueh2: "F2", mittel: "M", spaet1: "S1", spaet2: "S2" };
-const WEEKDAY_SHORT_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-
 function buildAvailabilityReply(state, today) {
   const weekStart = nextMondayFrom(today);
   const activeNames = state.employees || [];
@@ -597,41 +593,35 @@ function buildAvailabilityReply(state, today) {
   if (submittedNames.length === 0) {
     return `Für die Woche ab ${formatDateDe(weekStart)} hat noch niemand seine Verfügbarkeit eingetragen.`;
   }
-
-  // Tabelle: eine Zeile pro Mitarbeiter, eine Spalte pro Wochentag – Zelle zeigt den Schicht-Kurzcode.
-  const rowNames = [...new Set([...activeNames, ...submittedNames])];
-  const longestName = Math.max(...rowNames.map((n) => n.length));
-  const nameWidth = Math.max(4, Math.min(10, longestName));
-  const CELL_WIDTH = 5;
-  const header = "".padEnd(nameWidth) + " " + WEEKDAY_SHORT_DE.map((d) => d.padEnd(CELL_WIDTH)).join("");
-  const tableLines = [header];
-  for (const name of rowNames) {
-    let line = name.slice(0, nameWidth).padEnd(nameWidth) + " ";
-    for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
-      const dayEntry = (entries[name]?.days || []).find((d) => d.date === date);
-      let cell = "-";
-      if (dayEntry?.confirmedSlotId) {
-        const code = SLOT_CODE[dayEntry.confirmedSlotId] || "?";
-        cell = code + (dayEntry.bossConfirmed ? "" : "?");
-      } else if ((dayEntry?.slots || []).length > 0) {
-        const codes = dayEntry.slots.map((s) => SLOT_CODE[s.id] || "?");
-        cell = codes.length > 2 ? `${codes.length}x` : codes.join("/");
+  const lines = [`📅 Verfügbarkeit ab ${formatDateDe(weekStart)}:`];
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysISO(weekStart, i);
+    // slotId -> { label, from, to, names[] } – Reihenfolge/Zeiten kommen direkt aus den Einreichungen,
+    // der Worker kennt die Schicht-Definitionen selbst nicht (die leben nur in der App).
+    const slots = new Map();
+    for (const name of submittedNames) {
+      const dayEntry = (entries[name].days || []).find((d) => d.date === date);
+      for (const s of dayEntry?.slots || []) {
+        if (!slots.has(s.id)) slots.set(s.id, { label: s.label, from: s.from, to: s.to, names: [] });
+        const isConfirmedHere = dayEntry.confirmedSlotId === s.id;
+        // ✅fest = fertig entschieden, 🔶wartet auf Bestätigung = "Mittel", einzeln gewählt aber noch nicht
+        // von dir bestätigt, 🕓Kandidat = Person hat mehrere Schichten zur Auswahl gemeldet, du musst noch
+        // entscheiden wer von wem welche bekommt.
+        const marker = isConfirmedHere ? (dayEntry.bossConfirmed ? " ✅fest" : " 🔶wartet auf Bestätigung") : " 🕓Kandidat";
+        slots.get(s.id).names.push(`${name}${marker}`);
       }
-      line += cell.padEnd(CELL_WIDTH);
     }
-    tableLines.push(line);
+    lines.push(`\n${WEEKDAY_LABELS_DE[i]}, ${formatDateDe(date)}:`);
+    if (slots.size === 0) {
+      lines.push("  – niemand bereit gemeldet –");
+    } else {
+      for (const s of slots.values()) {
+        lines.push(`  ${s.label} (${s.from}-${s.to}): ${s.names.join(", ")}`);
+      }
+    }
   }
-
-  const lines = [
-    `📅 Verfügbarkeit ab ${formatDateDe(weekStart)}:`,
-    "```",
-    ...tableLines,
-    "```",
-    `F1/F2=Früh · M=Mittel · S1/S2=Spät · „?" = wartet auf Bestätigung · „Zx" = Z Kandidaten, noch offen`,
-  ];
   const missing = activeNames.filter((n) => !submittedNames.includes(n));
-  if (missing.length > 0) lines.push(`⚠ Noch offen (keine Angabe): ${missing.join(", ")}`);
+  if (missing.length > 0) lines.push(`\n⚠ Noch offen: ${missing.join(", ")}`);
   return lines.join("\n");
 }
 

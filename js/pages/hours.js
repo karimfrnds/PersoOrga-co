@@ -24,6 +24,8 @@ function renderHours() {
   let selectedForDelete = new Set();
   let from = firstOfMonth();
   let to = todayStr();
+  // Überlebt Rerenders: "Übersicht in einem Zeitraum" ist der häufigste Grund für einen Besuch, startet offen.
+  let expandedGroups = new Set(["overview"]);
 
   function rerender() {
     container.innerHTML = "";
@@ -33,9 +35,40 @@ function renderHours() {
   function build() {
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Stunden</h1><p class="muted">Arbeitszeiten verwalten und als Nachweis einsehen – unabhängig vom Kassenabschluss.</p>`;
-    frag.appendChild(buildShiftEditor());
-    frag.appendChild(buildDeleteDays());
-    frag.appendChild(buildOverview());
+
+    const GROUPS = [
+      { id: "edit", icon: "✏️", label: "Arbeitszeit eintragen oder ändern", hint: "Ein einzelner Tag", build: buildShiftEditor },
+      { id: "overview", icon: "📊", label: "Übersicht in einem Zeitraum", hint: "Tagesgenau + Summe je Mitarbeiter", build: buildOverview },
+      { id: "delete", icon: "🗑", label: "Tage löschen", hint: "Ganze Tage endgültig entfernen", build: buildDeleteDays },
+    ];
+
+    const groupList = document.createElement("div");
+    groupList.className = "group-list";
+    for (const group of GROUPS) {
+      const isOpen = expandedGroups.has(group.id);
+      const groupWrap = document.createElement("div");
+      const headerBtn = document.createElement("button");
+      headerBtn.className = "group-header" + (isOpen ? " open" : "");
+      headerBtn.innerHTML = `
+        <span class="group-header-chevron">▶</span>
+        <span class="group-header-name">${group.icon} ${group.label}</span>
+        <span class="group-header-meta">${group.hint}</span>
+      `;
+      headerBtn.onclick = () => {
+        if (isOpen) expandedGroups.delete(group.id);
+        else expandedGroups.add(group.id);
+        rerender();
+      };
+      groupWrap.appendChild(headerBtn);
+      if (isOpen) {
+        const body = document.createElement("div");
+        body.className = "group-body";
+        body.appendChild(group.build());
+        groupWrap.appendChild(body);
+      }
+      groupList.appendChild(groupWrap);
+    }
+    frag.appendChild(groupList);
     return frag;
   }
 

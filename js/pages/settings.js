@@ -1,5 +1,8 @@
 // ============================================================================
 // pages/settings.js – Verteilungsschlüssel, Rundung, Backup
+// Nach Themen gruppiert (aufklappbar), damit die Seite nicht als eine lange
+// Kette von Karten wirkt – wer z.B. nur den Admin-PIN ändern will, muss nicht
+// erst an Trinkgeld-Verteilung und GitHub-Backup vorbeischauen.
 // ============================================================================
 import { store } from "../store.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
@@ -12,15 +15,62 @@ function renderSettings() {
   const container = document.createElement("div");
   container.className = "page";
 
+  // Überlebt Rerenders: welche Themen-Gruppen aktuell aufgeklappt sind.
+  let expandedGroups = new Set();
+
   function rerender() {
     container.innerHTML = "";
     container.appendChild(build());
   }
 
   function build() {
-    const settings = store.getSettings();
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Einstellungen</h1>`;
+
+    const GROUPS = [
+      { id: "abrechnung", icon: "💰", label: "Abrechnung", hint: "Trinkgeld-Verteilung, Rundung, Lohnnebenkosten, Auszahlung", build: buildAbrechnungCards },
+      { id: "sicherheit", icon: "🔒", label: "Sicherheit", hint: "Admin-PIN", build: buildSicherheitCards },
+      { id: "backup", icon: "☁️", label: "Backup & Synchronisation", hint: "GitHub-Backup, Telegram-Aufgaben, manuelle Sicherung", build: buildBackupCards },
+      { id: "hinweise", icon: "ℹ️", label: "Hinweise", hint: "Steuer & Recht", build: buildHinweiseCards },
+    ];
+
+    const groupList = document.createElement("div");
+    groupList.className = "group-list";
+    for (const group of GROUPS) {
+      const isOpen = expandedGroups.has(group.id);
+      const groupWrap = document.createElement("div");
+      const headerBtn = document.createElement("button");
+      headerBtn.className = "group-header" + (isOpen ? " open" : "");
+      headerBtn.innerHTML = `
+        <span class="group-header-chevron">▶</span>
+        <span class="group-header-name">${group.icon} ${group.label}</span>
+        <span class="group-header-meta">${group.hint}</span>
+      `;
+      headerBtn.onclick = () => {
+        if (isOpen) expandedGroups.delete(group.id);
+        else expandedGroups.add(group.id);
+        rerender();
+      };
+      groupWrap.appendChild(headerBtn);
+
+      if (isOpen) {
+        const body = document.createElement("div");
+        body.className = "group-body";
+        for (const card of group.build()) body.appendChild(card);
+        groupWrap.appendChild(body);
+      }
+      groupList.appendChild(groupWrap);
+    }
+    frag.appendChild(groupList);
+    return frag;
+  }
+
+  // ---------------------------------------------------------------------
+  // 💰 Abrechnung
+  // ---------------------------------------------------------------------
+  function buildAbrechnungCards() {
+    const settings = store.getSettings();
+    const cards = [];
 
     // Verteilungsschlüssel (Punkte-System)
     const splitCard = document.createElement("section");
@@ -58,7 +108,7 @@ function renderSettings() {
       grid.appendChild(wrap);
     }
     splitCard.appendChild(grid);
-    frag.appendChild(splitCard);
+    cards.push(splitCard);
 
     // Rundung
     const roundCard = document.createElement("section");
@@ -82,7 +132,7 @@ function renderSettings() {
       store.updateSettings({ roundingMinutes: Number(select.value) });
     };
     roundCard.appendChild(select);
-    frag.appendChild(roundCard);
+    cards.push(roundCard);
 
     // Lohnnebenkosten
     const nebenkostenCard = document.createElement("section");
@@ -120,7 +170,7 @@ function renderSettings() {
       nebenkostenGrid.appendChild(wrap);
     }
     nebenkostenCard.appendChild(nebenkostenGrid);
-    frag.appendChild(nebenkostenCard);
+    cards.push(nebenkostenCard);
 
     // Lohnauszahlung
     const wageCard = document.createElement("section");
@@ -135,9 +185,15 @@ function renderSettings() {
     checkboxLabel.appendChild(checkbox);
     checkboxLabel.append(" Lohn wird bar ausgezahlt (sonst: Überweisung, nur Trinkgeld ist bar)");
     wageCard.appendChild(checkboxLabel);
-    frag.appendChild(wageCard);
+    cards.push(wageCard);
 
-    // Admin-PIN
+    return cards;
+  }
+
+  // ---------------------------------------------------------------------
+  // 🔒 Sicherheit
+  // ---------------------------------------------------------------------
+  function buildSicherheitCards() {
     const pinCard = document.createElement("section");
     pinCard.className = "card";
     pinCard.innerHTML = `<h2>Admin-PIN</h2><p class="muted small">Schützt diesen Bereich (Mitarbeiter, Einstellungen, Berichte) vor versehentlichen Änderungen. Kein echter Passwortschutz, nur ein Schutz gegen Versehen.</p>`;
@@ -146,22 +202,14 @@ function renderSettings() {
     changePinBtn.textContent = "PIN ändern";
     changePinBtn.onclick = () => openChangePinDialog();
     pinCard.appendChild(changePinBtn);
-    frag.appendChild(pinCard);
+    return [pinCard];
+  }
 
-    // Steuerhinweis
-    const taxCard = document.createElement("section");
-    taxCard.className = "card";
-    taxCard.innerHTML = `
-      <h2>Hinweis Steuer &amp; Recht</h2>
-      <p class="small muted">
-        Diese App ersetzt keine TSE-pflichtige Registrierkasse und keine Steuerberatung. Sie hilft bei der internen
-        Dokumentation von Arbeitszeiten (§17 MiLoG), der sauberen Trennung von Lohn (steuerpflichtig) und Trinkgeld
-        (i.d.R. steuerfrei nach §3 Nr. 51 EStG) sowie bei der Nachvollziehbarkeit von Stornos. Bitte die
-        Berechnungslogik hier einmal mit eurem Steuerbüro abstimmen. Daten mindestens 2 Jahre (Arbeitszeiten) bzw.
-        10 Jahre (Buchhaltungsrelevantes) aufbewahren – siehe Backup unten.
-      </p>
-    `;
-    frag.appendChild(taxCard);
+  // ---------------------------------------------------------------------
+  // ☁️ Backup & Synchronisation
+  // ---------------------------------------------------------------------
+  function buildBackupCards() {
+    const cards = [];
 
     // Automatisches Tages-Backup nach GitHub
     const autoBackupCard = document.createElement("section");
@@ -247,7 +295,7 @@ function renderSettings() {
       rerender();
     };
     autoBackupCard.appendChild(testBtn);
-    frag.appendChild(autoBackupCard);
+    cards.push(autoBackupCard);
 
     // Telegram-Aufgaben abgleichen (eigener Cloudflare Worker + KV-Speicher, unabhängig von GitHub)
     const inboxCard = document.createElement("section");
@@ -341,7 +389,7 @@ function renderSettings() {
       rerender();
     };
     inboxCard.appendChild(inboxTestBtn);
-    frag.appendChild(inboxCard);
+    cards.push(inboxCard);
 
     // Manuelles Backup
     const backupCard = document.createElement("section");
@@ -383,9 +431,28 @@ function renderSettings() {
     };
     importLabel.appendChild(importInput);
     backupCard.appendChild(importLabel);
-    frag.appendChild(backupCard);
+    cards.push(backupCard);
 
-    return frag;
+    return cards;
+  }
+
+  // ---------------------------------------------------------------------
+  // ℹ️ Hinweise
+  // ---------------------------------------------------------------------
+  function buildHinweiseCards() {
+    const taxCard = document.createElement("section");
+    taxCard.className = "card";
+    taxCard.innerHTML = `
+      <h2>Hinweis Steuer &amp; Recht</h2>
+      <p class="small muted">
+        Diese App ersetzt keine TSE-pflichtige Registrierkasse und keine Steuerberatung. Sie hilft bei der internen
+        Dokumentation von Arbeitszeiten (§17 MiLoG), der sauberen Trennung von Lohn (steuerpflichtig) und Trinkgeld
+        (i.d.R. steuerfrei nach §3 Nr. 51 EStG) sowie bei der Nachvollziehbarkeit von Stornos. Bitte die
+        Berechnungslogik hier einmal mit eurem Steuerbüro abstimmen. Daten mindestens 2 Jahre (Arbeitszeiten) bzw.
+        10 Jahre (Buchhaltungsrelevantes) aufbewahren – siehe Backup unten.
+      </p>
+    `;
+    return [taxCard];
   }
 
   function openChangePinDialog() {

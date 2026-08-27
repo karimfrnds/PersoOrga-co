@@ -224,9 +224,11 @@ eigene SumUp-API-Anbindung.
 
 **Lieferschein- oder Verkaufsbericht-Foto**: ein Foto direkt an den Bot schicken (mit oder ohne
 Bildunterschrift) – der Bot erkennt per KI-Bilderkennung selbst, um welche Art Beleg es sich handelt:
-- **Lieferschein/Rechnung**: liest heraus, welche Artikel mit welcher Menge geliefert wurden, gleicht sie mit
-  der Vorräte-Liste ab und erhöht bei mengengeführten Artikeln den Bestand entsprechend (sonst nur Status
-  zurück auf „Ok"), plus Liefer-Historie (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum · Menge").
+- **Lieferschein/Rechnung/Bestellung/Auftragsbestätigung** (auch von einem Großhändler wie METRO, auch
+  mehrseitig mit vielen Positionen): liest heraus, welche Artikel mit welcher Menge geliefert wurden, gleicht
+  sie mit der Vorräte-Liste ab und erhöht bei mengengeführten Artikeln den Bestand entsprechend (sonst nur
+  Status zurück auf „Ok"), plus Liefer-Historie (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum ·
+  Menge"). Reine Pfand-/Leergut-Zeilen werden dabei ignoriert.
 - **SumUp-Verkaufsbericht**: liest heraus, welche Produkte wie oft verkauft wurden, sucht das passende Rezept
   und zieht die entsprechende Zutatenmenge automatisch vom Bestand ab (nur bei Artikeln mit hinterlegtem Rezept
   – ohne Rezept passiert nichts, keine Schätzung).

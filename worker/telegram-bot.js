@@ -470,24 +470,37 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
   const tool = {
     name: "extract_stock_document",
     description:
-      "Erkennt die Art eines Beleg-Fotos (Lieferschein/Rechnung ODER SumUp-Verkaufsbericht) und extrahiert die jeweils relevanten Positionen.",
+      "Erkennt die Art eines Beleg-Fotos/PDFs (Lieferschein/Rechnung/Bestellung ODER SumUp-Verkaufsbericht) und extrahiert die jeweils relevanten Positionen.",
     input_schema: {
       type: "object",
       properties: {
         documentType: {
           type: "string",
           enum: ["lieferschein", "verkaufsbericht"],
-          description: "'lieferschein' für Lieferschein/Rechnung (Wareneingang), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang).",
+          description:
+            "'lieferschein' für Lieferschein/Rechnung/Bestellung/Auftragsbestätigung (Wareneingang, auch mehrseitig mit vielen Positionen), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang).",
         },
         items: {
           type: "array",
-          description: "Nur tatsächlich auf dem Beleg erkennbare Positionen, nichts erfinden.",
+          description:
+            "Nur tatsächlich auf dem Beleg erkennbare Positionen, nichts erfinden. Bei langen Bestellungen/Lieferscheinen mit vielen Zeilen ALLE Positionen auflisten, keine auslassen oder zusammenfassen. Reine Pfand-/Leergut-Zeilen (z.B. 'MW LEERGUT') NICHT mit aufnehmen, das ist kein Vorrats-Artikel.",
           items: {
             type: "object",
             properties: {
-              itemName: { type: "string", description: "Nur bei documentType=lieferschein: Artikelname, wie auf dem Beleg (kurz, ohne Mengenangabe)." },
-              quantity: { type: "number", description: "Nur bei documentType=lieferschein: gelieferte Menge als Zahl (z.B. 5, 2, 10)." },
-              unit: { type: "string", description: "Nur bei documentType=lieferschein: Einheit der Menge, z.B. 'kg', 'l', 'Stück', 'Kisten'." },
+              itemName: {
+                type: "string",
+                description:
+                  "Nur bei documentType=lieferschein: Artikelname wie auf dem Beleg, inkl. Packungsgröße falls angegeben (z.B. '500g Alpensalz', '1l Milch') – ohne die Bestellmenge selbst.",
+              },
+              quantity: {
+                type: "number",
+                description: "Nur bei documentType=lieferschein: bestellte/gelieferte Menge als Zahl (die Spalte 'Menge', z.B. 5, 2, 10).",
+              },
+              unit: {
+                type: "string",
+                description:
+                  "Nur bei documentType=lieferschein: Einheit der Menge-Spalte. Ist die Menge eine Stückzahl/Gebinde-Anzahl (das ist bei Bestellungen/Lieferscheinen der Normalfall), 'Stück' verwenden. Nur 'kg'/'l'/'g'/'ml' verwenden, wenn die Menge-Spalte selbst direkt in dieser Einheit angegeben ist (z.B. '50 kg Kaffeebohnen'), NICHT wenn nur die Packungsgröße im Artikelnamen steht.",
+              },
               productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
               quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
             },
@@ -509,7 +522,10 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
     headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: AI_MODEL,
-      max_tokens: 1536,
+      // Großzügig bemessen: mehrseitige Lieferscheine/Bestellungen (z.B. Großhändler wie METRO) können
+      // 40+ Positionen haben – bei zu knappem Limit bricht die Antwort mitten in der Artikel-Liste ab und
+      // wirkt dann wie "nichts erkannt".
+      max_tokens: 8192,
       tools: [tool],
       tool_choice: { type: "tool", name: "extract_stock_document" },
       messages: [
@@ -519,9 +535,9 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
             fileBlock,
             {
               type: "text",
-              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF): entweder ein Lieferschein/eine Rechnung (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Bestimme zuerst documentType, extrahiere dann die passenden Positionen.`,
+              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen.`,
             },
           ],
         },
@@ -579,7 +595,7 @@ async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, 
         .filter((it) => it.itemName);
 
       if (items.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte auf dem Foto keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung?");
+        await sendTelegramMessage(env, chatId, "Konnte darauf keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung/Bestellung?");
         return;
       }
 

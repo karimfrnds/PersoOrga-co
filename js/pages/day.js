@@ -12,6 +12,9 @@ function renderDay(dayId, navigate) {
   const container = document.createElement("div");
   container.className = "page";
 
+  // Überlebt Rerenders: welche Mitarbeiter-Gruppe in der Aufgaben-Sektion aufgeklappt ist.
+  let expandedTaskGroup = null;
+
   function rerender() {
     container.innerHTML = "";
     container.appendChild(build());
@@ -74,9 +77,19 @@ function renderDay(dayId, navigate) {
       empty.textContent = "Keine Aufgaben für diesen Tag (siehe Admin → Aufgaben für die Vorlage).";
       taskSection.appendChild(empty);
     } else {
-      const taskList = document.createElement("div");
-      taskList.className = "task-list";
+      // Nach Mitarbeiter gruppieren ("unassigned" = Aufgaben ohne Zuordnung, z.B. die Tages-Vorlage).
+      const taskGroups = new Map();
       for (const task of day.tasks) {
+        const key = task.assignedTo || "unassigned";
+        if (!taskGroups.has(key)) taskGroups.set(key, []);
+        taskGroups.get(key).push(task);
+      }
+      const orderedTaskKeys = [
+        ...employees.map((e) => e.id).filter((id) => taskGroups.has(id)),
+        ...(taskGroups.has("unassigned") ? ["unassigned"] : []),
+      ];
+
+      const buildTaskRow = (task) => {
         const row = document.createElement("label");
         row.className = "task-row" + (task.done ? " done" : "");
         const cb = document.createElement("input");
@@ -92,14 +105,11 @@ function renderDay(dayId, navigate) {
         const span = document.createElement("span");
         span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
         textWrap.appendChild(span);
-        if (task.assignedTo) {
-          const assignee = employees.find((e) => e.id === task.assignedTo) || store.getEmployee(task.assignedTo);
-          if (assignee) {
-            const tag = document.createElement("span");
-            tag.className = "muted small task-row-meta";
-            tag.textContent = `→ für ${assignee.name}${task.handoffFrom ? ` (übergeben von ${task.handoffFrom})` : ""}`;
-            textWrap.appendChild(tag);
-          }
+        if (task.handoffFrom) {
+          const tag = document.createElement("span");
+          tag.className = "muted small task-row-meta";
+          tag.textContent = `übergeben von ${task.handoffFrom}`;
+          textWrap.appendChild(tag);
         }
         if (task.done && task.doneBy) {
           const meta = document.createElement("span");
@@ -108,9 +118,45 @@ function renderDay(dayId, navigate) {
           textWrap.appendChild(meta);
         }
         row.appendChild(textWrap);
-        taskList.appendChild(row);
+        return row;
+      };
+
+      const groupList = document.createElement("div");
+      groupList.className = "group-list";
+      for (const key of orderedTaskKeys) {
+        const groupTasks = taskGroups.get(key);
+        const assignee = key === "unassigned" ? null : employees.find((e) => e.id === key) || store.getEmployee(key);
+        const label = assignee ? assignee.name : "Alle (nicht zugeordnet)";
+        const openCount = groupTasks.filter((t) => !t.done).length;
+        const isOpen = expandedTaskGroup === key;
+
+        const groupWrap = document.createElement("div");
+        const headerBtn = document.createElement("button");
+        headerBtn.className = "group-header" + (isOpen ? " open" : "");
+        headerBtn.innerHTML = `
+          <span class="group-header-chevron">▶</span>
+          <span class="group-header-name">${escapeHtml(label)}</span>
+          <span class="group-header-meta">${openCount} offen · ${groupTasks.length - openCount} erledigt</span>
+        `;
+        headerBtn.onclick = () => {
+          expandedTaskGroup = isOpen ? null : key;
+          rerender();
+        };
+        groupWrap.appendChild(headerBtn);
+
+        if (isOpen) {
+          const body = document.createElement("div");
+          body.className = "group-body";
+          const taskList = document.createElement("div");
+          taskList.className = "task-list";
+          for (const task of groupTasks) taskList.appendChild(buildTaskRow(task));
+          body.appendChild(taskList);
+          groupWrap.appendChild(body);
+        }
+
+        groupList.appendChild(groupWrap);
       }
-      taskSection.appendChild(taskList);
+      taskSection.appendChild(groupList);
     }
     frag.appendChild(taskSection);
 

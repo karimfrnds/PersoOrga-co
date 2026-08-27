@@ -391,6 +391,29 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }
 
+/* ---- Nach Mitarbeiter gruppierte Listen (Aufgaben/Tage im Admin) ---- */
+.group-list { display: flex; flex-direction: column; gap: 8px; }
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.group-header:hover { border-color: var(--green); }
+.group-header-name { font-weight: 600; flex: 1; }
+.group-header-meta { font-size: 13px; color: var(--gray); white-space: nowrap; }
+.group-header-chevron { transition: transform 0.15s ease; flex-shrink: 0; }
+.group-header.open .group-header-chevron { transform: rotate(90deg); }
+.group-body { padding: 10px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
+
 /* ---- Verfügbarkeit (Kiosk) ---- */
 .avail-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .avail-row-col {

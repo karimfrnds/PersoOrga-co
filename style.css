@@ -414,6 +414,18 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .group-header.open .group-header-chevron { transform: rotate(90deg); }
 .group-body { padding: 10px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
 
+/* ---- Schichtplanung (Admin) ---- */
+.week-nav { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.week-nav-label { font-weight: 600; }
+.plan-table { border-collapse: collapse; width: 100%; min-width: 640px; }
+.plan-table th, .plan-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.plan-table th:first-child, .plan-table td:first-child { text-align: left; }
+.plan-cell { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 13px; }
+.plan-cell-confirmed { background: var(--green-light, #e3f3e8); color: var(--green, #1f7a3d); }
+.plan-cell-pending { background: var(--orange-light, #fdf0dd); color: var(--orange, #b5620a); }
+.plan-decide-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.plan-decide-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--gray-light); border-radius: 10px; padding: 10px 12px; }
+
 /* ---- Verfügbarkeit (Kiosk) ---- */
 .avail-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .avail-row-col {

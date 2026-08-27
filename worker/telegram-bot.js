@@ -494,12 +494,13 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
               },
               quantity: {
                 type: "number",
-                description: "Nur bei documentType=lieferschein: bestellte/gelieferte Menge als Zahl (die Spalte 'Menge', z.B. 5, 2, 10).",
+                description:
+                  "Nur bei documentType=lieferschein: die TATSÄCHLICH gelieferte Stückzahl der einzelnen Verkaufs-/Verbrauchseinheit (z.B. einzelne Flaschen, Beutel, Packungen) – NICHT einfach die rohe Bestell-Menge kopieren. Gibt der Beleg zusätzlich zur Menge ein Gebinde/eine Packungsgröße an (z.B. Spalte 'Gebinde' mit '20er', '12er', '6er' = Stück pro Kasten/Karton), dann Menge MAL Gebinde-Größe rechnen (z.B. Menge 4, Gebinde '20er' → quantity 80). Ohne erkennbares Gebinde (oder Gebinde '1er') einfach die Menge-Spalte direkt übernehmen. Das ist wichtig, damit die Zahl später 1:1 mit einzeln verkauften Stück (z.B. aus einem Kassenbericht) vergleichbar ist.",
               },
               unit: {
                 type: "string",
                 description:
-                  "Nur bei documentType=lieferschein: Einheit der Menge-Spalte. Ist die Menge eine Stückzahl/Gebinde-Anzahl (das ist bei Bestellungen/Lieferscheinen der Normalfall), 'Stück' verwenden. Nur 'kg'/'l'/'g'/'ml' verwenden, wenn die Menge-Spalte selbst direkt in dieser Einheit angegeben ist (z.B. '50 kg Kaffeebohnen'), NICHT wenn nur die Packungsgröße im Artikelnamen steht.",
+                  "Nur bei documentType=lieferschein: die Einheit des EINZELNEN Stücks aus 'quantity' (z.B. 'Flasche', 'Stück', 'Packung', 'Beutel'), nicht die Bestell-/Liefer-Verpackung (also nicht 'Kasten'/'Karton'/'Kiste'). Nur 'kg'/'l'/'g'/'ml' verwenden, wenn der Beleg die Menge selbst direkt in dieser Einheit angibt (z.B. '50 kg Kaffeebohnen lose'), nicht wenn nur die Packungsgröße im Artikelnamen steht.",
               },
               productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
               quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
@@ -537,7 +538,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
               type: "text",
               text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen.`,
+              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht.`,
             },
           ],
         },

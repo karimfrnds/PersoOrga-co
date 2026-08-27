@@ -228,7 +228,12 @@ Bildunterschrift) – der Bot erkennt per KI-Bilderkennung selbst, um welche Art
   mehrseitig mit vielen Positionen): liest heraus, welche Artikel mit welcher Menge geliefert wurden, gleicht
   sie mit der Vorräte-Liste ab und erhöht bei mengengeführten Artikeln den Bestand entsprechend (sonst nur
   Status zurück auf „Ok"), plus Liefer-Historie (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum ·
-  Menge"). Reine Pfand-/Leergut-Zeilen werden dabei ignoriert.
+  Menge"). Reine Pfand-/Leergut-Zeilen werden dabei ignoriert. Steht auf dem Beleg eine Gebinde-/
+  Verpackungsgröße (z.B. „20er" bei einem Kasten Bier), rechnet der Bot das direkt in die tatsächliche
+  Stückzahl der Verkaufseinheit um (4 Kästen à 20 Flaschen → 80 Flaschen), NICHT die rohe Bestellmenge (4) –
+  sonst würde ein späterer Kassenbericht mit einzeln verkauften Flaschen den Bestand falsch verrechnen. Bei
+  Artikeln mit Gebinde-Umrechnung lohnt sich trotzdem ein kurzer Blick unter Admin → Vorräte, ob die Menge
+  plausibel aussieht (per „Menge korrigieren" jederzeit manuell anpassbar).
 - **SumUp-Verkaufsbericht**: liest heraus, welche Produkte wie oft verkauft wurden, sucht das passende Rezept
   und zieht die entsprechende Zutatenmenge automatisch vom Bestand ab (nur bei Artikeln mit hinterlegtem Rezept
   – ohne Rezept passiert nichts, keine Schätzung).

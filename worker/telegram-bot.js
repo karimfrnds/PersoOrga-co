@@ -338,7 +338,7 @@ Bestimme die Absicht der Nachricht:
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
 
   // Letzte Nachrichten als Kontext mitgeben, damit Rückfragen ("und Timm?") richtig aufgelöst werden.
-  const history = (state.conversationHistory || []).slice(-10).map((h) => ({ role: h.role, content: h.text }));
+  const history = (state.conversationHistory || []).slice(-6).map((h) => ({ role: h.role, content: h.text }));
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -802,7 +802,7 @@ ${taskLines}
 Vorräte:
 ${stockLines}`;
 
-  const history = (state.conversationHistory || []).slice(-10).map((h) => ({ role: h.role, content: h.text }));
+  const history = (state.conversationHistory || []).slice(-6).map((h) => ({ role: h.role, content: h.text }));
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

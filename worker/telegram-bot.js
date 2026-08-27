@@ -118,7 +118,8 @@ const EMPTY_STATE = {
   staleOpenShifts: [], // [{date, employeeName, from}] – vergessenes Ausstempeln
   stock: [], // [{name, status}] – Vorräte-Ampel
   stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
-  stockDeliveries: [], // [{id, itemName, amount, date}] – per Lieferschein-Foto erkannte Lieferungen
+  stockDeliveries: [], // [{id, itemName, quantity, unit, date}] – per Lieferschein-Foto erkannte Lieferungen
+  stockSales: [], // [{id, productName, quantitySold, date}] – per SumUp-Verkaufsbericht-Foto erkannte Verkäufe
   employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
@@ -144,6 +145,7 @@ async function getState(env) {
       stock: Array.isArray(parsed.stock) ? parsed.stock : [],
       stockRestocks: Array.isArray(parsed.stockRestocks) ? parsed.stockRestocks : [],
       stockDeliveries: Array.isArray(parsed.stockDeliveries) ? parsed.stockDeliveries : [],
+      stockSales: Array.isArray(parsed.stockSales) ? parsed.stockSales : [],
       employeeNotes: Array.isArray(parsed.employeeNotes) ? parsed.employeeNotes : [],
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
@@ -437,35 +439,50 @@ function buildRestockReply(items) {
 }
 
 function buildDeliveryReply(items) {
-  const lines = items.map((it, i) => `${i + 1}. ${it.itemName} – ${it.amount || "(Menge unklar)"}`);
+  const lines = items.map((it, i) => `${i + 1}. ${it.itemName} – ${it.quantity != null ? `${it.quantity} ${it.unit || ""}`.trim() : "(Menge unklar)"}`);
   const heading = items.length === 1 ? "📦 Lieferung erkannt und geloggt:" : `📦 ${items.length} Artikel erkannt und geloggt:`;
   return [heading, ...lines].join("\n");
 }
 
-/** Liest ein Foto eines Lieferscheins/einer Rechnung per Claude Vision aus (Artikel + Menge, Datum falls
- * erkennbar). Wirft bei echten Fehlern (Anthropic nicht erreichbar o.ä.). */
-async function extractDeliveryFromImage(env, imageBase64, mimeType, caption, today) {
+function buildSalesReply(items) {
+  const lines = items.map((it, i) => `${i + 1}. ${it.productName} – ${it.quantitySold}x`);
+  const heading = items.length === 1 ? "🧾 Verkauf erkannt und mit dem Bestand verrechnet:" : `🧾 ${items.length} Produkte erkannt und mit dem Bestand verrechnet:`;
+  return [heading, ...lines].join("\n");
+}
+
+/** Liest ein Foto per Claude Vision aus und erkennt dabei selbst, ob es ein Lieferschein/eine Rechnung
+ * (gelieferte Artikel + Menge) oder ein SumUp-Verkaufsbericht (verkaufte Produkte + Anzahl) ist. Wirft bei
+ * echten Fehlern (Anthropic nicht erreichbar o.ä.). */
+async function extractStockDocument(env, imageBase64, mimeType, caption, today) {
   const tool = {
-    name: "extract_delivery",
-    description: "Extrahiert gelieferte/bestellte Artikel mit Menge aus einem Foto eines Lieferscheins oder einer Rechnung.",
+    name: "extract_stock_document",
+    description:
+      "Erkennt die Art eines Beleg-Fotos (Lieferschein/Rechnung ODER SumUp-Verkaufsbericht) und extrahiert die jeweils relevanten Positionen.",
     input_schema: {
       type: "object",
       properties: {
+        documentType: {
+          type: "string",
+          enum: ["lieferschein", "verkaufsbericht"],
+          description: "'lieferschein' für Lieferschein/Rechnung (Wareneingang), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang).",
+        },
         items: {
           type: "array",
-          description: "Nur tatsächlich auf dem Beleg erkennbare Artikel, nichts erfinden.",
+          description: "Nur tatsächlich auf dem Beleg erkennbare Positionen, nichts erfinden.",
           items: {
             type: "object",
             properties: {
-              itemName: { type: "string", description: "Artikelname, wie auf dem Beleg (kurz, ohne Mengenangabe)." },
-              amount: { type: "string", description: "Menge wie auf dem Beleg, z.B. '5 kg', '2 Kisten', '10 Stück'." },
+              itemName: { type: "string", description: "Nur bei documentType=lieferschein: Artikelname, wie auf dem Beleg (kurz, ohne Mengenangabe)." },
+              quantity: { type: "number", description: "Nur bei documentType=lieferschein: gelieferte Menge als Zahl (z.B. 5, 2, 10)." },
+              unit: { type: "string", description: "Nur bei documentType=lieferschein: Einheit der Menge, z.B. 'kg', 'l', 'Stück', 'Kisten'." },
+              productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
+              quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
             },
-            required: ["itemName", "amount"],
           },
         },
         date: { type: "string", description: "Datum auf dem Beleg als YYYY-MM-DD, falls erkennbar, sonst leerer String." },
       },
-      required: ["items"],
+      required: ["documentType", "items"],
     },
   };
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -473,9 +490,9 @@ async function extractDeliveryFromImage(env, imageBase64, mimeType, caption, tod
     headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      max_tokens: 1536,
       tools: [tool],
-      tool_choice: { type: "tool", name: "extract_delivery" },
+      tool_choice: { type: "tool", name: "extract_stock_document" },
       messages: [
         {
           role: "user",
@@ -483,9 +500,9 @@ async function extractDeliveryFromImage(env, imageBase64, mimeType, caption, tod
             { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } },
             {
               type: "text",
-              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Foto eines Lieferscheins oder einer Rechnung für ein Café.${
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Foto für ein Café: entweder ein Lieferschein/eine Rechnung (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Extrahiere alle gelieferten/bestellten Artikel mit Menge.`,
+              } Bestimme zuerst documentType, extrahiere dann die passenden Positionen.`,
             },
           ],
         },
@@ -502,9 +519,10 @@ async function extractDeliveryFromImage(env, imageBase64, mimeType, caption, tod
   return toolUse.input;
 }
 
-/** Lädt das größte verfügbare Foto einer Telegram-Nachricht herunter und lässt es per Vision auswerten,
- * matcht die erkannten Artikel gegen die Vorräte-Liste (nachsichtig) und loggt sie als Lieferung. */
-async function handleDeliveryPhoto(env, chatId, photoSizes, caption, today, state) {
+/** Lädt das größte verfügbare Foto einer Telegram-Nachricht herunter, lässt es per Vision auswerten und
+ * verarbeitet es je nach erkanntem Dokument-Typ als Lieferung (Bestand rauf) oder Verkaufsbericht (Bestand
+ * über die Rezept-Zutaten runter). */
+async function handleStockPhoto(env, chatId, photoSizes, caption, today, state) {
   try {
     const largest = photoSizes[photoSizes.length - 1]; // Telegram sortiert aufsteigend nach Auflösung
     const fileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${largest.file_id}`);
@@ -517,33 +535,48 @@ async function handleDeliveryPhoto(env, chatId, photoSizes, caption, today, stat
     const base64 = arrayBufferToBase64(buffer);
     const mimeType = filePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
 
-    const extracted = await extractDeliveryFromImage(env, base64, mimeType, caption, today);
-    const items = (Array.isArray(extracted.items) ? extracted.items : [])
-      .map((it) => ({
-        id: crypto.randomUUID(),
-        itemName: String(it.itemName || "").trim(),
-        amount: String(it.amount || "").trim(),
-        date: /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today,
-      }))
-      .filter((it) => it.itemName);
+    const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
 
-    if (items.length === 0) {
-      await sendTelegramMessage(env, chatId, "Konnte auf dem Foto keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung?");
-      return;
+    if (extracted.documentType === "verkaufsbericht") {
+      const items = (Array.isArray(extracted.items) ? extracted.items : [])
+        .map((it) => ({ id: crypto.randomUUID(), productName: String(it.productName || "").trim(), quantitySold: Number(it.quantitySold) || 0, date }))
+        .filter((it) => it.productName && it.quantitySold > 0);
+      if (items.length === 0) {
+        await sendTelegramMessage(env, chatId, "Konnte im Verkaufsbericht keine Produkte erkennen.");
+        return;
+      }
+      await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
+      await sendTelegramMessage(env, chatId, buildSalesReply(items));
+    } else {
+      const items = (Array.isArray(extracted.items) ? extracted.items : [])
+        .map((it) => ({
+          id: crypto.randomUUID(),
+          itemName: String(it.itemName || "").trim(),
+          quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : null,
+          unit: String(it.unit || "").trim(),
+          date,
+        }))
+        .filter((it) => it.itemName);
+
+      if (items.length === 0) {
+        await sendTelegramMessage(env, chatId, "Konnte auf dem Foto keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung?");
+        return;
+      }
+
+      await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
+
+      const stock = state.stock || [];
+      const unresolved = items.filter((it) => {
+        const needle = it.itemName.toLowerCase();
+        return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
+      });
+      let reply = buildDeliveryReply(items);
+      if (unresolved.length > 0) {
+        reply += `\n\n⚠ Diese Artikel kenne ich nicht aus der Vorräte-Liste (Admin → Vorräte), bitte manuell prüfen: ${unresolved.map((it) => it.itemName).join(", ")}`;
+      }
+      await sendTelegramMessage(env, chatId, reply);
     }
-
-    await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
-
-    const stock = state.stock || [];
-    const unresolved = items.filter((it) => {
-      const needle = it.itemName.toLowerCase();
-      return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
-    });
-    let reply = buildDeliveryReply(items);
-    if (unresolved.length > 0) {
-      reply += `\n\n⚠ Diese Artikel kenne ich nicht aus der Vorräte-Liste (Admin → Vorräte), bitte manuell prüfen: ${unresolved.map((it) => it.itemName).join(", ")}`;
-    }
-    await sendTelegramMessage(env, chatId, reply);
   } catch (e) {
     await sendTelegramMessage(env, chatId, `⚠ Fehler beim Verarbeiten des Fotos: ${e.message}`);
   }
@@ -744,7 +777,7 @@ async function handleTelegram(request, env) {
     }
 
     if (photo) {
-      await handleDeliveryPhoto(env, chatId, photo, message.caption, today, state);
+      await handleStockPhoto(env, chatId, photo, message.caption, today, state);
       return new Response("ok", { status: 200 });
     }
 

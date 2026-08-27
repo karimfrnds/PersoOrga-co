@@ -6,6 +6,11 @@ import { todayStr, dateDe } from "./format.js";
 
 const STORAGE_KEY = "cafeapp_v1";
 
+/** Rundet auf 2 Nachkommastellen (Mengen/Beträge), vermeidet Float-Reste wie 0.1+0.2=0.30000000000000004. */
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 function uid() {
   if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
   return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
@@ -81,6 +86,8 @@ function defaultData() {
         appliedRestockIds: [],
         // IDs von per Lieferschein-Foto erkannten Lieferungen, die schon als Verlauf übernommen wurden.
         appliedDeliveryIds: [],
+        // IDs von per SumUp-Verkaufsbericht-Foto erkannten Verkäufen, die schon gegen Rezepte verrechnet wurden.
+        appliedSaleIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -88,10 +95,14 @@ function defaultData() {
     // Kurze System-Nachrichten an einzelne Mitarbeiter (z.B. "Schicht vom Chef bestätigt"), erscheinen als
     // Pop-up beim nächsten Öffnen ihres Kiosk-Fensters. { id, employeeId, text, createdAt, readAt }
     notifications: [],
-    // Vorräte – bewusst nur eine Ampel (kein Mengen-Tracking, das würde im Alltag nicht gepflegt werden).
-    // Mitarbeiter können im Kiosk den Status ändern, Admin verwaltet die Artikel-Liste selbst.
-    // { id, name, status: "ok"|"knapp"|"leer", updatedAt, updatedBy }
+    // Vorräte – Ampel (ok/knapp/leer) für alle Artikel; optional mit echter Mengenführung (unit gesetzt),
+    // dann wird die Ampel automatisch aus currentAmount berechnet. Admin verwaltet die Artikel-Liste.
+    // { id, name, status, updatedAt, updatedBy, deliveries[], consumptionLog[], unit, currentAmount, lowThreshold }
     stock: [],
+    // Rezepte: verknüpfen ein Verkaufsprodukt (wie es im SumUp-Bericht heißt) mit den Zutaten-Artikeln aus
+    // "stock" und deren Verbrauch pro verkauftem Stück – Basis für die automatische Bestandsrechnung.
+    // { id, productName, ingredients: [{ stockItemId, amount }] }
+    recipes: [],
   };
 }
 
@@ -140,6 +151,7 @@ function load() {
       days: (parsed.days ?? base.days).map(normalizeDay),
       notifications: parsed.notifications ?? base.notifications,
       stock: parsed.stock ?? base.stock,
+      recipes: parsed.recipes ?? base.recipes,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -178,6 +190,16 @@ function autoConfirmsWithoutBoss(slotId) {
 function roleOf(employeeId) {
   const role = data.employees.find((e) => e.id === employeeId)?.role || null;
   return role === "kueche" ? "kueche" : role === null ? null : "service";
+}
+
+/** Berechnet bei mengengeführten Vorräten (item.unit gesetzt) die Ampel automatisch aus currentAmount –
+ * reine Ampel-Artikel (kein unit) bleiben unangetastet, deren Status wird weiter manuell gesetzt. */
+function recomputeStockStatus(item) {
+  if (!item.unit) return;
+  const amount = Number(item.currentAmount) || 0;
+  if (amount <= 0) item.status = "leer";
+  else if (amount <= (Number(item.lowThreshold) || 0)) item.status = "knapp";
+  else item.status = "ok";
 }
 
 /**
@@ -633,9 +655,24 @@ export const store = {
     return [...data.stock].sort((a, b) => a.name.localeCompare(b.name));
   },
   /** Admin legt einen neuen Artikel an (Status startet bei "ok"). */
-  addStockItem(name) {
-    const item = { id: uid(), name: String(name || "").trim(), status: "ok", updatedAt: null, updatedBy: null, deliveries: [] };
+  /** opts optional: { unit, currentAmount, lowThreshold } – nur mit "unit" wird der Artikel mengengeführt
+   * (Status dann automatisch aus currentAmount berechnet), sonst bleibt es bei der reinen Ampel wie bisher. */
+  addStockItem(name, opts = {}) {
+    const unit = String(opts.unit || "").trim();
+    const item = {
+      id: uid(),
+      name: String(name || "").trim(),
+      status: "ok",
+      updatedAt: null,
+      updatedBy: null,
+      deliveries: [],
+      unit,
+      currentAmount: unit ? Number(opts.currentAmount) || 0 : null,
+      lowThreshold: unit ? Number(opts.lowThreshold) || 0 : null,
+      consumptionLog: [],
+    };
     if (!item.name) return null;
+    if (unit) recomputeStockStatus(item);
     data.stock.push(item);
     persist();
     return item;
@@ -654,20 +691,92 @@ export const store = {
     persist();
     return item;
   },
-  /** Loggt eine Lieferung (z.B. aus einem per Bot hochgeladenen Lieferschein-Foto) – reine Historie ("wann
-   * wurde wie viel bestellt"), keine Mengen-Buchhaltung. Setzt den Status automatisch auf "ok", da eine
-   * Lieferung angekommen ist. */
-  addStockDelivery(id, { date, amount, note }) {
+  /** Manuelle Mengen-Korrektur (z.B. nach einer echten Nachzählung) für mengengeführte Artikel. */
+  setStockAmount(id, amount, changedBy) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item || !item.unit) return;
+    item.currentAmount = Number(amount) || 0;
+    recomputeStockStatus(item);
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = changedBy || null;
+    persist();
+    return item;
+  },
+  /** Loggt eine Lieferung (z.B. aus einem per Bot hochgeladenen Lieferschein-Foto) – Historie ("wann wurde
+   * wie viel geliefert") UND, falls der Artikel mengengeführt ist (unit gesetzt), Erhöhung von
+   * currentAmount + automatische Status-Neuberechnung. Ist noch keine Einheit hinterlegt, aber die
+   * Lieferung nennt eine, wird die Mengenführung damit automatisch "gebootstrapped". */
+  addStockDelivery(id, { date, quantity, unit, note }) {
     const item = data.stock.find((s) => s.id === id);
     if (!item) return;
     if (!Array.isArray(item.deliveries)) item.deliveries = [];
-    item.deliveries.unshift({ id: uid(), date: date || todayStr(), amount: amount || "", note: note || "" });
+    const qty = Number(quantity);
+    item.deliveries.unshift({ id: uid(), date: date || todayStr(), quantity: Number.isFinite(qty) ? qty : null, unit: unit || "", note: note || "" });
     item.deliveries = item.deliveries.slice(0, 20); // Historie nicht unbegrenzt wachsen lassen
-    item.status = "ok";
+    if (Number.isFinite(qty) && unit) {
+      if (!item.unit) item.unit = unit; // erste Lieferung mit Einheit -> Mengenführung startet automatisch
+      if (item.unit.toLowerCase() === String(unit).toLowerCase()) {
+        item.currentAmount = round2((Number(item.currentAmount) || 0) + qty);
+        recomputeStockStatus(item);
+      }
+    }
+    if (!item.unit) item.status = "ok"; // reine Ampel-Artikel: Lieferung angekommen -> nicht mehr knapp/leer
     item.updatedAt = new Date().toISOString();
     item.updatedBy = "Lieferschein";
     persist();
     return item;
+  },
+
+  // ---- Rezepte (Verkaufsprodukt -> Zutaten-Verbrauch) ----
+  getRecipes() {
+    return [...data.recipes].sort((a, b) => a.productName.localeCompare(b.productName));
+  },
+  addRecipe(productName, ingredients = []) {
+    const recipe = { id: uid(), productName: String(productName || "").trim(), ingredients: [...ingredients] };
+    if (!recipe.productName) return null;
+    data.recipes.push(recipe);
+    persist();
+    return recipe;
+  },
+  updateRecipe(id, patch) {
+    const r = data.recipes.find((x) => x.id === id);
+    if (!r) return;
+    Object.assign(r, patch);
+    persist();
+    return r;
+  },
+  removeRecipe(id) {
+    data.recipes = data.recipes.filter((r) => r.id !== id);
+    persist();
+  },
+  /** Nachsichtiger Vergleich, damit ein per SumUp-Bericht erkannter Produktname (z.B. "Cappuccino Grande")
+   * zum hinterlegten Rezept (z.B. "Cappuccino") passt. */
+  getRecipeByProductName(name) {
+    const needle = String(name || "").trim().toLowerCase();
+    if (!needle) return null;
+    return (
+      data.recipes.find((r) => r.productName.trim().toLowerCase() === needle) ||
+      data.recipes.find((r) => r.productName.trim().toLowerCase().includes(needle) || needle.includes(r.productName.trim().toLowerCase())) ||
+      null
+    );
+  },
+  /** Verrechnet einen Verkauf (aus einem SumUp-Verkaufsbericht) gegen die Zutaten des Rezepts: zieht die
+   * jeweilige Menge × Verkaufsanzahl von jedem Zutat-Artikel ab und berechnet dessen Ampel neu. */
+  applyProductSale(recipeId, quantitySold, date) {
+    const recipe = data.recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+    const qty = Number(quantitySold) || 0;
+    for (const ing of recipe.ingredients) {
+      const item = data.stock.find((s) => s.id === ing.stockItemId);
+      if (!item || !item.unit) continue;
+      const consumed = round2((Number(ing.amount) || 0) * qty);
+      item.currentAmount = round2((Number(item.currentAmount) || 0) - consumed);
+      recomputeStockStatus(item);
+      if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
+      item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: recipe.productName, quantitySold: qty, consumed });
+      item.consumptionLog = item.consumptionLog.slice(0, 20);
+    }
+    persist();
   },
 
   // ---- Vergessenes Ausstempeln erkennen (für die Bot-Erinnerung) ----
@@ -861,6 +970,7 @@ export const store = {
       days: (parsed.days ?? []).map(normalizeDay),
       notifications: parsed.notifications ?? [],
       stock: parsed.stock ?? [],
+      recipes: parsed.recipes ?? [],
     };
     persist();
   },

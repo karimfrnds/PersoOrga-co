@@ -203,12 +203,26 @@ selbst im Kiosk – die Ampel ist reine Admin-Sache). Du fragst jederzeit `was f
 meldest per `Kaffeebohnen sind wieder da` (auch mehrere auf einmal), wenn was nachgekauft wurde – nachsichtiger
 Namensvergleich, muss nicht exakt passen.
 
-**Lieferschein-Foto**: ein Foto des Lieferscheins/der Rechnung direkt an den Bot schicken (mit oder ohne
-Bildunterschrift). Der Bot liest per KI-Bilderkennung heraus, welche Artikel mit welcher Menge geliefert
-wurden, gleicht sie mit der Vorräte-Liste ab und trägt sie automatisch als „bekommen" (Status zurück auf
-„Ok") plus als Liefer-Historie ein (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum · Menge"). Es
-wird **nichts gerechnet oder geschätzt** – nur abgeschrieben, was tatsächlich auf dem Beleg steht. Nur Fotos
-(keine PDF-Dokumente); braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von Textnachrichten.
+**Mengengeführte Artikel + Rezepte (intelligenter Bestand)**: Optional kann ein Artikel unter Admin → Vorräte
+zusätzlich mit einer Einheit (z.B. „l", „kg", „Stück") und einer Warnschwelle angelegt werden – dann wird nicht
+nur die Ampel, sondern der tatsächliche Bestand geführt (Status wird automatisch aus der Menge berechnet).
+Unter Admin → Vorräte → Rezepte verknüpfst du ein Verkaufsprodukt (Name wie im SumUp-Bericht, z.B.
+„Cappuccino") mit den Zutaten und der Menge pro verkauftem Stück. Damit rechnet das System bei einem
+hochgeladenen SumUp-Verkaufsbericht automatisch aus, wie viel von den Zutaten verbraucht wurde – ganz ohne
+eigene SumUp-API-Anbindung.
+
+**Lieferschein- oder Verkaufsbericht-Foto**: ein Foto direkt an den Bot schicken (mit oder ohne
+Bildunterschrift) – der Bot erkennt per KI-Bilderkennung selbst, um welche Art Beleg es sich handelt:
+- **Lieferschein/Rechnung**: liest heraus, welche Artikel mit welcher Menge geliefert wurden, gleicht sie mit
+  der Vorräte-Liste ab und erhöht bei mengengeführten Artikeln den Bestand entsprechend (sonst nur Status
+  zurück auf „Ok"), plus Liefer-Historie (sichtbar unter Admin → Vorräte: „Zuletzt geliefert: Datum · Menge").
+- **SumUp-Verkaufsbericht**: liest heraus, welche Produkte wie oft verkauft wurden, sucht das passende Rezept
+  und zieht die entsprechende Zutatenmenge automatisch vom Bestand ab (nur bei Artikeln mit hinterlegtem Rezept
+  – ohne Rezept passiert nichts, keine Schätzung).
+
+Es wird **nichts erfunden oder geschätzt** – nur verrechnet, was tatsächlich auf dem Beleg steht bzw. im Rezept
+hinterlegt ist. Nur Fotos (keine PDF-Dokumente); braucht denselben `ANTHROPIC_API_KEY` wie das Verstehen von
+Textnachrichten.
 
 **Automatische Erinnerungen (optional):** Richte im Worker unter **Settings → Triggers → Cron Triggers** einen
 Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:

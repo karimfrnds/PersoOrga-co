@@ -341,13 +341,30 @@ async function performTaskSync() {
     const match =
       stockForDelivery.find((s) => s.name.trim().toLowerCase() === needle) ||
       stockForDelivery.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
-    if (match) store.addStockDelivery(match.id, { date: d.date, amount: d.amount });
+    if (match) store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
     else syncWarnings.push(`Lieferung "${d.itemName}": kein passender Vorrats-Artikel gefunden.`);
     appliedDeliveryIds.add(d.id);
     newDeliveryIds = true;
   }
   if (newDeliveryIds) {
     store.updateTaskInboxConfig({ appliedDeliveryIds: [...appliedDeliveryIds].slice(-300) });
+  }
+
+  // Vom Bot per SumUp-Verkaufsbericht-Foto erkannte Verkäufe -> gegen die Rezept-Zutaten verrechnen
+  // (zieht die jeweilige Menge automatisch vom Bestand der Zutat-Artikel ab, neue Ampel inklusive).
+  const remoteSales = Array.isArray(remote.stockSales) ? remote.stockSales : [];
+  const appliedSaleIds = new Set(cfg.appliedSaleIds || []);
+  let newSaleIds = false;
+  for (const s of remoteSales) {
+    if (!s.id || appliedSaleIds.has(s.id)) continue;
+    const recipe = store.getRecipeByProductName(s.productName);
+    if (recipe) store.applyProductSale(recipe.id, s.quantitySold, s.date);
+    else syncWarnings.push(`Verkauf "${s.productName}" (${s.quantitySold}x): kein Rezept hinterlegt (Admin → Vorräte).`);
+    appliedSaleIds.add(s.id);
+    newSaleIds = true;
+  }
+  if (newSaleIds) {
+    store.updateTaskInboxConfig({ appliedSaleIds: [...appliedSaleIds].slice(-300) });
   }
 
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
@@ -408,7 +425,12 @@ async function performTaskSync() {
     ? employees.map((e) => ({ name: e.name, isMinijob: !!e.isMinijob, minijobLimit: Number(e.minijobLimit) || 556 }))
     : [];
   const staleOpenShifts = store.getStaleOpenShifts();
-  const stock = store.getStockItems().map((s) => ({ name: s.name, status: s.status }));
+  const stock = store.getStockItems().map((s) => ({
+    name: s.name,
+    status: s.status,
+    unit: s.unit || "",
+    currentAmount: s.unit ? s.currentAmount : null,
+  }));
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
     tasks: pushTasks,

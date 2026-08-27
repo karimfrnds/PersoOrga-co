@@ -119,6 +119,7 @@ const EMPTY_STATE = {
   stock: [], // [{name, status}] – Vorräte-Ampel
   stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
   stockDeliveries: [], // [{id, itemName, amount, date}] – per Lieferschein-Foto erkannte Lieferungen
+  employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
 };
@@ -143,6 +144,7 @@ async function getState(env) {
       stock: Array.isArray(parsed.stock) ? parsed.stock : [],
       stockRestocks: Array.isArray(parsed.stockRestocks) ? parsed.stockRestocks : [],
       stockDeliveries: Array.isArray(parsed.stockDeliveries) ? parsed.stockDeliveries : [],
+      employeeNotes: Array.isArray(parsed.employeeNotes) ? parsed.employeeNotes : [],
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
     };
@@ -188,7 +190,7 @@ async function interpretMessage(env, text, today, state) {
       properties: {
         action: {
           type: "string",
-          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "other"],
+          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "notes", "other"],
         },
         stats_period: {
           type: "string",
@@ -314,6 +316,7 @@ Bestimme die Absicht der Nachricht:
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "wie war letzte Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen (lastweek = die Woche VOR der aktuellen). Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
 - "stock_list": der Chef will wissen, was an Vorräten fehlt oder knapp ist, z.B. "was fehlt", "einkaufsliste", "was müssen wir nachkaufen".
 - "restock": der Chef meldet, dass ein oder mehrere Artikel wieder aufgefüllt/vorhanden sind, z.B. "Kaffeebohnen sind wieder da", "Milch und Servietten sind nachgefüllt" (zwei Einträge in items_to_restock).
+- "notes": der Chef will die gesammelten Mitarbeiter-Notizen sehen, z.B. "nachrichten", "was haben die Mitarbeiter geschrieben", "zeig mir die Notizen".
 - "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser fünf Werte sein: "Früh1", "Früh2", "Mittel", "Spät1", "Spät2" (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
@@ -605,6 +608,7 @@ function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
   const needle = employeeName.trim().toLowerCase();
   let hours = 0;
   let lohn = 0;
+  let lohnnebenkosten = 0;
   let days = 0;
   let matchedName = null;
   for (const r of rows) {
@@ -612,6 +616,7 @@ function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
       if (pe.name.trim().toLowerCase() === needle) {
         hours += Number(pe.hours) || 0;
         lohn += Number(pe.lohn) || 0;
+        lohnnebenkosten += Number(pe.lohnnebenkosten) || 0;
         days++;
         matchedName = pe.name;
       }
@@ -627,10 +632,13 @@ function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
   }
   hours = round2(hours);
   lohn = round2(lohn);
+  lohnnebenkosten = round2(lohnnebenkosten);
   return [
     `📊 ${label} – ${matchedName}`,
     `Stunden: ${hours.toFixed(2).replace(".", ",")} h`,
     `Lohn: ${euro(lohn)}`,
+    `Lohnnebenkosten (Arbeitgeber, geschätzt): ${euro(lohnnebenkosten)}`,
+    `Lohnkosten gesamt: ${euro(round2(lohn + lohnnebenkosten))}`,
     `(${days} Tag${days === 1 ? "" : "e"} mit Schicht)`,
   ].join("\n");
 }
@@ -650,17 +658,21 @@ function buildStatsReply(state, period, today, employeeName) {
   const sum = (key) => round2(rows.reduce((s, r) => s + (Number(r[key]) || 0), 0));
   const umsatz = sum("umsatzGesamt");
   const lohn = sum("totalLohn");
+  const lohnnebenkosten = sum("totalLohnnebenkosten");
+  const lohnGesamt = round2(lohn + lohnnebenkosten);
   const stunden = sum("totalHours");
   const umschlag = sum("umschlag");
   const trinkgeld = sum("trinkgeldGesamt");
-  const lohnquote = umsatz > 0 ? round2((lohn / umsatz) * 100) : 0;
+  const lohnquote = umsatz > 0 ? round2((lohnGesamt / umsatz) * 100) : 0;
   const openNote = rows.some((r) => r.status !== "abgeschlossen") ? " (inkl. heute, noch nicht final abgeschlossen)" : "";
 
   return [
     `📊 ${label}${openNote}`,
     `Umsatz: ${euro(umsatz)}`,
     `Trinkgeld: ${euro(trinkgeld)}`,
-    `Lohnkosten: ${euro(lohn)} (${String(lohnquote).replace(".", ",")}% vom Umsatz)`,
+    `Lohn: ${euro(lohn)}`,
+    `Lohnnebenkosten (Arbeitgeber, geschätzt): ${euro(lohnnebenkosten)}`,
+    `Lohnkosten gesamt: ${euro(lohnGesamt)} (${String(lohnquote).replace(".", ",")}% vom Umsatz)`,
     `Stunden: ${stunden.toFixed(2).replace(".", ",")} h`,
     `Umschlag: ${euro(umschlag)}`,
   ].join("\n");
@@ -868,11 +880,13 @@ async function handleTelegram(request, env) {
         await patchState(env, { stockRestocks: [...(state.stockRestocks || []), ...newRestocks] });
         await sendTelegramMessage(env, chatId, buildRestockReply(newRestocks));
       }
+    } else if (result.action === "notes") {
+      await sendTelegramMessage(env, chatId, buildNotesDigestReply(state));
     } else {
       await sendTelegramMessage(
         env,
         chatId,
-        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"`
+        `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"\n„nachrichten"`
       );
     }
   } catch (e) {
@@ -987,7 +1001,75 @@ async function handleNote(request, env) {
   if (env.OWNER_CHAT_ID) {
     await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📝 Notiz von ${employeeName}:\n${text}`);
   }
+
+  // Zusätzlich sammeln, damit "nachrichten" später eine Übersicht aller Notizen zeigen kann.
+  const current = await getState(env);
+  const note = { id: crypto.randomUUID(), date: todayBerlin(), employeeName, text };
+  const employeeNotes = [...(current.employeeNotes || []), note].slice(-100);
+  await patchState(env, { employeeNotes });
+
   return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+}
+
+/** Nimmt System-Events entgegen (Ein-/Ausstempeln, Kassenabschluss) und meldet sie sofort, statt auf den
+ * nächsten regulären Sync zu warten. Reine Weiterleitung, kein State nötig außer beim Kassenabschluss (der
+ * teilt sich die Kennzahlen-Freigabe-Regel mit den übrigen Finanzdaten – App entscheidet das bereits vorher). */
+async function handleEvent(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403, headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") return new Response("method not allowed", { status: 405, headers: CORS_HEADERS });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("bad request", { status: 400, headers: CORS_HEADERS });
+  }
+
+  if (env.OWNER_CHAT_ID) {
+    if (body.type === "clock_in") {
+      await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🟢 ${body.employeeName} hat sich eingestempelt (${body.time} Uhr).`);
+    } else if (body.type === "clock_out") {
+      await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🔴 ${body.employeeName} hat sich ausgestempelt (${body.time} Uhr).`);
+    } else if (body.type === "day_closed") {
+      await sendTelegramMessage(env, env.OWNER_CHAT_ID, buildDayClosedReply(body));
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+}
+
+function buildDayClosedReply(d) {
+  const lohnGesamt = round2((Number(d.totalLohn) || 0) + (Number(d.totalLohnnebenkosten) || 0));
+  const lines = [
+    `✅ Kassenabschluss ${formatDateDe(d.date)}`,
+    `Umsatz gesamt: ${euro(d.umsatzGesamt)}`,
+    `davon bar: ${euro(d.umsatzBar)}`,
+    `Trinkgeld: ${euro(d.trinkgeldGesamt)}`,
+    `Lohn: ${euro(d.totalLohn)}`,
+    `Lohnnebenkosten (geschätzt): ${euro(d.totalLohnnebenkosten)}`,
+    `Lohnkosten gesamt: ${euro(lohnGesamt)}`,
+    `Stunden: ${round2(d.totalHours).toFixed(2).replace(".", ",")} h`,
+    `Umschlag: ${euro(d.umschlag)}`,
+  ];
+  if (Array.isArray(d.perEmployee) && d.perEmployee.length > 0) {
+    lines.push("", "Pro Person:");
+    for (const p of d.perEmployee) {
+      lines.push(`- ${p.name}: ${round2(p.hours).toFixed(2).replace(".", ",")} h · ${euro(p.lohn)}${p.tip ? ` · Trinkgeld ${euro(p.tip)}` : ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function buildNotesDigestReply(state) {
+  const notes = state.employeeNotes || [];
+  if (notes.length === 0) return "📭 Keine Mitarbeiter-Notizen vorhanden.";
+  const recent = notes.slice(-20);
+  const lines = recent.map((n) => `${formatDateDe(n.date)} · ${n.employeeName}: ${n.text}`);
+  return ["📋 Mitarbeiter-Notizen (letzte 20):", ...lines].join("\n");
 }
 
 /** Cron Trigger (optional, siehe README): morgens/abends eine kurze Erinnerung schicken. */
@@ -1114,6 +1196,10 @@ export default {
     if (url.pathname === "/note") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleNote(request, env);
+    }
+    if (url.pathname === "/event") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleEvent(request, env);
     }
     if (url.pathname === "/availability") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });

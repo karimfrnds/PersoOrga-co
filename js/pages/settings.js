@@ -84,6 +84,44 @@ function renderSettings() {
     roundCard.appendChild(select);
     frag.appendChild(roundCard);
 
+    // Lohnnebenkosten
+    const nebenkostenCard = document.createElement("section");
+    nebenkostenCard.className = "card";
+    nebenkostenCard.innerHTML = `
+      <h2>Lohnnebenkosten</h2>
+      <p class="muted small">
+        Arbeitgeberanteil (Sozialversicherung etc.) als Pauschal-Prozentsatz vom Bruttolohn, fließt in die
+        Kennzahlen-Übersicht (App und Bot) mit ein. Nur eine Schätzung – echte Sätze variieren (Berufsgenossenschaft
+        u.a.), bei Bedarf hier an die Werte vom Steuerbüro anpassen.
+      </p>
+    `;
+    const nebenkostenGrid = document.createElement("div");
+    nebenkostenGrid.className = "kb-grid";
+    const nebenkosten = settings.lohnnebenkostenProzent || { minijob: 30, festangestellt: 21 };
+    for (const [key, label] of [
+      ["minijob", "Minijob (%)"],
+      ["festangestellt", "Festangestellt (%)"],
+    ]) {
+      const wrap = document.createElement("label");
+      wrap.className = "field";
+      const span = document.createElement("span");
+      span.textContent = label;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.step = "0.5";
+      input.value = nebenkosten[key];
+      input.onchange = () => {
+        store.updateSettings({ lohnnebenkostenProzent: { ...nebenkosten, [key]: Number(input.value) || 0 } });
+        rerender();
+      };
+      wrap.appendChild(span);
+      wrap.appendChild(input);
+      nebenkostenGrid.appendChild(wrap);
+    }
+    nebenkostenCard.appendChild(nebenkostenGrid);
+    frag.appendChild(nebenkostenCard);
+
     // Lohnauszahlung
     const wageCard = document.createElement("section");
     wageCard.className = "card";

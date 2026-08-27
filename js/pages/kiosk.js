@@ -16,7 +16,7 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
-import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability } from "../taskSync.js";
+import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
 import { alertDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
@@ -196,7 +196,8 @@ function renderKiosk(navigate) {
     startBtn.onclick = () => {
       const emp = greetEmployee;
       greetEmployee = null;
-      store.clockIn(emp.id);
+      const { shift } = store.clockIn(emp.id);
+      sendClockEvent("clock_in", emp.name, shift.from);
       openPersonal(emp);
     };
     wrap.appendChild(startBtn);
@@ -380,9 +381,6 @@ function renderKiosk(navigate) {
     // ---- Deine Schichten (Wochenplan) ----
     wrap.appendChild(buildShiftsCard(emp));
 
-    // ---- Vorräte ----
-    wrap.appendChild(buildStockCard(emp));
-
     const inboxCfg = store.getTaskInboxConfig();
     const inboxUsable = inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret;
 
@@ -459,51 +457,6 @@ function renderKiosk(navigate) {
     return wrap;
   }
 
-  // ---------------------------------------------------------------------
-  // Vorräte: einfache Ampel pro Artikel (kein Mengen-Tracking) – jede Person kann während der Schicht
-  // melden, wenn etwas knapp wird oder leer ist. Landet beim nächsten Sync als Einkaufsliste beim Chef.
-  // ---------------------------------------------------------------------
-  const STOCK_STATUS_LABEL = { ok: "Ok", knapp: "Wird knapp", leer: "Leer" };
-  function buildStockCard(emp) {
-    const items = store.getStockItems();
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `<h2>📦 Vorräte</h2>`;
-    if (items.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted small";
-      empty.textContent = "Noch keine Artikel hinterlegt (Admin → Vorräte).";
-      card.appendChild(empty);
-      return card;
-    }
-    const list = document.createElement("div");
-    list.className = "stock-list";
-    for (const item of items) {
-      const row = document.createElement("div");
-      row.className = "stock-row";
-      const label = document.createElement("div");
-      label.className = "stock-name";
-      label.textContent = item.name;
-      row.appendChild(label);
-      const toggles = document.createElement("div");
-      toggles.className = "stock-toggle";
-      for (const status of ["ok", "knapp", "leer"]) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `stock-status-btn stock-${status}` + (item.status === status ? " active" : "");
-        btn.textContent = STOCK_STATUS_LABEL[status];
-        btn.onclick = () => {
-          store.setStockStatus(item.id, status, emp.name);
-          rerender();
-        };
-        toggles.appendChild(btn);
-      }
-      row.appendChild(toggles);
-      list.appendChild(row);
-    }
-    card.appendChild(list);
-    return card;
-  }
 
   // ---------------------------------------------------------------------
   // Deine Schichten: geplante Schichten (aus CSV-Upload oder vom Bot per
@@ -832,7 +785,8 @@ function renderKiosk(navigate) {
   }
 
   function endShift(day, emp, shift, wouldBeLast) {
-    store.clockOut(day.id, shift.id);
+    const closed = store.clockOut(day.id, shift.id);
+    sendClockEvent("clock_out", emp.name, closed?.to || "");
     if (wouldBeLast && day.status !== "abgeschlossen") {
       navigate(`day/${day.id}`);
       return;

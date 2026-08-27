@@ -104,16 +104,27 @@ geputzt`. Wird beim nächsten Sync auch am iPad als abgehakt angezeigt (inkl. �
 gerade eingestempelt ist.
 
 **Kennzahlen-Übersicht** (nur wenn oben in der App freigegeben, siehe Schritt 7): `kennzahlen`, `wie war der
-Umsatz heute`, `wie lief die Woche`, `Zusammenfassung diesen Monat` → Umsatz, Trinkgeld, Lohnkosten (inkl.
-Lohnquote), Stunden und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„diesen Monat", plus – wenn
-genug Historie da ist – 2-3 kurze, rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡
-gekennzeichnet, **keine** Steuer- oder Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei
-jedem Abgleich mit hochlädt.
+Umsatz heute`, `wie lief die Woche`, `wie war letzte Woche`, `Zusammenfassung diesen Monat` → Umsatz, Trinkgeld,
+Lohn, **Lohnnebenkosten** (Arbeitgeberanteil, geschätzter Pauschalsatz – einstellbar unter Admin →
+Einstellungen, getrennt nach Minijob/Festangestellt), Lohnkosten gesamt (inkl. Lohnquote vom Umsatz), Stunden
+und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„letzte Woche"/„diesen Monat", plus – wenn genug
+Historie da ist – 2-3 kurze, rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡 gekennzeichnet,
+**keine** Steuer- oder Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei jedem Abgleich mit
+hochlädt.
 
 **Stunden/Lohn einer einzelnen Person**: `wie viele Stunden hat Anna diese Woche gemacht`, `was hat Timm im
-August gearbeitet` → Summe der Arbeitsstunden und des Lohns dieser Person im genannten Zeitraum (gleiche
-Zeiträume wie oben: heute/gestern/Woche/Monat). Passt der Name zu niemandem in den letzten ~5 Wochen, sagt der
-Bot das auch so.
+August gearbeitet` → Summe der Arbeitsstunden, Lohn und Lohnnebenkosten dieser Person im genannten Zeitraum
+(gleiche Zeiträume wie oben). Passt der Name zu niemandem in den letzten ~5 Wochen, sagt der Bot das auch so.
+
+**Kassenabschluss-Bericht (automatisch)**: sobald ihr in der App einen Tag abschließt, schickt dir der Bot
+sofort die komplette Zusammenfassung (Umsatz, Trinkgeld, Lohn/-nebenkosten, Stunden, Umschlag, Aufschlüsselung
+pro Person) – nur wenn Kennzahlen freigegeben sind (Schritt 7).
+
+**Ein-/Ausstempeln (automatisch)**: sobald sich jemand am Kiosk ein- oder ausstempelt, bekommst du sofort eine
+kurze Nachricht (🟢/🔴) – unabhängig von der Kennzahlen-Freigabe, reicht die normale Telegram-Abgleich-Aktivierung.
+
+**Mitarbeiter-Notizen sammeln**: `nachrichten` (oder „was haben die Mitarbeiter geschrieben") → Liste der
+letzten 20 Notizen, die Mitarbeiter dir aus ihrem Kiosk-Fenster geschickt haben, mit Datum und Namen.
 
 **Wochenplan per Chat eintragen**: zwei Varianten, beide gehen in derselben Nachricht auch gemischt/mehrfach.
 - Frei mit Uhrzeit, z.B. „Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17" – für Zeiten außerhalb der festen
@@ -187,10 +198,10 @@ jeweiligen Person, sobald sie sich anmeldet. Bewusst kein WhatsApp (siehe Hinwei
 Pop-up-System wie bei Schicht-Bestätigungen.
 
 **Vorräte (Einkaufsliste)**: Unter Admin → Vorräte legst du die Artikel-Liste an (z.B. Kaffeebohnen, Milch,
-Servietten). Mitarbeiter markieren im Kiosk-Fenster pro Artikel „Ok" / „Wird knapp" / „Leer" – bewusst keine
-Stückzahlen, nur eine Ampel, das lässt sich im Alltag realistisch pflegen. Du fragst jederzeit `was fehlt` oder
-`einkaufsliste` ab und meldest per `Kaffeebohnen sind wieder da` (auch mehrere auf einmal), wenn was nachgekauft
-wurde – nachsichtiger Namensvergleich, muss nicht exakt passen.
+Servietten) und pflegst dort auch den Status „Ok" / „Wird knapp" / „Leer" (Mitarbeiter melden das nicht mehr
+selbst im Kiosk – die Ampel ist reine Admin-Sache). Du fragst jederzeit `was fehlt` oder `einkaufsliste` ab und
+meldest per `Kaffeebohnen sind wieder da` (auch mehrere auf einmal), wenn was nachgekauft wurde – nachsichtiger
+Namensvergleich, muss nicht exakt passen.
 
 **Lieferschein-Foto**: ein Foto des Lieferscheins/der Rechnung direkt an den Bot schicken (mit oder ohne
 Bildunterschrift). Der Bot liest per KI-Bilderkennung heraus, welche Artikel mit welcher Menge geliefert

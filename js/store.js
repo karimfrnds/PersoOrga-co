@@ -22,6 +22,9 @@ function defaultData() {
     settings: {
       tipSplit: { service: 70, kueche: 20, bar: 10 }, // Gewichtung (Punkte/Std.) pro Rolle
       roundingMinutes: 15, // Rundung der Arbeitszeit
+      // Arbeitgeber-Lohnnebenkosten (Sozialversicherung etc.) als Pauschal-Prozentsatz vom Bruttolohn –
+      // Schätzwerte, echte Sätze (v.a. Berufsgenossenschaft) variieren, bei Bedarf hier anpassen.
+      lohnnebenkostenProzent: { minijob: 30, festangestellt: 21 },
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
       taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert

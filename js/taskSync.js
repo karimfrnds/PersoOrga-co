@@ -71,9 +71,10 @@ function buildFinancialsPayload() {
       umsatzBar: Number(day.kassenabschluss?.umsatzBar) || 0,
       trinkgeldGesamt: b.tipPool,
       totalLohn: b.totalLohn,
+      totalLohnnebenkosten: b.totalLohnnebenkosten,
       totalHours: b.totalHours,
       umschlag: b.umschlag,
-      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn })),
+      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn, lohnnebenkosten: r.lohnnebenkosten })),
     });
   }
   rows.sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -151,6 +152,49 @@ async function pushAvailability(employeeName, weekStart, days) {
     body: JSON.stringify({ employeeName, weekStart, days }),
   });
   if (!res.ok) throw new Error(`Worker antwortete mit ${res.status}`);
+}
+
+/** Meldet dem Bot sofort (nicht erst beim nächsten 90s-Sync), wenn sich jemand ein-/ausstempelt. Best-effort:
+ * wirft absichtlich nicht, ein Netzwerkproblem hier soll das eigentliche Ein-/Ausstempeln nicht stören. */
+async function sendClockEvent(type, employeeName, time) {
+  const cfg = store.getTaskInboxConfig();
+  if (!cfg.enabled || !cfg.workerUrl || !cfg.workerSecret) return;
+  try {
+    await fetch(workerUrl(cfg, "/event"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ type, employeeName, time }),
+    });
+  } catch {
+    // still best effort
+  }
+}
+
+/** Schickt eine vollständige Kassenabschluss-Zusammenfassung an den Bot, sobald ein Tag abgeschlossen wird –
+ * nur wenn Kennzahlen freigegeben sind (genauso sensibel wie die übrigen Kennzahlen). Best-effort. */
+async function sendDayClosedReport(day, breakdown) {
+  const cfg = store.getTaskInboxConfig();
+  if (!cfg.enabled || !cfg.workerUrl || !cfg.workerSecret || !cfg.shareFinancials) return;
+  try {
+    await fetch(workerUrl(cfg, "/event"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "day_closed",
+        date: day.date,
+        umsatzGesamt: Number(day.kassenabschluss?.umsatzGesamt) || 0,
+        umsatzBar: Number(day.kassenabschluss?.umsatzBar) || 0,
+        trinkgeldGesamt: breakdown.tipPool,
+        totalLohn: breakdown.totalLohn,
+        totalLohnnebenkosten: breakdown.totalLohnnebenkosten,
+        totalHours: breakdown.totalHours,
+        umschlag: breakdown.umschlag,
+        perEmployee: breakdown.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn, tip: r.tip })),
+      }),
+    });
+  } catch {
+    // still best effort
+  }
 }
 
 /** Führt den Abgleich jetzt durch (z.B. für den "Jetzt abgleichen"-Button). Wirft bei echten Fehlern. */
@@ -398,4 +442,4 @@ async function maybeSyncPendingTasks() {
   }
 }
 
-export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss, pushAvailability };
+export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, sendDayClosedReport };

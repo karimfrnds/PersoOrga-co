@@ -6,6 +6,7 @@ import { computeDay, computeHours, ROLE_LABEL } from "../calc.js";
 import { euro, hours, dateDe, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 import { requireUnlock } from "../adminAuth.js";
+import { sendDayClosedReport } from "../taskSync.js";
 
 function renderDay(dayId, navigate) {
   const container = document.createElement("div");
@@ -358,6 +359,7 @@ function renderDay(dayId, navigate) {
         }
         if (await confirmDialog("Tag jetzt abschließen? Danach ist er gesperrt (kann bei Bedarf mit Begründung wieder geöffnet werden).", { okLabel: "Abschließen" })) {
           store.closeDay(day.id);
+          sendDayClosedReport(day, breakdown);
           rerender();
         }
       };

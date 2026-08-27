@@ -75,11 +75,17 @@ function computeDay(day, employees, settings) {
     perEmployee[emp.id].rawHours += rawHours;
     perEmployee[emp.id].breakMinutes += breakMinutes;
   }
+  // Lohnnebenkosten (Arbeitgeberanteil Sozialversicherung etc.) – pauschaler Prozentsatz je nach
+  // Beschäftigungsart, da die exakten Sätze (Berufsgenossenschaft etc.) individuell variieren. Nur eine
+  // Schätzung für die eigene Kennzahlen-Übersicht, kein Ersatz für die Lohnbuchhaltung.
+  const nebenkostenPct = settings.lohnnebenkostenProzent || { minijob: 30, festangestellt: 21 };
   for (const id in perEmployee) {
     const row = perEmployee[id];
     row.hours = round2(row.hours);
     row.rawHours = round2(row.rawHours);
     row.lohn = round2(row.hours * row.employee.hourlyWage);
+    const pct = row.employee.isMinijob ? Number(nebenkostenPct.minijob ?? 30) : Number(nebenkostenPct.festangestellt ?? 21);
+    row.lohnnebenkosten = round2(row.lohn * (pct / 100));
   }
 
   // 2) Trinkgeldtopf – Punkte-System: jede Rolle hat ein Gewicht (Punkte pro Stunde).
@@ -143,6 +149,7 @@ function computeDay(day, employees, settings) {
     ust19: round2(extractVat(umsatz19, VAT_RATES.rate19)),
     umsatzSplitDiff,
     totalLohn: round2(Object.values(perEmployee).reduce((s, r) => s + r.lohn, 0)),
+    totalLohnnebenkosten: round2(Object.values(perEmployee).reduce((s, r) => s + r.lohnnebenkosten, 0)),
     totalHours: round2(Object.values(perEmployee).reduce((s, r) => s + r.hours, 0)),
   };
 }
@@ -156,11 +163,12 @@ function computeMonth(days, employees, settings, yyyymm) {
     const b = computeDay(day, employees, settings);
     for (const row of b.perEmployee) {
       if (!totals[row.employee.id]) {
-        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0 };
+        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0, lohnnebenkosten: 0 };
       }
       totals[row.employee.id].hours = round2(totals[row.employee.id].hours + row.hours);
       totals[row.employee.id].lohn = round2(totals[row.employee.id].lohn + row.lohn);
       totals[row.employee.id].tip = round2(totals[row.employee.id].tip + row.tip);
+      totals[row.employee.id].lohnnebenkosten = round2(totals[row.employee.id].lohnnebenkosten + row.lohnnebenkosten);
     }
     umsatzGesamt += Number(day.kassenabschluss?.umsatzGesamt || 0);
     umsatz7 += b.umsatz7;
@@ -193,12 +201,13 @@ function computeRange(days, employees, settings, fromDate, toDate) {
     const b = computeDay(day, employees, settings);
     for (const row of b.perEmployee) {
       if (!totals[row.employee.id]) {
-        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0, breakMinutes: 0 };
+        totals[row.employee.id] = { employee: row.employee, hours: 0, lohn: 0, tip: 0, breakMinutes: 0, lohnnebenkosten: 0 };
       }
       totals[row.employee.id].hours = round2(totals[row.employee.id].hours + row.hours);
       totals[row.employee.id].lohn = round2(totals[row.employee.id].lohn + row.lohn);
       totals[row.employee.id].tip = round2(totals[row.employee.id].tip + row.tip);
       totals[row.employee.id].breakMinutes += row.breakMinutes;
+      totals[row.employee.id].lohnnebenkosten = round2(totals[row.employee.id].lohnnebenkosten + row.lohnnebenkosten);
     }
   }
   const rows = Object.values(totals).sort((a, b) => a.employee.name.localeCompare(b.employee.name));

@@ -206,8 +206,17 @@ async function interpretMessage(env, text, today, state) {
         },
         stats_period: {
           type: "string",
-          enum: ["today", "yesterday", "week", "lastweek", "month"],
-          description: "Nur bei action=stats: welcher Zeitraum gewünscht ist. Ohne klaren Hinweis: 'today'.",
+          enum: ["today", "yesterday", "week", "lastweek", "month", "custom"],
+          description:
+            "Nur bei action=stats: welcher Zeitraum gewünscht ist. Ohne klaren Hinweis: 'today'. 'custom' setzen, wenn der Nutzer ein konkretes Start- und Enddatum nennt (z.B. 'vom 1. bis 5. August') – dann zusätzlich stats_from/stats_to setzen.",
+        },
+        stats_from: {
+          type: "string",
+          description: "Nur bei action=stats mit stats_period='custom': Start-Datum als YYYY-MM-DD.",
+        },
+        stats_to: {
+          type: "string",
+          description: "Nur bei action=stats mit stats_period='custom': End-Datum als YYYY-MM-DD (bei nur einem genannten Tag gleich stats_from).",
         },
         stats_employee_name: {
           type: "string",
@@ -325,7 +334,7 @@ Bestimme die Absicht der Nachricht:
 - "complete": eine oder mehrere der oben gelisteten (noch offenen) Aufgaben sind erledigt und sollen als erledigt markiert werden (z.B. "Kasse zählen ist erledigt", "hab die Vitrine geputzt") – NICHT löschen, nur abhaken.
 - "list": der Nutzer will die aktuelle Aufgaben-Liste/Übersicht sehen.
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
-- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "wie war letzte Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen (lastweek = die Woche VOR der aktuellen). Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm im August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
+- "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "wie war letzte Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen (lastweek = die Woche VOR der aktuellen). Nennt der Nutzer ein konkretes Datum oder einen konkreten Zeitraum (z.B. "vom 1. bis 5. August", "am 12.08.", "zwischen dem 3. und 10. August"), stats_period="custom" setzen und stats_from/stats_to als YYYY-MM-DD auflösen (Jahr aus dem heutigen Datum ergänzen, falls nicht genannt). Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm vom 1.-5. August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
 - "stock_list": der Chef will wissen, was an Vorräten fehlt oder knapp ist, z.B. "was fehlt", "einkaufsliste", "was müssen wir nachkaufen".
 - "restock": der Chef meldet, dass ein oder mehrere Artikel wieder aufgefüllt/vorhanden sind, z.B. "Kaffeebohnen sind wieder da", "Milch und Servietten sind nachgefüllt" (zwei Einträge in items_to_restock).
 - "notes": der Chef will die gesammelten Mitarbeiter-Notizen sehen, z.B. "nachrichten", "was haben die Mitarbeiter geschrieben", "zeig mir die Notizen".
@@ -715,14 +724,23 @@ function buildEmployeeStatsReply(rows, employeeName, label, allFinancials) {
   ].join("\n");
 }
 
-function buildStatsReply(state, period, today, employeeName) {
+/** customFrom/customTo (YYYY-MM-DD) nur bei period="custom" relevant – konkreter, vom Nutzer genannter
+ * Zeitraum statt eines der festen Presets. */
+function buildStatsReply(state, period, today, employeeName, customFrom, customTo) {
   const financials = state.financials || [];
   if (financials.length === 0) {
     return `Noch keine Kennzahlen freigegeben oder synchronisiert. Unter Admin → Einstellungen bei „Telegram-Aufgaben abgleichen" die Kennzahlen-Freigabe aktivieren, danach einmal die App öffnen.`;
   }
-  const { from, to } = periodRange(period, today);
+  let from, to, label;
+  if (period === "custom" && /^\d{4}-\d{2}-\d{2}$/.test(customFrom)) {
+    from = customFrom;
+    to = /^\d{4}-\d{2}-\d{2}$/.test(customTo) && customTo >= customFrom ? customTo : customFrom;
+    label = from === to ? `Am ${formatDateDe(from)}` : `${formatDateDe(from)} – ${formatDateDe(to)}`;
+  } else {
+    ({ from, to } = periodRange(period, today));
+    label = PERIOD_LABEL[period] || "Heute";
+  }
   const rows = financials.filter((r) => r.date >= from && r.date <= to);
-  const label = PERIOD_LABEL[period] || "Heute";
   if (employeeName) return buildEmployeeStatsReply(rows, employeeName, label, financials);
   if (rows.length === 0) {
     return `${label}: für diesen Zeitraum liegen noch keine Daten vor (letzter Abgleich: ${financials[financials.length - 1]?.date || "-"}).`;
@@ -902,9 +920,11 @@ async function handleTelegram(request, env) {
     } else if (result.action === "who") {
       replyText = buildWhoReply(state);
     } else if (result.action === "stats") {
-      const period = ["today", "yesterday", "week", "lastweek", "month"].includes(result.stats_period) ? result.stats_period : "today";
+      const period = ["today", "yesterday", "week", "lastweek", "month", "custom"].includes(result.stats_period) ? result.stats_period : "today";
       const employeeName = result.stats_employee_name ? String(result.stats_employee_name).trim() : "";
-      replyText = buildStatsReply(state, period, today, employeeName);
+      const customFrom = /^\d{4}-\d{2}-\d{2}$/.test(result.stats_from) ? result.stats_from : "";
+      const customTo = /^\d{4}-\d{2}-\d{2}$/.test(result.stats_to) ? result.stats_to : "";
+      replyText = buildStatsReply(state, period, today, employeeName, customFrom, customTo);
       if (!employeeName) {
         const insights = await generateInsights(env, state.financials);
         if (insights) replyText += `\n\n💡 ${insights}`;

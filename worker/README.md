@@ -116,14 +116,16 @@ gerade eingestempelt ist.
 Umsatz heute`, `wie lief die Woche`, `wie war letzte Woche`, `Zusammenfassung diesen Monat` → Umsatz, Trinkgeld,
 Lohn, **Lohnnebenkosten** (Arbeitgeberanteil, geschätzter Pauschalsatz – einstellbar unter Admin →
 Einstellungen, getrennt nach Minijob/Festangestellt), Lohnkosten gesamt (inkl. Lohnquote vom Umsatz), Stunden
-und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„letzte Woche"/„diesen Monat", plus – wenn genug
-Historie da ist – 2-3 kurze, rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡 gekennzeichnet,
-**keine** Steuer- oder Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei jedem Abgleich mit
-hochlädt.
+und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„letzte Woche"/„diesen Monat" **oder einen frei
+genannten Zeitraum** (z.B. `vom 1. bis 5. August`, `am 12.08.`), plus – wenn genug Historie da ist – 2-3 kurze,
+rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡 gekennzeichnet, **keine** Steuer- oder
+Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei jedem Abgleich mit hochlädt – ein frei
+genannter Zeitraum davor liefert entsprechend keine Daten.
 
-**Stunden/Lohn einer einzelnen Person**: `wie viele Stunden hat Anna diese Woche gemacht`, `was hat Timm im
-August gearbeitet` → Summe der Arbeitsstunden, Lohn und Lohnnebenkosten dieser Person im genannten Zeitraum
-(gleiche Zeiträume wie oben). Passt der Name zu niemandem in den letzten ~5 Wochen, sagt der Bot das auch so.
+**Stunden/Lohn einer einzelnen Person**: `wie viele Stunden hat Anna diese Woche gemacht`, `was hat Timm vom
+1. bis 5. August gearbeitet` → Summe der Arbeitsstunden, Lohn und Lohnnebenkosten dieser Person im genannten
+Zeitraum (gleiche Zeiträume wie oben, inkl. frei genanntem Datumsbereich). Passt der Name zu niemandem in den
+letzten ~5 Wochen, sagt der Bot das auch so.
 
 **Kassenabschluss-Bericht (automatisch)**: sobald ihr in der App einen Tag abschließt, schickt dir der Bot
 sofort die komplette Zusammenfassung (Umsatz, Trinkgeld, Lohn/-nebenkosten, Stunden, Umschlag, Aufschlüsselung

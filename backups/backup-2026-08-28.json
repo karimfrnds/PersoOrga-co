@@ -1,0 +1,6120 @@
+{
+  "employees": [
+    {
+      "id": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+      "name": "timm",
+      "role": "bar",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "0507"
+    },
+    {
+      "id": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+      "name": "elli",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "1710"
+    },
+    {
+      "id": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+      "name": "samuel",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "2008"
+    },
+    {
+      "id": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "name": "anna",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "3224"
+    },
+    {
+      "id": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+      "name": "kaya",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "1312"
+    },
+    {
+      "id": "db01632c-e6c2-461a-adf1-f56b3656a945",
+      "name": "livia",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "1212"
+    },
+    {
+      "id": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+      "name": "george",
+      "role": "bar",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "2003"
+    },
+    {
+      "id": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+      "name": "nico",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 260,
+      "active": true,
+      "pin": null
+    },
+    {
+      "id": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "name": "lilly",
+      "role": "bar",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 180,
+      "active": true,
+      "pin": "2302"
+    },
+    {
+      "id": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "name": "arianna",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "2506"
+    },
+    {
+      "id": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+      "name": "emma",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "0809"
+    },
+    {
+      "id": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
+      "name": "hanna",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "1812"
+    },
+    {
+      "id": "aa526cd0-d564-4b79-8f8b-dc3a7196d836",
+      "name": "miguel",
+      "role": "kueche",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true
+    },
+    {
+      "id": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+      "name": "maria",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": true,
+      "minijobLimit": 600,
+      "active": true,
+      "pin": "1221"
+    },
+    {
+      "id": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+      "name": "anna z.",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "1703"
+    },
+    {
+      "id": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+      "name": "karim",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": "1111"
+    }
+  ],
+  "settings": {
+    "tipSplit": {
+      "service": 42.5,
+      "kueche": 15,
+      "bar": 42.5
+    },
+    "roundingMinutes": 15,
+    "lohnnebenkostenProzent": {
+      "minijob": 30,
+      "festangestellt": 21
+    },
+    "cashWagePayout": false,
+    "adminPin": "0402",
+    "taskTemplates": [],
+    "shiftSlots": {
+      "service": [
+        {
+          "id": "frueh1",
+          "label": "Früh1",
+          "from": "08:30",
+          "to": "16:00"
+        },
+        {
+          "id": "frueh2",
+          "label": "Früh2",
+          "from": "09:30",
+          "to": "17:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ]
+        },
+        {
+          "id": "mittel",
+          "label": "Mittel",
+          "from": "10:00",
+          "to": "14:00"
+        },
+        {
+          "id": "spaet1",
+          "label": "Spät1",
+          "from": "15:30",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "id": "spaet2",
+          "label": "Spät2",
+          "from": "18:00",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "kueche": [
+        {
+          "id": "frueh1",
+          "label": "Früh1",
+          "from": "08:00",
+          "to": "15:30"
+        },
+        {
+          "id": "frueh2",
+          "label": "Früh2",
+          "from": "10:00",
+          "to": "16:00",
+          "allowedWeekdays": [
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "id": "mittel",
+          "label": "Mittel",
+          "from": "10:00",
+          "to": "14:00"
+        }
+      ]
+    },
+    "githubBackup": {
+      "enabled": true,
+      "owner": "karimfrnds",
+      "repo": "PersoOrga-co",
+      "token": "",
+      "lastBackupDate": "2026-08-27",
+      "lastError": null
+    },
+    "taskInbox": {
+      "enabled": true,
+      "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
+      "workerSecret": "cafe-webhook-9x7k2m",
+      "shareFinancials": true,
+      "lastSyncAt": "2026-08-28T07:07:42.727Z",
+      "lastError": null,
+      "knownRemoteState": [
+        {
+          "id": "6b7f4a24-a824-4ba0-bc58-6adbecd4f25c",
+          "done": false
+        },
+        {
+          "id": "66cbbc24-312b-42c4-b790-ca5d19705bec",
+          "done": true
+        },
+        {
+          "id": "39053ddb-fe43-41cb-befe-d38fcb98ade7",
+          "done": true
+        },
+        {
+          "id": "ef2b89cb-accd-47e0-b0f1-06b214a9ea8a",
+          "done": false
+        }
+      ],
+      "appliedShiftAssignmentIds": [
+        "65f684b7-f2e5-4c32-818b-f09f8f519c9f",
+        "7e17a09e-ca9a-4a55-800a-1857fce70d6a",
+        "b4a1069e-798a-4546-9933-e44a09684c85",
+        "01aa8dfa-cb90-4121-89cf-9ca356030432",
+        "363f04d2-a22a-41b1-9767-99738a6f53dc",
+        "3d5d71a1-21a7-4f7f-a462-3c4b497bb55b"
+      ],
+      "appliedMessageIds": [
+        "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
+        "8c43bd4f-f314-44e3-8629-1366ab73946b",
+        "7589bb9d-c971-4d51-9451-23df3ac3c229",
+        "13c28711-2c4c-4d0e-b8d7-c4f1cd9f9c88",
+        "18ace8c2-9fe9-47c5-bd2f-657546151985",
+        "75a6752c-e549-4812-b34b-ee95d2c58c06"
+      ],
+      "appliedRejectionIds": [
+        "df7a59b8-2238-45a6-bda2-656718bd62f0",
+        "ad800a7b-4b5d-4c9c-964f-0c76a1c69f67",
+        "f8cf65b6-39df-469f-a0a0-7efb68221407",
+        "1325b01e-8ea9-41c3-ae1c-122264ae15cb",
+        "299af863-577b-4370-aec8-b178e3292f21",
+        "0acf56f2-af41-4c98-ae33-c7cbd9a2f932",
+        "0cbaf0b9-2077-45da-836c-6a6092b0d9b0",
+        "a215e0cd-b900-401b-9cfb-b916a8e3f5f1",
+        "c9032290-fcbd-469f-92e2-795ce281f5cf",
+        "5b2ae108-4cf9-4c88-a7ba-05ebb9ab2331",
+        "a9b57874-5934-40dc-bb78-825f7c9b684d",
+        "36b7b279-d52e-45e1-8996-314da94d1060"
+      ],
+      "appliedRestockIds": [],
+      "appliedDeliveryIds": [
+        "89d936e2-0518-4d89-858f-49d92f27a38e",
+        "780ece9b-af9a-4e0d-8b71-0065041bb8b1",
+        "bea1699c-9009-4848-8718-aa0c583276b6",
+        "abadaf07-8361-4d59-bb91-f09f34d3e761",
+        "508a4b92-6567-45a4-b22d-816473adf0e6",
+        "b4e1b02a-04a0-433d-a254-a959dee38212",
+        "73702a41-16b5-41e3-80b1-690b4b27f1a5",
+        "1f56fc72-98a9-4395-91be-6957fff6b723",
+        "1ff63c94-b8f8-4335-ae7e-955e084d9173",
+        "7b5bbf64-a640-429d-aa92-3a0cf7cbca39",
+        "516f5466-1f6b-48df-8a19-7171efb2dca9",
+        "864a2482-3986-4f30-8c30-48b5ca10401a",
+        "26664c57-a3ad-43d2-be25-b9735ab893e6",
+        "0f67e102-9e21-4ac9-abf2-9713289348cf",
+        "e6fc553e-a2f4-4bcd-bd58-6fe3f5980d34",
+        "ca71b1f7-b7a1-42dc-8262-1e96ece7f18f",
+        "626aad5a-ef92-4d16-9694-8fa6e182a587",
+        "b2853dd8-bc97-4420-993f-597fd1924b62",
+        "11d7bb25-3696-4a72-9028-611f76d03712",
+        "cd6b4528-aec1-492e-a6db-191038387727",
+        "b6d5ce3a-5ffd-42ac-a042-390b9069be02",
+        "a06aa562-a9b2-44c4-bb26-368b91aba77d",
+        "913869d6-c97d-4709-a54b-c5ae900f19d7",
+        "d0f20d3f-7cff-480e-9469-9f78feaff683",
+        "b5aff7d9-91c0-4940-a48b-1b009803811c",
+        "3a9a3012-02e7-4379-aa63-6b8d9fca80dc",
+        "eba83b46-54f0-4215-a2ef-e008f54db2f5",
+        "c0be262b-414a-4b38-a111-a517004664f2",
+        "57975d37-9ab0-4631-b21b-5fc8b8cf0725",
+        "5f32b317-fc93-4665-95d5-3485cfc0a134",
+        "85bea3ee-e21a-4c59-973d-6b2c183b4012",
+        "5198e1ba-9a91-4d47-a849-d78be739af5c",
+        "f9c82b61-c374-47e6-bf62-9f9e7d9c7dbe",
+        "e21e3d86-ab76-4c7c-a63d-720c67b3f9a9",
+        "57c337d4-c664-415d-b613-d2b2c3dd2d3b",
+        "dd18508c-9c81-489a-93cf-9635dfada68d",
+        "f352cdf5-646a-4328-997f-f799bb8a5e3f",
+        "75e2f61a-5a16-4689-9bb8-6c15ef7015f8",
+        "3415ecda-91d2-4cb6-aaec-d5b31c7d4f63",
+        "856ff857-8c0e-4cbc-82eb-2e8b15ab4439",
+        "8400d2d7-ad7d-4f17-ad93-575f3597eb8e",
+        "67003b82-c6fc-4ba2-ab0f-d1f1813a908e",
+        "d1d37b4c-ad2c-47b6-a55f-30f80452561e",
+        "0e7cb6eb-80e3-48a2-b3df-235f0907c7e8",
+        "5d8ca35f-4ac7-4a0b-a041-38b99a28dd82",
+        "68aceba3-3d50-4bf9-8f6b-4d49ac2587f5",
+        "3bb377c6-52b7-4a79-9b44-abf23c0acdd9",
+        "d4918da5-8ac8-4d33-b062-79ab56726d90",
+        "eea1cb2a-4359-43d2-a138-aa33480f6a7e",
+        "863ee8fd-688c-46d1-bf79-c0a22c82d6ca",
+        "f0b7552a-1881-448a-a33a-1d93ef89c060",
+        "ed865bfe-2e5c-4a21-a373-60059aa82b0b",
+        "b72c7efb-196a-45a1-9c68-33737129330c",
+        "71f0a552-9d33-4565-a061-879d243121d7",
+        "03baa40d-fc44-420c-a846-143ea73578be",
+        "d5b55e6f-1605-429f-9640-61b1bd8414d6",
+        "fec610a7-8286-47f5-b574-eba2db74b7c6",
+        "100cd22a-4ebc-4bea-80b2-cdf3045fd518",
+        "c4e2d21e-051a-459b-9c17-a2331cb05ffc",
+        "7234c632-6830-4a48-9048-9bc79d788e24",
+        "99073948-03d2-41ad-8d5e-576a1f9f7e22",
+        "78e45d9d-87be-41df-9da0-62dec77f7146",
+        "b7d7220e-acb9-4527-8fcb-2376818a975e",
+        "26317113-c96b-4bba-96bc-d2eb3f25086d",
+        "acbeda1d-7895-47dc-948e-b27337e7166e",
+        "3f2cca17-952b-47be-aaf1-53cce1a5812d",
+        "76e60d36-83de-4704-bc02-e867c1550704",
+        "3b8a4df0-1fb3-48a5-ad93-9954f7669de1",
+        "da65d4b3-cc1b-49ce-9649-a4d57aaa9e3c",
+        "48ecb6e5-e1a7-467c-b9d9-c31d881a18eb",
+        "c29205cf-74c6-4cd8-a7a8-2d04bd0181df",
+        "acea1f22-a298-4a64-aa31-68b3dd8298e0",
+        "a568b052-3fd7-42c9-bfbb-6656e77d9b72",
+        "af03b1f5-1691-4edf-8106-09bf4f500d3b",
+        "a08bbfbf-61c9-42ed-b60f-d399f63a6dc9",
+        "af7c8f4e-a777-4a35-b662-dda80b0e097a",
+        "323d68bd-a825-4471-b1e7-cb5805a6e5a6",
+        "e7880c02-e6c4-4353-a1c5-9d295622cec3",
+        "f3e6fb52-27f7-4d30-821c-e457b03d1246",
+        "a8b1e543-dac3-419a-b296-c6eca091a007",
+        "f8a2674f-7d83-4da9-b360-912f30c1bc13",
+        "cbf834d1-cdc0-4624-8372-fc21ed4ef2e7",
+        "e8e09075-cb5f-43d0-ae3a-7ac75d40f5d2",
+        "00ddd6f2-320f-47b3-ab19-7317bfcaac25",
+        "8f18ab8b-1482-41e7-a50f-5ded9b5ebe80",
+        "5ea12b00-8cdf-47d4-acab-a3d3cf690104",
+        "b591901d-b6ee-4d4d-b907-735bf91a8aa0",
+        "3ce71fee-980f-468c-942f-c67df6cedc03",
+        "c2fbe002-106b-4120-bce0-29db429efdd9",
+        "d84089dc-4410-43ce-be60-2a90aabe553a"
+      ],
+      "appliedSaleIds": [],
+      "knownRemoteIds": [
+        "55aaa455-2591-4b43-8c02-f426ed83caf2",
+        "2e4ec8b6-187c-40b1-851c-be10d2e32193",
+        "84ef7b80-cdd7-44d0-9637-19ba1307ddad",
+        "2d71f8ad-4b61-45f3-b452-1798dbdfc847",
+        "2b3d8ef3-7e83-43a6-85a8-9f4c39077caa",
+        "3657e85a-da98-45f5-bbfe-c6792e5e20f4",
+        "69a0ced4-b2e8-4178-875a-6d4e4b1be427",
+        "b33f572b-21c2-4687-811a-3c6ff939e8d5",
+        "037b1311-eb05-4e27-a430-56f8234e9f51",
+        "f3a1f094-1700-42b1-8ec0-d4faad580f41",
+        "57b33357-4d76-4a35-a4d8-65b631aa9925",
+        "1026524f-6479-4b66-9354-e51c731b11ab",
+        "ea76d95b-890e-43a1-a049-7efa9b63842f",
+        "f8da93ec-73f1-436d-8465-8409f9a9fdf2",
+        "577ba432-834e-4f22-884b-2f1f489676b5",
+        "b87925f8-ba75-4187-8afa-8736da9dd2ed",
+        "3c26002c-cc3a-4fd8-be31-de2996f6f139",
+        "eca2e2d7-bde8-44e2-b4d9-abd7eea897f5",
+        "0f483fb0-6adc-4de7-a914-4d608ed32a54",
+        "07ecdf8a-fe26-432a-9e2c-054b73f5edf2",
+        "4f98af5d-8ea8-470b-b066-04ded13c6d8a",
+        "18635f90-77d9-4204-a292-a06854a8870c"
+      ],
+      "appliedIds": [
+        "3b87ff39-9485-45e7-b915-4738ccdf4bc8",
+        "3d4ea7bf-1307-49c5-bc47-7e60e0b2f870",
+        "088248fe-3620-4a1e-b2a0-f6141db4384b",
+        "e5c53726-76df-4f45-8cbb-a14eb860085f",
+        "ba4ac03a-18d8-4785-bf7e-12b51fecdbb0",
+        "21bd9b06-c3df-42ee-82a5-aba4648829e6",
+        "717706cd-f75c-423a-946f-913decaaddfe",
+        "2d40f4da-9f67-4202-b59e-ebddc3bcaa84",
+        "cd63260c-dd4f-433f-b60a-b48d7d9cd4d1",
+        "fae4df0e-7819-4dff-a02c-1c4a773cfe61",
+        "8158078b-0e31-4e14-8a3d-fa73066c967e"
+      ]
+    },
+    "checklistTemplates": {
+      "fruh": [],
+      "mittel": [],
+      "spaet": []
+    }
+  },
+  "days": [
+    {
+      "id": "6a0201dd-9aa9-40e0-b936-6a5f71695fc7",
+      "date": "2026-08-11",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "ecce7a1a-99f7-4981-8687-e21d139f67dd",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "17:30",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "dc7dfba8-b25c-486b-961a-1211782d4ece",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "14:00",
+          "to": "18:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 735.19,
+        "umsatzBar": 95.8,
+        "umsatz7": 365.6,
+        "umsatz19": 334.1,
+        "trinkgeldKarte": 35.49,
+        "trinkgeldBar": 24.5
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-11T14:52:54.079Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-11 angelegt"
+        },
+        {
+          "timestamp": "2026-08-11T14:52:56.234Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:02.279Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:08.211Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:12.694Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:15.264Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:16.879Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-11T14:53:20.378Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-11T15:02:08.076Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:02:20.344Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:02:29.543Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:02:37.577Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:02:56.193Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:06:16.715Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-11T15:06:43.176Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-12T11:19:47.961Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-12T11:19:52.622Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:12\"}"
+        },
+        {
+          "timestamp": "2026-08-12T11:20:03.276Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:30\"}"
+        },
+        {
+          "timestamp": "2026-08-12T11:20:26.272Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-12T16:07:59.244Z",
+          "action": "wieder geöffnet",
+          "detail": "cy"
+        },
+        {
+          "timestamp": "2026-08-12T16:08:07.159Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-12T16:08:07.159Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "b0251dca-8ba5-448b-bcdb-f1fad9e39577",
+      "date": "2026-08-12",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "8e4aff4c-2fef-4cb7-bef6-812c70e9368d",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "1c1cfe62-f291-45c8-9d35-74bd960e2a35",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "09:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "bb080dc8-d7a1-49fe-a68e-0b24a038ac85",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "a9e84d62-f9ad-4e46-9018-f79309dd6ff6",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "18:00",
+          "to": "23:15",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1078.31,
+        "umsatzBar": 341.3,
+        "umsatz7": 402.16,
+        "umsatz19": 632.52,
+        "trinkgeldKarte": 43.63,
+        "trinkgeldBar": 31.37
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-12T16:08:36.374Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-12 angelegt"
+        },
+        {
+          "timestamp": "2026-08-12T21:22:59.857Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-12T21:23:45.786Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:23:49.835Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:23:52.700Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:23:54.101Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-12T21:23:57.240Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:01.050Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:03.133Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"09:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:04.735Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:09.353Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"db01632c-e6c2-461a-adf1-f56b3656a945\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:12.915Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:13.783Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:18.470Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"c56befc2-48f3-4ac7-bc46-943f2248d324\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:22.133Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"18:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:26.249Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:33.616Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:15\"}"
+        },
+        {
+          "timestamp": "2026-08-12T21:24:49.835Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:25:03.403Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:25:14.169Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:25:24.201Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:25:27.658Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:25:37.953Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:29:04.104Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:30:06.337Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-12T21:30:25.887Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-12T21:30:25.887Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "c93f6334-f812-40f0-9442-0ba0819d1319",
+      "date": "2026-08-13",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "9075068e-75f1-42fe-8073-37ec17f4e082",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "9c26148c-923f-444a-8d2b-b7dfc1859ee2",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "18:00",
+          "to": "23:15",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "974920a1-ee36-43df-9de2-fc1b1a8ed684",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "09:00",
+          "to": "15:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "f631f264-3e2a-46f8-9678-f38611c8cd3e",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1232.77,
+        "umsatzBar": 265.5,
+        "umsatz7": 410.7,
+        "umsatz19": 751.3,
+        "trinkgeldKarte": 70.77,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-13T21:18:15.540Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-13 angelegt"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:17.974Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:22.845Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"a41c2a83-d45f-4266-b684-9238e4cb38d1\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:25.286Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:29.754Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:50.972Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:52.196Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-13T21:18:57.344Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"c56befc2-48f3-4ac7-bc46-943f2248d324\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:00.490Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"18:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:02.538Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:05.906Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:15\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:07.926Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:16.544Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:18.723Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"09:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:20.657Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"15:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:21.476Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:24.711Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"db01632c-e6c2-461a-adf1-f56b3656a945\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:28.907Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:48.063Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:51.058Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:19:58.525Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:20:06.808Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:20:16.394Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:20:31.560Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:20:41.328Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:22:04.065Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-13T21:24:49.761Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-13T21:24:49.761Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "f54be489-9ef3-4cf6-af1c-2a4499438cc8",
+      "date": "2026-08-14",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "5ff8c798-874b-416b-baae-a8353c3465f4",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "09:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "adfe95ed-431e-4778-80e8-640f2626579a",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "996e7c58-4698-47f3-886b-5980b23450a2",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "09:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "fbaf34a6-103c-41bb-9933-7c13e619fbc4",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "16:30",
+          "to": "00:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1749.2,
+        "umsatzBar": 342.1,
+        "umsatz7": 505,
+        "umsatz19": 1134.74,
+        "trinkgeldKarte": 109.46,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-14T13:53:06.575Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-14 angelegt"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:07.779Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:10.198Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"a41c2a83-d45f-4266-b684-9238e4cb38d1\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:13.273Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:21.320Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:22.773Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:28.336Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:38.170Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:40.302Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"09:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:43.660Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:48.004Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:49.055Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:54.009Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:53:58.703Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"09:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:01.170Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:02.039Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:04.508Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"c56befc2-48f3-4ac7-bc46-943f2248d324\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:07.304Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:13.171Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"16:30\"}"
+        },
+        {
+          "timestamp": "2026-08-14T13:54:16.905Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T22:01:41.943Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"00:00\"}"
+        },
+        {
+          "timestamp": "2026-08-14T22:02:10.139Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:02:43.440Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:02:51.206Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:03:05.673Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:03:15.356Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:06:12.361Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-14T22:10:01.127Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-14T22:10:01.127Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "a67c6b96-10e3-4638-91e7-e949144f92a2",
+      "date": "2026-08-15",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "f8304bfb-9a28-40fe-b6b1-d4fe388b0a31",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "dba22c6c-7a9e-443c-8d8e-2387e754edd7",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "08:30",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "6297d0d5-70af-47d5-9c25-756a89e54fbc",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "10:00",
+          "to": "15:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "47e20ac6-7c7e-4a0e-b9c4-90bd3a0592e4",
+          "employeeId": "aa526cd0-d564-4b79-8f8b-dc3a7196d836",
+          "from": "17:00",
+          "to": "20:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "b5079d33-baaa-443e-be92-7d18213154ca",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "15:30",
+          "to": "23:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 2274.38,
+        "umsatzBar": 279,
+        "umsatz7": 1125.12,
+        "umsatz19": 1029.24,
+        "trinkgeldKarte": 120.02,
+        "trinkgeldBar": 25
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-15T21:09:18.732Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-15 angelegt"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:29.647Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:35.703Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"b22e3ff2-5d27-4c9b-8187-acc3366cbe14\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:38.658Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:44.091Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:46.230Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:47.078Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-15T21:09:57.228Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"216459c0-e32f-4f43-b258-d6639ae87e0e\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:00.210Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:03.525Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:05.909Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:06.561Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:09.547Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:12.658Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"15:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:13.577Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:18.461Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"aa526cd0-d564-4b79-8f8b-dc3a7196d836\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:23.059Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:26.347Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"20:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:27.179Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:29.494Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"9efde466-0d06-4f85-bf4c-2625d4ac3ff9\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:31.792Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:34.242Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"15:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:38.543Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"15:30\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:41.258Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-15T21:10:55.877Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:11:03.278Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:11:14.110Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:11:23.929Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:11:33.311Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:14:09.148Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-15T21:19:00.921Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-15T21:19:00.921Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "0f95496b-8634-4ba9-a960-288b67a19f67",
+      "date": "2026-08-16",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "28a015fc-9698-494a-9afb-4825d29340ed",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "08:30",
+          "to": "17:30",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "8c7427ed-50af-432d-938e-8cb84591db5f",
+          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "cacfc98b-d877-4183-a731-ba8950bd3135",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "09:00",
+          "to": "15:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "e4e26c50-4cb1-40af-9c47-f060100376f4",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 2338.56,
+        "umsatzBar": 402.3,
+        "umsatz7": 1194.8,
+        "umsatz19": 994.8,
+        "trinkgeldKarte": 148.96,
+        "trinkgeldBar": 41.04
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-16T15:32:50.565Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-16 angelegt"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:09.160Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:12.859Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"216459c0-e32f-4f43-b258-d6639ae87e0e\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:19.446Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:23.240Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:30\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:25.309Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:29.811Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:35.573Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:36.458Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:40.930Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:44.957Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"09:00\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:46.990Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"15:00\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:47.691Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:49.710Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:33:54.057Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-16T15:34:07.112Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:34:15.676Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:34:25.741Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:34:36.260Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:34:55.274Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:38:11.527Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-16T15:39:40.178Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-17T15:30:21.305Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-17T15:30:25.736Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"351e6de4-2de9-405d-ba3a-235da86d7a7b\"}"
+        },
+        {
+          "timestamp": "2026-08-17T15:30:31.251Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-17T15:30:31.251Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "b7e67f9c-0f71-442d-8879-36edb09b7cbe",
+      "date": "2026-08-17",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "a8e9d8e7-3ad7-4832-8429-5808581eb40f",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "17:15",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "3095868f-d8af-4342-a233-feba2e05c8c5",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "08:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "6f13f64f-59b2-4518-861e-9bc408f2758f",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1103.86,
+        "umsatzBar": 261.2,
+        "umsatz7": 503.5,
+        "umsatz19": 541.9,
+        "trinkgeldKarte": 58.46,
+        "trinkgeldBar": 41.54
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-17T14:57:09.868Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-17 angelegt"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:14.171Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:16.180Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:18.762Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:19.729Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:23.248Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:30.248Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:34.542Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:50.593Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:57:53.226Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:00.660Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:14.193Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:23\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:18.312Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:23.811Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:12\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:26.977Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:15\"}"
+        },
+        {
+          "timestamp": "2026-08-17T14:58:52.779Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-17T14:59:15.028Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-17T14:59:26.980Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-17T14:59:39.047Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-17T14:59:49.978Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-17T15:09:03.208Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-17T15:10:02.074Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-17T15:10:02.074Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "17fba40e-17ad-4669-af3e-44dcee0f01b9",
+      "date": "2026-08-18",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "495be5ba-e835-43c3-b94d-49de4609facb",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "17:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "04ac9726-f792-43cc-a6f0-8df4f652e711",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "08:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "abb6d5f0-1286-4f67-bf98-cb34f2124c93",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 884.18,
+        "umsatzBar": 138.7,
+        "umsatz7": 425.62,
+        "umsatz19": 405.38,
+        "trinkgeldKarte": 53.18,
+        "trinkgeldBar": 15
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-18T15:47:52.612Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-18 angelegt"
+        },
+        {
+          "timestamp": "2026-08-18T15:47:55.159Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-18T15:47:58.519Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:02.167Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:04.917Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:06.087Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:09.091Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:11.935Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:14.618Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:21.304Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:23.389Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:27.289Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:38.570Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:48:48.121Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:49:01.304Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:49:09.919Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:49:18.654Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:50:42.142Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-18T15:55:02.420Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-18T15:55:02.420Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "e163d2cd-2dfd-41bf-95dc-a22315f3decb",
+      "date": "2026-08-19",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "65203692-8680-4ad3-808f-0ffb21c67d95",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "ae18d7bf-2f2a-44bf-8056-3b39d2a380d3",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "10:00",
+          "to": "13:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "15b50ad9-dc45-4dd3-987f-8852addc0dd6",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "a185142e-5517-462a-b769-10a8068bd12f",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "18:00",
+          "to": "22:30",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1274.69,
+        "umsatzBar": 268.4,
+        "umsatz7": 449.5,
+        "umsatz19": 748.72,
+        "trinkgeldKarte": 76.47,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-19T11:58:02.504Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-19 angelegt"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:15.544Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:19.871Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:21.634Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:07\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:25.985Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:28.268Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:29.440Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:41.391Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"db01632c-e6c2-461a-adf1-f56b3656a945\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:50.741Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"13:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:13:55.671Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:00.272Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"9efde466-0d06-4f85-bf4c-2625d4ac3ff9\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:03.568Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:04.406Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:07.889Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:11.719Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"18:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:18.517Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"22:00\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:23.567Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"22:30\"}"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:39.488Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:49.339Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:14:57.839Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:15:07.887Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:15:18.586Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:20:17.002Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-19T20:21:28.637Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-19T20:21:28.637Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "daf93579-875a-44de-98ed-3f08c9060e85",
+      "date": "2026-08-20",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "69b67878-97b5-4157-8cca-3497ed2a9ba7",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "b379ab20-07d8-4086-8456-65647f7957b8",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "b6d4924f-9d09-4394-abbb-6577a160a271",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "16:00",
+          "to": "22:30",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1868.51,
+        "umsatzBar": 309.1,
+        "umsatz7": 871.6,
+        "umsatz19": 897,
+        "trinkgeldKarte": 99.91,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-20T20:29:48.324Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-20 angelegt"
+        },
+        {
+          "timestamp": "2026-08-20T20:29:49.334Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-20T20:29:53.671Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"9efde466-0d06-4f85-bf4c-2625d4ac3ff9\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:29:56.565Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:00.866Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:03.568Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:05.687Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:10.420Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"db01632c-e6c2-461a-adf1-f56b3656a945\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:13.334Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:14.167Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:20.319Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:23.134Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:26.699Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:39.885Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"22:00\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:30:43.064Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"22:30\"}"
+        },
+        {
+          "timestamp": "2026-08-20T20:31:07.701Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:31:16.067Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:31:25.716Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:31:31.918Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:31:39.150Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:39:40.155Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-20T20:41:43.998Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-20T20:41:43.998Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "12c7f2e7-ee44-477b-b1c9-828a483887ff",
+      "date": "2026-08-21",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "33aa0bc3-7e92-4200-be4b-81bafb9ff417",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "fdc66266-95f0-4cb4-a528-24573fc7ce66",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "16:00",
+          "to": "23:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "bf658970-9c49-4c5e-acaf-a26d51e97a1f",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1521.31,
+        "umsatzBar": 223.24,
+        "umsatz7": 541.06,
+        "umsatz19": 895.28,
+        "trinkgeldKarte": 84.97,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-21T20:48:38.189Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-21 angelegt"
+        },
+        {
+          "timestamp": "2026-08-21T20:48:49.535Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:35.601Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"a41c2a83-d45f-4266-b684-9238e4cb38d1\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:41.146Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:43.863Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:06\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:49.746Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:52.380Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:49:53.670Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:04.232Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:09.032Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:13.363Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:14.099Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:16.316Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:50:27.648Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-21T20:51:54.316Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-21T20:52:16.052Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-21T20:52:26.932Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-21T20:52:39.183Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-21T20:53:11.566Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-21T20:58:54.251Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-21T21:00:14.119Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-21T21:00:14.119Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "97008dde-852d-41a1-b26a-bc1dad9cf8bb",
+      "date": "2026-08-22",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "741f635e-c9a4-4833-a6dd-da88a804fc75",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "08:30",
+          "to": "13:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "6a6be198-1606-42cb-956c-832486eecbc9",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "7642685b-b81e-4052-a8ba-25d87848a76c",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "31813c2c-aa81-4e06-b96d-84371025c402",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 2243.7,
+        "umsatzBar": 358,
+        "umsatz7": 1118.1,
+        "umsatz19": 976,
+        "trinkgeldKarte": 129.6,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-22T18:24:24.830Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-22 angelegt"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:25.983Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:30.161Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"c56befc2-48f3-4ac7-bc46-943f2248d324\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:33.780Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:37.479Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:40.148Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"13:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:42.615Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:46.666Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"a41c2a83-d45f-4266-b684-9238e4cb38d1\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:48.898Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:51.195Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:53.329Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:54.031Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-22T18:24:56.884Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:25:01.846Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:25:07.784Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-22T18:25:11.613Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:25:34.935Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-22T18:26:00.482Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:26:08.630Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:26:18.683Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:26:24.047Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:26:36.634Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:30:27.917Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-22T18:35:36.233Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-22T18:35:36.233Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "f5ee1ac5-fd9f-41f5-b265-a8729c20c9ff",
+      "date": "2026-08-23",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "0cff44d0-81e9-4c38-be3e-7374f2e67d21",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "from": "08:30",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "94311acf-9caa-4db9-9c06-8c01b777b6f1",
+          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "46c0ed44-ab2c-4197-b10e-c8beac652eda",
+          "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+          "from": "14:00",
+          "to": "17:15",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "e8299b76-24e1-4ba2-b2e5-133ae37d7316",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "6015e927-0eaa-48bc-8222-eb0674687df4",
+          "employeeId": "93ac9e87-62c0-4d3c-ae03-d6b4e0408553",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "84ea3946-fcfe-4a25-b9aa-74839200ab3c",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "08:30",
+          "to": "14:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 2040.9,
+        "umsatzBar": 306.7,
+        "umsatz7": 957.9,
+        "umsatz19": 947.3,
+        "trinkgeldKarte": 135.7,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-23T14:45:37.195Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-23 angelegt"
+        },
+        {
+          "timestamp": "2026-08-23T14:45:45.473Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T14:45:50.049Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"b22e3ff2-5d27-4c9b-8187-acc3366cbe14\"}"
+        },
+        {
+          "timestamp": "2026-08-23T14:45:51.342Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T14:45:53.560Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-23T14:45:56.674Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"351e6de4-2de9-405d-ba3a-235da86d7a7b\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:35.544Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:38.986Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:41.066Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:47.183Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:47.756Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:50.490Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"aab24ce1-ea5f-49d6-9c35-b97acbbc4298\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:11:54.133Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"04:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:00.734Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"13:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:03.832Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:06.066Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:09.633Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:15\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:10.484Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:12.885Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:31.433Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:40.249Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:42.518Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"93ac9e87-62c0-4d3c-ae03-d6b4e0408553\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:46.047Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:47.584Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:55.984Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"c56befc2-48f3-4ac7-bc46-943f2248d324\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:12:58.430Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:01.878Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:05.095Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:25.801Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:33.681Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:42.464Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:51.349Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:13:59.514Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:19:39.433Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-23T15:22:57.102Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-23T15:22:57.102Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "25cbc4fe-ee74-4c21-93b5-b93e89240d8b",
+      "date": "2026-08-24",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "e1cec3be-f3eb-4a40-a370-45d3577dad59",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "17:15",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "d38fddf6-6bd1-4711-8eb7-8781f7be9781",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1038.56,
+        "umsatzBar": 132.2,
+        "umsatz7": 568.98,
+        "umsatz19": 416.22,
+        "trinkgeldKarte": 53.36,
+        "trinkgeldBar": 20
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-24T15:02:13.560Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-24 angelegt"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:14.825Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:20.021Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:22.009Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:30.452Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:38.722Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"18:35\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:41.851Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"18:33\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:44.302Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:33\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:49.037Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:15\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:02:55.002Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:03:03.921Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:15\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:03:07.951Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-24T15:05:05.519Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:05:21.620Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:05:34.387Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:05:41.504Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:08:54.249Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:09:16.296Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:12:05.303Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-24T15:12:33.787Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-24T15:12:33.787Z",
+      "plannedShifts": [],
+      "tasks": [],
+      "availability": []
+    },
+    {
+      "id": "87cda8ac-2750-47a9-85fb-0309b56dfac1",
+      "date": "2026-08-25",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "manual",
+          "id": "82a16d25-1f81-4c31-972d-70f2e95d3b5e",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "17:15",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "c56538ab-e912-4c9b-84ba-d202c1ae4d2d",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "10:00",
+          "to": "14:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "9df505d9-0baa-4d5f-a22e-09fb9c56ec54",
+          "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
+          "from": "08:00",
+          "to": "16:00",
+          "note": ""
+        },
+        {
+          "source": "manual",
+          "id": "c11ce971-cc34-48d8-bd55-53525b88701f",
+          "employeeId": "aa526cd0-d564-4b79-8f8b-dc3a7196d836",
+          "from": "10:00",
+          "to": "16:00",
+          "note": ""
+        }
+      ],
+      "plannedShifts": [],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 811.07,
+        "umsatzBar": 193.1,
+        "umsatz7": 445.8,
+        "umsatz19": 320.72,
+        "trinkgeldKarte": 44.55,
+        "trinkgeldBar": 35.45
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-25T15:01:36.256Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-25 angelegt"
+        },
+        {
+          "timestamp": "2026-08-25T15:01:37.900Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-25T15:01:46.967Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:01:49.681Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:06\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:01:55.846Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:01:59.031Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:02:35.481Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:02:50.948Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:03:04.132Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:03:14.350Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:03:20.585Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:04:56.143Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-25T15:04:58.205Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"2b248f4f-e31d-42c5-b9e6-1827605b4253\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:02.815Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"14:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:04.051Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:07.202Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"d1a4bd38-67d5-4893-b81f-bb5c6400559b\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:14.383Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:16.566Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:17.336Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:21.653Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"aa526cd0-d564-4b79-8f8b-dc3a7196d836\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:05:33.299Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:07:49.415Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:10:17.152Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-25T15:12:01.735Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-25T15:12:42.155Z",
+          "action": "wieder geöffnet",
+          "detail": "zeit"
+        },
+        {
+          "timestamp": "2026-08-25T15:12:44.819Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:06\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:12:48.866Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"17:15\"}"
+        },
+        {
+          "timestamp": "2026-08-25T15:12:58.466Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-25T17:37:54.361Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-25T17:38:05.357Z",
+          "action": "eingestempelt",
+          "detail": "karim um 19:38 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T17:38:21.957Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 19:38 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T17:38:47.340Z",
+          "action": "eingestempelt",
+          "detail": "karim um 19:38 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T17:50:29.547Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 19:50 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T17:50:48.495Z",
+          "action": "eingestempelt",
+          "detail": "karim um 19:50 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T17:53:03.694Z",
+          "action": "Schicht entfernt",
+          "detail": "39bf45c5-cc65-4b8e-93ee-532b9d655f05"
+        },
+        {
+          "timestamp": "2026-08-25T18:02:23.463Z",
+          "action": "eingestempelt",
+          "detail": "timm um 20:02 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:02:33.148Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 20:02 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:02:34.747Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 20:02 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:02:47.714Z",
+          "action": "eingestempelt",
+          "detail": "karim um 20:02 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:00.201Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 20:16 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:05.685Z",
+          "action": "Schicht entfernt",
+          "detail": "5c3c5b89-5f2e-423b-9493-2933a2ac67ef"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:07.730Z",
+          "action": "Schicht entfernt",
+          "detail": "f69caf70-f10f-4691-8eda-cdc541c91570"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:09.168Z",
+          "action": "Schicht entfernt",
+          "detail": "0e00194c-7d0e-45c2-a0e6-6e0ffd9ff37a"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:10.668Z",
+          "action": "Schicht entfernt",
+          "detail": "4d5fc5fa-208a-4c30-90fc-72c2e89181bf"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:30.067Z",
+          "action": "eingestempelt",
+          "detail": "timm um 20:16 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:16:49.583Z",
+          "action": "eingestempelt",
+          "detail": "karim um 20:16 Uhr"
+        },
+        {
+          "timestamp": "2026-08-25T18:17:01.285Z",
+          "action": "Schicht entfernt",
+          "detail": "28fbc392-af2f-4062-8e96-18ad97244ba4"
+        },
+        {
+          "timestamp": "2026-08-25T18:17:02.518Z",
+          "action": "Schicht entfernt",
+          "detail": "e2882608-c298-414f-89b2-70df2400026a"
+        },
+        {
+          "timestamp": "2026-08-25T18:17:19.483Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-25T18:19:02.465Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-08-25T18:19:04.217Z",
+          "action": "Schicht entfernt",
+          "detail": "4b76b48b-b6aa-4dcc-8fd9-adba7b8b7111"
+        }
+      ],
+      "closedAt": "2026-08-25T18:17:19.483Z",
+      "availability": []
+    },
+    {
+      "id": "29ec51a4-3365-43d8-b368-c938c76b3687",
+      "date": "2026-08-26",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "pin",
+          "id": "e5047e8e-7086-403a-8aab-928bb0cc606e",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:15",
+          "to": "16:07",
+          "note": "",
+          "clockInAt": "2026-08-26T06:15:03.489Z",
+          "clockOutAt": "2026-08-26T14:07:56.636Z"
+        },
+        {
+          "source": "pin",
+          "id": "1838fbf8-08a1-4141-8f4a-2b6fba546796",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "09:58",
+          "to": "14:06",
+          "note": "",
+          "clockInAt": "2026-08-26T07:58:53.131Z",
+          "clockOutAt": "2026-08-26T12:06:42.082Z"
+        },
+        {
+          "source": "pin",
+          "id": "7d759f54-419d-43af-b0eb-179098a53f82",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "10:04",
+          "to": "14:13",
+          "note": "",
+          "clockInAt": "2026-08-26T08:04:56.927Z",
+          "clockOutAt": "2026-08-26T12:13:57.994Z"
+        },
+        {
+          "source": "pin",
+          "id": "1d857d27-a60c-4fad-a2eb-845361950a64",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "15:49",
+          "to": "23:03",
+          "note": "",
+          "clockInAt": "2026-08-26T13:49:05.100Z",
+          "clockOutAt": "2026-08-26T21:03:51.281Z"
+        },
+        {
+          "source": "pin",
+          "id": "ac3629fb-bd21-4125-90b3-0faa0f81c49d",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "18:01",
+          "to": "23:01",
+          "note": "",
+          "clockInAt": "2026-08-26T16:01:09.943Z",
+          "clockOutAt": "2026-08-26T21:01:08.099Z"
+        }
+      ],
+      "plannedShifts": [],
+      "tasks": [
+        {
+          "priority": "normal",
+          "id": "55aaa455-2591-4b43-8c02-f426ed83caf2",
+          "text": "Kaffeemaschine tiefenreinigen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.771Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2e4ec8b6-187c-40b1-851c-be10d2e32193",
+          "text": "Mühlen polieren und reinigen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.771Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "84ef7b80-cdd7-44d0-9637-19ba1307ddad",
+          "text": "Kühlschränke an der Bar wischen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.772Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2d71f8ad-4b61-45f3-b452-1798dbdfc847",
+          "text": "Türen und Seitenwände der Bar wischen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.772Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2b3d8ef3-7e83-43a6-85a8-9f4c39077caa",
+          "text": "Schubladen und Schränke ordentlich machen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.773Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "3657e85a-da98-45f5-bbfe-c6792e5e20f4",
+          "text": "Flaschen vor Schicht runterbringen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.774Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "hoch",
+          "id": "69a0ced4-b2e8-4178-875a-6d4e4b1be427",
+          "text": "Leere Flaschen im Keller einsortieren",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.774Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "b33f572b-21c2-4687-811a-3c6ff939e8d5",
+          "text": "Zwischenlager oben auffüllen (Handtücher, Klopapier aus Keller)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.775Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "037b1311-eb05-4e27-a430-56f8234e9f51",
+          "text": "To Go Sachen aus Keller auffüllen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.775Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "f3a1f094-1700-42b1-8ec0-d4faad580f41",
+          "text": "Alle Tische wischen zu beginn Schicht",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.776Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "57b33357-4d76-4a35-a4d8-65b631aa9925",
+          "text": "Toiletten checken und auffüllen ende Schicht",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.776Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "1026524f-6479-4b66-9354-e51c731b11ab",
+          "text": "toilette Mülleimer leeren ende Schicht",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.777Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "ea76d95b-890e-43a1-a049-7efa9b63842f",
+          "text": "besteck machen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.777Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "f8da93ec-73f1-436d-8465-8409f9a9fdf2",
+          "text": "innen und außen sauber machen zum Schichtwechsel um 15:30 Uhr",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.778Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "577ba432-834e-4f22-884b-2f1f489676b5",
+          "text": "Alles ordentlich machen zum Schichtwechsel um 15:30 Uhr",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.778Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "b87925f8-ba75-4187-8afa-8736da9dd2ed",
+          "text": "Leergut runterbringen und auffüllen beim Schichtwechsel",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.779Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "3c26002c-cc3a-4fd8-be31-de2996f6f139",
+          "text": "Kassenschublade aufräumen und ordnen wenn es ruhiger wird",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.780Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "eca2e2d7-bde8-44e2-b4d9-abd7eea897f5",
+          "text": "Zweite Schublade auffüllen (Servietten aus Keller)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.780Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "0f483fb0-6adc-4de7-a914-4d608ed32a54",
+          "text": "Kleine und große Servietten aus Keller auffüllen (Box auf Fensterbank gegenüber Kellertür)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.781Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "4f98af5d-8ea8-470b-b066-04ded13c6d8a",
+          "text": "Aufschreiben welche Aufgaben morgens und abends regelmäßig anfallen (wenn Zeit vorhanden)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.781Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "e0fbe1d7-7676-48d0-93a3-6a30e7e32655",
+          "text": "Hausflur aufräumen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.782Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "80d50292-5e2f-4337-8d24-969b0a940c00",
+          "text": "Weingläser sauber machen und polieren",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.782Z",
+          "source": "admin",
+          "addedBy": "Admin",
+          "assignedTo": null
+        },
+        {
+          "priority": "normal",
+          "id": "e2013412-7d71-4d76-b434-c2280905b027",
+          "text": "Nachricht ins System schreiben was an Bier fehlt",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.783Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "672c5b97-ac5c-45b7-9cc1-4820bc4ae387",
+          "text": "Wein Kühlschrank vorne auffüllen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.783Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "8c66c1c9-b573-463b-afd6-3e262145265a",
+          "text": "Flaschenregal oben mit Wein Zwischenlager aufbauen aus Weinkartons",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.784Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "hoch",
+          "id": "f1fb3698-7b63-46f3-ac5c-dbb92d796421",
+          "text": "Leergutkästen von unten nach oben in den Flur bringen für Belieferung morgen (oder an George morgen übertragen falls keine Zeit)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.784Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "hoch",
+          "id": "67b8e122-19ad-47eb-8607-cc15da277f1d",
+          "text": "Kompletten Flur leerräumen (Stühle in Kammer oder Keller, alles andere Zeug von uns in Keller, Elektrogrill darf bleiben)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-27T07:12:58.785Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "55aaa455-2591-4b43-8c02-f426ed83caf2",
+          "text": "Kaffeemaschine tiefenreinigen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2e4ec8b6-187c-40b1-851c-be10d2e32193",
+          "text": "Mühlen polieren und reinigen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "84ef7b80-cdd7-44d0-9637-19ba1307ddad",
+          "text": "Kühlschränke an der Bar wischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2d71f8ad-4b61-45f3-b452-1798dbdfc847",
+          "text": "Türen und Seitenwände der Bar wischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "2b3d8ef3-7e83-43a6-85a8-9f4c39077caa",
+          "text": "Schubladen und Schränke ordentlich machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "3657e85a-da98-45f5-bbfe-c6792e5e20f4",
+          "text": "Flaschen vor Schicht runterbringen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "hoch",
+          "id": "69a0ced4-b2e8-4178-875a-6d4e4b1be427",
+          "text": "Leere Flaschen im Keller einsortieren",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "b33f572b-21c2-4687-811a-3c6ff939e8d5",
+          "text": "Zwischenlager oben auffüllen (Handtücher, Klopapier aus Keller)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "037b1311-eb05-4e27-a430-56f8234e9f51",
+          "text": "To Go Sachen aus Keller auffüllen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "f3a1f094-1700-42b1-8ec0-d4faad580f41",
+          "text": "Alle Tische wischen zu beginn Schicht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "57b33357-4d76-4a35-a4d8-65b631aa9925",
+          "text": "Toiletten checken und auffüllen ende Schicht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "1026524f-6479-4b66-9354-e51c731b11ab",
+          "text": "toilette Mülleimer leeren ende Schicht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "ea76d95b-890e-43a1-a049-7efa9b63842f",
+          "text": "besteck machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "f8da93ec-73f1-436d-8465-8409f9a9fdf2",
+          "text": "innen und außen sauber machen zum Schichtwechsel um 15:30 Uhr",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "577ba432-834e-4f22-884b-2f1f489676b5",
+          "text": "Alles ordentlich machen zum Schichtwechsel um 15:30 Uhr",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "b87925f8-ba75-4187-8afa-8736da9dd2ed",
+          "text": "Leergut runterbringen und auffüllen beim Schichtwechsel",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "3c26002c-cc3a-4fd8-be31-de2996f6f139",
+          "text": "Kassenschublade aufräumen und ordnen wenn es ruhiger wird",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "eca2e2d7-bde8-44e2-b4d9-abd7eea897f5",
+          "text": "Zweite Schublade auffüllen (Servietten aus Keller)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "0f483fb0-6adc-4de7-a914-4d608ed32a54",
+          "text": "Kleine und große Servietten aus Keller auffüllen (Box auf Fensterbank gegenüber Kellertür)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "4f98af5d-8ea8-470b-b066-04ded13c6d8a",
+          "text": "Aufschreiben welche Aufgaben morgens und abends regelmäßig anfallen (wenn Zeit vorhanden)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
+          "priority": "normal",
+          "id": "e0fbe1d7-7676-48d0-93a3-6a30e7e32655",
+          "text": "Hausflur aufräumen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "80d50292-5e2f-4337-8d24-969b0a940c00",
+          "text": "Weingläser sauber machen und polieren",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": null
+        },
+        {
+          "priority": "normal",
+          "id": "e2013412-7d71-4d76-b434-c2280905b027",
+          "text": "Nachricht ins System schreiben was an Bier fehlt",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "672c5b97-ac5c-45b7-9cc1-4820bc4ae387",
+          "text": "Wein Kühlschrank vorne auffüllen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "normal",
+          "id": "8c66c1c9-b573-463b-afd6-3e262145265a",
+          "text": "Flaschenregal oben mit Wein Zwischenlager aufbauen aus Weinkartons",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "hoch",
+          "id": "f1fb3698-7b63-46f3-ac5c-dbb92d796421",
+          "text": "Leergutkästen von unten nach oben in den Flur bringen für Belieferung morgen (oder an George morgen übertragen falls keine Zeit)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        },
+        {
+          "priority": "hoch",
+          "id": "67b8e122-19ad-47eb-8607-cc15da277f1d",
+          "text": "Kompletten Flur leerräumen (Stühle in Kammer oder Keller, alles andere Zeug von uns in Keller, Elektrogrill darf bleiben)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324"
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1432.17,
+        "umsatzBar": 377.36,
+        "umsatz7": 583.6,
+        "umsatz19": 778.64,
+        "trinkgeldKarte": 69.93,
+        "trinkgeldBar": 40
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-25T16:49:27.937Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-26 angelegt"
+        },
+        {
+          "timestamp": "2026-08-26T06:15:03.490Z",
+          "action": "eingestempelt",
+          "detail": "timm um 08:15 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T07:58:53.134Z",
+          "action": "eingestempelt",
+          "detail": "livia um 09:58 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T08:04:56.927Z",
+          "action": "eingestempelt",
+          "detail": "arianna um 10:04 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T12:06:42.082Z",
+          "action": "ausgestempelt",
+          "detail": "livia um 14:06 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T12:13:57.994Z",
+          "action": "ausgestempelt",
+          "detail": "arianna um 14:13 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T13:22:40.010Z",
+          "action": "eingestempelt",
+          "detail": "karim um 15:22 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T13:24:19.967Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 15:24 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T13:24:28.767Z",
+          "action": "Schicht entfernt",
+          "detail": "9427b09a-1a00-4940-9287-3c56d4349bc1"
+        },
+        {
+          "timestamp": "2026-08-26T13:43:45.137Z",
+          "action": "eingestempelt",
+          "detail": "karim um 15:43 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T13:44:10.523Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 15:44 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T13:49:05.101Z",
+          "action": "eingestempelt",
+          "detail": "anna um 15:49 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T14:07:56.636Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 16:07 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T14:11:31.265Z",
+          "action": "Schicht entfernt",
+          "detail": "5f6f8708-eef1-42b2-a43b-7f858b8e688b"
+        },
+        {
+          "timestamp": "2026-08-26T16:01:09.944Z",
+          "action": "eingestempelt",
+          "detail": "kaya um 18:01 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:01:08.100Z",
+          "action": "ausgestempelt",
+          "detail": "kaya um 23:01 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:03:06.582Z",
+          "action": "eingestempelt",
+          "detail": "kaya um 23:03 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:03:21.517Z",
+          "action": "ausgestempelt",
+          "detail": "kaya um 23:03 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:03:40.832Z",
+          "action": "eingestempelt",
+          "detail": "kaya um 23:03 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:03:51.281Z",
+          "action": "ausgestempelt",
+          "detail": "anna um 23:03 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:07:23.250Z",
+          "action": "eingestempelt",
+          "detail": "anna um 23:07 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:07:25.549Z",
+          "action": "ausgestempelt",
+          "detail": "anna um 23:07 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:08:26.348Z",
+          "action": "ausgestempelt",
+          "detail": "kaya um 23:08 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:13:27.768Z",
+          "action": "eingestempelt",
+          "detail": "anna um 23:13 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:13:29.584Z",
+          "action": "ausgestempelt",
+          "detail": "anna um 23:13 Uhr"
+        },
+        {
+          "timestamp": "2026-08-26T21:14:56.585Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:15:21.919Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:15:32.934Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:15:40.134Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:15:50.355Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:25:25.660Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:27:03.977Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:30:11.189Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-26T21:33:15.649Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:26.941Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:28.638Z",
+          "action": "Schicht entfernt",
+          "detail": "dd9936bc-0e2a-4b1e-82b3-7496ff7aab10"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:29.639Z",
+          "action": "Schicht entfernt",
+          "detail": "bb105d77-f5c3-4409-8d61-86c7fce60ba8"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:30.589Z",
+          "action": "Schicht entfernt",
+          "detail": "3d1f1f7d-12b0-4a53-9eb2-437846598fb5"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:31.490Z",
+          "action": "Schicht entfernt",
+          "detail": "40dc191c-db9e-4ebc-8755-f359432b45be"
+        },
+        {
+          "timestamp": "2026-08-27T11:57:52.380Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-27T19:02:24.468Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-27T19:03:48.217Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        },
+        {
+          "timestamp": "2026-08-27T19:04:55.484Z",
+          "action": "wieder geöffnet",
+          "detail": "kein Grund angegeben"
+        },
+        {
+          "timestamp": "2026-08-27T19:05:08.552Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-27T19:05:22.849Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-27T19:05:22.849Z",
+      "availability": []
+    },
+    {
+      "id": "ddba2926-f842-41fe-aa4e-a0af6dff250d",
+      "date": "2026-08-27",
+      "status": "abgeschlossen",
+      "shifts": [
+        {
+          "source": "pin",
+          "id": "b3c9504e-bdd2-4c8a-819b-1de4c9f899df",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "09:14",
+          "to": "16:58",
+          "note": "",
+          "clockInAt": "2026-08-27T07:14:20.875Z",
+          "clockOutAt": "2026-08-27T14:58:00.812Z"
+        },
+        {
+          "source": "pin",
+          "id": "3e33e0e3-be4f-4cda-84c4-1a51f9be3ca7",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "from": "09:56",
+          "to": "14:21",
+          "note": "",
+          "clockInAt": "2026-08-27T07:56:50.108Z",
+          "clockOutAt": "2026-08-27T12:21:52.479Z"
+        },
+        {
+          "source": "pin",
+          "id": "8e3bb911-de3e-46ba-87c1-c6c6614c6cd3",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "15:29",
+          "to": "22:34",
+          "note": "",
+          "clockInAt": "2026-08-27T13:29:31.643Z",
+          "clockOutAt": "2026-08-27T20:34:29.673Z"
+        },
+        {
+          "source": "pin",
+          "id": "24ab2b15-662f-47ee-bb94-264118ea01cf",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "18:00",
+          "to": "22:47",
+          "note": "",
+          "clockInAt": "2026-08-27T16:00:33.577Z",
+          "clockOutAt": "2026-08-27T20:47:05.968Z"
+        },
+        {
+          "source": "pin",
+          "id": "fc1b64ce-9241-4bfa-9596-1872cda556c3",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "from": "22:34",
+          "to": "22:50",
+          "note": "",
+          "clockInAt": "2026-08-27T20:34:33.791Z",
+          "clockOutAt": "2026-08-27T20:50:57.735Z"
+        },
+        {
+          "source": "pin",
+          "id": "fbb143a1-56ff-4a13-a37c-5945ca9173e2",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "22:48",
+          "to": "22:49",
+          "note": "",
+          "clockInAt": "2026-08-27T20:48:54.851Z",
+          "clockOutAt": "2026-08-27T20:49:00.785Z"
+        }
+      ],
+      "plannedShifts": [],
+      "tasks": [
+        {
+          "priority": "normal",
+          "id": "87483681-ae5a-4f85-9c7e-0bcfd194d3cb",
+          "text": "Tische wischen zu Schichtbeginn",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.004Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "725d3e68-21b5-4001-abf8-905f6f95f696",
+          "text": "Toiletten machen zu Schichtbeginn: Papiermüll leeren, Papiertücher auffüllen, Oberflächen mit Glasreiniger und Poliertuch abwischen, dass keine Wasserflecken bleiben",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.005Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "423ef474-5993-49b1-9b6e-8be6eb9824ed",
+          "text": "Flur und Damenbad wischen vor Schichtende",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.006Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "22b20c13-2de1-4b37-96c6-1451a7575e1e",
+          "text": "Generell aufräumen, den Edelstahlwagen neben der Kasse sinnvoll machen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.007Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "33a5c120-1630-4548-b67c-6a9e5ea85bf3",
+          "text": "Das Lager aufräumen und nach eigenem System strukturieren (alles was nicht gebraucht wird erstmal in einer Box sammeln)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.008Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "handoffFrom": "arianna",
+          "handoffAt": "2026-08-27T20:29:04.197Z"
+        },
+        {
+          "priority": "normal",
+          "id": "db545bc4-debe-46d4-a340-e0d10eac5a34",
+          "text": "Detailarbeit: Schränke und Oberflächen/Seitenwände wischen an der Bar, Aschenbecher sauber machen, Kerzen auffüllen/sauber machen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.009Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "78b59515-39a5-46c8-967d-3fb6d968c8f4",
+          "text": "Vor Schichtende das Waschbecken der Bar gründlich reinigen (Achtung: linkes Waschbecken tropft unten raus, Eimer regelmäßig wechseln)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.010Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "22e26e3e-3184-46ce-af89-587b3b1956ac",
+          "text": "Pflanzen gießen: Bäume jeweils 1/2 Kanne und Buche links rechts 1 ganze große Gießkanne",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.011Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "2b378899-effd-4a1e-8533-9bf5521f3a57",
+          "text": "Mit schöner Schrift an die Eingangstür die Öffnungszeiten schreiben + Instagram Name",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.012Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "a78bcdd3-8b7a-45e1-8b7c-85999e21d44c",
+          "text": "Bier und Wein im Kühlschrank auffüllen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-08-28T00:09:35.012Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        },
+        {
+          "priority": "normal",
+          "id": "87483681-ae5a-4f85-9c7e-0bcfd194d3cb",
+          "text": "Tische wischen zu Schichtbeginn",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "725d3e68-21b5-4001-abf8-905f6f95f696",
+          "text": "Toiletten machen zu Schichtbeginn: Papiermüll leeren, Papiertücher auffüllen, Oberflächen mit Glasreiniger und Poliertuch abwischen, dass keine Wasserflecken bleiben",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "423ef474-5993-49b1-9b6e-8be6eb9824ed",
+          "text": "Flur und Damenbad wischen vor Schichtende",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "2b248f4f-e31d-42c5-b9e6-1827605b4253"
+        },
+        {
+          "priority": "normal",
+          "id": "22b20c13-2de1-4b37-96c6-1451a7575e1e",
+          "text": "Generell aufräumen, den Edelstahlwagen neben der Kasse sinnvoll machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "33a5c120-1630-4548-b67c-6a9e5ea85bf3",
+          "text": "Das Lager aufräumen und nach eigenem System strukturieren (alles was nicht gebraucht wird erstmal in einer Box sammeln)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90"
+        },
+        {
+          "priority": "normal",
+          "id": "db545bc4-debe-46d4-a340-e0d10eac5a34",
+          "text": "Detailarbeit: Schränke und Oberflächen/Seitenwände wischen an der Bar, Aschenbecher sauber machen, Kerzen auffüllen/sauber machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "78b59515-39a5-46c8-967d-3fb6d968c8f4",
+          "text": "Vor Schichtende das Waschbecken der Bar gründlich reinigen (Achtung: linkes Waschbecken tropft unten raus, Eimer regelmäßig wechseln)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "22e26e3e-3184-46ce-af89-587b3b1956ac",
+          "text": "Pflanzen gießen: Bäume jeweils 1/2 Kanne und Buche links rechts 1 ganze große Gießkanne",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "2b378899-effd-4a1e-8533-9bf5521f3a57",
+          "text": "Mit schöner Schrift an die Eingangstür die Öffnungszeiten schreiben + Instagram Name",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e"
+        },
+        {
+          "priority": "normal",
+          "id": "a78bcdd3-8b7a-45e1-8b7c-85999e21d44c",
+          "text": "Bier und Wein im Kühlschrank auffüllen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 1455.83,
+        "umsatzBar": 251.4,
+        "umsatz7": 582.74,
+        "umsatz19": 778.1,
+        "trinkgeldKarte": 94.99,
+        "trinkgeldBar": 30
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-25T18:18:26.254Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-27 angelegt"
+        },
+        {
+          "timestamp": "2026-08-27T07:14:20.878Z",
+          "action": "eingestempelt",
+          "detail": "george um 09:14 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T07:56:50.109Z",
+          "action": "eingestempelt",
+          "detail": "livia um 09:56 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T12:21:52.479Z",
+          "action": "ausgestempelt",
+          "detail": "livia um 14:21 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T13:29:31.643Z",
+          "action": "eingestempelt",
+          "detail": "anna um 15:29 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T14:58:00.812Z",
+          "action": "ausgestempelt",
+          "detail": "george um 16:58 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T15:37:47.549Z",
+          "action": "eingestempelt",
+          "detail": "kaya um 17:37 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T15:42:41.647Z",
+          "action": "ausgestempelt",
+          "detail": "kaya um 17:42 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T15:42:56.430Z",
+          "action": "Schicht entfernt",
+          "detail": "2eded139-f3c4-4896-a0c9-9bfe8b5868c8"
+        },
+        {
+          "timestamp": "2026-08-27T16:00:33.578Z",
+          "action": "eingestempelt",
+          "detail": "arianna um 18:00 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:34:29.675Z",
+          "action": "ausgestempelt",
+          "detail": "anna um 22:34 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:34:33.794Z",
+          "action": "eingestempelt",
+          "detail": "anna um 22:34 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:47:05.968Z",
+          "action": "ausgestempelt",
+          "detail": "arianna um 22:47 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:48:54.851Z",
+          "action": "eingestempelt",
+          "detail": "arianna um 22:48 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:49:00.785Z",
+          "action": "ausgestempelt",
+          "detail": "arianna um 22:49 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:50:57.735Z",
+          "action": "ausgestempelt",
+          "detail": "anna um 22:50 Uhr"
+        },
+        {
+          "timestamp": "2026-08-27T20:58:43.369Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-08-27T20:58:58.570Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-08-27T20:59:08.868Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-08-27T20:59:16.118Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-08-27T20:59:31.283Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-08-27T21:00:59.699Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-27T21:07:25.158Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-27T21:11:08.394Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-27T21:13:02.556Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-08-27T21:16:26.472Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
+        }
+      ],
+      "closedAt": "2026-08-27T21:16:26.472Z",
+      "availability": []
+    },
+    {
+      "id": "d09f5063-aaf7-4d3f-b550-91de6f45c1d3",
+      "date": "2026-08-31",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [],
+      "availability": [
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "9116918a-de2c-4d4d-b199-e7cb44a2e872",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "available": true,
+          "from": "08:30",
+          "to": "18:00",
+          "note": "",
+          "submittedAt": "2026-08-26T08:59:41.093Z",
+          "slotIds": []
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "25a6c316-df47-49fc-91aa-405e16ba27a7",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "slotIds": [
+            "frueh1",
+            "mittel"
+          ],
+          "submittedAt": "2026-08-27T12:32:17.369Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T08:59:30.296Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-31 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "86701ed8-b6aa-4504-8da5-5f05026b9f02",
+      "date": "2026-09-01",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-3512c3bd-0048-489c-b2e6-5c1ce6d99694",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-04d65737-dedd-43e2-a217-07057ea062d4",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "10:00",
+          "to": "14:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
+          "id": "3512c3bd-0048-489c-b2e6-5c1ce6d99694",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "slotIds": [
+            "frueh1"
+          ],
+          "submittedAt": "2026-08-26T11:23:38.192Z"
+        },
+        {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
+          "id": "04d65737-dedd-43e2-a217-07057ea062d4",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [
+            "mittel"
+          ],
+          "submittedAt": "2026-08-26T11:52:31.189Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T08:59:30.978Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-01 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "9adfc576-8738-4414-a822-f93388b10d17",
+      "date": "2026-09-02",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-8a13be55-d283-4f0f-b1e4-2229c7596427",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
+          "id": "8a13be55-d283-4f0f-b1e4-2229c7596427",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "slotIds": [
+            "frueh1"
+          ],
+          "submittedAt": "2026-08-26T11:23:38.194Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "ea5a5fdc-781b-4339-b9e9-6b84ecc397d4",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T11:52:31.190Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "9ce4596a-cae6-49b2-b58f-5a490108efb3",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "slotIds": [],
+          "submittedAt": null
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "9f2a76c1-032a-4a31-b363-8e213b626820",
+          "employeeId": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "slotIds": [],
+          "submittedAt": null
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "8b95a29c-65df-4369-a3a7-4f4f8a8bb5b9",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "slotIds": [
+            "spaet1",
+            "spaet2"
+          ],
+          "submittedAt": "2026-08-27T15:42:25.515Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T08:59:31.508Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-02 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "c85ae827-06c2-4e77-a9b2-1c8f51ecd844",
+      "date": "2026-09-05",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-1fca58ad-2fe9-40bd-8d33-9c4ddaf11827",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "from": "08:30",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
+          "id": "1fca58ad-2fe9-40bd-8d33-9c4ddaf11827",
+          "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "slotIds": [
+            "frueh1"
+          ],
+          "submittedAt": "2026-08-26T11:23:38.195Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "9490ff5a-4aeb-417f-a345-871b5c9ce181",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T09:40:25.016Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "7e72f83d-5990-40ee-8a8a-cf2ad7b7fce5",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "slotIds": [],
+          "submittedAt": null
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "e185ce49-bd46-4d42-95ca-50a1bd3c82a6",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "slotIds": [
+            "frueh2",
+            "mittel"
+          ],
+          "submittedAt": "2026-08-27T12:32:17.373Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T09:16:14.856Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-05 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "f80e1daf-a133-40a0-a76a-6e04b88fb2c5",
+      "date": "2026-09-03",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [],
+      "availability": [
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "3e22e5b0-b856-4edb-92d3-db013a545b81",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T09:40:31.112Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "5ad5f90f-8ac2-4389-8a42-30e5da37593e",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T18:01:05.316Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "cc27c066-1f1d-48fb-a727-ed36dc2bd16b",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "slotIds": [
+            "frueh1",
+            "mittel"
+          ],
+          "submittedAt": "2026-08-27T12:32:17.371Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "2ffbec22-a12f-4cae-ae6c-e9ba5dd49472",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "slotIds": [
+            "spaet1",
+            "spaet2"
+          ],
+          "submittedAt": "2026-08-27T15:42:25.518Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T09:38:32.411Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-03 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "247cfccc-77ed-4e96-b750-68c9cef675aa",
+      "date": "2026-09-04",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [],
+      "availability": [
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "e1d05835-04de-4aa4-80d1-541adb711ed4",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T09:40:21.030Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "e5f5b4cb-c26b-4f62-8463-c287c4936b57",
+          "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "slotIds": [],
+          "submittedAt": null
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "439a6306-b010-4303-90a5-8960ba3d4f94",
+          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+          "slotIds": [],
+          "submittedAt": "2026-08-26T18:01:05.318Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "c74c9bb5-3eaf-43c4-b6e8-46e6785002ca",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "slotIds": [
+            "frueh1",
+            "mittel"
+          ],
+          "submittedAt": "2026-08-27T12:32:17.372Z"
+        },
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "5ecd9a04-950d-4162-93af-4510246cbb31",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "slotIds": [],
+          "submittedAt": null
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-26T09:40:20.230Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-04 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "95a00226-1bcd-4122-8a0f-369dbdc88f46",
+      "date": "2026-09-06",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [],
+      "availability": [
+        {
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "id": "3f38154a-94dc-4cf1-a15d-33a7980f5a23",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "slotIds": [
+            "frueh1",
+            "frueh2",
+            "mittel"
+          ],
+          "submittedAt": "2026-08-27T12:32:17.375Z"
+        }
+      ],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-27T12:31:40.450Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-09-06 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "2ecf5bea-964d-4b1f-ac07-f97095934ffc",
+      "date": "2026-08-28",
+      "status": "offen",
+      "shifts": [
+        {
+          "source": "pin",
+          "id": "55915e58-392c-46cf-ab01-0b8100302d80",
+          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+          "from": "08:32",
+          "to": null,
+          "note": "",
+          "clockInAt": "2026-08-28T06:32:51.801Z",
+          "clockOutAt": null
+        }
+      ],
+      "plannedShifts": [],
+      "availability": [],
+      "tasks": [
+        {
+          "priority": "normal",
+          "id": "6b7f4a24-a824-4ba0-bc58-6adbecd4f25c",
+          "text": "Reservierung machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        },
+        {
+          "priority": "normal",
+          "id": "66cbbc24-312b-42c4-b790-ca5d19705bec",
+          "text": "Außenbereich aufmachen, wenn es nicht regnet",
+          "done": true,
+          "doneBy": "george",
+          "doneAt": "2026-08-28T07:02:58.676Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        },
+        {
+          "priority": "normal",
+          "id": "39053ddb-fe43-41cb-befe-d38fcb98ade7",
+          "text": "Neue laminierte Karten austeilen",
+          "done": true,
+          "doneBy": "george",
+          "doneAt": "2026-08-28T07:03:02.626Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        },
+        {
+          "priority": "niedrig",
+          "id": "ef2b89cb-accd-47e0-b0f1-06b214a9ea8a",
+          "text": "Flaschen runterbringen, wenn Zeit ist",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "a41c2a83-d45f-4266-b684-9238e4cb38d1"
+        }
+      ],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-08-28T06:32:43.653Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-08-28 angelegt"
+        },
+        {
+          "timestamp": "2026-08-28T06:32:51.802Z",
+          "action": "eingestempelt",
+          "detail": "george um 08:32 Uhr"
+        }
+      ],
+      "closedAt": null
+    }
+  ],
+  "notifications": [
+    {
+      "id": "849592fa-6aaa-40c7-8ae0-7027487feb95",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "💬 Bitte wechsel vor Schichtende die Musik.",
+      "createdAt": "2026-08-26T11:23:13.510Z",
+      "readAt": "2026-08-26T11:23:56.223Z"
+    },
+    {
+      "id": "72668756-cafc-4c74-93ad-7d76a8d21468",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Dienstag, 01.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T11:26:52.525Z",
+      "readAt": "2026-08-26T11:27:16.456Z"
+    },
+    {
+      "id": "4b596eef-dfec-4e38-a644-682b08d345ea",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Mittwoch, 02.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T11:29:20.510Z",
+      "readAt": "2026-08-26T11:30:58.525Z"
+    },
+    {
+      "id": "2b4e4d3d-f45a-45a0-85d6-ba7ddb949642",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "💬 Deine Mittel-Schicht am Mittwoch wird nicht bestätigt.",
+      "createdAt": "2026-08-26T11:29:20.517Z",
+      "readAt": "2026-08-26T11:31:00.153Z"
+    },
+    {
+      "id": "3d10c0c7-d726-4f38-a0b7-25d5eccf50bf",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Dienstag, 01.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T11:39:43.883Z",
+      "readAt": "2026-08-26T11:50:41.125Z"
+    },
+    {
+      "id": "0f3b6c0d-a021-4d20-840b-6df1877edf4f",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Mittwoch, 02.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T11:39:43.885Z",
+      "readAt": "2026-08-26T11:50:42.059Z"
+    },
+    {
+      "id": "cb52c935-4f06-4dca-95ab-a993297dd75f",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Mittwoch, 02.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T11:39:43.887Z",
+      "readAt": "2026-08-26T11:50:42.791Z"
+    },
+    {
+      "id": "fc74dfc5-28c6-470d-aaba-53be1ed4b66b",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "❌ Deine Schicht am Mittwoch, 02.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-26T11:52:09.392Z",
+      "readAt": "2026-08-26T11:52:17.955Z"
+    },
+    {
+      "id": "cb7b08ae-fec5-46c6-82d8-f5eebc5b6319",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "❌ Deine Schicht am Dienstag, 01.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-26T12:06:08.921Z",
+      "readAt": "2026-08-26T12:12:56.423Z"
+    },
+    {
+      "id": "6ca98ada-ce52-47c8-8907-a138dcc6e973",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "❌ Deine Schicht am Mittwoch, 02.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-26T12:06:08.924Z",
+      "readAt": "2026-08-26T12:12:59.693Z"
+    },
+    {
+      "id": "92ffd4d9-dc17-4528-b750-1bb297d3c9f7",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "✅ Deine Schicht am Dienstag, 01.09.2026 (Mittel, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-08-26T13:18:02.426Z",
+      "readAt": "2026-08-27T16:00:38.111Z"
+    },
+    {
+      "id": "238cb6f9-e0e2-4c91-9b9e-dd94e2fc5b38",
+      "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+      "text": "💬 Die Ansicht für den Kassenabschluss kommt sobald sich die letzte Person ausstempelt automatisch",
+      "createdAt": "2026-08-26T20:16:24.761Z",
+      "readAt": "2026-08-26T20:58:41.834Z"
+    },
+    {
+      "id": "49aa2812-4e53-4e71-9597-89acec30a549",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Donnerstag, 03.09.2026 (Früh1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:51:11.379Z",
+      "readAt": "2026-08-27T13:29:34.426Z"
+    },
+    {
+      "id": "a9eb0288-9f73-4159-baec-689a565dc796",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Freitag, 04.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:51:13.212Z",
+      "readAt": "2026-08-27T13:29:35.475Z"
+    },
+    {
+      "id": "51695021-131c-46d0-9101-49bc6f2aa485",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Donnerstag, 03.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:51:20.129Z",
+      "readAt": "2026-08-27T13:29:36.556Z"
+    },
+    {
+      "id": "d89354c9-e0d1-4684-b1ba-10f2dc1dbe05",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Donnerstag, 03.09.2026 (Früh1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:54:00.721Z",
+      "readAt": "2026-08-27T13:29:37.191Z"
+    },
+    {
+      "id": "6560ceba-f2c5-4d6d-865c-e5034ba54a3c",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Donnerstag, 03.09.2026 (Früh2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:54:00.724Z",
+      "readAt": "2026-08-27T13:29:37.691Z"
+    },
+    {
+      "id": "0771ef7e-814d-424f-99ba-0e552b1f6ccf",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Donnerstag, 03.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:54:00.726Z",
+      "readAt": "2026-08-27T13:29:38.090Z"
+    },
+    {
+      "id": "0b76fbed-d481-4122-a1eb-72b3ab333677",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Freitag, 04.09.2026 (Mittel) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-08-27T09:54:00.728Z",
+      "readAt": "2026-08-27T13:29:38.425Z"
+    },
+    {
+      "id": "312bb19e-8591-4874-bf40-7ac699936738",
+      "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+      "text": "💬 Nur die pflanzen draußen müssen gegossen werden. Bitte wähle nochmal deine Schichten für komende Woche aus",
+      "createdAt": "2026-08-27T11:57:00.423Z",
+      "readAt": "2026-08-27T16:00:43.060Z"
+    },
+    {
+      "id": "fba9fcdf-efe1-4899-8870-a27e21c1be3e",
+      "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+      "text": "💬 Bitte trag deine Schichten für nächste Woche ein.",
+      "createdAt": "2026-08-27T13:29:28.217Z",
+      "readAt": "2026-08-27T14:53:39.155Z"
+    },
+    {
+      "id": "dfcd499c-e4e9-4614-9d04-97265386f59b",
+      "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+      "text": "💬 Auf jeden Tisch muss eine 'Do it yourself'-Karte liegen. Die laminierten Karten dafür liegen am Stehtisch drinnen.",
+      "createdAt": "2026-08-28T06:32:43.650Z",
+      "readAt": "2026-08-28T06:32:52.751Z"
+    }
+  ],
+  "stock": [
+    {
+      "id": "1c93b7f0-8a31-4d05-8bf6-390c1b72f2c5",
+      "name": "2650ml ARO Kichererbsen",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.904Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "e56c8de8-27b9-4ff2-8810-abed9ba6e42f",
+          "date": "2026-08-26",
+          "quantity": 6,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 6,
+      "lowThreshold": 1.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "1cf724a2-009a-4c2f-a0ae-e88c46b5acbb",
+      "name": "500ml BIO T&C Vanille Extrakt",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.905Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "bf2b96db-e170-429d-8fc0-2afb22b16bc8",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "1597f6ca-e126-4747-806a-8fdd403eef53",
+      "name": "500g Bad Reichenh. Alpensalz",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.907Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "7c69aff4-6b16-4cf5-a5cc-03011a9f20b6",
+          "date": "2026-08-26",
+          "quantity": 6,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 6,
+      "lowThreshold": 1.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "4ec505a4-f1a2-45fc-8c0d-e454809fa790",
+      "name": "500g SZ Brauner Zucker",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.909Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "89b2c5c5-a3c2-43c2-a6a9-0b3ad0fd0bd8",
+          "date": "2026-08-26",
+          "quantity": 8,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 8,
+      "lowThreshold": 1.6,
+      "consumptionLog": []
+    },
+    {
+      "id": "812b6c49-fd21-491f-9d6b-36d115ae9a26",
+      "name": "500g Friess. Tr.-Backh. f. Piz",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.910Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "30b99864-b460-4058-acbf-4ece08df309b",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "c3972012-554e-4243-9b0f-2499a8a47499",
+      "name": "1kg Friess. Weizenm. Type 550",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.912Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "2394565e-5adb-43f2-9e27-0d819f4d397a",
+          "date": "2026-08-26",
+          "quantity": 10,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 10,
+      "lowThreshold": 2,
+      "consumptionLog": []
+    },
+    {
+      "id": "67410c82-cf83-403e-a2da-64e054076697",
+      "name": "1kg ARO Backpulver FS",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.913Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "6e8d572d-6bad-4085-bd0d-ce6462953bb9",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "b2188ba9-6821-4ddf-af99-ce2806f646bc",
+      "name": "750g ARO Nuss Nougat Crème",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.915Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "39817681-22aa-476b-bf06-f2af0e4140e9",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "04c9ba09-6a0c-4a74-8530-e528b5ba4b4d",
+      "name": "3kg ARO Himbeer Konfi. Extra Himbeer",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.916Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "c29b46ac-d5ed-44d1-9eb4-34ff5bc1cc89",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "58810f1b-7378-4a90-ada1-cb6a38505ed2",
+      "name": "1,5kg Extra Granola Classic",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.917Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "d195ff84-8a8a-413b-bdca-b6b63613332b",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "23886e56-90ee-4b1a-9904-c3c34d06d8b7",
+      "name": "1kg Natron",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.919Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "d21a179c-c45f-4aac-81cc-b290c6c18747",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "2e0ded59-f927-40a1-af2e-3638be265514",
+      "name": "0,50l MW Paulaner Hefe Weissb.",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.920Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "4f017910-2575-4639-b1d5-5adaaf98acad",
+          "date": "2026-08-26",
+          "quantity": 80,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 80,
+      "lowThreshold": 16,
+      "consumptionLog": []
+    },
+    {
+      "id": "b85a6b43-e673-43a7-b848-38970f6866ff",
+      "name": "0,50l MW Paulaner Hefeweiz. Alkoholfrei",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.921Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "678f061d-f855-436b-8e14-2aa8bbd9c0f3",
+          "date": "2026-08-26",
+          "quantity": 40,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 40,
+      "lowThreshold": 8,
+      "consumptionLog": []
+    },
+    {
+      "id": "0635523b-10e4-4f00-b5ab-0bc74bd18872",
+      "name": "1,00l MW Sprite",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.922Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "04b71532-6b1b-4450-bac6-c06ee0e8d073",
+          "date": "2026-08-26",
+          "quantity": 24,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 24,
+      "lowThreshold": 4.8,
+      "consumptionLog": []
+    },
+    {
+      "id": "70b6ec2c-6be1-4d73-afd0-e11c2db4d79c",
+      "name": "1,00l MW Rapps Orangensaft",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.923Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "9734c962-c1d0-4edb-9382-b0c750c99b74",
+          "date": "2026-08-26",
+          "quantity": 12,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 12,
+      "lowThreshold": 2.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "7f79cb89-f35d-4a95-998c-1a453fd70745",
+      "name": "1,00l MW Rapps Apfelsaft klar",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.924Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "e0082276-6234-4b4a-84f0-cdf187ddd38e",
+          "date": "2026-08-26",
+          "quantity": 12,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 12,
+      "lowThreshold": 2.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "0e322b9d-77b8-4de2-aa07-dbb55e873931",
+      "name": "1,00l MW Rapps Maracuja Nektar",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.925Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "0042ef11-3881-4b48-b3f6-cf2d6c07f0f3",
+          "date": "2026-08-26",
+          "quantity": 18,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 18,
+      "lowThreshold": 3.6,
+      "consumptionLog": []
+    },
+    {
+      "id": "341772cb-44e2-4d36-9465-935cbc5e0ef9",
+      "name": "1,00l MW Naturparkquelle Classic",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.927Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "2b795bf4-611b-49d0-8c98-8e68f04e4ceb",
+          "date": "2026-08-26",
+          "quantity": 48,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 48,
+      "lowThreshold": 9.6,
+      "consumptionLog": []
+    },
+    {
+      "id": "4e05e072-4aa7-42db-99b7-fa04ca7419ae",
+      "name": "0,75l MW Black Forest Gourmet Still",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.928Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "b6c0781a-9eb1-403a-be27-77eb11e6f0a3",
+          "date": "2026-08-26",
+          "quantity": 24,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 24,
+      "lowThreshold": 4.8,
+      "consumptionLog": []
+    },
+    {
+      "id": "c29769cc-d08e-43fa-a8b4-19978508d32e",
+      "name": "0,75l MW Peterstaler Classic Gourmet",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.929Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "28c684cb-7587-4210-808d-f11d1f2eea39",
+          "date": "2026-08-26",
+          "quantity": 48,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 48,
+      "lowThreshold": 9.6,
+      "consumptionLog": []
+    },
+    {
+      "id": "e53c1006-d99e-493c-986f-a188b45e135f",
+      "name": "1,00l MW Rapps Johannisbeere Schwarz",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.929Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "4c4539b6-5512-4358-9f10-78a577be41ab",
+          "date": "2026-08-26",
+          "quantity": 6,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 6,
+      "lowThreshold": 1.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "c26bcb6e-58da-4be9-b210-42f27d710bc7",
+      "name": "500 Cocktailhalme 150/7 Papier schwarz",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.930Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "7ace4cb6-723c-4fb0-83fb-1f8d6bd16c9e",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "30dd8ab5-f110-4051-a186-6939bc002be8",
+      "name": "1l Oat Mølk Barista",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.931Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "b84b5213-bd01-4be7-911b-bf86cb2bf433",
+          "date": "2026-08-26",
+          "quantity": 32,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 32,
+      "lowThreshold": 6.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "e2f839a4-8b2e-4b2d-b830-9491a3af1b23",
+      "name": "5kg Apostels Proto 10%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.932Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "d11aa78a-88f7-4bb1-a801-277e129ca594",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "f17ca099-1bee-4cfb-a54f-260d09d7b298",
+      "name": "1l BB ESL Milch 3,5%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.933Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "58cbcdce-ad2f-40ac-ba9b-9d3c467682fd",
+          "date": "2026-08-26",
+          "quantity": 40,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 40,
+      "lowThreshold": 8,
+      "consumptionLog": []
+    },
+    {
+      "id": "c7a73d6c-3b16-4f8a-80de-38f0c569c792",
+      "name": "500ml MC Sprühschlagsahne 35%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.934Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "963dd8b0-86e2-4d3f-9dad-05b0e42d0967",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Flasche",
+          "note": ""
+        }
+      ],
+      "unit": "Flasche",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "2f23f92b-3aab-469c-8475-8d0ad1f9edc6",
+      "name": "5kg ARO Speisequark 40%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.935Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "a04016dc-1da0-4ff9-ae41-613954f4db2a",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "bd50ca89-fd18-46ff-937e-8263089fe65f",
+      "name": "Eier S-L Boden W/B",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.936Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "ec18dbd0-1e27-4f8b-bc46-41c2c0cf463d",
+          "date": "2026-08-26",
+          "quantity": 360,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 360,
+      "lowThreshold": 72,
+      "consumptionLog": []
+    },
+    {
+      "id": "f4e4958e-584b-49fc-8183-1f2484a25977",
+      "name": "250g ARO Butter mild ges.",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.937Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "1cd714fc-86d6-4812-96eb-2e526617aba4",
+          "date": "2026-08-26",
+          "quantity": 16,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 16,
+      "lowThreshold": 3.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "d6e88d8c-4a18-4d3b-bfa3-fc21464a9341",
+      "name": "150g Bavaria Blu Minitorte 70% Das Original",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.938Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "6e5d81b8-8e9a-4ab5-94a2-290613de9b1f",
+          "date": "2026-08-26",
+          "quantity": 6,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 6,
+      "lowThreshold": 1.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "3a3933dd-d02e-490b-bd96-e48a3c37807f",
+      "name": "1kg MC Franz. Brie 60%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.938Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "dbfc5d8e-6d36-46af-9a81-d5956ecea608",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "468f8ca3-8419-4946-86f4-ab25c6f9ba36",
+      "name": "300g Pecorino Semistagionato",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.939Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "80a92415-7639-473f-ade0-229ed175cec2",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "1901aca5-2112-4be1-a363-8a443d3264ff",
+      "name": "1,5kg MC Frischkäse 70%",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.940Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "6d42ffea-c673-42f1-b913-32fad02b07a1",
+          "date": "2026-08-26",
+          "quantity": 4,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 4,
+      "lowThreshold": 0.8,
+      "consumptionLog": []
+    },
+    {
+      "id": "9d21b737-511a-4d4e-a257-e9629f1febb2",
+      "name": "1kg MC Beerenmix",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.941Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "b63b548f-8ba3-4cd7-9771-5140383207cc",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "5a8d3786-380e-44c4-99f0-dcc1138376b6",
+      "name": "1kg MC Heidelbeeren",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.942Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "cf5a877e-3889-4b24-8755-52dd9804ca59",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "754efd97-0c65-4e45-91ff-9fd8fe4f4c0c",
+      "name": "2,5L ARO Eis Vanille",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.943Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "fc9d9b61-585b-4197-aa10-7789df7659a4",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "428bcee0-fb9c-4cdf-b411-4495420e38a8",
+      "name": "5kg ARO Solid Ice Cubes",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.943Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "ae2ef8ad-40a2-49fa-84e8-a584125bbe06",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "ff0c9f75-c771-4536-8918-e60631c9f8c3",
+      "name": "200g ARO Bacon",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.944Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "90a34e11-6cae-469b-862b-03f03eec705d",
+          "date": "2026-08-26",
+          "quantity": 5,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 5,
+      "lowThreshold": 1,
+      "consumptionLog": []
+    },
+    {
+      "id": "d7954adb-dfde-47c0-99af-36288b5621db",
+      "name": "Saftorangen 5kg",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.945Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "3cb9e417-539d-4f65-ade8-0d7578c38ad3",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "67064393-e613-462b-8aef-3a90bdf33839",
+      "name": "Erdbeeren 500g DE/NL",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.946Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "d11f3bde-1387-4b56-be2f-b4d01f96b393",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "86048b79-2e43-4729-ae82-20c602e569b1",
+      "name": "Bananen",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.947Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "00c445d8-30a8-4f66-a0cc-c458de9d090f",
+          "date": "2026-08-26",
+          "quantity": 4,
+          "unit": "Stück",
+          "note": ""
+        }
+      ],
+      "unit": "Stück",
+      "currentAmount": 4,
+      "lowThreshold": 0.8,
+      "consumptionLog": []
+    },
+    {
+      "id": "1a350169-05c2-46cf-9675-a0e82565d654",
+      "name": "Champignon braun 1kg",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.947Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "92a9c2a4-c994-49a6-b001-250178a474ea",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "492db73f-3fdb-49e4-b23a-d28dc603b68f",
+      "name": "Minze 500g",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.948Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "4ff1c8b3-781e-4133-b8a7-51e0d9154674",
+          "date": "2026-08-26",
+          "quantity": 1,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 1,
+      "lowThreshold": 0.2,
+      "consumptionLog": []
+    },
+    {
+      "id": "e1b49f80-b171-40ce-9528-e7e9546017d2",
+      "name": "1kg MC Cashewkerne Natur",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.949Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "b31c53eb-63de-4eca-b2fb-1d7315344a82",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    },
+    {
+      "id": "fb675173-c106-4d9f-8075-7f8c315e72e1",
+      "name": "750g ARO Walnusskerne",
+      "status": "ok",
+      "updatedAt": "2026-08-27T12:27:11.950Z",
+      "updatedBy": "Lieferschein",
+      "deliveries": [
+        {
+          "id": "72397d3f-2d5f-4ec5-a6ac-37d67b926d7e",
+          "date": "2026-08-26",
+          "quantity": 2,
+          "unit": "Packung",
+          "note": ""
+        }
+      ],
+      "unit": "Packung",
+      "currentAmount": 2,
+      "lowThreshold": 0.4,
+      "consumptionLog": []
+    }
+  ],
+  "recipes": []
+}

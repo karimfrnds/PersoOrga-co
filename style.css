@@ -427,6 +427,31 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .plan-decide-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--gray-light); border-radius: 10px; padding: 10px 12px; }
 .plan-cell-sick { background: var(--gray-light); color: var(--gray); }
 
+/* ---- Schichtplan-Ansicht (Zeilen = Schichten, Spalten = Wochentage, wie der Papierplan) ---- */
+.plan-roster { min-width: 900px; }
+.plan-roster td, .plan-roster th { vertical-align: top; text-align: left; padding: 6px 8px; }
+.roster-slot { white-space: nowrap; background: var(--gray-light); }
+.roster-cell { min-width: 108px; }
+.roster-off { background: var(--gray-light); text-align: center; }
+.roster-box { display: flex; flex-direction: column; gap: 4px; }
+.roster-person { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.roster-name { font-size: 13px; }
+.roster-actions { display: flex; gap: 3px; flex-shrink: 0; }
+.roster-btn {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+.roster-btn:disabled { opacity: 0.4; cursor: default; }
+.roster-yes:hover:not(:disabled) { background: var(--green-light); border-color: var(--green); }
+.roster-no:hover:not(:disabled) { background: var(--orange-light); border-color: var(--orange); }
+.roster-add { align-self: flex-start; color: var(--gray); }
+.roster-frei { font-size: 12px; color: var(--orange); font-weight: 600; }
+
 /* ---- Chef-Ansicht (chef.html, eigener Einstieg für den Laptop) ---- */
 .chef-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .chef-login { max-width: 520px; }

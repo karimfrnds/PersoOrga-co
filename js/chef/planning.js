@@ -1,6 +1,8 @@
 // ============================================================================
-// chef/planning.js – Schichtplanung am Laptop: Wochentabelle Mitarbeiter × Tage.
-// Eine Zelle anklicken öffnet die Entscheidung (bestätigen/ablehnen).
+// chef/planning.js – Schichtplanung am Laptop, aufgebaut wie der Papier-Schichtplan:
+// Zeilen = Schichten, Spalten = Wochentage. So sieht man auf einen Blick, welche
+// Schicht an welchem Tag noch unbesetzt ist.
+// Zusagen und Ablehnen geht direkt in der Zelle (✓ / ✗), ohne Zwischendialog.
 // ============================================================================
 import { escapeHtml, dateDe } from "../format.js";
 import { decideShift } from "./api.js";
@@ -20,52 +22,52 @@ function addDaysISO(dateStr, n) {
   dt.setUTCDate(dt.getUTCDate() + n);
   return dt.toISOString().slice(0, 10);
 }
-function dateDeShort(dateStr) {
-  const [, m, d] = dateStr.split("-");
+const dateDeShort = (s) => {
+  const [, m, d] = s.split("-");
   return `${d}.${m}.`;
-}
-
-/** Zieht die Verfügbarkeits-Einträge einer Person für einen Tag aus dem Worker-Stand. */
-function dayEntryFor(state, name, weekStart, date) {
-  const needle = name.trim().toLowerCase();
-  for (const [ws, bucket] of Object.entries(state.availability || {})) {
-    if (ws !== weekStart) continue;
-    const key = Object.keys(bucket?.entries || {}).find((n) => n.trim().toLowerCase() === needle);
-    if (!key) continue;
-    return (bucket.entries[key].days || []).find((d) => d.date === date) || null;
-  }
-  return null;
-}
-
-function isSick(state, name, date) {
-  const needle = name.trim().toLowerCase();
-  return (state.sickReports || []).some(
-    (r) => String(r.employeeName || "").trim().toLowerCase() === needle && r.from <= date && (r.to || r.from) >= date
-  );
-}
+};
 
 function renderPlanning(state, { onChanged, today }) {
   const el = document.createElement("div");
-  // Standard ist die kommende Woche – das ist die, für die geplant wird.
-  let weekStart = addDaysISO(mondayOf(today), 7);
+  let weekStart = addDaysISO(mondayOf(today), 7); // Standard: die Woche, für die geplant wird
+  let busy = false;
+
+  const rolleVon = (name) =>
+    (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === name.trim().toLowerCase())?.role || "service";
+  const istKueche = (name) => rolleVon(name) === "kueche";
 
   function rerender() {
     el.innerHTML = "";
     el.appendChild(build());
   }
 
+  /** Alle Verfügbarkeits-Einträge der Woche, flach: {name, date, slots[], confirmedSlotId, bossConfirmed, note} */
+  function eintraege() {
+    const out = [];
+    const bucket = (state.availability || {})[weekStart];
+    for (const [name, entry] of Object.entries(bucket?.entries || {})) {
+      for (const day of entry?.days || []) out.push({ name, ...day });
+    }
+    return out;
+  }
+
+  function istKrank(name, date) {
+    const n = name.trim().toLowerCase();
+    return (state.sickReports || []).some(
+      (r) => String(r.employeeName || "").trim().toLowerCase() === n && r.from <= date && (r.to || r.from) >= date
+    );
+  }
+
   function build() {
     const frag = document.createElement("div");
-    frag.innerHTML = `
-      <h1>📅 Schichtplanung</h1>
-      <p class="muted">Wer arbeitet wann, wer könnte noch, wer wartet auf deine Entscheidung. Zelle anklicken zum Entscheiden.</p>
-    `;
+    frag.innerHTML = `<h1>📅 Schichtplan</h1>`;
 
     const nav = document.createElement("div");
     nav.className = "week-nav";
     const prev = document.createElement("button");
     prev.className = "btn btn-secondary";
-    prev.textContent = "← Vorherige Woche";
+    prev.textContent = "←";
+    prev.title = "Vorherige Woche";
     prev.onclick = () => {
       weekStart = addDaysISO(weekStart, -7);
       rerender();
@@ -75,159 +77,80 @@ function renderPlanning(state, { onChanged, today }) {
     label.textContent = `${dateDe(weekStart)} – ${dateDe(addDaysISO(weekStart, 6))}`;
     const next = document.createElement("button");
     next.className = "btn btn-secondary";
-    next.textContent = "Nächste Woche →";
+    next.textContent = "→";
+    next.title = "Nächste Woche";
     next.onclick = () => {
       weekStart = addDaysISO(weekStart, 7);
       rerender();
     };
-    nav.append(prev, label, next);
+    const heute = document.createElement("button");
+    heute.className = "btn btn-secondary";
+    heute.textContent = "Aktuelle Woche";
+    heute.onclick = () => {
+      weekStart = mondayOf(today);
+      rerender();
+    };
+    nav.append(prev, label, next, heute);
     frag.appendChild(nav);
 
-    const addBtn = document.createElement("button");
-    addBtn.className = "btn btn-primary";
-    addBtn.textContent = "＋ Person eintragen";
-    addBtn.onclick = () => openAssign();
-    frag.appendChild(addBtn);
+    if (!state.shiftSlots) {
+      const c = document.createElement("section");
+      c.className = "card";
+      c.innerHTML = `<p class="muted small">Die Schichtzeiten sind noch nicht da. Das iPad muss sich einmal abgleichen.</p>`;
+      frag.appendChild(c);
+      return frag;
+    }
+
+    frag.appendChild(buildPlan("Service / Bar", state.shiftSlots.service || [], false));
+    frag.appendChild(buildPlan("Küche", state.shiftSlots.kueche || [], true));
+    frag.appendChild(buildKranke());
 
     const legend = document.createElement("p");
     legend.className = "muted small";
-    legend.textContent = "✅ Fest bestätigt · 🔶 Wartet auf Bestätigung · 🕓 Kandidat, noch offen · 🤒 Krank · – Keine Angabe · 📝 Info hinterlegt";
+    legend.textContent = `✅ fest eingeteilt · 🔶 wartet auf dich · grau = Schicht entfällt an dem Tag · „frei" = noch niemand eingeteilt`;
     frag.appendChild(legend);
-
-    frag.appendChild(buildTable());
     return frag;
   }
 
-  /** Schichten, die für die Rolle dieser Person an diesem Wochentag angeboten werden. Definitionen kommen
-   * vom iPad – hier wird nichts fest verdrahtet, damit es bei Änderungen nicht auseinanderläuft. */
-  function slotsFor(name, date) {
-    const slots = state.shiftSlots;
-    if (!slots) return [];
-    const role = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === name.trim().toLowerCase())?.role;
-    const list = (role === "kueche" ? slots.kueche : slots.service) || [];
-    const [y, m, d] = date.split("-").map(Number);
-    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-    const idx = wd === 0 ? 6 : wd - 1; // 0 = Montag
-    return list.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(idx));
-  }
-
-  /** Jemanden von Hand eintragen – auch wenn die Person für den Tag gar nichts gemeldet hat. */
-  function openAssign(presetName, presetDate) {
-    const employees = [...(state.employees || [])].sort((a, b) => a.localeCompare(b));
-    if (employees.length === 0) return;
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    overlay.innerHTML = `
-      <div class="dialog">
-        <h2>Person eintragen</h2>
-        <label class="field"><span>Mitarbeiter</span>
-          <select id="as-emp">${employees.map((n) => `<option ${n === presetName ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}</select>
-        </label>
-        <label class="field"><span>Tag</span><input type="date" id="as-date" value="${presetDate || weekStart}" /></label>
-        <label class="field"><span>Schicht</span><select id="as-slot"></select></label>
-        <label class="field"><span>Info zur Schicht (optional)</span><input type="text" id="as-note" maxlength="200" placeholder="z.B. bitte Lieferung annehmen" /></label>
-        <p class="muted small">Die Person bekommt die Schicht als bestätigt angezeigt – im Kiosk am iPad und in ihrer App.</p>
-        <p class="muted small" id="as-status"></p>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" id="as-cancel">Abbrechen</button>
-          <button class="btn btn-primary" id="as-save">Eintragen</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    const empSel = overlay.querySelector("#as-emp");
-    const dateIn = overlay.querySelector("#as-date");
-    const slotSel = overlay.querySelector("#as-slot");
-    const status = overlay.querySelector("#as-status");
-
-    const refreshSlots = () => {
-      const list = slotsFor(empSel.value, dateIn.value);
-      slotSel.innerHTML = list.length
-        ? list.map((s) => `<option value="${escapeHtml(s.label)}">${escapeHtml(s.label)} (${escapeHtml(s.from)}–${escapeHtml(s.to)})</option>`).join("")
-        : `<option value="">– an diesem Tag keine Schicht für diese Rolle –</option>`;
-    };
-    refreshSlots();
-    empSel.onchange = refreshSlots;
-    dateIn.onchange = refreshSlots;
-
-    overlay.querySelector("#as-cancel").onclick = () => overlay.remove();
-    overlay.querySelector("#as-save").onclick = async () => {
-      if (!slotSel.value) {
-        status.textContent = "⚠ Für diese Rolle gibt es an dem Tag keine Schicht.";
-        return;
-      }
-      overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
-      status.textContent = "Wird gespeichert…";
-      try {
-        await decideShift(empSel.value, dateIn.value, slotSel.value, "confirm", overlay.querySelector("#as-note").value.trim());
-        overlay.remove();
-        await onChanged();
-      } catch (e) {
-        status.textContent = "⚠ " + e.message;
-        overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
-      }
-    };
-  }
-
-  function buildTable() {
+  function buildPlan(titel, slots, kueche) {
     const card = document.createElement("section");
     card.className = "card";
-    const employees = [...(state.employees || [])].sort((a, b) => a.localeCompare(b));
-    if (employees.length === 0) {
-      card.innerHTML = `<p class="muted small">Noch keine Mitarbeiter bekannt – das iPad muss sich mindestens einmal abgeglichen haben.</p>`;
+    card.innerHTML = `<h2>${escapeHtml(titel)}</h2>`;
+    if (slots.length === 0) {
+      card.innerHTML += `<p class="muted small">Keine Schichten hinterlegt.</p>`;
       return card;
     }
 
     const scroll = document.createElement("div");
     scroll.style.overflowX = "auto";
     const table = document.createElement("table");
-    table.className = "plan-table";
+    table.className = "plan-table plan-roster";
 
     const thead = document.createElement("thead");
-    const headRow = document.createElement("tr");
-    headRow.innerHTML = `<th>Mitarbeiter</th>`;
+    const hr = document.createElement("tr");
+    hr.innerHTML = `<th>Schicht</th>`;
     for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
       const th = document.createElement("th");
-      th.innerHTML = `${WEEKDAY_SHORT[i]}<br/><span class="muted small">${dateDeShort(addDaysISO(weekStart, i))}</span>`;
-      headRow.appendChild(th);
+      th.innerHTML = `${WEEKDAY_SHORT[i]}<br/><span class="muted small">${dateDeShort(date)}</span>`;
+      hr.appendChild(th);
     }
-    thead.appendChild(headRow);
+    thead.appendChild(hr);
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    for (const name of employees) {
+    const alle = eintraege();
+    for (const slot of slots) {
       const tr = document.createElement("tr");
       const nameTd = document.createElement("td");
-      nameTd.innerHTML = `<b>${escapeHtml(name)}</b>`;
+      nameTd.className = "roster-slot";
+      nameTd.innerHTML = `<b>${escapeHtml(slot.label)}</b><br/><span class="muted small">${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>`;
       tr.appendChild(nameTd);
 
       for (let i = 0; i < 7; i++) {
         const date = addDaysISO(weekStart, i);
-        const td = document.createElement("td");
-        const entry = dayEntryFor(state, name, weekStart, date);
-
-        const noteTag = entry?.note ? ` <span title="${escapeHtml(entry.note)}">📝</span>` : "";
-        if (isSick(state, name, date)) {
-          td.innerHTML = `<span class="plan-cell plan-cell-sick">🤒 Krank</span>`;
-        } else if (!entry || (entry.slots || []).length === 0) {
-          // Leere Zelle: direkt jemanden für diesen Tag eintragen.
-          td.innerHTML = `<span class="muted">–</span>`;
-          td.style.cursor = "pointer";
-          td.title = "Person für diesen Tag eintragen";
-          td.onclick = () => openAssign(name, date);
-        } else {
-          const confirmed = (entry.slots || []).find((s) => s.id === entry.confirmedSlotId);
-          if (confirmed && entry.bossConfirmed) {
-            td.innerHTML = `<span class="plan-cell plan-cell-confirmed">✅ ${escapeHtml(confirmed.label)}</span>${noteTag}`;
-          } else if (confirmed) {
-            td.innerHTML = `<span class="plan-cell plan-cell-pending">🔶 ${escapeHtml(confirmed.label)}</span>${noteTag}`;
-          } else {
-            const labels = entry.slots.map((s) => s.label).join(", ");
-            td.innerHTML = `<span class="plan-cell plan-cell-pending">🕓 ${escapeHtml(labels)}</span>${noteTag}`;
-          }
-          td.style.cursor = "pointer";
-          td.onclick = () => openDecide(name, date, entry);
-        }
-        tr.appendChild(td);
+        const gilt = !slot.allowedWeekdays || slot.allowedWeekdays.includes(i);
+        tr.appendChild(buildCell(slot, date, gilt, kueche, alle));
       }
       tbody.appendChild(tr);
     }
@@ -237,51 +160,170 @@ function renderPlanning(state, { onChanged, today }) {
     return card;
   }
 
-  function openDecide(name, date, entry) {
+  function buildCell(slot, date, gilt, kueche, alle) {
+    const td = document.createElement("td");
+    td.className = "roster-cell";
+    if (!gilt) {
+      td.className += " roster-off";
+      td.innerHTML = `<span class="muted">–</span>`;
+      return td;
+    }
+
+    // Nur Personen der passenden Rolle betrachten (Service und Bar teilen sich einen Plan).
+    const relevant = alle.filter((e) => e.date === date && istKueche(e.name) === kueche && !istKrank(e.name, date));
+    const fest = relevant.find((e) => e.confirmedSlotId === slot.id && e.bossConfirmed);
+    const wartet = relevant.find((e) => e.confirmedSlotId === slot.id && !e.bossConfirmed);
+    const kandidaten = relevant.filter((e) => e.confirmedSlotId !== slot.id && (e.slots || []).some((s) => s.id === slot.id));
+
+    const box = document.createElement("div");
+    box.className = "roster-box";
+
+    const zeile = (e, zustand) => {
+      const row = document.createElement("div");
+      row.className = "roster-person";
+      const nm = document.createElement("span");
+      nm.className = "roster-name";
+      nm.textContent = (zustand === "fest" ? "✅ " : zustand === "wartet" ? "🔶 " : "") + e.name;
+      if (e.note) {
+        nm.title = e.note;
+        nm.textContent += " 📝";
+      }
+      row.appendChild(nm);
+
+      const btns = document.createElement("div");
+      btns.className = "roster-actions";
+      if (zustand !== "fest") {
+        const ja = document.createElement("button");
+        ja.className = "roster-btn roster-yes";
+        ja.textContent = "✓";
+        ja.title = `${e.name} für ${slot.label} einteilen`;
+        ja.onclick = () => senden(e.name, date, slot.label, "confirm");
+        btns.appendChild(ja);
+      }
+      const nein = document.createElement("button");
+      nein.className = "roster-btn roster-no";
+      nein.textContent = "✗";
+      nein.title = zustand === "fest" ? `${e.name} wieder austragen` : `${e.name} für ${slot.label} ablehnen`;
+      nein.onclick = () => senden(e.name, date, slot.label, "reject");
+      btns.appendChild(nein);
+      row.appendChild(btns);
+      return row;
+    };
+
+    if (fest) box.appendChild(zeile(fest, "fest"));
+    if (wartet) box.appendChild(zeile(wartet, "wartet"));
+    for (const k of kandidaten) box.appendChild(zeile(k, "kandidat"));
+
+    if (!fest) {
+      // Kein fest Eingeteilter -> Schicht ist offen. Das ist die Information, um die es beim Planen geht.
+      const frei = document.createElement("div");
+      frei.className = "roster-frei";
+      frei.textContent = kandidaten.length || wartet ? "noch nicht entschieden" : "frei";
+      box.insertBefore(frei, box.firstChild);
+    }
+
+    const plus = document.createElement("button");
+    plus.className = "roster-btn roster-add";
+    plus.textContent = "＋";
+    plus.title = "Jemanden von Hand eintragen";
+    plus.onclick = () => openAssign(date, slot, kueche);
+    box.appendChild(plus);
+
+    td.appendChild(box);
+    return td;
+  }
+
+  async function senden(name, date, slotLabel, decision, note) {
+    if (busy) return;
+    busy = true;
+    // Sofortige Rückmeldung, damit man bei mehreren Klicks hintereinander sieht, dass etwas passiert.
+    el.querySelectorAll(".roster-btn").forEach((b) => (b.disabled = true));
+    try {
+      await decideShift(name, date, slotLabel, decision, note);
+      await onChanged();
+    } catch (e) {
+      zeigeFehler(e.message);
+      el.querySelectorAll(".roster-btn").forEach((b) => (b.disabled = false));
+    }
+    busy = false;
+  }
+
+  /** Fehler als Hinweis oben in der Ansicht statt als blockierender Dialog – beim schnellen Durchklicken
+   * eines Wochenplans wäre ein Dialog pro Klick unbrauchbar. */
+  function zeigeFehler(text) {
+    el.querySelector(".roster-error")?.remove();
+    const box = document.createElement("div");
+    box.className = "callout callout-warn roster-error";
+    box.textContent = "⚠ " + text;
+    el.prepend(box);
+    setTimeout(() => box.remove(), 6000);
+  }
+
+  /** Jemanden von Hand auf diese Schicht setzen – auch ohne gemeldete Verfügbarkeit. */
+  function openAssign(date, slot, kueche) {
+    const passende = [...(state.employees || [])].filter((n) => istKueche(n) === kueche).sort((a, b) => a.localeCompare(b));
     const overlay = document.createElement("div");
     overlay.className = "overlay";
-    const rows = (entry.slots || [])
-      .map((s) => {
-        const fest = entry.confirmedSlotId === s.id && entry.bossConfirmed;
-        return `
-          <div class="plan-decide-row">
-            <span>${fest ? "✅" : "🔶"} <b>${escapeHtml(s.label)}</b> (${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr)</span>
-            <div class="employee-actions">
-              ${fest ? "" : `<button class="btn btn-primary" data-confirm="${escapeHtml(s.label)}">Bestätigen</button>`}
-              <button class="btn btn-icon-danger" data-reject="${escapeHtml(s.label)}" title="Ablehnen">✕</button>
-            </div>
-          </div>`;
-      })
-      .join("");
     overlay.innerHTML = `
       <div class="dialog">
-        <h2>${escapeHtml(name)} – ${escapeHtml(dateDe(date))}</h2>
-        <div class="plan-decide-list">${rows}</div>
-        <label class="field"><span>Info zur Schicht (optional)</span>
-          <input type="text" id="cd-note" maxlength="200" value="${escapeHtml(entry.note || "")}" placeholder="z.B. bitte Lieferung annehmen" />
-        </label>
-        <p class="muted small">Die Info wird beim Bestätigen mitgespeichert und der Person angezeigt.</p>
-        <p class="muted small" id="cd-status"></p>
-        <div class="dialog-actions"><button class="btn btn-secondary" id="cd-close">Schließen</button></div>
+        <h2>${escapeHtml(slot.label)} · ${escapeHtml(dateDe(date))}</h2>
+        <p class="muted small">${escapeHtml(slot.from)}–${escapeHtml(slot.to)} Uhr</p>
+        ${
+          passende.length
+            ? `<label class="field"><span>Mitarbeiter</span><select id="ra-emp">${passende.map((n) => `<option>${escapeHtml(n)}</option>`).join("")}</select></label>
+               <label class="field"><span>Info zur Schicht (optional)</span><input type="text" id="ra-note" maxlength="200" placeholder="z.B. bitte Lieferung annehmen" /></label>
+               <p class="muted small">Die Person bekommt die Schicht als bestätigt angezeigt – am iPad und auf ihrem Handy.</p>`
+            : `<p class="muted small">Für diesen Bereich sind keine Mitarbeiter hinterlegt.</p>`
+        }
+        <p class="muted small" id="ra-status"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" id="ra-cancel">Abbrechen</button>
+          ${passende.length ? `<button class="btn btn-primary" id="ra-save">Eintragen</button>` : ""}
+        </div>
       </div>`;
     document.body.appendChild(overlay);
-    const status = overlay.querySelector("#cd-status");
-    overlay.querySelector("#cd-close").onclick = () => overlay.remove();
+    overlay.querySelector("#ra-cancel").onclick = () => overlay.remove();
+    const save = overlay.querySelector("#ra-save");
+    if (save) {
+      save.onclick = async () => {
+        const status = overlay.querySelector("#ra-status");
+        overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
+        status.textContent = "Wird gespeichert…";
+        try {
+          await decideShift(overlay.querySelector("#ra-emp").value, date, slot.label, "confirm", overlay.querySelector("#ra-note").value.trim());
+          overlay.remove();
+          await onChanged();
+        } catch (e) {
+          status.textContent = "⚠ " + e.message;
+          overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        }
+      };
+    }
+  }
 
-    const send = async (slotLabel, decision) => {
-      overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
-      status.textContent = "Wird gespeichert…";
-      try {
-        await decideShift(name, date, slotLabel, decision, overlay.querySelector("#cd-note").value.trim());
-        overlay.remove();
-        await onChanged();
-      } catch (e) {
-        status.textContent = "⚠ " + e.message;
-        overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
-      }
-    };
-    overlay.querySelectorAll("[data-confirm]").forEach((b) => (b.onclick = () => send(b.dataset.confirm, "confirm")));
-    overlay.querySelectorAll("[data-reject]").forEach((b) => (b.onclick = () => send(b.dataset.reject, "reject")));
+  function buildKranke() {
+    const wochenEnde = addDaysISO(weekStart, 6);
+    const krank = (state.sickReports || []).filter((r) => (r.to || r.from) >= weekStart && r.from <= wochenEnde);
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>🤒 Krankmeldungen diese Woche</h2>`;
+    if (krank.length === 0) {
+      card.innerHTML += `<p class="muted small">Keine.</p>`;
+      return card;
+    }
+    const list = document.createElement("div");
+    list.className = "task-list";
+    for (const r of krank) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      const zeitraum = r.from === (r.to || r.from) ? dateDe(r.from) : `${dateDe(r.from)} – ${dateDe(r.to)}`;
+      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(r.employeeName)}</b></span><span class="muted small task-row-meta">${escapeHtml(
+        zeitraum
+      )}${r.note ? ` · ${escapeHtml(r.note)}` : ""}</span></div>`;
+      list.appendChild(row);
+    }
+    card.appendChild(list);
+    return card;
   }
 
   rerender();

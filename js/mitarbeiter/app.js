@@ -3,7 +3,7 @@
 // Bewusst OHNE Ein-/Ausstempeln: das bleibt am iPad im Café, damit niemand aus
 // der Ferne für sich oder andere stempeln kann.
 // ============================================================================
-import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick } from "./api.js";
+import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick, markNotificationsRead } from "./api.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 
 const outlet = document.getElementById("outlet");
@@ -144,6 +144,34 @@ function renderMain() {
   wrap.appendChild(buildSick());
   wrap.appendChild(buildNumbers());
   show(wrap);
+
+  // Nachrichten vom Chef (Schicht zugesagt/abgelehnt) als Pop-up – wie am iPad im Kiosk.
+  if ((me.neueNachrichten || []).length > 0) showMessages(me.neueNachrichten);
+}
+
+function showMessages(nachrichten) {
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.innerHTML = `
+    <div class="dialog">
+      <h2>📬 ${nachrichten.length === 1 ? "Nachricht vom Chef" : `${nachrichten.length} Nachrichten vom Chef`}</h2>
+      <div class="task-list">
+        ${nachrichten
+          .map((n) => `<div class="task-row"><div class="task-row-text"><span>${escapeHtml(n.text).replace(/\n/g, "<br/>")}</span></div></div>`)
+          .join("")}
+      </div>
+      <div class="dialog-actions"><button class="btn btn-primary" id="msg-ok">Verstanden</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#msg-ok").onclick = async () => {
+    overlay.remove();
+    // Fehler hier bewusst schlucken: gelingt das Markieren nicht, erscheint die Nachricht halt nochmal –
+    // besser als eine Fehlermeldung, die die Person nicht einordnen kann.
+    try {
+      await markNotificationsRead(nachrichten.map((n) => n.id));
+      me.neueNachrichten = [];
+    } catch {}
+  };
 }
 
 function buildShifts() {

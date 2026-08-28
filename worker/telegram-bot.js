@@ -88,7 +88,17 @@ function normalizeSlotLabelCheck(s) {
     .replace(/ß/g, "ss")
     .replace(/[^a-z0-9]/g, "");
 }
+// Rückfall-Liste für den Fall, dass das iPad seine Schicht-Definitionen noch nicht hochgeladen hat.
 const KNOWN_SLOT_LABELS = new Set(["Früh1", "Früh2", "Mittel", "Spät1", "Spät2"].map(normalizeSlotLabelCheck));
+
+/** Gültige Schicht-Namen: bevorzugt die vom iPad gelieferten Definitionen, damit ein Umbenennen der
+ * Schichten dort nicht dazu führt, dass hier plötzlich alles abgelehnt wird. Nur solange noch nichts
+ * synchronisiert wurde, greift die fest hinterlegte Liste. */
+function knownSlotLabels(state) {
+  const slots = state?.shiftSlots;
+  const aus = [...(slots?.service || []), ...(slots?.kueche || [])].map((s) => normalizeSlotLabelCheck(s.label));
+  return aus.length > 0 ? new Set(aus) : KNOWN_SLOT_LABELS;
+}
 const REMINDER_WEEKDAY = 5; // Freitag – Erinnerung an alle, die für nächste Woche noch nichts eingetragen haben
 /** Wandelt ein per Telegram heruntergeladenes Foto (ArrayBuffer) in Base64 um, für die Anthropic Vision-API.
  * In Chunks, damit String.fromCharCode bei großen Fotos nicht am Funktions-Argument-Limit scheitert. */
@@ -141,6 +151,10 @@ const EMPTY_STATE = {
   // Rollen + Schicht-Definitionen vom iPad, damit die Laptop-Ansicht weiß, welche Schichten es für wen gibt.
   employeeRoles: [], // [{name, role}]
   shiftSlots: null, // { service: [{id,label,from,to,allowedWeekdays?}], kueche: [...] }
+  // Kurznachrichten an einzelne Mitarbeiter für die HANDY-Ansicht (Schicht zugesagt/abgelehnt o.ä.).
+  // Bewusst getrennt von den Kiosk-Benachrichtigungen: die entstehen lokal auf dem iPad und kämen hier
+  // sonst nie an. [{id, employeeName, text, createdAt, readAt}]
+  employeeNotifications: [],
 };
 
 async function getState(env) {
@@ -173,6 +187,7 @@ async function getState(env) {
       adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
       shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
+      employeeNotifications: Array.isArray(parsed.employeeNotifications) ? parsed.employeeNotifications : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -398,7 +413,35 @@ async function handleMe(request, env) {
     meineVerfuegbarkeit,
     meineSchichtarten,
     belegteSchichten,
+    // Ungelesene Kurznachrichten für diese Person (Schicht zugesagt/abgelehnt) – erscheinen als Pop-up.
+    neueNachrichten: (state.employeeNotifications || [])
+      .filter((n) => !n.readAt && String(n.employeeName || "").trim().toLowerCase() === needle)
+      .map((n) => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
   });
+}
+
+/** Pop-up wurde gesehen -> Nachrichten als gelesen markieren, damit sie nicht erneut erscheinen. */
+async function handleMeNotificationsRead(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const ids = new Set(Array.isArray(body?.ids) ? body.ids : []);
+  if (ids.size === 0) return jsonResponse({ ok: true });
+  const needle = guard.session.name.trim().toLowerCase();
+  const state = await getState(env);
+  const now = new Date().toISOString();
+  // Nur eigene Nachrichten dürfen markiert werden – eine fremde ID soll nichts bewirken.
+  const next = (state.employeeNotifications || []).map((n) =>
+    ids.has(n.id) && String(n.employeeName || "").trim().toLowerCase() === needle && !n.readAt ? { ...n, readAt: now } : n
+  );
+  await patchState(env, { employeeNotifications: next });
+  return jsonResponse({ ok: true });
 }
 
 /** Verfügbarkeit vom Handy. Der Name kommt IMMER aus der Sitzung, nie aus dem Request – sonst könnte
@@ -521,6 +564,13 @@ function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, 
   return next;
 }
 
+/** Hängt eine Kurznachricht für die Handy-Ansicht einer Person an (gedeckelt, damit der Speicher nicht
+ * unbegrenzt wächst). Gibt die neue Liste zurück, die per patchState geschrieben wird. */
+function withEmployeeNotification(state, employeeName, text) {
+  const list = Array.isArray(state.employeeNotifications) ? state.employeeNotifications : [];
+  return [...list, { id: crypto.randomUUID(), employeeName, text, createdAt: new Date().toISOString(), readAt: null }].slice(-300);
+}
+
 /** Sucht die Schicht-Definition (Zeiten) passend zur Rolle der Person. Die Definitionen kommen vom iPad,
  * damit sie nicht doppelt gepflegt werden. Service und Bar teilen sich denselben Plan. */
 function findSlotDefinition(state, employeeName, slotLabel) {
@@ -552,16 +602,26 @@ async function handleAdminShiftDecision(request, env) {
   if (!employeeName || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !slotLabel) {
     return jsonResponse({ error: "Mitarbeiter, Datum und Schicht werden benötigt." }, 400);
   }
-  if (!KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(slotLabel))) {
-    return jsonResponse({ error: `Unbekannte Schicht "${slotLabel}".` }, 400);
-  }
-
   const note = String(body?.note || "").trim().slice(0, 200);
   const state = await getState(env);
+  if (!knownSlotLabels(state).has(normalizeSlotLabelCheck(slotLabel))) {
+    return jsonResponse({ error: `Unbekannte Schicht "${slotLabel}".` }, 400);
+  }
   const entry = { id: crypto.randomUUID(), employeeName, date, slotLabel };
   const patch = { availability: applyShiftDecisionPreview(state.availability, employeeName, date, slotLabel, decision, note, state) };
   if (decision === "confirm") patch.plannedShifts = [...(state.plannedShifts || []), { ...entry, from: "", to: "", note }];
   else patch.shiftRejections = [...(state.shiftRejections || []), entry];
+
+  // Die Person soll es auch auf dem Handy erfahren, nicht erst beim nächsten Öffnen des Kiosks am iPad.
+  const slotDef = findSlotDefinition(state, employeeName, slotLabel);
+  const zeit = slotDef ? `${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr` : slotLabel;
+  patch.employeeNotifications = withEmployeeNotification(
+    state,
+    employeeName,
+    decision === "confirm"
+      ? `✅ Deine Schicht am ${formatDateDe(date)} (${zeit}) ist bestätigt.${note ? `\n📝 ${note}` : ""}`
+      : `❌ Deine Schicht am ${formatDateDe(date)} (${zeit}) wurde abgelehnt. Bitte trage eine andere Schicht ein.`
+  );
   await patchState(env, patch);
   return jsonResponse({ ok: true });
 }
@@ -1650,9 +1710,18 @@ async function handleTelegram(request, env) {
       if (newShifts.length === 0) {
         replyText = `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Anna bekommt Montag Früh1")?`;
       } else {
-        await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts] });
+        // Auch bei Zuweisung per Telegram soll die Person es auf dem Handy sehen (gleiches Verhalten wie
+        // über die Laptop-Ansicht).
+        let notifs = state.employeeNotifications;
+        for (const s of newShifts) {
+          const def = findSlotDefinition(state, s.employeeName, s.slotLabel);
+          const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : s.slotLabel || `${s.from}–${s.to} Uhr`;
+          notifs = withEmployeeNotification({ employeeNotifications: notifs }, s.employeeName, `✅ Deine Schicht am ${formatDateDe(s.date)} (${zeit}) ist bestätigt.`);
+        }
+        await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts], employeeNotifications: notifs });
         const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));
-        const badLabels = newShifts.filter((s) => s.slotLabel && !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(s.slotLabel)));
+        const gueltige = knownSlotLabels(state);
+        const badLabels = newShifts.filter((s) => s.slotLabel && !gueltige.has(normalizeSlotLabelCheck(s.slotLabel)));
         replyText = buildPlanShiftsReply(newShifts);
         if (unresolved.length > 0) {
           replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
@@ -1693,9 +1762,20 @@ async function handleTelegram(request, env) {
       if (newRejections.length === 0) {
         replyText = `Konnte daraus keine Ablehnung erkennen. Magst du es anders formulieren (z.B. „Annas Mittel-Schicht am Montag ablehnen")?`;
       } else {
-        await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections] });
+        let rejNotifs = state.employeeNotifications;
+        for (const r of newRejections) {
+          const def = findSlotDefinition(state, r.employeeName, r.slotLabel);
+          const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : r.slotLabel;
+          rejNotifs = withEmployeeNotification(
+            { employeeNotifications: rejNotifs },
+            r.employeeName,
+            `❌ Deine Schicht am ${formatDateDe(r.date)} (${zeit}) wurde abgelehnt. Bitte trage eine andere Schicht ein.`
+          );
+        }
+        await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections], employeeNotifications: rejNotifs });
         const unresolved = newRejections.filter((r) => !knownNames.has(r.employeeName.toLowerCase()));
-        const badLabels = newRejections.filter((r) => !KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(r.slotLabel)));
+        const gueltigeR = knownSlotLabels(state);
+        const badLabels = newRejections.filter((r) => !gueltigeR.has(normalizeSlotLabelCheck(r.slotLabel)));
         replyText = buildRejectReply(newRejections);
         if (unresolved.length > 0) {
           replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((r) => r.employeeName).join(", ")}`;
@@ -2062,6 +2142,7 @@ export default {
       if (url.pathname === "/me") return handleMe(request, env);
       if (url.pathname === "/me/availability") return handleMeAvailability(request, env);
       if (url.pathname === "/me/sick") return handleMeSick(request, env);
+      if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/stock") return handleAdminStock(request, env);

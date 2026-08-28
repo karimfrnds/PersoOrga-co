@@ -70,7 +70,8 @@ async function login(pin) {
 }
 
 const getMe = () => call("/me");
+const markNotificationsRead = (ids) => call("/me/notifications/read", { method: "POST", body: { ids } });
 const sendAvailability = (weekStart, days) => call("/me/availability", { method: "POST", body: { weekStart, days } });
 const reportSick = (from, to, note) => call("/me/sick", { method: "POST", body: { from, to, note } });
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick };
+export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick, markNotificationsRead };

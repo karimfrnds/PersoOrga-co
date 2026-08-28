@@ -132,6 +132,12 @@ const EMPTY_STATE = {
   // Rückfragen ("und letzte Woche?") den Zusammenhang kennt. [{role:"user"|"assistant", text}], gedeckelt
   // auf die letzten 20 Einträge (~10 Austausche), damit KV-Größe und Tokenkosten begrenzt bleiben.
   conversationHistory: [],
+  // Krankmeldungen vom Handy: [{id, employeeName, from, to, note, createdAt}] – Warteschlange, die der iPad
+  // abarbeitet (wie stockDeliveries & Co.), damit sein eigener Stand die Quelle der Wahrheit bleibt.
+  sickReports: [],
+  // Vom iPad gelieferte PIN-Hashes für den Handy-/Laptop-Login. NIEMALS an einen Client ausliefern.
+  authPins: [], // [{name, pinHash}]
+  adminPinHash: null,
 };
 
 async function getState(env) {
@@ -159,6 +165,9 @@ async function getState(env) {
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
       conversationHistory: Array.isArray(parsed.conversationHistory) ? parsed.conversationHistory : [],
+      sickReports: Array.isArray(parsed.sickReports) ? parsed.sickReports : [],
+      authPins: Array.isArray(parsed.authPins) ? parsed.authPins : [],
+      adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -179,6 +188,235 @@ function mergeAvailabilityWeek(currentAvailability, weekStart, entries) {
   const bucket = currentAvailability[weekStart] || { entries: {}, notifiedComplete: false };
   const nextBucket = { ...bucket, entries: { ...bucket.entries, ...entries } };
   return { ...currentAvailability, [weekStart]: nextBucket };
+}
+
+// ---------------------------------------------------------------------
+// Anmeldung für Handy (Mitarbeiter) und Laptop (Chef).
+//
+// Bewusst KOMPLETT getrennt vom WEBHOOK_SECRET: das nutzen weiterhin nur iPad und Telegram-Bot. Ein
+// Mitarbeiter-Handy darf dieses Secret nie bekommen, denn damit könnte man den gesamten Stand inklusive
+// der Löhne ALLER Kollegen auslesen. Stattdessen: PIN -> serverseitig geprüfte Sitzung, und jeder Endpunkt
+// liefert nur das, was die jeweilige Rolle sehen darf.
+//
+// Zur Einordnung: 4-stellige PINs sind über das Internet erreichbar nur schwach. Der eigentliche Schutz ist
+// deshalb die Sperre nach wenigen Fehlversuchen (siehe unten).
+// ---------------------------------------------------------------------
+const SESSION_TTL_SECONDS = 30 * 24 * 3600; // 30 Tage, danach muss man sich am Handy neu anmelden
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+}
+
+function toHex(bytes) {
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function randomToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return toHex(bytes);
+}
+
+/** Muss Zeichen für Zeichen identisch zu hashPin() in js/taskSync.js sein, sonst schlägt jeder Login fehl.
+ * Das Worker-Secret dient als "Pfeffer", damit im Speicher keine blanken PIN-Hashes liegen. */
+async function hashPin(secret, pin) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${secret}:${pin}`));
+  return toHex(digest);
+}
+
+/** Vergleich ohne frühen Abbruch, damit die Antwortzeit nichts über den richtigen Wert verrät. */
+function sameHash(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function clientKey(request) {
+  return request.headers.get("CF-Connecting-IP") || "unbekannt";
+}
+
+async function isLockedOut(env, key) {
+  const raw = await env.TASKS_KV.get(`lock:${key}`);
+  return Number(raw) >= LOGIN_MAX_ATTEMPTS;
+}
+
+async function noteFailedLogin(env, key) {
+  const current = Number(await env.TASKS_KV.get(`lock:${key}`)) || 0;
+  // TTL bei jedem Fehlversuch neu setzen: wer weiter probiert, verlängert die eigene Sperre.
+  await env.TASKS_KV.put(`lock:${key}`, String(current + 1), { expirationTtl: LOGIN_LOCK_SECONDS });
+}
+
+async function clearFailedLogins(env, key) {
+  await env.TASKS_KV.delete(`lock:${key}`);
+}
+
+async function createSession(env, payload) {
+  const token = randomToken();
+  await env.TASKS_KV.put(`session:${token}`, JSON.stringify(payload), { expirationTtl: SESSION_TTL_SECONDS });
+  return token;
+}
+
+/** Prüft Sitzung und Rolle an EINER Stelle – hier hängt der Schutz der Lohndaten dran. Rollen werden exakt
+ * verlangt (kein "Chef darf auch /me"), damit es keine Grauzone gibt. Gibt {session} oder {error} zurück. */
+async function requireSession(request, env, role) {
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return { error: jsonResponse({ error: "Nicht angemeldet." }, 401) };
+  const raw = await env.TASKS_KV.get(`session:${token}`);
+  if (!raw) return { error: jsonResponse({ error: "Sitzung abgelaufen. Bitte neu anmelden." }, 401) };
+  let session;
+  try {
+    session = JSON.parse(raw);
+  } catch {
+    return { error: jsonResponse({ error: "Sitzung ungültig. Bitte neu anmelden." }, 401) };
+  }
+  if (session.role !== role) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
+  return { session };
+}
+
+async function handleAuthLogin(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  if (!env.WEBHOOK_SECRET) return jsonResponse({ error: "Worker ist noch nicht fertig eingerichtet." }, 503);
+
+  const key = clientKey(request);
+  // Absichtlich dieselbe Formulierung wie bei falschem PIN: verrät nicht, ob ein PIN existiert.
+  const rejection = jsonResponse({ error: "PIN nicht erkannt oder zu viele Fehlversuche. Bitte später erneut versuchen." }, 401);
+  if (await isLockedOut(env, key)) return rejection;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const pin = String(body?.pin || "").trim();
+  if (!pin) return jsonResponse({ error: "Bitte PIN eingeben." }, 400);
+
+  const state = await getState(env);
+  const hash = await hashPin(env.WEBHOOK_SECRET, pin);
+
+  let session = null;
+  if (state.adminPinHash && sameHash(hash, state.adminPinHash)) {
+    session = { role: "boss", name: "Chef" };
+  } else {
+    const match = (state.authPins || []).find((p) => sameHash(hash, p.pinHash));
+    if (match) session = { role: "employee", name: match.name };
+  }
+
+  if (!session) {
+    await noteFailedLogin(env, key);
+    return rejection;
+  }
+  await clearFailedLogins(env, key);
+  const token = await createSession(env, session);
+  return jsonResponse({ token, role: session.role, name: session.name });
+}
+
+/** Mitarbeiter-Ansicht: ausschließlich die EIGENEN Daten. Lohnnebenkosten bleiben bewusst draußen (reine
+ * Arbeitgeber-Größe), ebenso alles, was andere Personen betrifft. */
+async function handleMe(request, env) {
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard.error;
+  const name = guard.session.name;
+  const needle = name.trim().toLowerCase();
+  const state = await getState(env);
+
+  const tage = [];
+  for (const r of state.financials || []) {
+    const mine = (r.perEmployee || []).find((pe) => String(pe.name || "").trim().toLowerCase() === needle);
+    if (mine) tage.push({ date: r.date, stunden: round2(mine.hours), lohn: round2(mine.lohn), trinkgeld: round2(mine.tip || 0) });
+  }
+  const summe = (von, bis) => {
+    const rows = tage.filter((t) => t.date >= von && t.date <= bis);
+    return {
+      stunden: round2(rows.reduce((s, t) => s + t.stunden, 0)),
+      lohn: round2(rows.reduce((s, t) => s + t.lohn, 0)),
+      trinkgeld: round2(rows.reduce((s, t) => s + t.trinkgeld, 0)),
+    };
+  };
+  const today = todayBerlin();
+
+  const meineSchichten = (state.plannedShifts || [])
+    .filter((s) => String(s.employeeName || "").trim().toLowerCase() === needle)
+    .map((s) => ({ date: s.date, schicht: s.slotLabel || (s.from && s.to ? `${s.from}-${s.to}` : "") }));
+
+  const meineVerfuegbarkeit = {};
+  for (const [weekStart, bucket] of Object.entries(state.availability || {})) {
+    const entry = Object.entries(bucket?.entries || {}).find(([n]) => n.trim().toLowerCase() === needle);
+    if (entry) meineVerfuegbarkeit[weekStart] = entry[1];
+  }
+
+  return jsonResponse({
+    name,
+    heute: today,
+    kennzahlenFreigegeben: (state.financials || []).length > 0,
+    dieseWoche: summe(mondayOf(today), today),
+    dieserMonat: summe(today.slice(0, 7) + "-01", today),
+    tage: tage.slice(-90),
+    meineSchichten,
+    meineVerfuegbarkeit,
+  });
+}
+
+/** Verfügbarkeit vom Handy. Der Name kommt IMMER aus der Sitzung, nie aus dem Request – sonst könnte
+ * jemand Verfügbarkeiten im Namen von Kollegen eintragen. */
+async function handleMeAvailability(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const weekStart = String(body?.weekStart || "");
+  const days = Array.isArray(body?.days) ? body.days : [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return jsonResponse({ error: "weekStart fehlt oder ist ungültig." }, 400);
+
+  const state = await getState(env);
+  const entries = { [guard.session.name]: { submittedAt: new Date().toISOString(), days } };
+  await patchState(env, { availability: mergeAvailabilityWeek(state.availability, weekStart, entries) });
+  return jsonResponse({ ok: true });
+}
+
+/** Krankmeldung vom Handy: geht als Warteschlangen-Eintrag rein, den der iPad übernimmt. Der Chef bekommt
+ * sofort eine Telegram-Nachricht, damit er nicht auf den nächsten iPad-Abgleich warten muss. */
+async function handleMeSick(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const from = String(body?.from || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return jsonResponse({ error: "Bitte ein gültiges Datum angeben." }, 400);
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(body?.to) && body.to >= from ? body.to : from;
+  const note = String(body?.note || "").trim().slice(0, 300);
+
+  const state = await getState(env);
+  const report = { id: crypto.randomUUID(), employeeName: guard.session.name, from, to, note, createdAt: new Date().toISOString() };
+  await patchState(env, { sickReports: [...(state.sickReports || []), report] });
+
+  if (env.OWNER_CHAT_ID) {
+    const zeitraum = from === to ? formatDateDe(from) : `${formatDateDe(from)} – ${formatDateDe(to)}`;
+    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🤒 Krankmeldung: ${guard.session.name} (${zeitraum})${note ? `\n„${note}"` : ""}`);
+  }
+  return jsonResponse({ ok: true });
+}
+
+/** Chef-Ansicht (Laptop): voller Stand – aber ohne die PIN-Hashes und ohne den Chat-Verlauf, die gehören
+ * in keine Client-Antwort. */
+async function handleAdminOverview(request, env) {
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  const { authPins, adminPinHash, conversationHistory, ...safe } = await getState(env);
+  return jsonResponse(safe);
 }
 
 async function sendTelegramMessage(env, chatId, text) {
@@ -1349,6 +1587,11 @@ async function handleState(request, env) {
     const staleOpenShifts = Array.isArray(body.staleOpenShifts) ? body.staleOpenShifts : undefined;
     const stock = Array.isArray(body.stock) ? body.stock : undefined;
     const patch = { employees, tasks, shiftsInService, financials, employeeMeta, staleOpenShifts, stock };
+    // PIN-Hashes für den Handy-/Laptop-Login (kommen nur vom iPad, nie im Klartext). Nur setzen, wenn
+    // wirklich mitgeschickt: sonst würde ein Push ohne diese Felder die gespeicherten Hashes löschen und
+    // alle Handy-Logins wären auf einen Schlag tot.
+    if (Array.isArray(body.authPins)) patch.authPins = body.authPins;
+    if (typeof body.adminPinHash === "string") patch.adminPinHash = body.adminPinHash;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -1633,6 +1876,17 @@ export default {
     if (url.pathname === "/availability") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleAvailability(request, env);
+    }
+
+    // Handy/Laptop – eigene Anmeldung, getrennt vom WEBHOOK_SECRET (siehe Kommentar bei requireSession).
+    if (url.pathname.startsWith("/auth/") || url.pathname === "/me" || url.pathname.startsWith("/me/") || url.pathname.startsWith("/admin/")) {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
+      if (url.pathname === "/me") return handleMe(request, env);
+      if (url.pathname === "/me/availability") return handleMeAvailability(request, env);
+      if (url.pathname === "/me/sick") return handleMeSick(request, env);
+      if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
+      return jsonResponse({ error: "unbekannter Endpunkt" }, 404);
     }
 
     if (request.method === "POST") return handleTelegram(request, env);

@@ -75,6 +75,24 @@ App → Admin → Einstellungen → „Telegram-Aufgaben abgleichen":
   Aufgaben-Texte: ohne Häkchen bleiben Umsatz/Löhne nur lokal auf dem iPad, es werden nur Aufgabentexte und wer
   im Dienst ist synchronisiert.
 
+## Mobiler Zugriff (im Aufbau)
+
+Zusätzlich zum iPad bekommen Mitarbeiter später eine Handy-Ansicht (Schichten eintragen, krankmelden, eigene
+Stunden) und der Chef eine Laptop-Ansicht (Schichtplanung, Bestand, Kosten). Das **iPad bleibt die Zentrale**
+und rechnet weiterhin Stunden und Löhne – Handy und Laptop docken nur an.
+
+**Fundament ist fertig** (Anmeldung + Datenwege), die Oberflächen kommen als Nächstes:
+- Anmeldung mit demselben PIN wie am iPad, aber **serverseitig geprüft**. Nach 5 Fehlversuchen ist die
+  jeweilige Internet-Verbindung 15 Minuten gesperrt – das ist der eigentliche Schutz, weil ein 4-stelliger
+  PIN sonst schnell durchprobiert wäre. *Empfehlung für später: PINs auf 6 Stellen verlängern.*
+- **Mitarbeiter sehen ausschließlich ihre eigenen Zahlen.** Die Löhne der Kollegen sind serverseitig
+  ausgeschlossen, nicht nur in der Anzeige ausgeblendet – deshalb darf der Zugriffsschlüssel aus den
+  Einstellungen niemals auf ein Mitarbeiter-Handy.
+- Krankmeldungen vom Handy kommen sofort als Telegram-Nachricht bei dir an und werden beim nächsten
+  iPad-Abgleich als Krank-Tage übernommen.
+- Bekannte Grenze: Stunden-/Lohnzahlen auf Handy und Laptop sind so aktuell wie der letzte iPad-Abgleich.
+  Ist das iPad tagelang aus, sind diese Zahlen veraltet.
+
 ## Nutzung
 
 Der Bot versteht ganz normal formulierte Nachrichten (per KI interpretiert, Modell **Claude Sonnet 5** – versteht

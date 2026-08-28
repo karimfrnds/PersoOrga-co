@@ -23,6 +23,26 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Muss Zeichen für Zeichen identisch zu hashPin() in worker/telegram-bot.js sein, sonst schlägt jeder
+ * Handy-/Laptop-Login fehl. Der Zugriffsschlüssel dient als "Pfeffer", damit in der Cloud keine blanken
+ * PIN-Hashes liegen – der PIN selbst verlässt das iPad nie im Klartext. */
+async function hashPin(secret, pin) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${secret}:${pin}`));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** PIN-Hashes aller aktiven Mitarbeiter + des Admin-PINs für den Login am Handy/Laptop. */
+async function buildAuthPinsPayload(cfg, employees) {
+  const authPins = [];
+  for (const e of employees) {
+    if (!e.pin) continue;
+    authPins.push({ name: e.name, pinHash: await hashPin(cfg.workerSecret, String(e.pin)) });
+  }
+  const adminPin = store.getSettings().adminPin;
+  const adminPinHash = adminPin ? await hashPin(cfg.workerSecret, String(adminPin)) : null;
+  return { authPins, adminPinHash };
+}
+
 function mondayOf(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -74,7 +94,9 @@ function buildFinancialsPayload() {
       totalLohnnebenkosten: b.totalLohnnebenkosten,
       totalHours: b.totalHours,
       umschlag: b.umschlag,
-      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn, lohnnebenkosten: r.lohnnebenkosten })),
+      // tip wird für die eigene Ansicht der Mitarbeiter am Handy gebraucht (GET /me liefert nur die
+      // jeweils eigene Zeile zurück, nie die der Kollegen).
+      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn, lohnnebenkosten: r.lohnnebenkosten, tip: r.tip })),
     });
   }
   rows.sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -392,6 +414,31 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSaleIds: [...appliedSaleIds].slice(-300) });
   }
 
+  // Krankmeldungen vom Handy -> als Krank-Tage übernehmen. Ein Eintrag kann mehrere Tage umfassen
+  // (from..to), daraus wird pro Tag ein Krank-Tag. Nachsichtiger Namens-Vergleich wie oben.
+  const remoteSick = Array.isArray(remote.sickReports) ? remote.sickReports : [];
+  const appliedSickIds = new Set(cfg.appliedSickIds || []);
+  let newSickIds = false;
+  for (const r of remoteSick) {
+    if (!r.id || appliedSickIds.has(r.id)) continue;
+    const needle = String(r.employeeName || "").trim().toLowerCase();
+    const match = employees.find((e) => e.name.trim().toLowerCase() === needle);
+    if (match && /^\d{4}-\d{2}-\d{2}$/.test(r.from)) {
+      const to = /^\d{4}-\d{2}-\d{2}$/.test(r.to) && r.to >= r.from ? r.to : r.from;
+      // Sicherheitsnetz gegen einen kaputten/absurden Zeitraum: höchstens 60 Tage am Stück.
+      for (let d = r.from, guard = 0; d <= to && guard < 60; d = addDaysISO(d, 1), guard++) {
+        store.addSickDay(match.id, d, r.note);
+      }
+    } else {
+      syncWarnings.push(`Krankmeldung "${r.employeeName}": Mitarbeiter nicht gefunden oder Datum ungültig.`);
+    }
+    appliedSickIds.add(r.id);
+    newSickIds = true;
+  }
+  if (newSickIds) {
+    store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;
@@ -456,6 +503,7 @@ async function performTaskSync() {
     unit: s.unit || "",
     currentAmount: s.unit ? s.currentAmount : null,
   }));
+  const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
     tasks: pushTasks,
@@ -465,6 +513,8 @@ async function performTaskSync() {
     employeeMeta,
     staleOpenShifts,
     stock,
+    authPins,
+    adminPinHash,
   });
 
   store.updateTaskInboxConfig({

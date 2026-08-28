@@ -88,6 +88,8 @@ function defaultData() {
         appliedDeliveryIds: [],
         // IDs von per SumUp-Verkaufsbericht-Foto erkannten Verkäufen, die schon gegen Rezepte verrechnet wurden.
         appliedSaleIds: [],
+        // IDs von Krankmeldungen (vom Handy), die schon als Krank-Tage übernommen wurden.
+        appliedSickIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -103,6 +105,9 @@ function defaultData() {
     // "stock" und deren Verbrauch pro verkauftem Stück – Basis für die automatische Bestandsrechnung.
     // { id, productName, ingredients: [{ stockItemId, amount }] }
     recipes: [],
+    // Krankmeldungen (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
+    // { id, employeeId, date, note, reportedAt }
+    sickDays: [],
   };
 }
 
@@ -152,6 +157,7 @@ function load() {
       notifications: parsed.notifications ?? base.notifications,
       stock: parsed.stock ?? base.stock,
       recipes: parsed.recipes ?? base.recipes,
+      sickDays: parsed.sickDays ?? base.sickDays,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -779,6 +785,32 @@ export const store = {
     persist();
   },
 
+  // ---- Krankmeldungen (kommen vom Handy der Mitarbeiter herein) ----
+  /** Legt einen Krank-Tag an. Doppelte (gleiche Person, gleicher Tag) werden ignoriert, damit ein erneuter
+   * Abgleich oder eine zweite Meldung für denselben Tag nichts verdoppelt. */
+  addSickDay(employeeId, date, note) {
+    if (!employeeId || !date) return null;
+    const exists = data.sickDays.find((s) => s.employeeId === employeeId && s.date === date);
+    if (exists) return exists;
+    const entry = { id: uid(), employeeId, date, note: note || "", reportedAt: new Date().toISOString() };
+    data.sickDays.push(entry);
+    persist();
+    return entry;
+  },
+  /** Krank-Tage in einem Zeitraum (beide Grenzen inklusive), aufsteigend nach Datum. */
+  getSickDays(from, to) {
+    return data.sickDays
+      .filter((s) => (!from || s.date >= from) && (!to || s.date <= to))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  },
+  isSick(employeeId, date) {
+    return data.sickDays.some((s) => s.employeeId === employeeId && s.date === date);
+  },
+  removeSickDay(id) {
+    data.sickDays = data.sickDays.filter((s) => s.id !== id);
+    persist();
+  },
+
   // ---- Vergessenes Ausstempeln erkennen (für die Bot-Erinnerung) ----
   /** PIN-Schichten, die an einem VERGANGENEN Tag begonnen haben und noch offen sind (Ausstempeln vergessen).
    * Betrachtet nur die letzten paar Tage, damit uralte/kaputte Daten nicht ewig als "offen" auftauchen. */
@@ -971,6 +1003,7 @@ export const store = {
       notifications: parsed.notifications ?? [],
       stock: parsed.stock ?? [],
       recipes: parsed.recipes ?? [],
+      sickDays: parsed.sickDays ?? [],
     };
     persist();
   },

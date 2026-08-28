@@ -132,20 +132,37 @@ function renderPlanning(state, { onChanged, today }) {
     const table = document.createElement("table");
     table.className = "plan-table plan-roster";
 
+    const alle = eintraege();
+
+    // Wie viele Schichten sind an dem Tag besetzt? Beantwortet die eigentliche Frage beim Planen
+    // ("sind genug Leute da?") direkt im Kopf der Tabelle.
+    const besetzung = [];
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(weekStart, i);
+      const relevanteSlots = slots.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i));
+      const besetzt = relevanteSlots.filter((s) =>
+        alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && istKueche(e.name) === kueche && !istKrank(e.name, date))
+      ).length;
+      besetzung.push({ besetzt, gesamt: relevanteSlots.length });
+    }
+
     const thead = document.createElement("thead");
     const hr = document.createElement("tr");
     hr.innerHTML = `<th>Schicht</th>`;
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
+      const { besetzt, gesamt } = besetzung[i];
+      const voll = gesamt > 0 && besetzt === gesamt;
       const th = document.createElement("th");
-      th.innerHTML = `${WEEKDAY_SHORT[i]}<br/><span class="muted small">${dateDeShort(date)}</span>`;
+      th.innerHTML =
+        `${WEEKDAY_SHORT[i]} <span class="muted small">${dateDeShort(date)}</span>` +
+        (gesamt > 0 ? `<br/><span class="roster-count ${voll ? "roster-count-voll" : ""}">${besetzt}/${gesamt} besetzt</span>` : "");
       hr.appendChild(th);
     }
     thead.appendChild(hr);
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    const alle = eintraege();
     for (const slot of slots) {
       const tr = document.createElement("tr");
       const nameTd = document.createElement("td");
@@ -188,66 +205,134 @@ function renderPlanning(state, { onChanged, today }) {
 
     // Nur Personen der passenden Rolle betrachten (Service und Bar teilen sich einen Plan).
     const relevant = alle.filter((e) => e.date === date && istKueche(e.name) === kueche && !istKrank(e.name, date));
-    const fest = relevant.find((e) => e.confirmedSlotId === slot.id && e.bossConfirmed);
-    const wartet = relevant.find((e) => e.confirmedSlotId === slot.id && !e.bossConfirmed);
+    const belegt = relevant.find((e) => e.confirmedSlotId === slot.id);
     const kandidaten = relevant.filter((e) => e.confirmedSlotId !== slot.id && (e.slots || []).some((s) => s.id === slot.id));
 
     const box = document.createElement("div");
     box.className = "roster-box";
 
-    const zeile = (e, zustand) => {
+    if (belegt) {
+      // Besetzt: Name gross und ruhig, daneben nur ✗ zum Austragen. Kein Knopf-Wirrwarr.
+      td.className += belegt.bossConfirmed ? " roster-filled" : " roster-pending";
       const row = document.createElement("div");
       row.className = "roster-person";
-      const nm = document.createElement("span");
-      nm.className = "roster-name";
-      nm.textContent = (zustand === "fest" ? "✅ " : zustand === "wartet" ? "🔶 " : "") + e.name;
-      if (e.note) {
-        nm.title = e.note;
-        nm.textContent += " 📝";
-      }
+      const nm = document.createElement("button");
+      nm.className = "roster-name-btn";
+      nm.textContent = belegt.name + (belegt.note ? " 📝" : "");
+      nm.title = (belegt.bossConfirmed ? "Fest eingeteilt" : "Wartet auf deine Bestätigung") + (belegt.note ? ` · ${belegt.note}` : "") + " · Klicken zum Wechseln";
+      nm.onclick = () => openPicker(date, slot, kueche, relevant, belegt);
       row.appendChild(nm);
 
-      const btns = document.createElement("div");
-      btns.className = "roster-actions";
-      if (zustand !== "fest") {
-        const ja = document.createElement("button");
-        ja.className = "roster-btn roster-yes";
-        ja.textContent = "✓";
-        ja.title = `${e.name} für ${slot.label} einteilen`;
-        ja.onclick = () => senden(e.name, date, slot.label, "confirm");
-        btns.appendChild(ja);
+      const raus = document.createElement("button");
+      raus.className = "roster-btn roster-no";
+      raus.textContent = "✗";
+      raus.title = `${belegt.name} wieder austragen`;
+      raus.onclick = () => senden(belegt.name, date, slot.label, "reject");
+      row.appendChild(raus);
+      box.appendChild(row);
+
+      if (!belegt.bossConfirmed) {
+        const hinweis = document.createElement("button");
+        hinweis.className = "roster-confirm";
+        hinweis.textContent = "✓ bestätigen";
+        hinweis.onclick = () => senden(belegt.name, date, slot.label, "confirm");
+        box.appendChild(hinweis);
       }
-      const nein = document.createElement("button");
-      nein.className = "roster-btn roster-no";
-      nein.textContent = "✗";
-      nein.title = zustand === "fest" ? `${e.name} wieder austragen` : `${e.name} für ${slot.label} ablehnen`;
-      nein.onclick = () => senden(e.name, date, slot.label, "reject");
-      btns.appendChild(nein);
-      row.appendChild(btns);
-      return row;
-    };
+    } else {
+      // Offen: die ganze Zelle ist ein Knopf. Wer sich gemeldet hat, steht als antippbarer Name darunter –
+      // ein Klick teilt ein, ohne Umweg über einen Dialog.
+      // Alles in EINER umbrechenden Zeile: erst der Einteilen-Knopf, dann wer sich gemeldet hat.
+      // Ein Klick auf einen Namen teilt direkt ein – kein Umweg über einen Dialog.
+      td.className += " roster-open";
+      const chips = document.createElement("div");
+      chips.className = "roster-chips";
 
-    if (fest) box.appendChild(zeile(fest, "fest"));
-    if (wartet) box.appendChild(zeile(wartet, "wartet"));
-    for (const k of kandidaten) box.appendChild(zeile(k, "kandidat"));
+      const frei = document.createElement("button");
+      frei.className = "roster-frei-btn";
+      frei.textContent = kandidaten.length ? "＋" : "frei";
+      frei.title = "Jemanden einteilen";
+      frei.onclick = () => openPicker(date, slot, kueche, relevant, null);
+      chips.appendChild(frei);
 
-    if (!fest) {
-      // Kein fest Eingeteilter -> Schicht ist offen. Das ist die Information, um die es beim Planen geht.
-      const frei = document.createElement("div");
-      frei.className = "roster-frei";
-      frei.textContent = kandidaten.length || wartet ? "noch nicht entschieden" : "frei";
-      box.insertBefore(frei, box.firstChild);
+      for (const k of kandidaten.slice(0, 2)) {
+        const chip = document.createElement("button");
+        chip.className = "roster-chip";
+        chip.textContent = k.name;
+        chip.title = `${k.name} für ${slot.label} einteilen`;
+        chip.onclick = () => senden(k.name, date, slot.label, "confirm");
+        chips.appendChild(chip);
+      }
+      if (kandidaten.length > 2) {
+        const mehr = document.createElement("button");
+        mehr.className = "roster-chip roster-chip-more";
+        mehr.textContent = `+${kandidaten.length - 2}`;
+        mehr.title = `${kandidaten.length} haben sich gemeldet – alle anzeigen`;
+        mehr.onclick = () => openPicker(date, slot, kueche, relevant, null);
+        chips.appendChild(mehr);
+      }
+      box.appendChild(chips);
     }
-
-    const plus = document.createElement("button");
-    plus.className = "roster-btn roster-add";
-    plus.textContent = "＋";
-    plus.title = "Jemanden von Hand eintragen";
-    plus.onclick = () => openAssign(date, slot, kueche);
-    box.appendChild(plus);
 
     td.appendChild(box);
     return td;
+  }
+
+  /** Auswahl-Fenster für eine Schicht: wer sich gemeldet hat steht oben, danach alle anderen.
+   * Ein Klick auf einen Namen teilt ein – kein Dropdown, kein zweiter Bestätigungsschritt. */
+  function openPicker(date, slot, kueche, relevant, belegt) {
+    const alleNamen = [...(state.employees || [])].filter((n) => istKueche(n) === kueche).sort((a, b) => a.localeCompare(b));
+    const gemeldet = new Set(relevant.filter((e) => (e.slots || []).some((s) => s.id === slot.id)).map((e) => e.name));
+    // Wer an dem Tag schon woanders fest eingeteilt ist, wird gekennzeichnet – schützt vor Doppelbelegung.
+    const anderweitig = new Map();
+    for (const e of relevant) {
+      if (e.confirmedSlotId && e.confirmedSlotId !== slot.id) {
+        const s = (e.slots || []).find((x) => x.id === e.confirmedSlotId);
+        anderweitig.set(e.name, s?.label || "andere Schicht");
+      }
+    }
+    const krank = new Set((state.employees || []).filter((n) => istKrank(n, date)));
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const eintrag = (name) => {
+      const busyMit = anderweitig.get(name);
+      const istKrankHeute = krank.has(name);
+      const hinweis = istKrankHeute ? "krank gemeldet" : busyMit ? `schon: ${busyMit}` : gemeldet.has(name) ? "hat sich gemeldet" : "";
+      return `<button class="picker-row${belegt?.name === name ? " picker-current" : ""}${istKrankHeute ? " picker-warn" : ""}" data-name="${escapeHtml(name)}">
+          <span class="picker-name">${escapeHtml(name)}${belegt?.name === name ? " ✓" : ""}</span>
+          ${hinweis ? `<span class="muted small">${escapeHtml(hinweis)}</span>` : ""}
+        </button>`;
+    };
+    const gemeldeteNamen = alleNamen.filter((n) => gemeldet.has(n));
+    const uebrige = alleNamen.filter((n) => !gemeldet.has(n));
+
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>${escapeHtml(slot.label)}</h2>
+        <p class="muted small">${escapeHtml(dateDe(date))} · ${escapeHtml(slot.from)}–${escapeHtml(slot.to)} Uhr</p>
+        ${gemeldeteNamen.length ? `<p class="muted small"><b>Hat sich gemeldet</b></p><div class="picker-list">${gemeldeteNamen.map(eintrag).join("")}</div>` : ""}
+        ${uebrige.length ? `<p class="muted small"><b>${gemeldeteNamen.length ? "Alle anderen" : "Mitarbeiter"}</b></p><div class="picker-list">${uebrige.map(eintrag).join("")}</div>` : ""}
+        ${alleNamen.length ? `<label class="field"><span>Info zur Schicht (optional)</span><input type="text" id="pk-note" maxlength="200" value="${escapeHtml(belegt?.note || "")}" placeholder="z.B. bitte Lieferung annehmen" /></label>` : `<p class="muted small">Für diesen Bereich sind keine Mitarbeiter hinterlegt.</p>`}
+        <p class="muted small" id="pk-status"></p>
+        <div class="dialog-actions"><button class="btn btn-secondary" id="pk-close">Schließen</button></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#pk-close").onclick = () => overlay.remove();
+    overlay.querySelectorAll(".picker-row").forEach((b) => {
+      b.onclick = async () => {
+        const status = overlay.querySelector("#pk-status");
+        overlay.querySelectorAll("button").forEach((x) => (x.disabled = true));
+        status.textContent = "Wird gespeichert…";
+        try {
+          await decideShift(b.dataset.name, date, slot.label, "confirm", overlay.querySelector("#pk-note")?.value.trim() || "");
+          overlay.remove();
+          await onChanged();
+        } catch (e) {
+          status.textContent = "⚠ " + e.message;
+          overlay.querySelectorAll("button").forEach((x) => (x.disabled = false));
+        }
+      };
+    });
   }
 
   async function senden(name, date, slotLabel, decision, note) {
@@ -276,47 +361,6 @@ function renderPlanning(state, { onChanged, today }) {
     setTimeout(() => box.remove(), 6000);
   }
 
-  /** Jemanden von Hand auf diese Schicht setzen – auch ohne gemeldete Verfügbarkeit. */
-  function openAssign(date, slot, kueche) {
-    const passende = [...(state.employees || [])].filter((n) => istKueche(n) === kueche).sort((a, b) => a.localeCompare(b));
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    overlay.innerHTML = `
-      <div class="dialog">
-        <h2>${escapeHtml(slot.label)} · ${escapeHtml(dateDe(date))}</h2>
-        <p class="muted small">${escapeHtml(slot.from)}–${escapeHtml(slot.to)} Uhr</p>
-        ${
-          passende.length
-            ? `<label class="field"><span>Mitarbeiter</span><select id="ra-emp">${passende.map((n) => `<option>${escapeHtml(n)}</option>`).join("")}</select></label>
-               <label class="field"><span>Info zur Schicht (optional)</span><input type="text" id="ra-note" maxlength="200" placeholder="z.B. bitte Lieferung annehmen" /></label>
-               <p class="muted small">Die Person bekommt die Schicht als bestätigt angezeigt – am iPad und auf ihrem Handy.</p>`
-            : `<p class="muted small">Für diesen Bereich sind keine Mitarbeiter hinterlegt.</p>`
-        }
-        <p class="muted small" id="ra-status"></p>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" id="ra-cancel">Abbrechen</button>
-          ${passende.length ? `<button class="btn btn-primary" id="ra-save">Eintragen</button>` : ""}
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.querySelector("#ra-cancel").onclick = () => overlay.remove();
-    const save = overlay.querySelector("#ra-save");
-    if (save) {
-      save.onclick = async () => {
-        const status = overlay.querySelector("#ra-status");
-        overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
-        status.textContent = "Wird gespeichert…";
-        try {
-          await decideShift(overlay.querySelector("#ra-emp").value, date, slot.label, "confirm", overlay.querySelector("#ra-note").value.trim());
-          overlay.remove();
-          await onChanged();
-        } catch (e) {
-          status.textContent = "⚠ " + e.message;
-          overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
-        }
-      };
-    }
-  }
 
   function buildKranke() {
     const wochenEnde = addDaysISO(weekStart, 6);

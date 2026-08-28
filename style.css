@@ -428,10 +428,10 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .plan-cell-sick { background: var(--gray-light); color: var(--gray); }
 
 /* ---- Schichtplan-Ansicht (Zeilen = Schichten, Spalten = Wochentage, wie der Papierplan) ---- */
-.plan-roster { min-width: 900px; }
+.plan-roster { min-width: 1120px; }
 .plan-roster td, .plan-roster th { vertical-align: top; text-align: left; padding: 6px 8px; }
 .roster-slot { white-space: nowrap; background: var(--gray-light); }
-.roster-cell { min-width: 108px; }
+.roster-cell { min-width: 138px; }
 .roster-off { background: var(--gray-light); text-align: center; }
 .roster-box { display: flex; flex-direction: column; gap: 4px; }
 .roster-person { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
@@ -447,10 +447,48 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   padding: 3px 6px;
 }
 .roster-btn:disabled { opacity: 0.4; cursor: default; }
-.roster-yes:hover:not(:disabled) { background: var(--green-light); border-color: var(--green); }
 .roster-no:hover:not(:disabled) { background: var(--orange-light); border-color: var(--orange); }
-.roster-add { align-self: flex-start; color: var(--gray); }
-.roster-frei { font-size: 12px; color: var(--orange); font-weight: 600; }
+
+/* Besetzte Schicht: ruhig und lesbar. Offene Schicht: sichtbar hervorgehoben. */
+.roster-filled { background: var(--green-light); }
+.roster-pending { background: var(--orange-light); }
+.roster-open { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.025) 6px, rgba(0,0,0,0.025) 12px); }
+.roster-name-btn {
+  border: none; background: none; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 700; font-size: 14px; color: var(--text);
+  text-align: left; flex: 1; min-width: 0;
+}
+.roster-name-btn:hover { text-decoration: underline; }
+.roster-frei-btn {
+  border: 1px dashed var(--border); background: none; border-radius: 999px;
+  color: var(--gray); font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer;
+}
+.roster-frei-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
+.roster-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.roster-chip {
+  border: 1px solid var(--border); background: var(--card-bg); border-radius: 999px;
+  font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer; text-align: left;
+}
+.roster-chip:hover:not(:disabled) { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+.roster-chip-more { border-style: dashed; color: var(--gray); }
+.roster-confirm {
+  border: 1px solid var(--green); background: var(--green-light); color: var(--green-dark);
+  border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; padding: 3px 8px; cursor: pointer;
+}
+.roster-count { font-size: 11px; font-weight: 600; color: var(--orange); }
+.roster-count-voll { color: var(--green); }
+
+/* Auswahl-Fenster: eine Liste, ein Klick teilt ein. */
+.picker-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.picker-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px;
+  padding: 11px 13px; cursor: pointer; font: inherit; color: var(--text); text-align: left; width: 100%;
+}
+.picker-row:hover:not(:disabled) { border-color: var(--green); background: var(--green-light); }
+.picker-name { font-weight: 600; }
+.picker-current { border-color: var(--green); background: var(--green-light); }
+.picker-warn .picker-name { color: var(--orange); }
 
 /* ---- Chef-Ansicht (chef.html, eigener Einstieg für den Laptop) ---- */
 .chef-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }

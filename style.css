@@ -633,3 +633,4 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   .res-actions .btn { flex: 1; }
 }
 .res-warn { color: var(--orange); font-weight: 600; font-size: 14px; margin-top: 2px; }
+.topnav-version { font-size: 12px; font-weight: 400; opacity: 0.65; margin-left: 8px; }

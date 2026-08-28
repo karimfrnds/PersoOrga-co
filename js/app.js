@@ -7,7 +7,15 @@ import { renderReservations } from "./pages/reservations.js";
 import { renderAdmin } from "./pages/admin.js";
 import { maybeRunDailyBackup } from "./backup.js";
 
+// Wird bei jeder Änderung hochgezählt und oben in der Leiste angezeigt. Damit ist auf einen Blick
+// erkennbar, ob das iPad schon die neue Fassung geladen hat oder noch eine gespeicherte: GitHub Pages
+// erlaubt dem Browser, die Dateien 10 Minuten zu behalten. Steht hier nach einer Änderung noch die alte
+// Nummer, ist es der Zwischenspeicher – und kein fehlender Upload.
+const APP_VERSION = "2026-08-29.1";
+
 const outlet = document.getElementById("outlet");
+const versionEl = document.getElementById("app-version");
+if (versionEl) versionEl.textContent = APP_VERSION;
 const navLinks = document.querySelectorAll(".nav-link");
 
 function navigate(hash) {

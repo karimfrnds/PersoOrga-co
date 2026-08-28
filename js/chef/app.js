@@ -9,11 +9,12 @@ import { renderPlanning } from "./planning.js";
 import { renderStock } from "./stock.js";
 import { renderCosts } from "./costs.js";
 import { renderTeam } from "./team.js";
+import { renderForecast } from "./forecast.js";
 import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-08-28.4";
+const APP_VERSION = "2026-08-28.6";
 
 const outlet = document.getElementById("outlet");
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: "stock", label: "📦 Bestand" },
   { id: "costs", label: "💰 Kosten" },
   { id: "team", label: "👥 Mitarbeiter" },
+  { id: "forecast", label: "📈 Auswertung" },
 ];
 let activeTab = "planning";
 let state = null;
@@ -158,6 +160,7 @@ function renderShell() {
   if (activeTab === "stock") view = renderStock(state, { onChanged });
   else if (activeTab === "costs") view = renderCosts(state);
   else if (activeTab === "team") view = renderTeam(state, { onChanged });
+  else if (activeTab === "forecast") view = renderForecast(state);
   else view = renderPlanning(state, { onChanged, today: todayStr() });
   wrap.appendChild(view);
 

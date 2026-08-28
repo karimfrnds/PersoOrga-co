@@ -155,6 +155,11 @@ const EMPTY_STATE = {
   // Bewusst getrennt von den Kiosk-Benachrichtigungen: die entstehen lokal auf dem iPad und kämen hier
   // sonst nie an. [{id, employeeName, text, createdAt, readAt}]
   employeeNotifications: [],
+  // Rezepte vom iPad (nur zum Anzeigen/Bearbeiten am Laptop) + Warteschlangen für Änderungen, die der
+  // Laptop anstößt. Wie überall gilt: der iPad arbeitet sie ab und bleibt die maßgebliche Instanz.
+  recipes: [], // [{id, productName, ingredients:[{stockItemId, amount}]}]
+  stockChanges: [], // [{id, kind:"create"|"update"|"delete"|"setAmount", ...}]
+  recipeChanges: [], // [{id, kind:"create"|"update"|"delete", ...}]
 };
 
 async function getState(env) {
@@ -188,6 +193,9 @@ async function getState(env) {
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
       shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
       employeeNotifications: Array.isArray(parsed.employeeNotifications) ? parsed.employeeNotifications : [],
+      recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [],
+      stockChanges: Array.isArray(parsed.stockChanges) ? parsed.stockChanges : [],
+      recipeChanges: Array.isArray(parsed.recipeChanges) ? parsed.recipeChanges : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -1120,6 +1128,70 @@ async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
   return { art: "lieferschein", items, unresolved: unresolved.map((it) => it.itemName), text };
 }
 
+/** Artikel anlegen/bearbeiten/löschen bzw. Menge korrigieren – vom Laptop aus. Geht als Warteschlangen-
+ * Eintrag rein, den der iPad abarbeitet (dort liegt die maßgebliche Vorräte-Liste). */
+async function handleAdminStockItem(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete", "setAmount"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
+  if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
+  if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
+
+  const eintrag = {
+    id: crypto.randomUUID(),
+    kind,
+    itemId: String(body?.itemId || "") || null,
+    name: String(body?.name || "").trim(),
+    unit: body?.unit === undefined ? undefined : String(body.unit).trim(),
+    lowThreshold: body?.lowThreshold === undefined ? undefined : Number(body.lowThreshold) || 0,
+    currentAmount: body?.currentAmount === undefined ? undefined : Number(body.currentAmount) || 0,
+  };
+  const state = await getState(env);
+  await patchState(env, { stockChanges: [...(state.stockChanges || []), eintrag] });
+  return jsonResponse({ ok: true });
+}
+
+/** Rezepte anlegen/bearbeiten/löschen – vom Laptop aus, ebenfalls über eine Warteschlange. */
+async function handleAdminRecipe(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !String(body?.recipeId || "").trim()) return jsonResponse({ error: "Rezept fehlt." }, 400);
+  if (kind !== "delete" && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
+
+  const zutaten = (Array.isArray(body?.ingredients) ? body.ingredients : [])
+    .map((z) => ({ stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }))
+    .filter((z) => z.stockItemId && z.amount > 0);
+
+  const eintrag = {
+    id: crypto.randomUUID(),
+    kind,
+    recipeId: String(body?.recipeId || "") || null,
+    productName: String(body?.productName || "").trim(),
+    ingredients: zutaten,
+  };
+  const state = await getState(env);
+  await patchState(env, { recipeChanges: [...(state.recipeChanges || []), eintrag] });
+  return jsonResponse({ ok: true });
+}
+
 /** Beleg-Upload aus der Laptop-Ansicht (PDF oder Foto). Nutzt denselben Weg wie der Telegram-Upload. */
 async function handleAdminDocument(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
@@ -1903,6 +1975,7 @@ async function handleState(request, env) {
     if (typeof body.adminPinHash === "string") patch.adminPinHash = body.adminPinHash;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
+    if (Array.isArray(body.recipes)) patch.recipes = body.recipes;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -2201,6 +2274,8 @@ export default {
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
+      if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);
+      if (url.pathname === "/admin/recipe") return handleAdminRecipe(request, env);
       return jsonResponse({ error: "unbekannter Endpunkt" }, 404);
     }
 

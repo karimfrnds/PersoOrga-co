@@ -106,4 +106,20 @@ async function uploadDocument(file) {
   return request("/admin/document", { method: "POST", body: { mimeType: file.type, dataBase64, caption: "" } });
 }
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOverview, decideShift, markRestocked, recordDelivery, uploadDocument };
+const stockItemAction = (body) => request("/admin/stock-item", { method: "POST", body });
+const recipeAction = (body) => request("/admin/recipe", { method: "POST", body });
+
+export {
+  getSession,
+  clearSession,
+  getWorkerUrl,
+  setWorkerUrl,
+  login,
+  getOverview,
+  decideShift,
+  markRestocked,
+  recordDelivery,
+  uploadDocument,
+  stockItemAction,
+  recipeAction,
+};

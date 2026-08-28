@@ -12,7 +12,7 @@ import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-08-28.2";
+const APP_VERSION = "2026-08-28.3";
 
 const outlet = document.getElementById("outlet");
 

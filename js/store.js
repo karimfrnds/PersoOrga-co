@@ -94,6 +94,9 @@ function defaultData() {
         appliedSickIds: [],
         // "Woche|Name|Zeitstempel" der Verfügbarkeits-Einreichungen vom Handy, die schon übernommen wurden.
         appliedAvailabilityKeys: [],
+        // IDs der vom Laptop eingereichten Artikel- bzw. Rezept-Änderungen, die schon übernommen wurden.
+        appliedStockChangeIds: [],
+        appliedRecipeChangeIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -724,6 +727,29 @@ export const store = {
   removeStockItem(id) {
     data.stock = data.stock.filter((s) => s.id !== id);
     persist();
+  },
+  /** Artikel bearbeiten (Name, Einheit, Warnschwelle). Wird eine Einheit ergänzt, startet damit die
+   * Mengenführung; wird sie entfernt, fällt der Artikel auf die reine Ampel zurück. */
+  updateStockItem(id, patch) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item) return null;
+    if (patch.name !== undefined && String(patch.name).trim()) item.name = String(patch.name).trim();
+    if (patch.unit !== undefined) {
+      const unit = String(patch.unit).trim();
+      item.unit = unit;
+      if (unit) {
+        if (item.currentAmount === null || item.currentAmount === undefined) item.currentAmount = 0;
+        if (item.lowThreshold === null || item.lowThreshold === undefined) item.lowThreshold = 0;
+      } else {
+        item.currentAmount = null;
+        item.lowThreshold = null;
+      }
+    }
+    if (patch.lowThreshold !== undefined && item.unit) item.lowThreshold = Number(patch.lowThreshold) || 0;
+    if (item.unit) recomputeStockStatus(item);
+    item.updatedAt = new Date().toISOString();
+    persist();
+    return item;
   },
   /** Mitarbeiter (im Kiosk) oder Chef (per Bot) ändern den Status eines Artikels. */
   setStockStatus(id, status, changedBy) {

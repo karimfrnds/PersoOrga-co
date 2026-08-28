@@ -417,6 +417,46 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSaleIds: [...appliedSaleIds].slice(-300) });
   }
 
+  // Artikel- und Rezept-Änderungen aus der Laptop-Ansicht übernehmen. Der iPad hält die maßgebliche
+  // Vorräte-/Rezept-Liste, der Laptop reicht nur Änderungswünsche ein (gleiches Muster wie überall).
+  const remoteStockChanges = Array.isArray(remote.stockChanges) ? remote.stockChanges : [];
+  const appliedStockChangeIds = new Set(cfg.appliedStockChangeIds || []);
+  let newStockChangeIds = false;
+  for (const c of remoteStockChanges) {
+    if (!c.id || appliedStockChangeIds.has(c.id)) continue;
+    if (c.kind === "create") {
+      store.addStockItem(c.name, { unit: c.unit || "", currentAmount: c.currentAmount ?? 0, lowThreshold: c.lowThreshold ?? 0 });
+    } else if (c.kind === "update") {
+      if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold })) {
+        syncWarnings.push(`Artikel-Änderung: Artikel nicht gefunden (evtl. schon gelöscht).`);
+      }
+    } else if (c.kind === "delete") {
+      store.removeStockItem(c.itemId);
+    } else if (c.kind === "setAmount") {
+      store.setStockAmount(c.itemId, c.currentAmount, "Chef (Laptop)");
+    }
+    appliedStockChangeIds.add(c.id);
+    newStockChangeIds = true;
+  }
+  if (newStockChangeIds) {
+    store.updateTaskInboxConfig({ appliedStockChangeIds: [...appliedStockChangeIds].slice(-300) });
+  }
+
+  const remoteRecipeChanges = Array.isArray(remote.recipeChanges) ? remote.recipeChanges : [];
+  const appliedRecipeChangeIds = new Set(cfg.appliedRecipeChangeIds || []);
+  let newRecipeChangeIds = false;
+  for (const c of remoteRecipeChanges) {
+    if (!c.id || appliedRecipeChangeIds.has(c.id)) continue;
+    if (c.kind === "create") store.addRecipe(c.productName, c.ingredients || []);
+    else if (c.kind === "update") store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [] });
+    else if (c.kind === "delete") store.removeRecipe(c.recipeId);
+    appliedRecipeChangeIds.add(c.id);
+    newRecipeChangeIds = true;
+  }
+  if (newRecipeChangeIds) {
+    store.updateTaskInboxConfig({ appliedRecipeChangeIds: [...appliedRecipeChangeIds].slice(-300) });
+  }
+
   // Krankmeldungen vom Handy -> als Krank-Tage übernehmen. Ein Eintrag kann mehrere Tage umfassen
   // (from..to), daraus wird pro Tag ein Krank-Tag. Nachsichtiger Namens-Vergleich wie oben.
   const remoteSick = Array.isArray(remote.sickReports) ? remote.sickReports : [];
@@ -537,12 +577,16 @@ async function performTaskSync() {
     ? employees.map((e) => ({ name: e.name, isMinijob: !!e.isMinijob, minijobLimit: Number(e.minijobLimit) || 556 }))
     : [];
   const staleOpenShifts = store.getStaleOpenShifts();
+  // id und lowThreshold mitschicken, damit die Laptop-Ansicht Artikel gezielt bearbeiten/löschen kann.
   const stock = store.getStockItems().map((s) => ({
+    id: s.id,
     name: s.name,
     status: s.status,
     unit: s.unit || "",
     currentAmount: s.unit ? s.currentAmount : null,
+    lowThreshold: s.unit ? s.lowThreshold : null,
   }));
+  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients }));
   const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
@@ -559,6 +603,7 @@ async function performTaskSync() {
     employeeMeta,
     staleOpenShifts,
     stock,
+    recipes,
     authPins,
     adminPinHash,
   });

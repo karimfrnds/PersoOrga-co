@@ -4,7 +4,7 @@
 // beim nächsten Abgleich übernimmt.
 // ============================================================================
 import { escapeHtml, dateDe, todayStr } from "../format.js";
-import { markRestocked, recordDelivery, uploadDocument } from "./api.js";
+import { markRestocked, recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
 
 const STATUS = {
   leer: { label: "🔴 Leer", rank: 0 },
@@ -28,7 +28,7 @@ function renderStock(state, { onChanged }) {
     const frag = document.createElement("div");
     frag.innerHTML = `
       <h1>📦 Bestand & Bestellung</h1>
-      <p class="muted">Was nachgekauft werden muss, und Lieferungen erfassen. Artikel selbst werden am iPad unter Admin → Vorräte verwaltet.</p>
+      <p class="muted">Belege hochladen, Artikel und Rezepte pflegen, Bestand korrigieren. Änderungen werden beim nächsten iPad-Abgleich übernommen.</p>
     `;
 
     const items = [...(state.stock || [])].sort((a, b) => {
@@ -49,7 +49,22 @@ function renderStock(state, { onChanged }) {
     frag.appendChild(buildEinkaufsliste(fehlend));
     frag.appendChild(buildListe(items));
     frag.appendChild(buildLieferung(items));
+    frag.appendChild(buildRezepte(items));
+    frag.appendChild(buildBewegungen());
     return frag;
+  }
+
+  /** Änderung einreichen und Ansicht neu laden. Fehler landen als Hinweis in der jeweiligen Karte. */
+  async function aktion(fn, statusEl) {
+    statusEl.className = "muted small";
+    statusEl.textContent = "Wird gespeichert…";
+    try {
+      await fn();
+      await onChanged();
+    } catch (e) {
+      statusEl.className = "callout callout-warn";
+      statusEl.textContent = "⚠ " + e.message;
+    }
   }
 
   /** Beleg hochladen (z.B. METRO-Auftragsbestätigung als PDF) und automatisch einpflegen lassen. */
@@ -182,24 +197,322 @@ function renderStock(state, { onChanged }) {
   function buildListe(items) {
     const card = document.createElement("section");
     card.className = "card";
-    card.innerHTML = `<h2>Alle Artikel</h2>`;
+    card.innerHTML = `<h2>Alle Artikel</h2><p class="muted small">Änderungen werden beim nächsten iPad-Abgleich übernommen.</p>`;
+    const status = document.createElement("p");
+    status.className = "muted small";
+
     const scroll = document.createElement("div");
     scroll.style.overflowX = "auto";
     const table = document.createElement("table");
     table.className = "calc-table";
-    table.innerHTML = `<thead><tr><th>Artikel</th><th>Status</th><th>Bestand</th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>Artikel</th><th>Status</th><th>Bestand</th><th>Warnschwelle</th><th></th></tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const item of items) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${escapeHtml(item.name)}</td>
-        <td>${STATUS[item.status]?.label || escapeHtml(item.status || "")}</td>
-        <td>${item.unit ? `${item.currentAmount} ${escapeHtml(item.unit)}` : '<span class="muted">–</span>'}</td>`;
+      const zellen = document.createElement("td");
+      zellen.textContent = item.name;
+      tr.appendChild(zellen);
+      const st = document.createElement("td");
+      st.innerHTML = STATUS[item.status]?.label || escapeHtml(item.status || "");
+      tr.appendChild(st);
+
+      // Bestand direkt korrigierbar (nur bei mengengeführten Artikeln)
+      const menge = document.createElement("td");
+      if (item.unit) {
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.step = "0.1";
+        inp.value = item.currentAmount;
+        inp.style.width = "80px";
+        inp.onchange = () => aktion(() => stockItemAction({ kind: "setAmount", itemId: item.id, currentAmount: inp.value }), status);
+        menge.appendChild(inp);
+        menge.append(" " + item.unit);
+      } else {
+        menge.innerHTML = '<span class="muted">–</span>';
+      }
+      tr.appendChild(menge);
+
+      const schwelle = document.createElement("td");
+      schwelle.innerHTML = item.unit ? `${item.lowThreshold ?? 0} ${escapeHtml(item.unit)}` : '<span class="muted">–</span>';
+      tr.appendChild(schwelle);
+
+      const aktionen = document.createElement("td");
+      aktionen.className = "employee-actions";
+      const bearbeiten = document.createElement("button");
+      bearbeiten.className = "btn btn-secondary";
+      bearbeiten.textContent = "Bearbeiten";
+      bearbeiten.onclick = () => openArtikelDialog(item);
+      const loeschen = document.createElement("button");
+      loeschen.className = "btn btn-icon-danger";
+      loeschen.textContent = "✕";
+      loeschen.title = "Artikel löschen";
+      loeschen.onclick = () => {
+        if (!confirm(`Artikel „${item.name}" löschen?`)) return;
+        aktion(() => stockItemAction({ kind: "delete", itemId: item.id }), status);
+      };
+      aktionen.append(bearbeiten, loeschen);
+      tr.appendChild(aktionen);
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
     scroll.appendChild(table);
-    card.appendChild(scroll);
+
+    const neu = document.createElement("button");
+    neu.className = "btn btn-primary";
+    neu.textContent = "＋ Neuer Artikel";
+    neu.onclick = () => openArtikelDialog(null);
+
+    card.append(scroll, neu, status);
+    return card;
+  }
+
+  /** Artikel anlegen oder bearbeiten. Einheit leer = reine Ampel ohne Mengenführung. */
+  function openArtikelDialog(item) {
+    const neu = !item;
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>${neu ? "Neuer Artikel" : "Artikel bearbeiten"}</h2>
+        <label class="field"><span>Name</span><input type="text" id="ai-name" value="${escapeHtml(item?.name || "")}" placeholder="z.B. Kaffeebohnen" /></label>
+        <label class="field"><span>Einheit (leer lassen für einfache Ampel)</span><input type="text" id="ai-unit" value="${escapeHtml(item?.unit || "")}" placeholder="z.B. kg, l, Stück" /></label>
+        ${neu ? `<label class="field"><span>Aktueller Bestand</span><input type="number" id="ai-amount" step="0.1" value="0" /></label>` : ""}
+        <label class="field"><span>Warnschwelle (ab wann „wird knapp")</span><input type="number" id="ai-low" step="0.1" value="${item?.lowThreshold ?? 0}" /></label>
+        <p class="muted small">Nur mit Einheit wird der Bestand als Menge geführt und automatisch verrechnet.</p>
+        <p class="muted small" id="ai-status"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" id="ai-cancel">Abbrechen</button>
+          <button class="btn btn-primary" id="ai-save">Speichern</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const status = overlay.querySelector("#ai-status");
+    overlay.querySelector("#ai-cancel").onclick = () => overlay.remove();
+    overlay.querySelector("#ai-save").onclick = async () => {
+      const name = overlay.querySelector("#ai-name").value.trim();
+      if (!name) {
+        status.className = "callout callout-warn";
+        status.textContent = "Bitte einen Namen eintragen.";
+        return;
+      }
+      const body = {
+        kind: neu ? "create" : "update",
+        itemId: item?.id,
+        name,
+        unit: overlay.querySelector("#ai-unit").value.trim(),
+        lowThreshold: overlay.querySelector("#ai-low").value,
+      };
+      if (neu) body.currentAmount = overlay.querySelector("#ai-amount").value;
+      overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      status.className = "muted small";
+      status.textContent = "Wird gespeichert…";
+      try {
+        await stockItemAction(body);
+        overlay.remove();
+        await onChanged();
+      } catch (e) {
+        status.className = "callout callout-warn";
+        status.textContent = "⚠ " + e.message;
+        overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    };
+  }
+
+  /** Rezepte: Verkaufsprodukt -> Zutatenverbrauch. Basis für die automatische Bestandsrechnung. */
+  function buildRezepte(items) {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `
+      <h2>🧾 Rezepte</h2>
+      <p class="muted small">Verknüpft ein Verkaufsprodukt (Name wie im SumUp-Bericht) mit den Zutaten pro verkauftem Stück.
+      Nur damit kann ein Verkaufsbericht den Bestand automatisch abziehen.</p>`;
+    const status = document.createElement("p");
+    status.className = "muted small";
+
+    const mengengefuehrt = items.filter((i) => i.unit);
+    if (mengengefuehrt.length === 0) {
+      card.innerHTML += `<p class="muted small">Lege zuerst mindestens einen Artikel mit Einheit an – ohne Mengenführung kann nichts verrechnet werden.</p>`;
+      return card;
+    }
+
+    const rezepte = [...(state.recipes || [])].sort((a, b) => a.productName.localeCompare(b.productName));
+    if (rezepte.length === 0) {
+      const p = document.createElement("p");
+      p.className = "muted small";
+      p.textContent = "Noch keine Rezepte hinterlegt.";
+      card.appendChild(p);
+    } else {
+      const liste = document.createElement("div");
+      liste.className = "task-list";
+      for (const r of rezepte) {
+        const row = document.createElement("div");
+        row.className = "task-row";
+        const zutaten = (r.ingredients || [])
+          .map((z) => {
+            const art = mengengefuehrt.find((i) => i.id === z.stockItemId);
+            return art ? `${z.amount} ${art.unit} ${art.name}` : null;
+          })
+          .filter(Boolean)
+          .join(" · ");
+        row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(r.productName)}</b></span><span class="muted small task-row-meta">${
+          escapeHtml(zutaten) || "keine Zutaten hinterlegt"
+        }</span></div>`;
+        const akt = document.createElement("div");
+        akt.className = "employee-actions";
+        const bearb = document.createElement("button");
+        bearb.className = "btn btn-secondary";
+        bearb.textContent = "Bearbeiten";
+        bearb.onclick = () => openRezeptDialog(r, mengengefuehrt);
+        const del = document.createElement("button");
+        del.className = "btn btn-icon-danger";
+        del.textContent = "✕";
+        del.onclick = () => {
+          if (!confirm(`Rezept „${r.productName}" löschen?`)) return;
+          aktion(() => recipeAction({ kind: "delete", recipeId: r.id }), status);
+        };
+        akt.append(bearb, del);
+        row.appendChild(akt);
+        liste.appendChild(row);
+      }
+      card.appendChild(liste);
+    }
+
+    const neu = document.createElement("button");
+    neu.className = "btn btn-primary";
+    neu.textContent = "＋ Neues Rezept";
+    neu.onclick = () => openRezeptDialog(null, mengengefuehrt);
+    card.append(neu, status);
+    return card;
+  }
+
+  function openRezeptDialog(rezept, artikel) {
+    const neu = !rezept;
+    const zutaten = (rezept?.ingredients || []).map((z) => ({ ...z }));
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    document.body.appendChild(overlay);
+
+    const zeichne = () => {
+      overlay.innerHTML = `
+        <div class="dialog">
+          <h2>${neu ? "Neues Rezept" : "Rezept bearbeiten"}</h2>
+          <label class="field"><span>Produktname (wie im SumUp-Bericht)</span><input type="text" id="rz-name" value="${escapeHtml(
+            rezept?.productName || ""
+          )}" placeholder="z.B. Cappuccino" /></label>
+          <p class="muted small"><b>Zutaten pro verkauftem Stück</b></p>
+          <div id="rz-list" class="task-list"></div>
+          <button class="btn btn-secondary" id="rz-add" style="margin-top:8px">＋ Zutat hinzufügen</button>
+          <p class="muted small" id="rz-status"></p>
+          <div class="dialog-actions">
+            <button class="btn btn-secondary" id="rz-cancel">Abbrechen</button>
+            <button class="btn btn-primary" id="rz-save">Speichern</button>
+          </div>
+        </div>`;
+      const nameInput = overlay.querySelector("#rz-name");
+      const liste = overlay.querySelector("#rz-list");
+      zutaten.forEach((z, idx) => {
+        const row = document.createElement("div");
+        row.className = "task-add-row";
+        const sel = document.createElement("select");
+        for (const a of artikel) {
+          const o = document.createElement("option");
+          o.value = a.id;
+          o.textContent = `${a.name} (${a.unit})`;
+          if (a.id === z.stockItemId) o.selected = true;
+          sel.appendChild(o);
+        }
+        sel.onchange = () => (z.stockItemId = sel.value);
+        const menge = document.createElement("input");
+        menge.type = "number";
+        menge.step = "0.01";
+        menge.min = "0";
+        menge.style.width = "90px";
+        menge.value = z.amount;
+        menge.oninput = () => (z.amount = menge.value);
+        const weg = document.createElement("button");
+        weg.className = "btn btn-icon-danger";
+        weg.textContent = "✕";
+        weg.onclick = () => {
+          zutaten.splice(idx, 1);
+          const merk = nameInput.value;
+          zeichne();
+          overlay.querySelector("#rz-name").value = merk;
+        };
+        row.append(sel, menge, weg);
+        liste.appendChild(row);
+      });
+
+      overlay.querySelector("#rz-add").onclick = () => {
+        zutaten.push({ stockItemId: artikel[0].id, amount: 1 });
+        const merk = nameInput.value;
+        zeichne();
+        overlay.querySelector("#rz-name").value = merk;
+      };
+      overlay.querySelector("#rz-cancel").onclick = () => overlay.remove();
+      overlay.querySelector("#rz-save").onclick = async () => {
+        const status = overlay.querySelector("#rz-status");
+        const name = overlay.querySelector("#rz-name").value.trim();
+        if (!name) {
+          status.className = "callout callout-warn";
+          status.textContent = "Bitte einen Produktnamen eintragen.";
+          return;
+        }
+        overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
+        status.className = "muted small";
+        status.textContent = "Wird gespeichert…";
+        try {
+          await recipeAction({
+            kind: neu ? "create" : "update",
+            recipeId: rezept?.id,
+            productName: name,
+            ingredients: zutaten.map((z) => ({ stockItemId: z.stockItemId, amount: Number(z.amount) || 0 })),
+          });
+          overlay.remove();
+          await onChanged();
+        } catch (e) {
+          status.className = "callout callout-warn";
+          status.textContent = "⚠ " + e.message;
+          overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        }
+      };
+    };
+    zeichne();
+  }
+
+  /** Was zuletzt rein- und rausgegangen ist – aus den erfassten Lieferungen und Verkäufen. */
+  function buildBewegungen() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>📊 Letzte Bewegungen</h2>`;
+    const lieferungen = [...(state.stockDeliveries || [])].slice(-40).reverse();
+    const verkaeufe = [...(state.stockSales || [])].slice(-40).reverse();
+    if (lieferungen.length === 0 && verkaeufe.length === 0) {
+      card.innerHTML += `<p class="muted small">Noch nichts erfasst.</p>`;
+      return card;
+    }
+    const details = document.createElement("details");
+    details.className = "history";
+    details.innerHTML = `<summary>${lieferungen.length} Lieferungen · ${verkaeufe.length} Verkaufsposten anzeigen</summary>`;
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    scroll.style.marginTop = "10px";
+    const table = document.createElement("table");
+    table.className = "calc-table";
+    table.innerHTML = `<thead><tr><th>Datum</th><th>Art</th><th>Artikel / Produkt</th><th>Menge</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    const alle = [
+      ...lieferungen.map((d) => ({ date: d.date, art: "Eingang", was: d.itemName, menge: d.quantity != null ? `${d.quantity} ${d.unit || ""}`.trim() : "—" })),
+      ...verkaeufe.map((s) => ({ date: s.date, art: "Verkauf", was: s.productName, menge: `${s.quantitySold}x` })),
+    ].sort((a, b) => (a.date < b.date ? 1 : -1));
+    for (const z of alle) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escapeHtml(dateDe(z.date))}</td><td>${z.art}</td><td>${escapeHtml(z.was)}</td><td>${escapeHtml(z.menge)}</td>`;
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    scroll.appendChild(table);
+    details.appendChild(scroll);
+    card.appendChild(details);
     return card;
   }
 

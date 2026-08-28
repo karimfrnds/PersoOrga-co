@@ -419,6 +419,103 @@ async function handleAdminOverview(request, env) {
   return jsonResponse(safe);
 }
 
+/** Spiegelt eine Schicht-Entscheidung sofort in state.availability, damit der Chef am Laptop direkt sieht,
+ * dass sie angekommen ist. Bewusst NUR für die betroffene Person: welche Schichten sich gegenseitig
+ * blockieren (Service und Bar teilen sich einen Plan, Küche nicht) und die Kaskade daraus kennt allein der
+ * iPad – diese Logik wird nicht doppelt gepflegt, sonst laufen beide Seiten irgendwann auseinander. Der iPad
+ * korrigiert beim nächsten Abgleich ohnehin auf den maßgeblichen Stand. */
+function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, decision) {
+  const needle = employeeName.trim().toLowerCase();
+  const next = { ...availability };
+  for (const [weekStart, bucket] of Object.entries(availability || {})) {
+    const entryKey = Object.keys(bucket?.entries || {}).find((n) => n.trim().toLowerCase() === needle);
+    if (!entryKey) continue;
+    const entry = bucket.entries[entryKey];
+    const dayIdx = (entry.days || []).findIndex((d) => d.date === date);
+    if (dayIdx < 0) continue;
+    const day = entry.days[dayIdx];
+    const slot = (day.slots || []).find((s) => (s.label || "").trim().toLowerCase() === slotLabel.trim().toLowerCase());
+    if (!slot) continue;
+
+    const updatedDay =
+      decision === "confirm"
+        ? { ...day, confirmedSlotId: slot.id, bossConfirmed: true }
+        : // Ablehnen: Schicht fällt aus der Auswahl und eine feste Zuteilung wird aufgehoben.
+          {
+            ...day,
+            slots: (day.slots || []).filter((s) => s.id !== slot.id),
+            confirmedSlotId: day.confirmedSlotId === slot.id ? null : day.confirmedSlotId,
+            bossConfirmed: day.confirmedSlotId === slot.id ? false : day.bossConfirmed,
+          };
+
+    const days = [...entry.days];
+    days[dayIdx] = updatedDay;
+    next[weekStart] = { ...bucket, entries: { ...bucket.entries, [entryKey]: { ...entry, days } } };
+    return next;
+  }
+  return next;
+}
+
+/** Chef entscheidet vom Laptop über eine Schicht. Der Eintrag geht in dieselbe Warteschlange, die auch der
+ * Telegram-Bot nutzt – der iPad übernimmt ihn beim nächsten Abgleich und bleibt die maßgebliche Instanz. */
+async function handleAdminShiftDecision(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const employeeName = String(body?.employeeName || "").trim();
+  const date = String(body?.date || "");
+  const slotLabel = String(body?.slotLabel || "").trim();
+  const decision = body?.decision === "reject" ? "reject" : "confirm";
+  if (!employeeName || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !slotLabel) {
+    return jsonResponse({ error: "Mitarbeiter, Datum und Schicht werden benötigt." }, 400);
+  }
+  if (!KNOWN_SLOT_LABELS.has(normalizeSlotLabelCheck(slotLabel))) {
+    return jsonResponse({ error: `Unbekannte Schicht "${slotLabel}".` }, 400);
+  }
+
+  const state = await getState(env);
+  const entry = { id: crypto.randomUUID(), employeeName, date, slotLabel };
+  const patch = { availability: applyShiftDecisionPreview(state.availability, employeeName, date, slotLabel, decision) };
+  if (decision === "confirm") patch.plannedShifts = [...(state.plannedShifts || []), { ...entry, from: "", to: "" }];
+  else patch.shiftRejections = [...(state.shiftRejections || []), entry];
+  await patchState(env, patch);
+  return jsonResponse({ ok: true });
+}
+
+/** Vorräte vom Laptop: "wieder da" bzw. eine Lieferung erfassen – beides über die bestehenden
+ * Warteschlangen, die der iPad schon abarbeitet. */
+async function handleAdminStock(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const itemName = String(body?.itemName || "").trim();
+  if (!itemName) return jsonResponse({ error: "Artikelname fehlt." }, 400);
+  const state = await getState(env);
+
+  if (body?.kind === "delivery") {
+    const quantity = Number(body?.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : todayBerlin();
+    const delivery = { id: crypto.randomUUID(), itemName, quantity, unit: String(body?.unit || "").trim(), date };
+    await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), delivery] });
+  } else {
+    await patchState(env, { stockRestocks: [...(state.stockRestocks || []), { id: crypto.randomUUID(), itemName }] });
+  }
+  return jsonResponse({ ok: true });
+}
+
 async function sendTelegramMessage(env, chatId, text) {
   await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -1886,6 +1983,8 @@ export default {
       if (url.pathname === "/me/availability") return handleMeAvailability(request, env);
       if (url.pathname === "/me/sick") return handleMeSick(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
+      if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
+      if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
       return jsonResponse({ error: "unbekannter Endpunkt" }, 404);
     }
 

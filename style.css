@@ -425,6 +425,11 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .plan-cell-pending { background: var(--orange-light, #fdf0dd); color: var(--orange, #b5620a); }
 .plan-decide-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
 .plan-decide-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--gray-light); border-radius: 10px; padding: 10px 12px; }
+.plan-cell-sick { background: var(--gray-light); color: var(--gray); }
+
+/* ---- Chef-Ansicht (chef.html, eigener Einstieg für den Laptop) ---- */
+.chef-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.chef-login { max-width: 520px; }
 
 /* ---- Verfügbarkeit (Kiosk) ---- */
 .avail-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }

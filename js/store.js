@@ -958,6 +958,10 @@ export const store = {
       area: area === "draussen" ? "draussen" : "innen",
       active: true,
       sort: data.tables.length,
+      // Tische, die physisch daneben stehen und zusammengeschoben werden können.
+      // Wird immer beidseitig gepflegt (siehe setTableNeighbours), sonst kämen widersprüchliche
+      // Angaben heraus: Tisch 1 wüsste von Tisch 2, aber nicht umgekehrt.
+      combinesWith: [],
     };
     if (!t.name) return null;
     data.tables.push(t);
@@ -974,8 +978,29 @@ export const store = {
     persist();
     return t;
   },
+  /** Nachbarn eines Tisches setzen – immer beidseitig, damit die Angaben nie auseinanderlaufen. */
+  setTableNeighbours(id, neighbourIds) {
+    const t = data.tables.find((x) => x.id === id);
+    if (!t) return null;
+    // Nur echte, andere Tische; ein Tisch ist nie sein eigener Nachbar.
+    const gueltig = [...new Set(neighbourIds)].filter((n) => n !== id && data.tables.some((x) => x.id === n));
+    t.combinesWith = gueltig;
+    for (const other of data.tables) {
+      if (other.id === id) continue;
+      const liste = new Set(other.combinesWith || []);
+      if (gueltig.includes(other.id)) liste.add(id);
+      else liste.delete(id);
+      other.combinesWith = [...liste];
+    }
+    persist();
+    return t;
+  },
   removeTable(id) {
     data.tables = data.tables.filter((t) => t.id !== id);
+    // Auch aus den Nachbarschafts-Listen der anderen entfernen, sonst zeigen die auf einen Geistertisch.
+    for (const t of data.tables) {
+      if (t.combinesWith?.includes(id)) t.combinesWith = t.combinesWith.filter((x) => x !== id);
+    }
     // Zuweisungen auf diesen Tisch lösen sich auf, sonst zeigt die Reservierung auf einen Tisch,
     // den es nicht mehr gibt.
     for (const r of data.reservations) {
@@ -1094,6 +1119,86 @@ export const store = {
       return startA < startB + dauer && startB < endeA;
     });
   },
+  /** Stehen diese Tische so, dass man sie zu EINER Tafel zusammenschieben kann?
+   *
+   * Es reicht nicht, dass jeder Tisch irgendeinen Nachbarn in der Auswahl hat – die ganze Auswahl muss
+   * zusammenhängen. Bei einer Reihe 1–2–3 sind 1+2 und 2+3 in Ordnung, 1+3 dagegen nicht: dazwischen
+   * stünde Tisch 2 im Weg. Geprüft wird das, indem man von einem Tisch aus über die Nachbarschaften
+   * läuft und schaut, ob man alle anderen erreicht.
+   */
+  areTablesCombinable(tableIds) {
+    const ids = [...new Set(tableIds)].filter((id) => data.tables.some((t) => t.id === id));
+    if (ids.length <= 1) return true;
+    // Über zwei Bereiche hinweg geht nie – drinnen und draußen lassen sich nicht zusammenschieben.
+    const bereiche = new Set(ids.map((id) => data.tables.find((t) => t.id === id).area));
+    if (bereiche.size > 1) return false;
+
+    const inAuswahl = new Set(ids);
+    const erreicht = new Set([ids[0]]);
+    const warteschlange = [ids[0]];
+    while (warteschlange.length > 0) {
+      const aktuell = warteschlange.shift();
+      const tisch = data.tables.find((t) => t.id === aktuell);
+      for (const n of tisch?.combinesWith || []) {
+        if (!inAuswahl.has(n) || erreicht.has(n)) continue;
+        erreicht.add(n);
+        warteschlange.push(n);
+      }
+    }
+    return erreicht.size === ids.length;
+  },
+
+  /** Passende Tische bzw. Tisch-Kombinationen für eine Reservierung, beste zuerst.
+   *
+   * Reihenfolge: möglichst wenige Tische, dann möglichst wenig verschenkte Plätze. Ein einzelner
+   * Vierer ist also besser als zwei Zweier, und zwei Zweier sind besser als ein Sechser.
+   * Kombiniert wird nur, was laut Nachbarschaft auch wirklich zusammengeschoben werden kann.
+   */
+  getCombinationSuggestions(date, time, guests, area, exceptReservationId = null, maxTische = 3) {
+    const personen = Math.max(1, Number(guests) || 1);
+    let frei = this.getFreeTables(date, time, exceptReservationId);
+    // Bereichswunsch beachten – "egal" lässt beides zu.
+    if (area === "innen" || area === "draussen") frei = frei.filter((t) => t.area === area);
+    if (frei.length === 0) return [];
+
+    const vorschlaege = [];
+    const gesehen = new Set();
+    const merken = (tische) => {
+      const plaetze = tische.reduce((s, t) => s + t.seats, 0);
+      if (plaetze < personen) return;
+      const key = tische.map((t) => t.id).sort().join("|");
+      if (gesehen.has(key)) return;
+      gesehen.add(key);
+      vorschlaege.push({ tableIds: tische.map((t) => t.id), names: tische.map((t) => t.name), seats: plaetze, count: tische.length });
+    };
+
+    // Einzelne Tische
+    for (const t of frei) merken([t]);
+
+    // Kombinationen: nur über echte Nachbarschaften, deshalb von jedem Tisch aus die Nachbarn ablaufen.
+    // Die Suche ist auf maxTische begrenzt, sonst wüchse sie bei vielen Tischen ins Uferlose.
+    const freiIds = new Set(frei.map((t) => t.id));
+    const erweitern = (gruppe) => {
+      if (gruppe.length >= maxTische) return;
+      const kandidaten = new Set();
+      for (const t of gruppe) {
+        for (const n of t.combinesWith || []) {
+          if (!freiIds.has(n) || gruppe.some((g) => g.id === n)) continue;
+          kandidaten.add(n);
+        }
+      }
+      for (const id of kandidaten) {
+        const neu = [...gruppe, frei.find((t) => t.id === id)];
+        merken(neu);
+        erweitern(neu);
+      }
+    };
+    for (const t of frei) erweitern([t]);
+
+    vorschlaege.sort((a, b) => a.count - b.count || a.seats - b.seats || a.names.join().localeCompare(b.names.join()));
+    return vorschlaege;
+  },
+
   /** Tische, die zu dieser Zeit frei sind. Terrassentische fallen bei gesperrter Terrasse ganz raus. */
   getFreeTables(date, time, exceptReservationId = null) {
     const terrasseZu = this.isTerraceClosed(date);

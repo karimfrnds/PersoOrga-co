@@ -634,3 +634,11 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 }
 .res-warn { color: var(--orange); font-weight: 600; font-size: 14px; margin-top: 2px; }
 .topnav-version { font-size: 12px; font-weight: 400; opacity: 0.65; margin-left: 8px; }
+
+/* Kombinations-Vorschläge in der Tischauswahl */
+.res-vorschlag { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px;
+  border-radius: 10px; border: 2px solid var(--green); background: var(--green-light); color: var(--green-dark);
+  cursor: pointer; font: inherit; text-align: left; }
+.res-vorschlag:hover { background: var(--green); color: #fff; }
+.res-vorschlag:hover .muted { color: #fff; opacity: 0.85; }
+.res-vorschlag .res-tisch-name { font-weight: 700; }

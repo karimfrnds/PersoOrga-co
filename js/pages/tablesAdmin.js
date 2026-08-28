@@ -25,7 +25,9 @@ function renderTablesAdmin() {
     frag.innerHTML = `
       <h1>🪑 Tische</h1>
       <p class="muted">Grundlage für die Reservierungen: welche Tische es gibt, wie viele Plätze sie haben und
-      ob sie drinnen oder draußen stehen.</p>`;
+      ob sie drinnen oder draußen stehen. Unter <b>Steht neben</b> legst du fest, welche Tische
+      zusammengeschoben werden können – daraus schlägt das System bei größeren Gruppen passende
+      Kombinationen vor.</p>`;
     frag.appendChild(buildNeu());
     frag.appendChild(buildListe());
     frag.appendChild(buildEinstellungen());
@@ -139,7 +141,7 @@ function renderTablesAdmin() {
       scroll.style.overflowX = "auto";
       const table = document.createElement("table");
       table.className = "calc-table";
-      table.innerHTML = `<thead><tr><th>Name</th><th>Plätze</th><th>Bereich</th><th></th></tr></thead>`;
+      table.innerHTML = `<thead><tr><th>Name</th><th>Plätze</th><th>Bereich</th><th>Steht neben</th><th></th></tr></thead>`;
       const tbody = document.createElement("tbody");
       for (const t of liste) {
         const tr = document.createElement("tr");
@@ -179,6 +181,15 @@ function renderTablesAdmin() {
         };
         brTd.appendChild(brSel);
 
+        const nachbarnTd = document.createElement("td");
+        const nachbarn = (t.combinesWith || []).map((id) => store.getTable(id)?.name).filter(Boolean);
+        const nbBtn = document.createElement("button");
+        nbBtn.className = "btn btn-secondary";
+        nbBtn.textContent = nachbarn.length ? `↔ ${nachbarn.join(", ")}` : "↔ festlegen";
+        nbBtn.title = "Welche Tische stehen daneben und lassen sich zusammenschieben?";
+        nbBtn.onclick = () => openNachbarn(t);
+        nachbarnTd.appendChild(nbBtn);
+
         const aktTd = document.createElement("td");
         aktTd.className = "employee-actions";
         const um = document.createElement("button");
@@ -201,7 +212,7 @@ function renderTablesAdmin() {
         };
         aktTd.append(um, del);
 
-        tr.append(nameTd, plTd, brTd, aktTd);
+        tr.append(nameTd, plTd, brTd, nachbarnTd, aktTd);
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
@@ -209,6 +220,63 @@ function renderTablesAdmin() {
       card.appendChild(scroll);
     }
     return card;
+  }
+
+  /** Nachbarn eines Tisches auswählen. Nur Tische aus demselben Bereich – drinnen und draußen lassen
+   * sich nicht zusammenschieben, und die Auswahl bliebe sonst unnötig lang. */
+  function openNachbarn(t) {
+    const andere = store.getTables(true).filter((x) => x.id !== t.id && x.area === t.area);
+    const aktuell = new Set(t.combinesWith || []);
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>${escapeHtml(t.name)} steht neben…</h2>
+        <p class="muted small">Welche Tische stehen direkt daneben und lassen sich zusammenschieben?
+        Nur diese werden später als Kombination vorgeschlagen.</p>
+      </div>`;
+    const box = overlay.querySelector(".dialog");
+
+    if (andere.length === 0) {
+      const p = document.createElement("p");
+      p.className = "muted small";
+      p.textContent = "Es gibt keine weiteren Tische in diesem Bereich.";
+      box.appendChild(p);
+    } else {
+      const liste = document.createElement("div");
+      liste.className = "res-tische";
+      for (const x of andere) {
+        const btn = document.createElement("button");
+        btn.className = "res-tisch-btn" + (aktuell.has(x.id) ? " gewaehlt" : "");
+        btn.innerHTML = `<span class="res-tisch-name">${escapeHtml(x.name)}</span><span class="muted small">${x.seats} Pl.</span>`;
+        btn.onclick = () => {
+          if (aktuell.has(x.id)) aktuell.delete(x.id);
+          else aktuell.add(x.id);
+          btn.classList.toggle("gewaehlt", aktuell.has(x.id));
+        };
+        liste.appendChild(btn);
+      }
+      box.appendChild(liste);
+    }
+
+    const aktionen = document.createElement("div");
+    aktionen.className = "dialog-actions";
+    const abbrechen = document.createElement("button");
+    abbrechen.className = "btn btn-secondary";
+    abbrechen.textContent = "Abbrechen";
+    abbrechen.onclick = () => overlay.remove();
+    const speichern = document.createElement("button");
+    speichern.className = "btn btn-primary";
+    speichern.textContent = "Speichern";
+    speichern.onclick = () => {
+      store.setTableNeighbours(t.id, [...aktuell]);
+      overlay.remove();
+      rerender();
+    };
+    aktionen.append(abbrechen, speichern);
+    box.appendChild(aktionen);
+    document.body.appendChild(overlay);
   }
 
   function buildEinstellungen() {

@@ -267,6 +267,46 @@ function renderReservations() {
       return box;
     }
 
+    // Vorschläge zuerst: bei 24 Reservierungen soll niemand selbst suchen, welche zwei Zweier noch
+    // frei sind und nebeneinander stehen. Nur anzeigen, solange noch nichts zugewiesen ist.
+    if ((r.tableIds || []).length === 0) {
+      const vorschlaege = store.getCombinationSuggestions(datum, r.time, r.guests, r.area, r.id).slice(0, 5);
+      if (vorschlaege.length > 0) {
+        const titel = document.createElement("div");
+        titel.className = "muted small res-bereich";
+        titel.innerHTML = `<b>Passt für ${r.guests} ${r.guests === 1 ? "Person" : "Personen"}</b> – antippen übernimmt direkt`;
+        box.appendChild(titel);
+
+        const reihe = document.createElement("div");
+        reihe.className = "res-tische";
+        for (const v of vorschlaege) {
+          const btn = document.createElement("button");
+          btn.className = "res-vorschlag" + (v.count > 1 ? " res-vorschlag-kombi" : "");
+          btn.innerHTML =
+            `<span class="res-tisch-name">${escapeHtml(v.names.join(" + "))}</span>` +
+            `<span class="muted small">${v.seats} Plätze${v.count > 1 ? " · zusammengeschoben" : ""}</span>`;
+          btn.onclick = () => {
+            store.updateReservation(r.id, { tableIds: v.tableIds });
+            rerender();
+          };
+          reihe.appendChild(btn);
+        }
+        box.appendChild(reihe);
+
+        const trenner = document.createElement("div");
+        trenner.className = "muted small res-bereich";
+        trenner.textContent = "…oder selbst auswählen:";
+        box.appendChild(trenner);
+      } else {
+        const leer = document.createElement("div");
+        leer.className = "callout callout-warn";
+        leer.textContent = `Keine freie Kombination für ${r.guests} ${
+          r.guests === 1 ? "Person" : "Personen"
+        } um ${r.time}. Du kannst trotzdem von Hand zuweisen.`;
+        box.appendChild(leer);
+      }
+    }
+
     const terrasseZu = store.isTerraceClosed(datum);
     for (const bereich of ["innen", "draussen"]) {
       const imBereich = tische.filter((t) => t.area === bereich);
@@ -320,6 +360,16 @@ function renderReservations() {
       info.textContent = `${plaetze} Plätze für ${r.guests} ${r.guests === 1 ? "Person" : "Personen"}.`;
     }
     box.appendChild(info);
+
+    // Mehrere Tische, die laut Nachbarschaft nicht zusammenpassen: als Hinweis, nicht als Verbot.
+    // Es kann gute Gründe geben (Tisch umstellen, Gruppe sitzt getrennt) – das entscheidet der Mensch.
+    if ((r.tableIds || []).length > 1 && !store.areTablesCombinable(r.tableIds)) {
+      const warn = document.createElement("p");
+      warn.className = "callout callout-warn";
+      warn.textContent =
+        "Diese Tische stehen laut Tischplan nicht nebeneinander – sie lassen sich also nicht zu einer Tafel zusammenschieben. Wenn die Gruppe getrennt sitzen soll, passt es so.";
+      box.appendChild(warn);
+    }
 
     const fertig = document.createElement("button");
     fertig.className = "btn btn-primary";

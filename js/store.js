@@ -247,7 +247,9 @@ function materializePlannedShiftsFromAvailability(d) {
       const emp = data.employees.find((e) => e.id === a.employeeId);
       const slot = emp ? shiftSlotsForRole(emp.role).find((s) => s.id === a.confirmedSlotId) : null;
       if (slot) {
-        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: "", bossConfirmed: !!a.bossConfirmed };
+        // note kommt aus der Verfügbarkeit, nicht aus der Schicht selbst: diese Funktion baut die Schicht bei
+        // jeder Auflösung neu, eine direkt an der Schicht gespeicherte Notiz wäre dabei jedes Mal weg.
+        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: a.note || "", bossConfirmed: !!a.bossConfirmed };
         if (idx >= 0) d.plannedShifts[idx] = shift;
         else d.plannedShifts.push(shift);
       }
@@ -586,7 +588,10 @@ export const store = {
    * jemand anderes sie gerade fest hatte – die verliert sie dann wieder). Zählt IMMER als Chef-Bestätigung
    * (auch für "mittel", die sonst nie automatisch bestätigt wird) und schickt der Person eine Nachricht,
    * die beim nächsten Öffnen ihres Kiosk-Fensters als Pop-up erscheint. Stößt die Kaskade erneut an. */
-  confirmAvailability(dayId, employeeId, slotId) {
+  /** note ist optional: eine kurze Info zur Schicht ("bitte Lieferung annehmen"), die der Person unter
+   * "Deine Schichten" angezeigt wird und in der Benachrichtigung mitkommt. Wird an der Verfügbarkeit
+   * gespeichert, weil die geplante Schicht bei jeder Auflösung neu gebaut wird. */
+  confirmAvailability(dayId, employeeId, slotId, note) {
     const d = this.getDay(dayId);
     if (!d) return;
     const role = roleOf(employeeId);
@@ -599,14 +604,31 @@ export const store = {
       if (!a.slotIds.includes(slotId)) a.slotIds.push(slotId);
       a.confirmedSlotId = slotId;
       a.bossConfirmed = true;
+      // Nur überschreiben, wenn wirklich eine Notiz mitkam – sonst würde eine erneute Bestätigung
+      // (z.B. beim Umplanen) eine vorhandene Info stillschweigend löschen.
+      if (note !== undefined && note !== null) a.note = String(note).trim();
     } else {
-      d.availability.push({ id: uid(), employeeId, slotIds: [slotId], confirmedSlotId: slotId, bossConfirmed: true, submittedAt: new Date().toISOString() });
+      d.availability.push({
+        id: uid(),
+        employeeId,
+        slotIds: [slotId],
+        confirmedSlotId: slotId,
+        bossConfirmed: true,
+        note: note ? String(note).trim() : "",
+        submittedAt: new Date().toISOString(),
+      });
     }
     resolveDayAvailability(d);
     persist();
 
     const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
-    this.addNotification(employeeId, `✅ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr)` : ""} ist vom Chef bestätigt.`);
+    const noteText = note ? String(note).trim() : "";
+    this.addNotification(
+      employeeId,
+      `✅ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr)` : ""} ist vom Chef bestätigt.${
+        noteText ? `\n📝 ${noteText}` : ""
+      }`
+    );
 
     return this.getAvailability(dayId, employeeId);
   },

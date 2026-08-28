@@ -86,8 +86,8 @@ async function login(pin) {
 
 const getOverview = () => request("/admin/overview");
 
-const decideShift = (employeeName, date, slotLabel, decision) =>
-  request("/admin/shift-decision", { method: "POST", body: { employeeName, date, slotLabel, decision } });
+const decideShift = (employeeName, date, slotLabel, decision, note) =>
+  request("/admin/shift-decision", { method: "POST", body: { employeeName, date, slotLabel, decision, note } });
 
 const markRestocked = (itemName) => request("/admin/stock", { method: "POST", body: { kind: "restock", itemName } });
 

@@ -83,13 +83,89 @@ function renderPlanning(state, { onChanged, today }) {
     nav.append(prev, label, next);
     frag.appendChild(nav);
 
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary";
+    addBtn.textContent = "＋ Person eintragen";
+    addBtn.onclick = () => openAssign();
+    frag.appendChild(addBtn);
+
     const legend = document.createElement("p");
     legend.className = "muted small";
-    legend.textContent = "✅ Fest bestätigt · 🔶 Wartet auf Bestätigung · 🕓 Kandidat, noch offen · 🤒 Krank · – Keine Angabe";
+    legend.textContent = "✅ Fest bestätigt · 🔶 Wartet auf Bestätigung · 🕓 Kandidat, noch offen · 🤒 Krank · – Keine Angabe · 📝 Info hinterlegt";
     frag.appendChild(legend);
 
     frag.appendChild(buildTable());
     return frag;
+  }
+
+  /** Schichten, die für die Rolle dieser Person an diesem Wochentag angeboten werden. Definitionen kommen
+   * vom iPad – hier wird nichts fest verdrahtet, damit es bei Änderungen nicht auseinanderläuft. */
+  function slotsFor(name, date) {
+    const slots = state.shiftSlots;
+    if (!slots) return [];
+    const role = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === name.trim().toLowerCase())?.role;
+    const list = (role === "kueche" ? slots.kueche : slots.service) || [];
+    const [y, m, d] = date.split("-").map(Number);
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    const idx = wd === 0 ? 6 : wd - 1; // 0 = Montag
+    return list.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(idx));
+  }
+
+  /** Jemanden von Hand eintragen – auch wenn die Person für den Tag gar nichts gemeldet hat. */
+  function openAssign(presetName, presetDate) {
+    const employees = [...(state.employees || [])].sort((a, b) => a.localeCompare(b));
+    if (employees.length === 0) return;
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>Person eintragen</h2>
+        <label class="field"><span>Mitarbeiter</span>
+          <select id="as-emp">${employees.map((n) => `<option ${n === presetName ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}</select>
+        </label>
+        <label class="field"><span>Tag</span><input type="date" id="as-date" value="${presetDate || weekStart}" /></label>
+        <label class="field"><span>Schicht</span><select id="as-slot"></select></label>
+        <label class="field"><span>Info zur Schicht (optional)</span><input type="text" id="as-note" maxlength="200" placeholder="z.B. bitte Lieferung annehmen" /></label>
+        <p class="muted small">Die Person bekommt die Schicht als bestätigt angezeigt – im Kiosk am iPad und in ihrer App.</p>
+        <p class="muted small" id="as-status"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" id="as-cancel">Abbrechen</button>
+          <button class="btn btn-primary" id="as-save">Eintragen</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const empSel = overlay.querySelector("#as-emp");
+    const dateIn = overlay.querySelector("#as-date");
+    const slotSel = overlay.querySelector("#as-slot");
+    const status = overlay.querySelector("#as-status");
+
+    const refreshSlots = () => {
+      const list = slotsFor(empSel.value, dateIn.value);
+      slotSel.innerHTML = list.length
+        ? list.map((s) => `<option value="${escapeHtml(s.label)}">${escapeHtml(s.label)} (${escapeHtml(s.from)}–${escapeHtml(s.to)})</option>`).join("")
+        : `<option value="">– an diesem Tag keine Schicht für diese Rolle –</option>`;
+    };
+    refreshSlots();
+    empSel.onchange = refreshSlots;
+    dateIn.onchange = refreshSlots;
+
+    overlay.querySelector("#as-cancel").onclick = () => overlay.remove();
+    overlay.querySelector("#as-save").onclick = async () => {
+      if (!slotSel.value) {
+        status.textContent = "⚠ Für diese Rolle gibt es an dem Tag keine Schicht.";
+        return;
+      }
+      overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      status.textContent = "Wird gespeichert…";
+      try {
+        await decideShift(empSel.value, dateIn.value, slotSel.value, "confirm", overlay.querySelector("#as-note").value.trim());
+        overlay.remove();
+        await onChanged();
+      } catch (e) {
+        status.textContent = "⚠ " + e.message;
+        overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    };
   }
 
   function buildTable() {
@@ -129,19 +205,24 @@ function renderPlanning(state, { onChanged, today }) {
         const td = document.createElement("td");
         const entry = dayEntryFor(state, name, weekStart, date);
 
+        const noteTag = entry?.note ? ` <span title="${escapeHtml(entry.note)}">📝</span>` : "";
         if (isSick(state, name, date)) {
           td.innerHTML = `<span class="plan-cell plan-cell-sick">🤒 Krank</span>`;
         } else if (!entry || (entry.slots || []).length === 0) {
+          // Leere Zelle: direkt jemanden für diesen Tag eintragen.
           td.innerHTML = `<span class="muted">–</span>`;
+          td.style.cursor = "pointer";
+          td.title = "Person für diesen Tag eintragen";
+          td.onclick = () => openAssign(name, date);
         } else {
           const confirmed = (entry.slots || []).find((s) => s.id === entry.confirmedSlotId);
           if (confirmed && entry.bossConfirmed) {
-            td.innerHTML = `<span class="plan-cell plan-cell-confirmed">✅ ${escapeHtml(confirmed.label)}</span>`;
+            td.innerHTML = `<span class="plan-cell plan-cell-confirmed">✅ ${escapeHtml(confirmed.label)}</span>${noteTag}`;
           } else if (confirmed) {
-            td.innerHTML = `<span class="plan-cell plan-cell-pending">🔶 ${escapeHtml(confirmed.label)}</span>`;
+            td.innerHTML = `<span class="plan-cell plan-cell-pending">🔶 ${escapeHtml(confirmed.label)}</span>${noteTag}`;
           } else {
             const labels = entry.slots.map((s) => s.label).join(", ");
-            td.innerHTML = `<span class="plan-cell plan-cell-pending">🕓 ${escapeHtml(labels)}</span>`;
+            td.innerHTML = `<span class="plan-cell plan-cell-pending">🕓 ${escapeHtml(labels)}</span>${noteTag}`;
           }
           td.style.cursor = "pointer";
           td.onclick = () => openDecide(name, date, entry);
@@ -176,6 +257,10 @@ function renderPlanning(state, { onChanged, today }) {
       <div class="dialog">
         <h2>${escapeHtml(name)} – ${escapeHtml(dateDe(date))}</h2>
         <div class="plan-decide-list">${rows}</div>
+        <label class="field"><span>Info zur Schicht (optional)</span>
+          <input type="text" id="cd-note" maxlength="200" value="${escapeHtml(entry.note || "")}" placeholder="z.B. bitte Lieferung annehmen" />
+        </label>
+        <p class="muted small">Die Info wird beim Bestätigen mitgespeichert und der Person angezeigt.</p>
         <p class="muted small" id="cd-status"></p>
         <div class="dialog-actions"><button class="btn btn-secondary" id="cd-close">Schließen</button></div>
       </div>`;
@@ -187,7 +272,7 @@ function renderPlanning(state, { onChanged, today }) {
       overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
       status.textContent = "Wird gespeichert…";
       try {
-        await decideShift(name, date, slotLabel, decision);
+        await decideShift(name, date, slotLabel, decision, overlay.querySelector("#cd-note").value.trim());
         overlay.remove();
         await onChanged();
       } catch (e) {

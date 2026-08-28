@@ -261,7 +261,8 @@ async function performTaskSync() {
           syncWarnings.push(`Schicht-Zuweisung für ${rs.employeeName} am ${rs.date}: Schicht "${rs.slotLabel}" nicht erkannt (erwartet z.B. Früh1/Mittel/Spät2).`);
         } else {
           const day = store.getOrCreateDayByDate(rs.date);
-          store.confirmAvailability(day.id, match.id, slot.id);
+          // note kommt vom Laptop mit ("Info zur Schicht") und landet bei der Person unter "Deine Schichten".
+          store.confirmAvailability(day.id, match.id, slot.id, rs.note);
         }
       }
       appliedAssignmentIds.add(rs.id);
@@ -504,8 +505,14 @@ async function performTaskSync() {
     currentAmount: s.unit ? s.currentAmount : null,
   }));
   const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
+  // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
+  // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
+  const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role }));
+  const shiftSlots = store.getSettings().shiftSlots;
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
+    employeeRoles,
+    shiftSlots,
     tasks: pushTasks,
     shiftsInService,
     financials,

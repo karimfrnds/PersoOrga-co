@@ -138,6 +138,9 @@ const EMPTY_STATE = {
   // Vom iPad gelieferte PIN-Hashes für den Handy-/Laptop-Login. NIEMALS an einen Client ausliefern.
   authPins: [], // [{name, pinHash}]
   adminPinHash: null,
+  // Rollen + Schicht-Definitionen vom iPad, damit die Laptop-Ansicht weiß, welche Schichten es für wen gibt.
+  employeeRoles: [], // [{name, role}]
+  shiftSlots: null, // { service: [{id,label,from,to,allowedWeekdays?}], kueche: [...] }
 };
 
 async function getState(env) {
@@ -168,6 +171,8 @@ async function getState(env) {
       sickReports: Array.isArray(parsed.sickReports) ? parsed.sickReports : [],
       authPins: Array.isArray(parsed.authPins) ? parsed.authPins : [],
       adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
+      employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
+      shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -438,7 +443,7 @@ async function handleAdminOverview(request, env) {
  * blockieren (Service und Bar teilen sich einen Plan, Küche nicht) und die Kaskade daraus kennt allein der
  * iPad – diese Logik wird nicht doppelt gepflegt, sonst laufen beide Seiten irgendwann auseinander. Der iPad
  * korrigiert beim nächsten Abgleich ohnehin auf den maßgeblichen Stand. */
-function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, decision) {
+function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, decision, note, state) {
   const needle = employeeName.trim().toLowerCase();
   const next = { ...availability };
   for (const [weekStart, bucket] of Object.entries(availability || {})) {
@@ -463,11 +468,47 @@ function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, 
           };
 
     const days = [...entry.days];
-    days[dayIdx] = updatedDay;
+    days[dayIdx] = { ...updatedDay, note: note !== undefined ? note : day.note };
     next[weekStart] = { ...bucket, entries: { ...bucket.entries, [entryKey]: { ...entry, days } } };
     return next;
   }
+
+  // Kein passender Eintrag vorhanden: der Chef trägt jemanden von Hand ein, der sich für diesen Tag gar
+  // nicht gemeldet hat. Beim iPad geht das über confirmAvailability(), das den Eintrag selbst anlegt –
+  // hier wird er nur für die Sofort-Anzeige nachgebildet. Bei einer Ablehnung gibt es dagegen nichts
+  // anzulegen, da hört die Vorschau auf.
+  if (decision !== "confirm") return next;
+  const slotDef = findSlotDefinition(state, employeeName, slotLabel);
+  if (!slotDef) return next;
+  const weekStart = mondayOf(date);
+  const bucket = next[weekStart] || { entries: {}, notifiedComplete: false };
+  const entryKey = Object.keys(bucket.entries || {}).find((n) => n.trim().toLowerCase() === needle) || employeeName;
+  const entry = bucket.entries?.[entryKey] || { submittedAt: new Date().toISOString(), days: [] };
+  const days = [...(entry.days || [])];
+  const dayIdx = days.findIndex((d) => d.date === date);
+  const newDay = {
+    date,
+    slots: [slotDef],
+    confirmedSlotId: slotDef.id,
+    bossConfirmed: true,
+    note: note || "",
+  };
+  if (dayIdx >= 0) days[dayIdx] = { ...days[dayIdx], ...newDay, slots: days[dayIdx].slots?.length ? days[dayIdx].slots : [slotDef] };
+  else days.push(newDay);
+  next[weekStart] = { ...bucket, entries: { ...(bucket.entries || {}), [entryKey]: { ...entry, days } } };
   return next;
+}
+
+/** Sucht die Schicht-Definition (Zeiten) passend zur Rolle der Person. Die Definitionen kommen vom iPad,
+ * damit sie nicht doppelt gepflegt werden. Service und Bar teilen sich denselben Plan. */
+function findSlotDefinition(state, employeeName, slotLabel) {
+  const slots = state?.shiftSlots;
+  if (!slots) return null;
+  const needle = employeeName.trim().toLowerCase();
+  const role = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role;
+  const list = role === "kueche" ? slots.kueche : slots.service;
+  const found = (list || []).find((s) => normalizeSlotLabelCheck(s.label) === normalizeSlotLabelCheck(slotLabel));
+  return found ? { id: found.id, label: found.label, from: found.from, to: found.to } : null;
 }
 
 /** Chef entscheidet vom Laptop über eine Schicht. Der Eintrag geht in dieselbe Warteschlange, die auch der
@@ -493,10 +534,11 @@ async function handleAdminShiftDecision(request, env) {
     return jsonResponse({ error: `Unbekannte Schicht "${slotLabel}".` }, 400);
   }
 
+  const note = String(body?.note || "").trim().slice(0, 200);
   const state = await getState(env);
   const entry = { id: crypto.randomUUID(), employeeName, date, slotLabel };
-  const patch = { availability: applyShiftDecisionPreview(state.availability, employeeName, date, slotLabel, decision) };
-  if (decision === "confirm") patch.plannedShifts = [...(state.plannedShifts || []), { ...entry, from: "", to: "" }];
+  const patch = { availability: applyShiftDecisionPreview(state.availability, employeeName, date, slotLabel, decision, note, state) };
+  if (decision === "confirm") patch.plannedShifts = [...(state.plannedShifts || []), { ...entry, from: "", to: "", note }];
   else patch.shiftRejections = [...(state.shiftRejections || []), entry];
   await patchState(env, patch);
   return jsonResponse({ ok: true });
@@ -1703,6 +1745,8 @@ async function handleState(request, env) {
     // alle Handy-Logins wären auf einen Schlag tot.
     if (Array.isArray(body.authPins)) patch.authPins = body.authPins;
     if (typeof body.adminPinHash === "string") patch.adminPinHash = body.adminPinHash;
+    if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
+    if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);

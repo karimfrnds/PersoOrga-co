@@ -482,6 +482,14 @@ function renderKiosk(navigate) {
         const statusTag = s.bossConfirmed === true ? " ✅ bestätigt" : s.bossConfirmed === false ? " ⏳ wartet auf Bestätigung" : "";
         row.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr${statusTag}</span>`;
         list.appendChild(row);
+        // Info des Chefs zur Schicht (z.B. "bitte Lieferung annehmen") – eigene Zeile darunter.
+        if (s.note) {
+          const noteRow = document.createElement("div");
+          noteRow.className = "muted small";
+          noteRow.style.margin = "-4px 0 4px";
+          noteRow.textContent = `📝 ${s.note}`;
+          list.appendChild(noteRow);
+        }
       }
       card.appendChild(list);
     }

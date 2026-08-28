@@ -769,9 +769,9 @@ function buildStatsReply(state, period, today, employeeName, customFrom, customT
 }
 
 /** Kurze, rein datenbasierte Beobachtungen (keine Finanz-/Steuerberatung) – optional, wenn genug Historie da ist. */
-async function generateInsights(env, financials) {
+async function generateInsights(env, financials, daysBack = 14) {
   if (!Array.isArray(financials) || financials.length < 3 || !env.ANTHROPIC_API_KEY) return null;
-  const recent = financials.slice(-14);
+  const recent = financials.slice(-daysBack);
   const lines = recent
     .map(
       (r) =>
@@ -796,66 +796,160 @@ async function generateInsights(env, financials) {
   }
 }
 
-/** Beantwortet eine freie Frage/Bitte des Chefs (action="ask_anything"), die zu keiner der festen Aktionen
- * passt, in eigenen Worten – auf Basis der tatsächlich vorhandenen Daten (Kennzahlen, Aufgaben, Vorräte),
- * plus dem bisherigen Gesprächsverlauf für Rückfragen. Erfindet/schätzt nichts, was nicht aus den Daten
- * hervorgeht – sagt stattdessen ehrlich, wenn Informationen fehlen. */
-async function buildAskAnythingReply(env, state, text) {
+// ---------------------------------------------------------------------
+// Freies Fragen & Antworten (action="ask_anything") – agentisch: statt einen festen Daten-Ausschnitt in
+// jeden Prompt zu packen, bekommt Claude Werkzeuge und entscheidet SELBST, welche Daten es für die konkrete
+// Frage braucht (auch mehrere Abfragen nacheinander, z.B. zwei Zeiträume zum Vergleichen). Erfindet/schätzt
+// nichts, was die Werkzeuge nicht tatsächlich liefern – sagt stattdessen ehrlich, wenn Daten fehlen.
+// ---------------------------------------------------------------------
+const ASK_TOOLS = [
+  {
+    name: "get_financials",
+    description: "Liefert Tageskennzahlen (Umsatz, Lohn, Lohnnebenkosten, Stunden, Umschlag) für einen Datumsbereich (bis zu ca. 6 Monate zurück).",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "YYYY-MM-DD, Start des Zeitraums. Ohne Angabe: ältester verfügbarer Tag." },
+        to: { type: "string", description: "YYYY-MM-DD, Ende des Zeitraums. Ohne Angabe: neuester verfügbarer Tag." },
+      },
+    },
+  },
+  {
+    name: "get_employee_summary",
+    description: "Summiert Arbeitsstunden, Lohn und Lohnnebenkosten EINER Person über einen Zeitraum.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Name der Person aus der Mitarbeiterliste." },
+        from: { type: "string", description: "YYYY-MM-DD, Start. Ohne Angabe: ältester verfügbarer Tag." },
+        to: { type: "string", description: "YYYY-MM-DD, Ende. Ohne Angabe: neuester verfügbarer Tag." },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_tasks",
+    description: "Listet Aufgaben.",
+    input_schema: { type: "object", properties: { status: { type: "string", enum: ["open", "done", "all"], description: "Default: 'open'." } } },
+  },
+  {
+    name: "get_stock",
+    description: "Listet den aktuellen Vorräte-Stand (Ampel-Status, bei mengengeführten Artikeln auch Bestand/Einheit).",
+    input_schema: { type: "object", properties: {} },
+  },
+];
+
+function toolGetFinancials(state, input) {
   const financials = Array.isArray(state.financials) ? state.financials : [];
-  const finLines = financials.length
-    ? financials
-        .slice(-35)
-        .map(
-          (r) =>
-            `${r.date}: Umsatz ${round2(r.umsatzGesamt)}€, Lohn ${round2(r.totalLohn)}€, Lohnnebenkosten ${round2(r.totalLohnnebenkosten || 0)}€, Stunden ${round2(r.totalHours)}h, Umschlag ${round2(r.umschlag)}€${
-              r.status !== "abgeschlossen" ? " (offen)" : ""
-            }`
-        )
-        .join("\n")
-    : "(keine Kennzahlen freigegeben oder noch nicht synchronisiert – siehe Admin → Einstellungen)";
+  if (financials.length === 0) return { error: "Keine Kennzahlen freigegeben oder noch nicht synchronisiert (siehe Admin → Einstellungen)." };
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : financials[0].date;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : financials[financials.length - 1].date;
+  const rows = financials
+    .filter((r) => r.date >= from && r.date <= to)
+    .map((r) => ({
+      date: r.date,
+      status: r.status,
+      umsatzGesamt: round2(r.umsatzGesamt),
+      totalLohn: round2(r.totalLohn),
+      totalLohnnebenkosten: round2(r.totalLohnnebenkosten || 0),
+      totalHours: round2(r.totalHours),
+      umschlag: round2(r.umschlag),
+    }));
+  return { from, to, days: rows.length, rows: rows.slice(0, 200) };
+}
 
-  const openTasks = (state.tasks || []).filter((t) => !t.done);
-  const taskLines = openTasks.length ? openTasks.map((t) => `- ${t.date} · ${t.assignedToName || "Allgemein"}: ${t.text}`).join("\n") : "(keine offenen Aufgaben)";
+function toolGetEmployeeSummary(state, input) {
+  const financials = Array.isArray(state.financials) ? state.financials : [];
+  if (financials.length === 0) return { error: "Keine Kennzahlen freigegeben oder noch nicht synchronisiert." };
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : financials[0].date;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : financials[financials.length - 1].date;
+  const needle = String(input?.name || "").trim().toLowerCase();
+  let hours = 0,
+    lohn = 0,
+    lohnnebenkosten = 0,
+    days = 0,
+    matchedName = null;
+  for (const r of financials) {
+    if (r.date < from || r.date > to) continue;
+    for (const pe of r.perEmployee || []) {
+      if (pe.name.trim().toLowerCase() === needle) {
+        hours += Number(pe.hours) || 0;
+        lohn += Number(pe.lohn) || 0;
+        lohnnebenkosten += Number(pe.lohnnebenkosten) || 0;
+        days++;
+        matchedName = pe.name;
+      }
+    }
+  }
+  if (!matchedName) return { error: `Niemand namens "${input?.name}" im Zeitraum ${from} bis ${to} gefunden.` };
+  return { name: matchedName, from, to, days, hours: round2(hours), lohn: round2(lohn), lohnnebenkosten: round2(lohnnebenkosten) };
+}
 
-  const stockLines = (state.stock || []).length
-    ? state.stock.map((s) => `- ${s.name}: ${s.status}${s.unit ? ` (${s.currentAmount ?? "?"} ${s.unit})` : ""}`).join("\n")
-    : "(keine Vorräte hinterlegt)";
+function toolGetTasks(state, input) {
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+  const status = input?.status || "open";
+  const filtered = status === "all" ? tasks : tasks.filter((t) => (status === "done" ? t.done : !t.done));
+  return { count: filtered.length, tasks: filtered.slice(0, 100).map((t) => ({ date: t.date, assignedTo: t.assignedToName || "Allgemein", text: t.text, done: t.done })) };
+}
 
-  const system = `Du bist der Assistent für die Café-Verwaltung eines kleinen Cafés. Antworte auf Deutsch, kurz und
-konkret, ohne Einleitung direkt zur Sache. Nutze NUR die unten stehenden Daten – wenn sie für eine Frage nicht
-reichen, sag das ehrlich statt zu raten oder zu schätzen. Keine Finanz-, Steuer- oder Rechtsberatung, nur
-nüchterne Beobachtungen und Einschätzungen anhand der Zahlen. Bekannte aktive Mitarbeiter: ${
-    state.employees.join(", ") || "(keine hinterlegt)"
-  }.
+function toolGetStock(state) {
+  const stock = Array.isArray(state.stock) ? state.stock : [];
+  return { count: stock.length, items: stock.map((s) => ({ name: s.name, status: s.status, unit: s.unit || null, currentAmount: s.unit ? s.currentAmount : null })) };
+}
 
-Kennzahlen der letzten Tage (soweit freigegeben/synchronisiert):
-${finLines}
+function executeAskTool(state, name, input) {
+  if (name === "get_financials") return toolGetFinancials(state, input);
+  if (name === "get_employee_summary") return toolGetEmployeeSummary(state, input);
+  if (name === "get_tasks") return toolGetTasks(state, input);
+  if (name === "get_stock") return toolGetStock(state);
+  return { error: "Unbekanntes Werkzeug." };
+}
 
-Offene Aufgaben:
-${taskLines}
+async function buildAskAnythingReply(env, state, text) {
+  const system = `Du bist der Assistent für die Café-Verwaltung eines kleinen Cafés. Heute ist ${todayBerlin()} (Europe/Berlin).
+Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)"}.
 
-Vorräte:
-${stockLines}`;
+Du hast Werkzeuge, um GENAU die Daten abzurufen, die du für die Antwort brauchst – nutze sie, statt zu raten,
+auch mehrfach nacheinander (z.B. zwei Zeiträume zum Vergleichen, oder erst Kennzahlen dann Aufgaben). Antworte
+erst mit Text, wenn du genug Daten hast oder ein Werkzeug einen Fehler zurückgibt, der die Frage beantwortet
+("keine Daten für X"). Nutze NUR was die Werkzeuge tatsächlich liefern – erfinde oder schätze nichts. Reichen
+die Daten nicht, sag das ehrlich. Keine Finanz-, Steuer- oder Rechtsberatung, nur nüchterne Beobachtungen.
+Antworte auf Deutsch, kurz und konkret, ohne Einleitung direkt zur Sache.`;
 
   const history = (state.conversationHistory || []).slice(-6).map((h) => ({ role: h.role, content: h.text }));
+  let messages = [...history, { role: "user", content: text }];
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      max_tokens: 700,
-      system,
-      messages: [...history, { role: "user", content: text }],
-    }),
-  });
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Anthropic API ${res.status}${errText ? ": " + errText.slice(0, 300) : ""}`);
+  for (let round = 0; round < 4; round++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 1024, system, tools: ASK_TOOLS, messages }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Anthropic API ${res.status}${errText ? ": " + errText.slice(0, 300) : ""}`);
+    }
+    const data = await res.json();
+    const content = data.content || [];
+    const toolUses = content.filter((b) => b.type === "tool_use");
+    if (toolUses.length === 0) {
+      const block = content.find((b) => b.type === "text");
+      return block?.text?.trim() || "Dazu konnte ich gerade keine Antwort finden.";
+    }
+    messages = [
+      ...messages,
+      { role: "assistant", content },
+      {
+        role: "user",
+        content: toolUses.map((tu) => ({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: JSON.stringify(executeAskTool(state, tu.name, tu.input)).slice(0, 4000),
+        })),
+      },
+    ];
   }
-  const data = await res.json();
-  const block = (data.content || []).find((b) => b.type === "text");
-  return block?.text?.trim() || "Dazu konnte ich gerade keine Antwort finden.";
+  return "Konnte die Frage nach mehreren Rückfragen an die eigenen Daten nicht abschließend beantworten – bitte enger fassen oder anders formulieren.";
 }
 
 async function handleTelegram(request, env) {
@@ -1293,7 +1387,9 @@ async function remindMissingAvailability(env, state, today) {
 async function sendWeeklySummary(env, state, today) {
   if (!state.financials || state.financials.length === 0) return;
   let reply = buildStatsReply(state, "lastweek", today);
-  const insights = await generateInsights(env, state.financials);
+  // Breiterer Rückblick (bis zu ~2 Monate statt der sonst üblichen 14 Tage) für den wöchentlichen "Routine-Scan"
+  // - hier darf es auch mal ein längerfristiges Muster sein, nicht nur der Blick auf die letzten zwei Wochen.
+  const insights = await generateInsights(env, state.financials, 60);
   if (insights) reply += `\n\n💡 ${insights}`;
   await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📅 Wochenrückblick\n\n${reply}`);
 }

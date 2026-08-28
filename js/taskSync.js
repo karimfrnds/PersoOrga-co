@@ -11,7 +11,7 @@ import { store } from "./store.js";
 import { todayStr } from "./format.js";
 import { computeDay } from "./calc.js";
 
-const FINANCIALS_DAYS = 35; // ca. 5 Wochen zurück, für Wochen-/Monatsvergleiche im Bot
+const FINANCIALS_DAYS = 180; // ca. 6 Monate zurück, damit der Bot auch längerfristige Fragen/Vergleiche beantworten kann
 
 function workerUrl(cfg, path) {
   return `${cfg.workerUrl.replace(/\/+$/, "")}${path}`;

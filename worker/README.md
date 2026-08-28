@@ -84,11 +84,13 @@ iPad gerade an ist.
 
 **Frag ihn einfach direkt etwas**: passt eine Nachricht zu keinem der unten aufgelisteten festen Befehle, aber
 ist erkennbar eine echte Frage oder Bitte um Einschätzung (z.B. „wieso war der Umschlag diese Woche schlechter",
-„vergleich diesen Monat mit letztem", „sollten wir am Wochenende mehr Personal einplanen"), beantwortet der Bot
-sie in eigenen Worten – auf Basis der tatsächlich vorhandenen Kennzahlen/Aufgaben/Vorräte, **nichts erfunden
-oder geschätzt**, was nicht aus den Daten hervorgeht (fehlen Infos, sagt er das ehrlich). Er merkt sich dafür
-auch die letzten paar Nachrichten des Gesprächs, Rückfragen wie „und was können wir dagegen tun" funktionieren
-also im Kontext der vorherigen Antwort, ohne dass du alles nochmal wiederholen musst.
+„vergleich Julis Stunden mit August", „sollten wir am Wochenende mehr Personal einplanen"), holt sich der Bot
+dafür selbst **gezielt genau die Daten**, die er für die Antwort braucht (Kennzahlen für einen Zeitraum,
+Stunden/Lohn einer Person, Aufgaben, Vorräte – bei Bedarf auch mehrere Abfragen nacheinander, z.B. zwei
+Zeiträume zum Vergleichen), statt nur mit einem festen Daten-Ausschnitt zu arbeiten. Basis dafür sind die
+letzten **ca. 6 Monate** an Kennzahlen, die die App synchronisiert. **Nichts erfunden oder geschätzt** – was
+die Daten nicht hergeben, sagt er ehrlich. Er merkt sich außerdem die letzten paar Nachrichten des Gesprächs,
+Rückfragen wie „und was können wir dagegen tun" funktionieren also im Kontext der vorherigen Antwort.
 
 **Aufgaben anlegen** – auch mehrere auf einmal, auch an verschiedene Personen:
 - `Kaffeemaschine reparieren lassen` → allgemeine Aufgabe für heute.
@@ -119,13 +121,13 @@ Einstellungen, getrennt nach Minijob/Festangestellt), Lohnkosten gesamt (inkl. L
 und Umschlag für „heute"/„gestern"/„diese Woche" (ab Montag)/„letzte Woche"/„diesen Monat" **oder einen frei
 genannten Zeitraum** (z.B. `vom 1. bis 5. August`, `am 12.08.`), plus – wenn genug Historie da ist – 2-3 kurze,
 rein aus den eigenen Zahlen abgeleitete Beobachtungen (klar mit 💡 gekennzeichnet, **keine** Steuer- oder
-Finanzberatung). Basis sind die letzten ca. 5 Wochen, die die App bei jedem Abgleich mit hochlädt – ein frei
+Finanzberatung). Basis sind die letzten ca. 6 Monate, die die App bei jedem Abgleich mit hochlädt – ein frei
 genannter Zeitraum davor liefert entsprechend keine Daten.
 
 **Stunden/Lohn einer einzelnen Person**: `wie viele Stunden hat Anna diese Woche gemacht`, `was hat Timm vom
 1. bis 5. August gearbeitet` → Summe der Arbeitsstunden, Lohn und Lohnnebenkosten dieser Person im genannten
 Zeitraum (gleiche Zeiträume wie oben, inkl. frei genanntem Datumsbereich). Passt der Name zu niemandem in den
-letzten ~5 Wochen, sagt der Bot das auch so.
+letzten ~6 Monaten, sagt der Bot das auch so.
 
 **Kassenabschluss-Bericht (automatisch)**: sobald ihr in der App einen Tag abschließt, schickt dir der Bot
 sofort die komplette Zusammenfassung (Umsatz, Trinkgeld, Lohn/-nebenkosten, Stunden, Umschlag, Aufschlüsselung
@@ -258,8 +260,9 @@ Trigger mit `0 * * * *` ein (stündlich). Der Bot meldet sich dann von selbst:
 - **Täglich um 8 Uhr**: kurze Tagesübersicht der Aufgaben.
 - **Täglich um 19 Uhr**: falls noch Aufgaben offen sind.
 - **Freitags**: wer für die kommende Woche noch keine Verfügbarkeit eingetragen hat.
-- **Montags**: Wochenrückblick (Umsatz/Lohnkosten/Stunden der letzten Woche + kurze Beobachtungen) – nur wenn
-  Kennzahlen freigegeben sind (siehe oben).
+- **Montags**: Wochenrückblick (Umsatz/Lohnkosten/Stunden der letzten Woche + kurze, aus bis zu ~2 Monaten
+  Historie abgeleitete Beobachtungen für längerfristige Muster) – nur wenn Kennzahlen freigegeben sind (siehe
+  oben).
 - **Täglich, einmalig pro Monat und Person**: Warnung, sobald ein Minijobber 85% seiner Verdienstgrenze erreicht
   hat – nur wenn Kennzahlen freigegeben sind (die Minijob-Grenze selbst steht am Mitarbeiter, Admin → Mitarbeiter).
 - **Täglich, einmalig pro Tag und Person**: Hinweis, falls eine PIN-Schicht aus einem vergangenen Tag noch offen

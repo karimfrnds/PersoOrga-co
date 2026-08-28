@@ -295,6 +295,20 @@ async function handleAuthLogin(request, env) {
   if (!pin) return jsonResponse({ error: "Bitte PIN eingeben." }, 400);
 
   const state = await getState(env);
+
+  // Sonderfall Ersteinrichtung: der Worker kennt noch überhaupt keine PINs, weil das iPad seit dem Update
+  // noch nicht abgeglichen hat. Das ist kein Geheimnis (verrät nichts über gültige PINs), deshalb hier
+  // bewusst eine klare Ansage statt der neutralen Ablehnung – sonst sucht man ewig am falschen Ende.
+  if (!state.adminPinHash && (state.authPins || []).length === 0) {
+    return jsonResponse(
+      {
+        error:
+          "Dieser Zugang ist noch nicht eingerichtet: Das iPad hat seine PINs noch nicht übermittelt. Bitte einmal die App auf dem iPad öffnen (Telegram-Abgleich muss unter Einstellungen aktiv sein) und es danach erneut versuchen.",
+      },
+      503
+    );
+  }
+
   const hash = await hashPin(env.WEBHOOK_SECRET, pin);
 
   let session = null;

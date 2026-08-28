@@ -26,6 +26,12 @@ const dateDeShort = (s) => {
   const [, m, d] = s.split("-");
   return `${d}.${m}.`;
 };
+/** Zeiten, die an DIESEM Wochentag gelten (manche Schichten enden an einzelnen Tagen später).
+ * Bewusst klein gehalten und gespiegelt aus js/store.js – diese Ansicht kennt den Store nicht. */
+function slotAmTag(slot, wochentagIndex) {
+  const ov = slot?.weekdayOverrides?.[wochentagIndex];
+  return ov ? { ...slot, ...ov } : slot;
+}
 
 function renderPlanning(state, { onChanged, today }) {
   const el = document.createElement("div");
@@ -144,13 +150,24 @@ function renderPlanning(state, { onChanged, today }) {
       const tr = document.createElement("tr");
       const nameTd = document.createElement("td");
       nameTd.className = "roster-slot";
-      nameTd.innerHTML = `<b>${escapeHtml(slot.label)}</b><br/><span class="muted small">${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>`;
+      // Weicht die Zeit an einzelnen Tagen ab, wird das an der Schicht vermerkt. Tage mit gleicher
+      // Abweichung werden zusammengefasst, damit dort "Mo/Di bis 17:00" steht statt zweimal dasselbe.
+      const nachEndzeit = new Map();
+      for (const [wd, ov] of Object.entries(slot.weekdayOverrides || {})) {
+        const bis = ov.to || slot.to;
+        if (!nachEndzeit.has(bis)) nachEndzeit.set(bis, []);
+        nachEndzeit.get(bis).push(WEEKDAY_SHORT[Number(wd)]);
+      }
+      const abweichung = [...nachEndzeit.entries()].map(([bis, tage]) => `${tage.join("/")} bis ${bis}`).join(", ");
+      nameTd.innerHTML =
+        `<b>${escapeHtml(slot.label)}</b><br/><span class="muted small">${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>` +
+        (abweichung ? `<br/><span class="muted small">${escapeHtml(abweichung)}</span>` : "");
       tr.appendChild(nameTd);
 
       for (let i = 0; i < 7; i++) {
         const date = addDaysISO(weekStart, i);
         const gilt = !slot.allowedWeekdays || slot.allowedWeekdays.includes(i);
-        tr.appendChild(buildCell(slot, date, gilt, kueche, alle));
+        tr.appendChild(buildCell(slotAmTag(slot, i), date, gilt, kueche, alle));
       }
       tbody.appendChild(tr);
     }

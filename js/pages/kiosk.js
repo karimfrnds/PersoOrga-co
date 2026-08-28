@@ -655,7 +655,6 @@ function renderKiosk(navigate) {
   }
 
   async function submitAvailability(weekStart, emp, slotDefs, btn) {
-    const slotById = new Map(slotDefs.map((s) => [s.id, s]));
     const summaryLines = [];
     const pushDays = [];
     for (let i = 0; i < 7; i++) {
@@ -666,6 +665,8 @@ function renderKiosk(navigate) {
       const d = store.getOrCreateDayByDate(date);
       const committed = store.commitAvailability(d.id, emp.id, draftEntry.slotIds);
       const dayLabel = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
+      // Für die Zeiten pro Tag nachschlagen (Service 1 endet Mo/Di später), nicht die Grunddefinition.
+      const slotById = new Map(store.getShiftSlotsForRole(emp.role, date).map((s) => [s.id, s]));
       if (committed.confirmedSlotId) {
         const slot = slotById.get(committed.confirmedSlotId);
         summaryLines.push(

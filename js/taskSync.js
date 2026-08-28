@@ -112,7 +112,6 @@ function buildAvailabilityUpdatePayload() {
   const employees = store.getEmployees(false);
   const entries = {};
   for (const emp of employees) {
-    const slotById = new Map(store.getShiftSlotsForRole(emp.role).map((s) => [s.id, s]));
     const days = [];
     let submittedAt = null;
     for (let i = 0; i < 7; i++) {
@@ -121,6 +120,9 @@ function buildAvailabilityUpdatePayload() {
       const entry = day ? store.getAvailability(day.id, emp.id) : null;
       if (!entry || !entry.submittedAt || entry.slotIds.length === 0) continue;
       submittedAt = entry.submittedAt;
+      // Pro Tag nachschlagen, damit Schichten mit abweichender Zeit (z.B. Service 1 Mo/Di bis 17:00)
+      // die richtigen Zeiten mitbekommen.
+      const slotById = new Map(store.getShiftSlotsForRole(emp.role, date).map((s) => [s.id, s]));
       const slots = entry.slotIds.map((id) => slotById.get(id)).filter(Boolean).map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to }));
       if (slots.length > 0) days.push({ date, slots, confirmedSlotId: entry.confirmedSlotId || null, bossConfirmed: !!entry.bossConfirmed });
     }

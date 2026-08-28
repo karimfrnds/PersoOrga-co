@@ -36,18 +36,20 @@ function defaultData() {
       // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar"
       // (teilen sich einen Plan, blockieren sich gegenseitig). allowedWeekdays: 0=Mo..6=So, fehlt = alle Tage.
       // "mittel" braucht IMMER eine explizite Chef-Bestätigung, auch wenn sie automatisch fest wird.
+      // Namen und Zeiten entsprechen dem Papier-Schichtplan des Cafés.
+      // weekdayOverrides: abweichende Zeiten an einzelnen Wochentagen (0=Mo).
       shiftSlots: {
         service: [
-          { id: "frueh1", label: "Früh1", from: "08:30", to: "16:00" },
-          { id: "frueh2", label: "Früh2", from: "09:30", to: "17:00", allowedWeekdays: [5, 6] }, // nur Sa/So
-          { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
-          { id: "spaet1", label: "Spät1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
-          { id: "spaet2", label: "Spät2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
+          { id: "frueh1", label: "Service 1", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" } } }, // Mo/Di bis 17:00
+          { id: "frueh2", label: "Service 2", from: "09:30", to: "17:00", allowedWeekdays: [5, 6] }, // nur Sa/So
+          { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00" },
+          { id: "spaet1", label: "Service Abend 1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
+          { id: "spaet2", label: "Service Abend 2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
         ],
         kueche: [
-          { id: "frueh1", label: "Früh1", from: "08:00", to: "15:30" },
-          { id: "frueh2", label: "Früh2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
-          { id: "mittel", label: "Mittel", from: "10:00", to: "14:00" },
+          { id: "frueh1", label: "Küche 1", from: "08:00", to: "15:30" },
+          { id: "mittel", label: "Küche Mitte", from: "10:00", to: "14:00" },
+          { id: "frueh2", label: "Küche 2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
         ],
       },
       githubBackup: {
@@ -178,6 +180,14 @@ function shiftSlotsForRole(role) {
   return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
 }
 
+/** Schicht mit den Zeiten, die an DIESEM Wochentag gelten. Manche Schichten enden an einzelnen Tagen
+ * später (z.B. Service 1 Mo/Di bis 17:00) – diese Ausnahme wird hier an einer Stelle aufgelöst, damit sie
+ * nicht in jeder Anzeige einzeln nachgebaut werden muss. */
+function slotForDate(slot, dateStr) {
+  const ov = slot?.weekdayOverrides?.[weekdayIndexOfDate(dateStr)];
+  return ov ? { ...slot, ...ov } : slot;
+}
+
 /** 0=Montag..6=Sonntag, reiner Kalendertag. */
 function weekdayIndexOfDate(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -249,9 +259,11 @@ function materializePlannedShiftsFromAvailability(d) {
       const emp = data.employees.find((e) => e.id === a.employeeId);
       const slot = emp ? shiftSlotsForRole(emp.role).find((s) => s.id === a.confirmedSlotId) : null;
       if (slot) {
+        // Zeiten für den konkreten Wochentag auflösen (z.B. Service 1 endet Mo/Di später).
+        const s = slotForDate(slot, d.date);
         // note kommt aus der Verfügbarkeit, nicht aus der Schicht selbst: diese Funktion baut die Schicht bei
         // jeder Auflösung neu, eine direkt an der Schicht gespeicherte Notiz wäre dabei jedes Mal weg.
-        const shift = { id: shiftId, employeeId: a.employeeId, from: slot.from, to: slot.to, note: a.note || "", bossConfirmed: !!a.bossConfirmed };
+        const shift = { id: shiftId, employeeId: a.employeeId, from: s.from, to: s.to, note: a.note || "", bossConfirmed: !!a.bossConfirmed };
         if (idx >= 0) d.plannedShifts[idx] = shift;
         else d.plannedShifts.push(shift);
       }
@@ -525,12 +537,13 @@ export const store = {
   // ausgegraut. Wählt jemand mehrere ("keine Präferenz"), bleibt das offen (keine ausgegraut), bis der
   // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf eine reduziert. ----
   /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). Mit dateStr nur die an
-   * diesem Wochentag tatsächlich angebotenen Schichten (manche gelten nur an bestimmten Tagen). */
+   * diesem Wochentag tatsächlich angebotenen Schichten – und mit den Zeiten, die an dem Tag gelten
+   * (z.B. Service 1 endet Mo/Di später). Ohne dateStr die Grunddefinition. */
   getShiftSlotsForRole(role, dateStr) {
     const all = shiftSlotsForRole(role);
     if (!dateStr) return all;
     const wd = weekdayIndexOfDate(dateStr);
-    return all.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(wd));
+    return all.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(wd)).map((s) => slotForDate(s, dateStr));
   },
   getAvailability(dayId, employeeId) {
     const d = this.getDay(dayId);
@@ -623,7 +636,8 @@ export const store = {
     resolveDayAvailability(d);
     persist();
 
-    const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    const slotRaw = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    const slotDef = slotRaw ? slotForDate(slotRaw, d.date) : null;
     const noteText = note ? String(note).trim() : "";
     this.addNotification(
       employeeId,

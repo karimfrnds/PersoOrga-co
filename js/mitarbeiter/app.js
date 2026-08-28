@@ -40,6 +40,12 @@ function weekdayIndex(dateStr) {
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   return wd === 0 ? 6 : wd - 1;
 }
+/** Zeiten, die an DIESEM Wochentag gelten (manche Schichten enden an einzelnen Tagen später).
+ * Bewusst klein gehalten und gespiegelt aus js/store.js – diese Ansicht kennt den Store nicht. */
+function slotAmTag(slot, wochentagIndex) {
+  const ov = slot?.weekdayOverrides?.[wochentagIndex];
+  return ov ? { ...slot, ...ov } : slot;
+}
 
 // ---------------------------------------------------------------------
 // Anmeldung
@@ -252,7 +258,7 @@ function buildAvailability() {
 
   for (let i = 0; i < 7; i++) {
     const date = addDaysISO(weekStart, i);
-    const angeboten = alle.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i));
+    const angeboten = alle.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i)).map((s) => slotAmTag(s, i));
     if (angeboten.length === 0) continue;
 
     const block = document.createElement("div");

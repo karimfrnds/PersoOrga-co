@@ -667,6 +667,19 @@ async function sendTelegramMessage(env, chatId, text) {
 // echten aktuellen Stand (aus dem KV-Speicher) als Kontext.
 // ---------------------------------------------------------------------
 async function interpretMessage(env, text, today, state) {
+  // Schicht-Namen kommen vom iPad, damit ein Umbenennen dort nicht dazu führt, dass der Bot noch die alten
+  // Namen anbietet. Doppelte (Service und Küche haben je eine "Mitte") werden zusammengefasst.
+  const alleSchichtNamen = [
+    ...new Set([...(state.shiftSlots?.service || []), ...(state.shiftSlots?.kueche || [])].map((s) => s.label).filter(Boolean)),
+  ];
+  if (alleSchichtNamen.length === 0) alleSchichtNamen.push("Früh1", "Früh2", "Mittel", "Spät1", "Spät2"); // noch nichts synchronisiert
+  const schichtNamenText = alleSchichtNamen.map((n) => `"${n}"`).join(", ");
+  // Schichten, die IMMER eine ausdrückliche Bestätigung brauchen (intern die ID "mittel").
+  const mittelNamen =
+    [...(state.shiftSlots?.service || []), ...(state.shiftSlots?.kueche || [])]
+      .filter((s) => s.id === "mittel")
+      .map((s) => s.label)
+      .join(" / ") || "Mittel";
   const tool = {
     name: "handle_message",
     description: "Interpretiert eine Nachricht des Café-Betreibers ans Team-Aufgaben-System.",
@@ -730,7 +743,7 @@ async function interpretMessage(env, text, today, state) {
               date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur unten genannten Zielwoche aufgelöst." },
               slotLabel: {
                 type: "string",
-                enum: ["", "Früh1", "Früh2", "Mittel", "Spät1", "Spät2"],
+                enum: ["", ...alleSchichtNamen],
                 description:
                   "Bevorzugt: Name der Schicht wie sie die Mitarbeiter im Kiosk sehen, falls der Chef so eine benennt (z.B. 'Anna bekommt Montag Früh1'). Dann from/to leer lassen. Muss EXAKT einer dieser Werte sein, keine Abwandlung – sonst leerer String und stattdessen from/to nutzen.",
               },
@@ -763,7 +776,7 @@ async function interpretMessage(env, text, today, state) {
               date: { type: "string", description: "Datum YYYY-MM-DD, aus Wochentag/Datum relativ zur oben genannten Zielwoche aufgelöst." },
               slotLabel: {
                 type: "string",
-                enum: ["Früh1", "Früh2", "Mittel", "Spät1", "Spät2"],
+                enum: alleSchichtNamen,
                 description: "Name der Schicht wie im Kiosk. Muss EXAKT einer dieser Werte sein.",
               },
             },
@@ -811,7 +824,7 @@ Bestimme die Absicht der Nachricht:
 - "stock_list": der Chef will wissen, was an Vorräten fehlt oder knapp ist, z.B. "was fehlt", "einkaufsliste", "was müssen wir nachkaufen".
 - "restock": der Chef meldet, dass ein oder mehrere Artikel wieder aufgefüllt/vorhanden sind, z.B. "Kaffeebohnen sind wieder da", "Milch und Servietten sind nachgefüllt" (zwei Einträge in items_to_restock).
 - "notes": der Chef will die gesammelten Mitarbeiter-Notizen sehen, z.B. "nachrichten", "was haben die Mitarbeiter geschrieben", "zeig mir die Notizen".
-- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser fünf Werte sein: "Früh1", "Früh2", "Mittel", "Spät1", "Spät2" (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. "Mittel"-Schichten werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit slotLabel="Mittel" behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
+- "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser Werte sein: ${schichtNamenText} (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. Mittelschichten (${mittelNamen}) werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit dem passenden Mittelschicht-Namen behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
 - "notify": der Chef will einer oder mehreren Personen eine freie Nachricht schicken, die im Kiosk als Pop-up erscheint, z.B. "Sag Anna, sie soll morgen 30 Min früher kommen", "Schreib Timm: Danke für die Vertretung gestern!", "Richte allen aus, dass am Montag Inventur ist" (dann für JEDE bekannte aktive Person einen eigenen Eintrag in messages_to_send anlegen). IMMER jede Nachricht als eigenen Eintrag, auch bei mehreren Empfängern.

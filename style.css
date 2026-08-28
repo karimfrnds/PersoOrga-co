@@ -642,3 +642,12 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .res-vorschlag:hover { background: var(--green); color: #fff; }
 .res-vorschlag:hover .muted { color: #fff; opacity: 0.85; }
 .res-vorschlag .res-tisch-name { font-weight: 700; }
+
+/* Zähler mit − und + (Personenzahl bei Reservierungen) */
+.zaehler { display: flex; align-items: stretch; gap: 6px; }
+.zaehler input { flex: 1 1 auto; min-width: 0; text-align: center; }
+.zaehler-btn { flex: 0 0 auto; width: 48px; border: 1px solid var(--border); background: var(--bg);
+  color: var(--text); border-radius: 10px; font-size: 22px; font-weight: 700; line-height: 1;
+  cursor: pointer; font-family: inherit; }
+.zaehler-btn:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
+.zaehler-btn:disabled { opacity: 0.35; cursor: not-allowed; }

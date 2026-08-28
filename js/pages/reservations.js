@@ -21,6 +21,73 @@ function addDaysISO(dateStr, n) {
 }
 const AREA_LABEL = { innen: "🏠 Drinnen", draussen: "☀️ Draußen", egal: "egal" };
 
+// Uhrzeiten im Viertelstunden-Takt. Am Telefon ist "halb acht" die Regel, minutengenaue Reservierungen
+// gibt es praktisch nie – eine Liste ist damit schneller ausgewählt als ein Uhrzeit-Rad.
+const ZEIT_VON = 8;
+const ZEIT_BIS = 23;
+function viertelstunden() {
+  const liste = [];
+  for (let h = ZEIT_VON; h <= ZEIT_BIS; h++) {
+    for (const m of [0, 15, 30, 45]) liste.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+  return liste;
+}
+
+/** Auswahlfeld für die Uhrzeit. Ein Wert außerhalb des Rasters (z.B. aus einer alten Reservierung oder
+ * vom Web-Formular) wird zusätzlich aufgenommen, statt beim Öffnen still auf etwas anderes zu springen. */
+function zeitAuswahl(wert) {
+  const sel = document.createElement("select");
+  const zeiten = viertelstunden();
+  if (wert && !zeiten.includes(wert)) zeiten.push(wert);
+  zeiten.sort();
+  for (const z of zeiten) {
+    const o = document.createElement("option");
+    o.value = z;
+    o.textContent = z + " Uhr";
+    if (z === wert) o.selected = true;
+    sel.appendChild(o);
+  }
+  return sel;
+}
+
+/** Personenzahl mit − und + daneben. Die meisten Reservierungen weichen nur um ein bis zwei Personen
+ * vom Vorschlag ab; Tippen auf einer Zahlentastatur ist dafür der umständlichere Weg. */
+function personenFeld(wert) {
+  const box = document.createElement("div");
+  box.className = "zaehler";
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.className = "zaehler-btn";
+  minus.textContent = "−";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "1";
+  input.max = "99";
+  input.inputMode = "numeric";
+  input.value = String(Math.max(1, Number(wert) || 1));
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.className = "zaehler-btn";
+  plus.textContent = "+";
+
+  const setzen = (n) => {
+    const neu = Math.min(99, Math.max(1, n));
+    input.value = String(neu);
+    minus.disabled = neu <= 1;
+    // Ein change-Ereignis auslösen, damit es keinen Unterschied macht, ob der Wert getippt oder
+    // über die Knöpfe gesetzt wurde – sonst würde ein späterer Zuhörer nur eine der beiden Arten sehen.
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  minus.onclick = () => setzen(Number(input.value) - 1);
+  plus.onclick = () => setzen(Number(input.value) + 1);
+  input.addEventListener("blur", () => setzen(Number(input.value)));
+  minus.disabled = Number(input.value) <= 1;
+
+  box.append(minus, input, plus);
+  box.wert = () => Math.max(1, Number(input.value) || 1);
+  return box;
+}
+
 function renderReservations() {
   const container = document.createElement("div");
   container.className = "page";
@@ -391,8 +458,8 @@ function renderReservations() {
         <p class="muted small">${escapeHtml(dateDe(r.date))} · ${escapeHtml(r.time)} Uhr · Nr. ${escapeHtml(r.code)}</p>
         <label class="field"><span>Name</span><input type="text" id="rd-name" value="${escapeHtml(r.name)}" /></label>
         <div class="res-form-row">
-          <label class="field"><span>Uhrzeit</span><input type="time" id="rd-time" value="${escapeHtml(r.time)}" /></label>
-          <label class="field"><span>Personen</span><input type="number" id="rd-guests" min="1" value="${r.guests}" /></label>
+          <label class="field"><span>Uhrzeit</span><span id="rd-time-slot"></span></label>
+          <label class="field"><span>Personen</span><span id="rd-guests-slot"></span></label>
         </div>
         <div class="res-form-row">
           <label class="field"><span>Bereich</span><select id="rd-area">
@@ -415,12 +482,19 @@ function renderReservations() {
         </div>
       </div>`;
     document.body.appendChild(overlay);
+    // Uhrzeit und Personenzahl werden gebaut statt als HTML geschrieben: beide sind zusammengesetzte
+    // Bedienelemente (Viertelstunden-Liste bzw. Zähler mit − und +).
+    const zeitFeld = zeitAuswahl(r.time);
+    overlay.querySelector("#rd-time-slot").replaceWith(zeitFeld);
+    const personenFeldEl = personenFeld(r.guests);
+    overlay.querySelector("#rd-guests-slot").replaceWith(personenFeldEl);
+
     const status = overlay.querySelector("#rd-status");
     overlay.querySelector("#rd-cancel").onclick = () => overlay.remove();
 
     overlay.querySelector("#rd-save").onclick = () => {
       const name = overlay.querySelector("#rd-name").value.trim();
-      const zeit = overlay.querySelector("#rd-time").value;
+      const zeit = zeitFeld.value;
       const tag = overlay.querySelector("#rd-date").value;
       if (!name || !zeit || !tag) {
         status.className = "callout callout-warn";
@@ -431,7 +505,7 @@ function renderReservations() {
         name,
         time: zeit,
         date: tag,
-        guests: overlay.querySelector("#rd-guests").value,
+        guests: personenFeldEl.wert(),
         area: overlay.querySelector("#rd-area").value,
         phone: overlay.querySelector("#rd-phone").value,
         note: overlay.querySelector("#rd-note").value,
@@ -479,8 +553,8 @@ function renderReservations() {
     };
 
     const name = mk("text", { placeholder: "Name des Gastes" });
-    const zeit = mk("time", { value: "19:00" });
-    const personen = mk("number", { min: "1", value: "2" });
+    const zeit = zeitAuswahl("19:00");
+    const personen = personenFeld(2);
     const telefon = mk("tel", { placeholder: "optional" });
     const notiz = mk("text", { placeholder: "z.B. Kinderstuhl, Geburtstag" });
     const bereich = document.createElement("select");
@@ -513,7 +587,7 @@ function renderReservations() {
         time: zeit.value,
         name: name.value,
         phone: telefon.value,
-        guests: personen.value,
+        guests: personen.wert(),
         area: bereich.value,
         note: notiz.value,
       });

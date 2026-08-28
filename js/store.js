@@ -90,6 +90,8 @@ function defaultData() {
         appliedSaleIds: [],
         // IDs von Krankmeldungen (vom Handy), die schon als Krank-Tage übernommen wurden.
         appliedSickIds: [],
+        // "Woche|Name|Zeitstempel" der Verfügbarkeits-Einreichungen vom Handy, die schon übernommen wurden.
+        appliedAvailabilityKeys: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }

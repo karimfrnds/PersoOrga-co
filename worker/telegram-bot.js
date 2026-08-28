@@ -367,6 +367,26 @@ async function handleMe(request, env) {
     if (entry) meineVerfuegbarkeit[weekStart] = entry[1];
   }
 
+  // Schichten, die für die eigene Rolle angeboten werden (Service und Bar teilen sich einen Plan).
+  const meineRolle = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role || null;
+  const meineSchichtarten = state.shiftSlots ? (meineRolle === "kueche" ? state.shiftSlots.kueche : state.shiftSlots.service) || [] : [];
+
+  // Welche Schichten im eigenen Konkurrenz-Pool schon FEST an jemand anderen vergeben sind – damit die
+  // Person sie gar nicht erst auswählt. Bewusst OHNE Namen: wer die Schicht hat, geht sie nichts an.
+  const belegteSchichten = {};
+  for (const bucket of Object.values(state.availability || {})) {
+    for (const [otherName, entry] of Object.entries(bucket?.entries || {})) {
+      if (otherName.trim().toLowerCase() === needle) continue;
+      const otherRole = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === otherName.trim().toLowerCase())?.role;
+      const samePool = (otherRole === "kueche") === (meineRolle === "kueche");
+      if (!samePool) continue;
+      for (const day of entry?.days || []) {
+        if (!day.confirmedSlotId) continue;
+        (belegteSchichten[day.date] ||= []).push(day.confirmedSlotId);
+      }
+    }
+  }
+
   return jsonResponse({
     name,
     heute: today,
@@ -376,6 +396,8 @@ async function handleMe(request, env) {
     tage: tage.slice(-90),
     meineSchichten,
     meineVerfuegbarkeit,
+    meineSchichtarten,
+    belegteSchichten,
   });
 }
 

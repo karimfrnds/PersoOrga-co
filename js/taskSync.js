@@ -440,6 +440,43 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
   }
 
+  // Verfügbarkeiten, die Mitarbeiter über ihr HANDY eingetragen haben -> lokal übernehmen.
+  // Ohne diesen Schritt landen sie zwar in der Cloud (der Chef sieht sie am Laptop), das iPad erfährt aber
+  // nie davon: die Person sähe ihre eigene Eingabe im Kiosk nicht und die Ausgrau-/Kaskaden-Logik liefe nie.
+  // Übernommen wird über commitAvailability(), damit exakt dieselben Regeln greifen wie bei einer Eingabe am
+  // iPad (bereits vergebene Schichten werden dabei herausgefiltert).
+  // Jede Einreichung wird über eine Merkliste genau einmal angewendet (gleiches Muster wie bei Lieferungen
+  // und Krankmeldungen). Bewusst NICHT über einen Zeitstempel-Vergleich: der hinge daran, dass die Uhren von
+  // iPad und Server zusammenpassen – läuft das iPad nach, würde dieselbe Einreichung bei jedem Abgleich
+  // erneut angewendet, die Kaskade jedes Mal neu ausgelöst und Entscheidungen des Chefs überschrieben.
+  const remoteAvailability = remote.availability && typeof remote.availability === "object" ? remote.availability : {};
+  const appliedAvailabilityKeys = new Set(cfg.appliedAvailabilityKeys || []);
+  let newAvailabilityKeys = false;
+  for (const [weekStart, bucket] of Object.entries(remoteAvailability)) {
+    for (const [name, entry] of Object.entries(bucket?.entries || {})) {
+      if (!entry?.submittedAt || !Array.isArray(entry.days)) continue;
+      const key = `${weekStart}|${name}|${entry.submittedAt}`; // pro Einreichung eindeutig und stabil
+      if (appliedAvailabilityKeys.has(key)) continue;
+      const match = employees.find((e) => e.name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (!match) {
+        syncWarnings.push(`Verfügbarkeit von "${name}" (Woche ab ${weekStart}): Mitarbeiter nicht gefunden.`);
+      } else {
+        for (const day of entry.days) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(day?.date)) continue;
+          const slotIds = (day.slots || []).map((s) => s.id).filter(Boolean);
+          if (slotIds.length === 0) continue;
+          const d = store.getOrCreateDayByDate(day.date);
+          store.commitAvailability(d.id, match.id, slotIds);
+        }
+      }
+      appliedAvailabilityKeys.add(key);
+      newAvailabilityKeys = true;
+    }
+  }
+  if (newAvailabilityKeys) {
+    store.updateTaskInboxConfig({ appliedAvailabilityKeys: [...appliedAvailabilityKeys].slice(-300) });
+  }
+
   // Neu in der Cloud (z.B. per Telegram angelegt) -> lokal übernehmen
   for (const rt of remoteTasks) {
     if (localIds.has(rt.id)) continue;

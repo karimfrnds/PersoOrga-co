@@ -84,12 +84,25 @@ iPad gerade an ist.
 
 **Frag ihn einfach direkt etwas**: passt eine Nachricht zu keinem der unten aufgelisteten festen Befehle, aber
 ist erkennbar eine echte Frage oder Bitte um Einschätzung (z.B. „wieso war der Umschlag diese Woche schlechter",
-„vergleich Julis Stunden mit August", „sollten wir am Wochenende mehr Personal einplanen"), holt sich der Bot
-dafür selbst **gezielt genau die Daten**, die er für die Antwort braucht (Kennzahlen für einen Zeitraum,
-Stunden/Lohn einer Person, Aufgaben, Vorräte – bei Bedarf auch mehrere Abfragen nacheinander, z.B. zwei
-Zeiträume zum Vergleichen), statt nur mit einem festen Daten-Ausschnitt zu arbeiten. Basis dafür sind die
-letzten **ca. 6 Monate** an Kennzahlen, die die App synchronisiert. **Nichts erfunden oder geschätzt** – was
-die Daten nicht hergeben, sagt er ehrlich. Er merkt sich außerdem die letzten paar Nachrichten des Gesprächs,
+„vergleich Julis Stunden mit August", „wer wartet noch auf eine Schicht-Bestätigung", „was haben die
+Mitarbeiter zuletzt geschrieben"), holt sich der Bot dafür selbst **gezielt genau die Daten**, die er für die
+Antwort braucht – bei Bedarf auch mehrere Abfragen nacheinander (z.B. zwei Zeiträume zum Vergleichen). Er hat
+dabei Zugriff auf:
+
+| Bereich | Was er abrufen kann |
+|---|---|
+| Kennzahlen | Umsatz, Lohn, Lohnnebenkosten, Stunden, Umschlag – tagesgenau für jeden Zeitraum |
+| Mitarbeiter-Stunden | Stunden/Lohn einer einzelnen Person über einen frei wählbaren Zeitraum |
+| Schichtplanung | wer wann fest eingeplant ist, wer sich für was gemeldet hat, was noch auf Bestätigung wartet |
+| Mitarbeiterliste | Minijob-Status und Grenze, wer gerade eingestempelt ist, vergessenes Ausstempeln |
+| Aufgaben | offene, erledigte oder alle |
+| Vorräte | aktueller Stand (Ampel + Mengen) |
+| Warenbewegungen | erfasste Lieferungen (Wareneingang) und Verkäufe (Warenausgang) mit Datum und Menge |
+| Notizen | was Mitarbeiter aus dem Kiosk an dich geschickt haben |
+
+Basis sind die letzten **ca. 6 Monate**, die die App synchronisiert. **Nichts erfunden oder geschätzt** – was
+die Daten nicht hergeben, sagt er ehrlich; wird eine Abfrage zu groß, sagt er das ebenfalls, statt mit
+unvollständigen Daten weiterzurechnen. Er merkt sich außerdem die letzten paar Nachrichten des Gesprächs,
 Rückfragen wie „und was können wir dagegen tun" funktionieren also im Kontext der vorherigen Antwort.
 
 **Aufgaben anlegen** – auch mehrere auf einmal, auch an verschiedene Personen:

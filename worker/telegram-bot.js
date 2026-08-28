@@ -837,6 +837,49 @@ const ASK_TOOLS = [
     description: "Listet den aktuellen Vorräte-Stand (Ampel-Status, bei mengengeführten Artikeln auch Bestand/Einheit).",
     input_schema: { type: "object", properties: {} },
   },
+  {
+    name: "get_shift_plan",
+    description:
+      "Schichtplanung: wer arbeitet wann (fest eingeplante Schichten) und wer hätte sich für welche Schicht bereit gemeldet (Verfügbarkeiten inkl. Status: fest bestätigt / wartet auf Bestätigung / nur Kandidat unter mehreren).",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "YYYY-MM-DD, Start des Zeitraums. Ohne Angabe: alles Bekannte." },
+        to: { type: "string", description: "YYYY-MM-DD, Ende des Zeitraums. Ohne Angabe: alles Bekannte." },
+        name: { type: "string", description: "Optional: nur die Schichten/Verfügbarkeiten dieser Person." },
+      },
+    },
+  },
+  {
+    name: "get_employees",
+    description:
+      "Liste der aktiven Mitarbeiter, inkl. Minijob-Status und Verdienstgrenze (soweit bekannt), wer aktuell eingestempelt ist und wo das Ausstempeln vergessen wurde.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_employee_notes",
+    description: "Notizen/Nachrichten, die Mitarbeiter aus ihrem Kiosk-Fenster an den Chef geschickt haben (mit Datum und Name).",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Optional: nur Notizen dieser Person." },
+        limit: { type: "number", description: "Wie viele der neuesten Notizen, Default 30." },
+      },
+    },
+  },
+  {
+    name: "get_stock_movements",
+    description:
+      "Warenbewegungen: per Lieferschein/Bestellung erfasste Lieferungen (Wareneingang) und per Verkaufsbericht erfasste Verkäufe (Warenausgang), jeweils mit Datum und Menge.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["deliveries", "sales", "all"], description: "Default: 'all'." },
+        from: { type: "string", description: "YYYY-MM-DD, Start. Ohne Angabe: alles Bekannte." },
+        to: { type: "string", description: "YYYY-MM-DD, Ende. Ohne Angabe: alles Bekannte." },
+      },
+    },
+  },
 ];
 
 function toolGetFinancials(state, input) {
@@ -897,11 +940,130 @@ function toolGetStock(state) {
   return { count: stock.length, items: stock.map((s) => ({ name: s.name, status: s.status, unit: s.unit || null, currentAmount: s.unit ? s.currentAmount : null })) };
 }
 
+/** Kleiner Helfer für die Zeitraum-Filter der folgenden Werkzeuge (leere Grenze = unbegrenzt). */
+function inRange(date, from, to) {
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+
+function toolGetShiftPlan(state, input) {
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : "";
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : "";
+  const needle = String(input?.name || "").trim().toLowerCase();
+
+  const planned = (Array.isArray(state.plannedShifts) ? state.plannedShifts : [])
+    .filter((s) => inRange(s.date || "", from, to))
+    .filter((s) => !needle || String(s.employeeName || "").trim().toLowerCase() === needle)
+    .map((s) => ({ date: s.date, name: s.employeeName, shift: s.slotLabel || (s.from && s.to ? `${s.from}-${s.to}` : "") }));
+
+  // Verfügbarkeiten liegen pro Zielwoche (Montag) gebündelt: { weekStart: { entries: { Name: { days: [...] } } } }
+  const availability = [];
+  for (const [weekStart, bucket] of Object.entries(state.availability || {})) {
+    for (const [name, entry] of Object.entries(bucket?.entries || {})) {
+      if (needle && name.trim().toLowerCase() !== needle) continue;
+      for (const day of entry?.days || []) {
+        if (!inRange(day.date || "", from, to)) continue;
+        const slots = (day.slots || []).map((s) => s.label || s.id);
+        const confirmed = (day.slots || []).find((s) => s.id === day.confirmedSlotId);
+        availability.push({
+          date: day.date,
+          weekStart,
+          name,
+          moeglicheSchichten: slots,
+          status: day.confirmedSlotId
+            ? day.bossConfirmed
+              ? `fest: ${confirmed?.label || day.confirmedSlotId}`
+              : `wartet auf Bestätigung: ${confirmed?.label || day.confirmedSlotId}`
+            : slots.length > 1
+              ? "mehrere Kandidaten, noch nicht entschieden"
+              : "gemeldet, noch nicht zugeteilt",
+        });
+      }
+    }
+  }
+  availability.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  if (planned.length === 0 && availability.length === 0) {
+    return { error: "Für diesen Zeitraum/diese Person sind weder eingeplante Schichten noch gemeldete Verfügbarkeiten bekannt." };
+  }
+  return { geplanteSchichten: planned.slice(0, 150), verfuegbarkeiten: availability.slice(0, 150) };
+}
+
+function toolGetEmployees(state) {
+  const meta = new Map((Array.isArray(state.employeeMeta) ? state.employeeMeta : []).map((m) => [String(m.name || "").trim().toLowerCase(), m]));
+  const inService = new Map((Array.isArray(state.shiftsInService) ? state.shiftsInService : []).map((s) => [String(s.name || "").trim().toLowerCase(), s]));
+  const employees = (Array.isArray(state.employees) ? state.employees : []).map((name) => {
+    const m = meta.get(name.trim().toLowerCase());
+    const s = inService.get(name.trim().toLowerCase());
+    return {
+      name,
+      isMinijob: m ? !!m.isMinijob : null,
+      minijobLimit: m?.isMinijob ? m.minijobLimit : null,
+      aktuellImDienstSeit: s ? s.since : null,
+    };
+  });
+  return {
+    count: employees.length,
+    employees,
+    ausstempelnVergessen: (Array.isArray(state.staleOpenShifts) ? state.staleOpenShifts : []).map((s) => ({ date: s.date, name: s.employeeName, seit: s.from })),
+  };
+}
+
+function toolGetEmployeeNotes(state, input) {
+  const needle = String(input?.name || "").trim().toLowerCase();
+  const limit = Number.isFinite(Number(input?.limit)) && Number(input.limit) > 0 ? Math.min(Number(input.limit), 100) : 30;
+  const notes = (Array.isArray(state.employeeNotes) ? state.employeeNotes : []).filter(
+    (n) => !needle || String(n.employeeName || "").trim().toLowerCase() === needle
+  );
+  if (notes.length === 0) return { error: needle ? `Keine Notizen von "${input?.name}" vorhanden.` : "Keine Mitarbeiter-Notizen vorhanden." };
+  return { count: notes.length, notes: notes.slice(-limit).map((n) => ({ date: n.date, name: n.employeeName, text: n.text })) };
+}
+
+function toolGetStockMovements(state, input) {
+  const kind = ["deliveries", "sales", "all"].includes(input?.kind) ? input.kind : "all";
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : "";
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : "";
+  const result = {};
+  if (kind === "deliveries" || kind === "all") {
+    result.lieferungen = (Array.isArray(state.stockDeliveries) ? state.stockDeliveries : [])
+      .filter((d) => inRange(d.date || "", from, to))
+      .slice(-200)
+      .map((d) => ({ date: d.date, artikel: d.itemName, menge: d.quantity, einheit: d.unit || null }));
+  }
+  if (kind === "sales" || kind === "all") {
+    result.verkaeufe = (Array.isArray(state.stockSales) ? state.stockSales : [])
+      .filter((s) => inRange(s.date || "", from, to))
+      .slice(-200)
+      .map((s) => ({ date: s.date, produkt: s.productName, anzahl: s.quantitySold }));
+  }
+  const empty = (result.lieferungen?.length ?? 0) === 0 && (result.verkaeufe?.length ?? 0) === 0;
+  if (empty) return { error: "Für diesen Zeitraum sind keine Warenbewegungen erfasst." };
+  return result;
+}
+
+/** Begrenzt ein Werkzeug-Ergebnis auf eine sinnvolle Größe. Wichtig: bei Überlänge NICHT stillschweigend
+ * mitten im JSON abschneiden (Claude würde die unvollständigen Daten für vollständig halten), sondern
+ * explizit sagen, dass gekürzt wurde und der Zeitraum enger gefasst werden muss. */
+function capToolResult(result) {
+  const json = JSON.stringify(result);
+  const LIMIT = 8000;
+  if (json.length <= LIMIT) return json;
+  return JSON.stringify({
+    error: "Zu viele Daten für eine Antwort – bitte den Zeitraum enger fassen oder gezielter nachfragen (z.B. einzelner Monat statt alles).",
+    hinweis: `Das Ergebnis war ${json.length} Zeichen groß, erlaubt sind ${LIMIT}.`,
+  });
+}
+
 function executeAskTool(state, name, input) {
   if (name === "get_financials") return toolGetFinancials(state, input);
   if (name === "get_employee_summary") return toolGetEmployeeSummary(state, input);
   if (name === "get_tasks") return toolGetTasks(state, input);
   if (name === "get_stock") return toolGetStock(state);
+  if (name === "get_shift_plan") return toolGetShiftPlan(state, input);
+  if (name === "get_employees") return toolGetEmployees(state);
+  if (name === "get_employee_notes") return toolGetEmployeeNotes(state, input);
+  if (name === "get_stock_movements") return toolGetStockMovements(state, input);
   return { error: "Unbekanntes Werkzeug." };
 }
 
@@ -909,11 +1071,15 @@ async function buildAskAnythingReply(env, state, text) {
   const system = `Du bist der Assistent für die Café-Verwaltung eines kleinen Cafés. Heute ist ${todayBerlin()} (Europe/Berlin).
 Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)"}.
 
-Du hast Werkzeuge, um GENAU die Daten abzurufen, die du für die Antwort brauchst – nutze sie, statt zu raten,
-auch mehrfach nacheinander (z.B. zwei Zeiträume zum Vergleichen, oder erst Kennzahlen dann Aufgaben). Antworte
-erst mit Text, wenn du genug Daten hast oder ein Werkzeug einen Fehler zurückgibt, der die Frage beantwortet
-("keine Daten für X"). Nutze NUR was die Werkzeuge tatsächlich liefern – erfinde oder schätze nichts. Reichen
-die Daten nicht, sag das ehrlich. Keine Finanz-, Steuer- oder Rechtsberatung, nur nüchterne Beobachtungen.
+Du hast über Werkzeuge Zugriff auf ALLE Daten des Systems: Kennzahlen und Stunden/Lohn pro Person, Aufgaben,
+Vorräte und Warenbewegungen (Lieferungen/Verkäufe), Schichtplanung und Verfügbarkeiten, die Mitarbeiterliste
+(inkl. Minijob-Grenzen, wer eingestempelt ist, vergessenes Ausstempeln) sowie Notizen der Mitarbeiter.
+
+Rufe GENAU die Daten ab, die du für die Antwort brauchst – nutze die Werkzeuge, statt zu raten, auch mehrfach
+nacheinander (z.B. zwei Zeiträume zum Vergleichen, oder erst Kennzahlen dann Schichtplan). Antworte erst mit
+Text, wenn du genug Daten hast oder ein Werkzeug einen Fehler zurückgibt, der die Frage beantwortet ("keine
+Daten für X"). Nutze NUR was die Werkzeuge tatsächlich liefern – erfinde oder schätze nichts. Reichen die
+Daten nicht, sag das ehrlich. Keine Finanz-, Steuer- oder Rechtsberatung, nur nüchterne Beobachtungen.
 Antworte auf Deutsch, kurz und konkret, ohne Einleitung direkt zur Sache.`;
 
   const history = (state.conversationHistory || []).slice(-6).map((h) => ({ role: h.role, content: h.text }));
@@ -944,7 +1110,7 @@ Antworte auf Deutsch, kurz und konkret, ohne Einleitung direkt zur Sache.`;
         content: toolUses.map((tu) => ({
           type: "tool_result",
           tool_use_id: tu.id,
-          content: JSON.stringify(executeAskTool(state, tu.name, tu.input)).slice(0, 4000),
+          content: capToolResult(executeAskTool(state, tu.name, tu.input)),
         })),
       },
     ];

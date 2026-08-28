@@ -10,6 +10,10 @@ import { renderStock } from "./stock.js";
 import { renderCosts } from "./costs.js";
 import { escapeHtml, todayStr } from "../format.js";
 
+// Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
+// ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
+const APP_VERSION = "2026-08-28.2";
+
 const outlet = document.getElementById("outlet");
 
 const TABS = [
@@ -109,9 +113,13 @@ function renderShell() {
   const head = document.createElement("div");
   head.className = "chef-head";
   const title = document.createElement("div");
-  title.innerHTML = `<b>Chef-Bereich</b> <span class="muted small">· Stand vom letzten iPad-Abgleich${
-    state?.updatedAt ? `: ${new Date(state.updatedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}` : " – noch keiner"
-  }</span>`;
+  title.innerHTML =
+    `<b>Chef-Bereich</b> <span class="muted small">· Stand vom letzten iPad-Abgleich${
+      state?.updatedAt ? `: ${new Date(state.updatedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}` : " – noch keiner"
+    }</span>` +
+    // Sichtbare Version: Browser halten die Dateien bis zu 10 Minuten fest. Wenn nach einer Änderung
+    // hier noch die alte Nummer steht, ist es der Cache und kein fehlender Deploy.
+    `<br/><span class="muted small">Version ${APP_VERSION}</span>`;
   const actions = document.createElement("div");
   actions.className = "employee-actions";
   const reload = document.createElement("button");

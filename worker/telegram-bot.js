@@ -160,6 +160,10 @@ const EMPTY_STATE = {
   recipes: [], // [{id, productName, ingredients:[{stockItemId, amount}]}]
   stockChanges: [], // [{id, kind:"create"|"update"|"delete"|"setAmount", ...}]
   recipeChanges: [], // [{id, kind:"create"|"update"|"delete", ...}]
+  // Mitarbeiter-Stammdaten vom iPad für die Laptop-Verwaltung. Bewusst OHNE PIN – der wird weiterhin nur
+  // am iPad vergeben, damit kein PIN im Klartext das Gerät verlässt.
+  employeeDetails: [], // [{id, name, role, hourlyWage, isMinijob, minijobLimit, active, hasPin}]
+  employeeChanges: [], // [{id, kind:"create"|"update"|"deactivate"|"activate", ...}]
 };
 
 async function getState(env) {
@@ -196,6 +200,8 @@ async function getState(env) {
       recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [],
       stockChanges: Array.isArray(parsed.stockChanges) ? parsed.stockChanges : [],
       recipeChanges: Array.isArray(parsed.recipeChanges) ? parsed.recipeChanges : [],
+      employeeDetails: Array.isArray(parsed.employeeDetails) ? parsed.employeeDetails : [],
+      employeeChanges: Array.isArray(parsed.employeeChanges) ? parsed.employeeChanges : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -425,6 +431,12 @@ async function handleMe(request, env) {
     neueNachrichten: (state.employeeNotifications || [])
       .filter((n) => !n.readAt && String(n.employeeName || "").trim().toLowerCase() === needle)
       .map((n) => ({ id: n.id, text: n.text, createdAt: n.createdAt })),
+    // Postfach: auch schon gelesene Nachrichten, damit man sie nachlesen kann.
+    postfach: (state.employeeNotifications || [])
+      .filter((n) => String(n.employeeName || "").trim().toLowerCase() === needle)
+      .slice(-50)
+      .reverse()
+      .map((n) => ({ id: n.id, text: n.text, createdAt: n.createdAt, gelesen: !!n.readAt })),
   });
 }
 
@@ -1190,6 +1202,69 @@ async function handleAdminRecipe(request, env) {
   const state = await getState(env);
   await patchState(env, { recipeChanges: [...(state.recipeChanges || []), eintrag] });
   return jsonResponse({ ok: true });
+}
+
+/** Mitarbeiter anlegen/bearbeiten/deaktivieren – vom Laptop aus. Der PIN ist bewusst NICHT dabei: der wird
+ * weiterhin nur am iPad vergeben, damit kein PIN im Klartext über das Netz geht oder hier zwischenliegt. */
+async function handleAdminEmployee(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "deactivate", "activate"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !String(body?.employeeId || "").trim()) return jsonResponse({ error: "Mitarbeiter fehlt." }, 400);
+  if (["create", "update"].includes(kind) && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
+  const rollen = ["service", "kueche", "bar"];
+  if (["create", "update"].includes(kind) && !rollen.includes(body?.role)) return jsonResponse({ error: "Bitte eine gültige Rolle wählen." }, 400);
+
+  const eintrag = {
+    id: crypto.randomUUID(),
+    kind,
+    employeeId: String(body?.employeeId || "") || null,
+    name: String(body?.name || "").trim(),
+    role: body?.role,
+    hourlyWage: Number(body?.hourlyWage) || 0,
+    isMinijob: !!body?.isMinijob,
+    minijobLimit: Number(body?.minijobLimit) || 556,
+  };
+  const state = await getState(env);
+  await patchState(env, { employeeChanges: [...(state.employeeChanges || []), eintrag] });
+  return jsonResponse({ ok: true });
+}
+
+/** Freie Nachricht an eine Person (oder alle) – landet im Postfach der Handy-Ansicht. */
+async function handleAdminMessage(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const text = String(body?.text || "").trim().slice(0, 1000);
+  if (!text) return jsonResponse({ error: "Bitte einen Text eingeben." }, 400);
+
+  const state = await getState(env);
+  const alle = state.employees || [];
+  const empfaenger = body?.toAll ? alle : alle.filter((n) => n === String(body?.employeeName || "").trim());
+  if (empfaenger.length === 0) return jsonResponse({ error: "Kein Empfänger gefunden." }, 400);
+
+  let notifs = state.employeeNotifications;
+  for (const name of empfaenger) notifs = withEmployeeNotification({ employeeNotifications: notifs }, name, `💬 ${text}`);
+  // Zusätzlich als Pop-up im Kiosk am iPad, damit es auch dort ankommt.
+  const kiosk = (Array.isArray(state.employeeMessages) ? state.employeeMessages : []).concat(
+    empfaenger.map((name) => ({ id: crypto.randomUUID(), employeeName: name, text }))
+  );
+  await patchState(env, { employeeNotifications: notifs, employeeMessages: kiosk });
+  return jsonResponse({ ok: true, empfaenger: empfaenger.length });
 }
 
 /** Beleg-Upload aus der Laptop-Ansicht (PDF oder Foto). Nutzt denselben Weg wie der Telegram-Upload. */
@@ -1976,6 +2051,7 @@ async function handleState(request, env) {
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     if (Array.isArray(body.recipes)) patch.recipes = body.recipes;
+    if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -2276,6 +2352,8 @@ export default {
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);
       if (url.pathname === "/admin/recipe") return handleAdminRecipe(request, env);
+      if (url.pathname === "/admin/employee") return handleAdminEmployee(request, env);
+      if (url.pathname === "/admin/message") return handleAdminMessage(request, env);
       return jsonResponse({ error: "unbekannter Endpunkt" }, 404);
     }
 

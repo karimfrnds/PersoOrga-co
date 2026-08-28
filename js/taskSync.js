@@ -96,7 +96,16 @@ function buildFinancialsPayload() {
       umschlag: b.umschlag,
       // tip wird für die eigene Ansicht der Mitarbeiter am Handy gebraucht (GET /me liefert nur die
       // jeweils eigene Zeile zurück, nie die der Kollegen).
-      perEmployee: b.perEmployee.map((r) => ({ name: r.employee.name, hours: r.hours, lohn: r.lohn, lohnnebenkosten: r.lohnnebenkosten, tip: r.tip })),
+      // hours ist bereits die NETTO-Zeit (gesetzliche Pause abgezogen). breakMinutes kommt mit, damit im
+      // Stunden-Export fürs Steuerbüro nachvollziehbar ist, wie viel Pause abgezogen wurde.
+      perEmployee: b.perEmployee.map((r) => ({
+        name: r.employee.name,
+        hours: r.hours,
+        breakMinutes: r.breakMinutes,
+        lohn: r.lohn,
+        lohnnebenkosten: r.lohnnebenkosten,
+        tip: r.tip,
+      })),
     });
   }
   rows.sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -457,6 +466,31 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRecipeChangeIds: [...appliedRecipeChangeIds].slice(-300) });
   }
 
+  // Mitarbeiter-Änderungen aus der Laptop-Ansicht übernehmen. Der PIN wird dabei nie angefasst – der bleibt
+  // ausschließlich am iPad und geht nie über das Netz.
+  const remoteEmployeeChanges = Array.isArray(remote.employeeChanges) ? remote.employeeChanges : [];
+  const appliedEmployeeChangeIds = new Set(cfg.appliedEmployeeChangeIds || []);
+  let newEmployeeChangeIds = false;
+  for (const c of remoteEmployeeChanges) {
+    if (!c.id || appliedEmployeeChangeIds.has(c.id)) continue;
+    const daten = { name: c.name, role: c.role, hourlyWage: c.hourlyWage, isMinijob: !!c.isMinijob, minijobLimit: c.minijobLimit };
+    if (c.kind === "create") {
+      store.addEmployee({ ...daten, pin: null }); // PIN vergibt der Chef am iPad
+    } else if (c.kind === "update") {
+      if (store.getEmployee(c.employeeId)) store.updateEmployee(c.employeeId, daten);
+      else syncWarnings.push(`Mitarbeiter-Änderung: Person nicht gefunden (evtl. schon gelöscht).`);
+    } else if (c.kind === "deactivate") {
+      store.updateEmployee(c.employeeId, { active: false });
+    } else if (c.kind === "activate") {
+      store.updateEmployee(c.employeeId, { active: true });
+    }
+    appliedEmployeeChangeIds.add(c.id);
+    newEmployeeChangeIds = true;
+  }
+  if (newEmployeeChangeIds) {
+    store.updateTaskInboxConfig({ appliedEmployeeChangeIds: [...appliedEmployeeChangeIds].slice(-300) });
+  }
+
   // Krankmeldungen vom Handy -> als Krank-Tage übernehmen. Ein Eintrag kann mehrere Tage umfassen
   // (from..to), daraus wird pro Tag ein Krank-Tag. Nachsichtiger Namens-Vergleich wie oben.
   const remoteSick = Array.isArray(remote.sickReports) ? remote.sickReports : [];
@@ -587,6 +621,18 @@ async function performTaskSync() {
     lowThreshold: s.unit ? s.lowThreshold : null,
   }));
   const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients }));
+  // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
+  // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
+  const employeeDetails = store.getEmployees(true).map((e) => ({
+    id: e.id,
+    name: e.name,
+    role: e.role,
+    hourlyWage: e.hourlyWage,
+    isMinijob: !!e.isMinijob,
+    minijobLimit: e.minijobLimit,
+    active: e.active !== false,
+    hasPin: !!e.pin,
+  }));
   const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
@@ -604,6 +650,7 @@ async function performTaskSync() {
     staleOpenShifts,
     stock,
     recipes,
+    employeeDetails,
     authPins,
     adminPinHash,
   });

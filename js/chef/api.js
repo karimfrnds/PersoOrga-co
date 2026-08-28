@@ -107,6 +107,8 @@ async function uploadDocument(file) {
 }
 
 const stockItemAction = (body) => request("/admin/stock-item", { method: "POST", body });
+const employeeAction = (body) => request("/admin/employee", { method: "POST", body });
+const sendMessage = (body) => request("/admin/message", { method: "POST", body });
 const recipeAction = (body) => request("/admin/recipe", { method: "POST", body });
 
 export {
@@ -122,4 +124,6 @@ export {
   uploadDocument,
   stockItemAction,
   recipeAction,
+  employeeAction,
+  sendMessage,
 };

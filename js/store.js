@@ -97,6 +97,7 @@ function defaultData() {
         // IDs der vom Laptop eingereichten Artikel- bzw. Rezept-Änderungen, die schon übernommen wurden.
         appliedStockChangeIds: [],
         appliedRecipeChangeIds: [],
+        appliedEmployeeChangeIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }

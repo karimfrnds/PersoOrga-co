@@ -8,11 +8,12 @@ import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOvervie
 import { renderPlanning } from "./planning.js";
 import { renderStock } from "./stock.js";
 import { renderCosts } from "./costs.js";
+import { renderTeam } from "./team.js";
 import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-08-28.3";
+const APP_VERSION = "2026-08-28.4";
 
 const outlet = document.getElementById("outlet");
 
@@ -20,6 +21,7 @@ const TABS = [
   { id: "planning", label: "📅 Schichtplanung" },
   { id: "stock", label: "📦 Bestand" },
   { id: "costs", label: "💰 Kosten" },
+  { id: "team", label: "👥 Mitarbeiter" },
 ];
 let activeTab = "planning";
 let state = null;
@@ -155,6 +157,7 @@ function renderShell() {
   let view;
   if (activeTab === "stock") view = renderStock(state, { onChanged });
   else if (activeTab === "costs") view = renderCosts(state);
+  else if (activeTab === "team") view = renderTeam(state, { onChanged });
   else view = renderPlanning(state, { onChanged, today: todayStr() });
   wrap.appendChild(view);
 

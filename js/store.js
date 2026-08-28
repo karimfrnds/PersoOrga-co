@@ -33,6 +33,14 @@ function defaultData() {
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
       taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert
+      // Reservierungen: wie lange ein Tisch pro Reservierung als belegt gilt. Ohne so einen Wert liesse
+      // sich gar nicht sagen, ob 18:00 und 19:00 am selben Tisch ein Konflikt sind.
+      reservation: {
+        durationMinutes: 120,
+        // Tage, an denen draussen nicht bedient wird (Regen). "YYYY-MM-DD"[] – der Tischplan zeigt die
+        // Terrassentische an dem Tag dann als nicht nutzbar an.
+        terraceClosedDates: [],
+      },
       // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar"
       // (teilen sich einen Plan, blockieren sich gegenseitig). allowedWeekdays: 0=Mo..6=So, fehlt = alle Tage.
       // "mittel" braucht IMMER eine explizite Chef-Bestätigung, auch wenn sie automatisch fest wird.
@@ -121,6 +129,13 @@ function defaultData() {
     // Wochen, deren Schichtplan der Chef abgeschlossen hat: [{ weekStart, publishedAt }].
     // Solange eine Woche hier nicht steht, erfahren die Mitarbeiter nichts über Zu- oder Absagen.
     publishedWeeks: [],
+    // Tische des Cafés. { id, name, seats, area: "innen"|"draussen", active, sort }
+    tables: [],
+    // Reservierungen. Aktuell von Hand am iPad eingetragen; später kommen Gast-Buchungen von der Website
+    // über dieselbe Struktur dazu (source: "web").
+    // { id, code, date, time, name, phone, guests, area, note, tableIds[], status, source, createdAt, arrivedAt }
+    // status: "offen" (noch kein Tisch) | "zugewiesen" | "da" | "weg" | "storniert" | "noshow"
+    reservations: [],
   };
 }
 
@@ -164,6 +179,7 @@ function load() {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
+        reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
@@ -172,6 +188,8 @@ function load() {
       recipes: parsed.recipes ?? base.recipes,
       sickDays: parsed.sickDays ?? base.sickDays,
       publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
+      tables: parsed.tables ?? base.tables,
+      reservations: parsed.reservations ?? base.reservations,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -931,6 +949,160 @@ export const store = {
     persist();
   },
 
+  // ---- Tische ----
+  addTable({ name, seats, area }) {
+    const t = {
+      id: uid(),
+      name: String(name || "").trim(),
+      seats: Math.max(1, Number(seats) || 2),
+      area: area === "draussen" ? "draussen" : "innen",
+      active: true,
+      sort: data.tables.length,
+    };
+    if (!t.name) return null;
+    data.tables.push(t);
+    persist();
+    return t;
+  },
+  updateTable(id, patch) {
+    const t = data.tables.find((x) => x.id === id);
+    if (!t) return null;
+    if (patch.name !== undefined && String(patch.name).trim()) t.name = String(patch.name).trim();
+    if (patch.seats !== undefined) t.seats = Math.max(1, Number(patch.seats) || 1);
+    if (patch.area !== undefined) t.area = patch.area === "draussen" ? "draussen" : "innen";
+    if (patch.active !== undefined) t.active = !!patch.active;
+    persist();
+    return t;
+  },
+  removeTable(id) {
+    data.tables = data.tables.filter((t) => t.id !== id);
+    // Zuweisungen auf diesen Tisch lösen sich auf, sonst zeigt die Reservierung auf einen Tisch,
+    // den es nicht mehr gibt.
+    for (const r of data.reservations) {
+      if (!r.tableIds?.includes(id)) continue;
+      r.tableIds = r.tableIds.filter((x) => x !== id);
+      if (r.tableIds.length === 0 && r.status === "zugewiesen") r.status = "offen";
+    }
+    persist();
+  },
+  getTables(includeInactive = false) {
+    return data.tables.filter((t) => includeInactive || t.active !== false).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  },
+  getTable(id) {
+    return data.tables.find((t) => t.id === id) || null;
+  },
+
+  // ---- Reservierungen ----
+  /** Kurze, gut vorlesbare Nummer. Nur Zeichen, die am Telefon nicht zu verwechseln sind (kein 0/O, 1/I). */
+  makeReservationCode() {
+    const alphabet = "ACDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let versuch = 0; versuch < 50; versuch++) {
+      let code = "";
+      for (let i = 0; i < 5; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+      if (!data.reservations.some((r) => r.code === code)) return code;
+    }
+    return "R" + Date.now().toString(36).toUpperCase().slice(-5);
+  },
+  addReservation({ date, time, name, phone, guests, area, note, source = "manuell", tableIds = [] }) {
+    const r = {
+      id: uid(),
+      code: this.makeReservationCode(),
+      date: String(date || "").trim(),
+      time: String(time || "").trim(),
+      name: String(name || "").trim(),
+      phone: String(phone || "").trim(),
+      guests: Math.max(1, Number(guests) || 1),
+      area: area === "draussen" ? "draussen" : area === "egal" ? "egal" : "innen",
+      note: String(note || "").trim(),
+      tableIds: [...tableIds],
+      status: tableIds.length > 0 ? "zugewiesen" : "offen",
+      source,
+      createdAt: new Date().toISOString(),
+      arrivedAt: null,
+    };
+    if (!r.date || !r.time || !r.name) return null;
+    data.reservations.push(r);
+    persist();
+    return r;
+  },
+  updateReservation(id, patch) {
+    const r = data.reservations.find((x) => x.id === id);
+    if (!r) return null;
+    for (const key of ["date", "time", "name", "phone", "note", "area"]) {
+      if (patch[key] !== undefined) r[key] = String(patch[key]).trim();
+    }
+    if (patch.guests !== undefined) r.guests = Math.max(1, Number(patch.guests) || 1);
+    if (patch.tableIds !== undefined) {
+      r.tableIds = [...patch.tableIds];
+      // Status folgt der Zuweisung – aber nur solange der Gast noch nicht da ist, sonst würde ein
+      // Umsetzen an einen anderen Tisch das "ist da" wieder zurücksetzen.
+      if (r.status === "offen" && r.tableIds.length > 0) r.status = "zugewiesen";
+      else if (r.status === "zugewiesen" && r.tableIds.length === 0) r.status = "offen";
+    }
+    if (patch.status !== undefined) {
+      r.status = patch.status;
+      if (patch.status === "da" && !r.arrivedAt) r.arrivedAt = new Date().toISOString();
+      if (patch.status !== "da" && patch.status !== "weg") r.arrivedAt = null;
+    }
+    persist();
+    return r;
+  },
+  removeReservation(id) {
+    data.reservations = data.reservations.filter((r) => r.id !== id);
+    persist();
+  },
+  getReservation(id) {
+    return data.reservations.find((r) => r.id === id) || null;
+  },
+  /** Alle Reservierungen eines Tages, nach Uhrzeit sortiert. Abgesagte bleiben drin (ausgegraut anzeigen),
+   * damit man sieht, dass da mal etwas war – wichtig, wenn jemand doch auftaucht. */
+  getReservationsByDate(date) {
+    return data.reservations
+      .filter((r) => r.date === date)
+      .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.name.localeCompare(b.name)));
+  },
+  /** Ist die Terrasse an dem Tag gesperrt (Regen)? */
+  isTerraceClosed(date) {
+    return (data.settings.reservation?.terraceClosedDates || []).includes(date);
+  },
+  setTerraceClosed(date, closed) {
+    const list = data.settings.reservation.terraceClosedDates || [];
+    data.settings.reservation.terraceClosedDates = closed ? [...new Set([...list, date])] : list.filter((d) => d !== date);
+    persist();
+  },
+
+  /** Welche Reservierungen belegen diesen Tisch zur gegebenen Zeit?
+   *
+   * Zwei Reservierungen kollidieren, wenn sich ihre Zeitfenster überschneiden. Das Fenster ist die Uhrzeit
+   * plus die eingestellte Verweildauer. Ohne diese Annahme liesse sich gar nicht sagen, ob 18:00 und 19:00
+   * am selben Tisch ein Problem sind. Abgesagte und No-Shows blockieren nichts mehr.
+   */
+  getTableConflicts(tableId, date, time, exceptReservationId = null) {
+    const dauer = Number(data.settings.reservation?.durationMinutes) || 120;
+    const minuten = (t) => {
+      const [h, m] = String(t || "").split(":").map(Number);
+      return (Number(h) || 0) * 60 + (Number(m) || 0);
+    };
+    const startA = minuten(time);
+    const endeA = startA + dauer;
+    return data.reservations.filter((r) => {
+      if (r.id === exceptReservationId) return false;
+      if (r.date !== date) return false;
+      if (!r.tableIds?.includes(tableId)) return false;
+      if (["storniert", "noshow", "weg"].includes(r.status)) return false;
+      const startB = minuten(r.time);
+      return startA < startB + dauer && startB < endeA;
+    });
+  },
+  /** Tische, die zu dieser Zeit frei sind. Terrassentische fallen bei gesperrter Terrasse ganz raus. */
+  getFreeTables(date, time, exceptReservationId = null) {
+    const terrasseZu = this.isTerraceClosed(date);
+    return this.getTables().filter((t) => {
+      if (t.area === "draussen" && terrasseZu) return false;
+      return this.getTableConflicts(t.id, date, time, exceptReservationId).length === 0;
+    });
+  },
+
   // ---- Abgeschlossene Schichtpläne (der Chef gibt eine Woche am Laptop frei) ----
   /** Merkt sich, dass eine Woche abgeschlossen ist. Erneutes Abschließen aktualisiert nur den Zeitpunkt,
    * damit ein zweiter Abgleich keinen doppelten Eintrag anlegt. */
@@ -1135,6 +1307,7 @@ export const store = {
         taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
+        reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? []).map(normalizeDay),
@@ -1143,6 +1316,8 @@ export const store = {
       recipes: parsed.recipes ?? [],
       sickDays: parsed.sickDays ?? [],
       publishedWeeks: parsed.publishedWeeks ?? [],
+      tables: parsed.tables ?? [],
+      reservations: parsed.reservations ?? [],
     };
     persist();
   },

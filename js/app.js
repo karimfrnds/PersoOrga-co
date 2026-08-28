@@ -3,6 +3,7 @@
 // ============================================================================
 import { renderKiosk } from "./pages/kiosk.js";
 import { renderDay } from "./pages/day.js";
+import { renderReservations } from "./pages/reservations.js";
 import { renderAdmin } from "./pages/admin.js";
 import { maybeRunDailyBackup } from "./backup.js";
 
@@ -34,6 +35,8 @@ function render() {
   } else if (route.startsWith("day/")) {
     const id = route.slice(4);
     outlet.appendChild(renderDay(id, navigate));
+  } else if (route === "reservierungen") {
+    outlet.appendChild(renderReservations());
   } else if (route.startsWith("admin")) {
     outlet.appendChild(renderAdmin(navigate));
   } else {

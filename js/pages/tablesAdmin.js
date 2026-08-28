@@ -1,0 +1,256 @@
+// ============================================================================
+// pages/tablesAdmin.js – Admin-Tab „Tische": die Tische des Cafés anlegen und
+// pflegen, plus die Verweildauer für Reservierungen.
+//
+// Die Verweildauer steht hier und nicht bei den Reservierungen, weil sie eine
+// Grundeinstellung des Hauses ist: sie entscheidet, ob 18:00 und 19:00 am selben
+// Tisch als Konflikt gelten. Ohne diese Annahme kann das System Doppelbelegungen
+// gar nicht erkennen.
+// ============================================================================
+import { store } from "../store.js";
+import { escapeHtml } from "../format.js";
+import { confirmDialog } from "../dialog.js";
+
+function renderTablesAdmin() {
+  const container = document.createElement("div");
+  container.className = "page";
+
+  function rerender() {
+    container.innerHTML = "";
+    container.appendChild(build());
+  }
+
+  function build() {
+    const frag = document.createElement("div");
+    frag.innerHTML = `
+      <h1>🪑 Tische</h1>
+      <p class="muted">Grundlage für die Reservierungen: welche Tische es gibt, wie viele Plätze sie haben und
+      ob sie drinnen oder draußen stehen.</p>`;
+    frag.appendChild(buildNeu());
+    frag.appendChild(buildListe());
+    frag.appendChild(buildEinstellungen());
+    return frag;
+  }
+
+  function buildNeu() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>Neuer Tisch</h2>`;
+
+    const reihe = document.createElement("div");
+    reihe.className = "res-form-row";
+
+    const feld = (label, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      return l;
+    };
+    const name = document.createElement("input");
+    name.type = "text";
+    name.placeholder = "z.B. Tisch 1 oder T1";
+    const plaetze = document.createElement("input");
+    plaetze.type = "number";
+    plaetze.min = "1";
+    plaetze.value = "4";
+    const bereich = document.createElement("select");
+    bereich.innerHTML = `<option value="innen">Drinnen</option><option value="draussen">Draußen</option>`;
+    reihe.append(feld("Name", name), feld("Plätze", plaetze), feld("Bereich", bereich));
+    card.appendChild(reihe);
+
+    const status = document.createElement("p");
+    status.className = "muted small";
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-primary";
+    btn.textContent = "＋ Hinzufügen";
+    const anlegen = () => {
+      if (!name.value.trim()) {
+        status.className = "callout callout-warn";
+        status.textContent = "Bitte einen Namen eintragen.";
+        return;
+      }
+      store.addTable({ name: name.value, seats: plaetze.value, area: bereich.value });
+      name.value = "";
+      rerender();
+      // Nach dem Anlegen gleich weiter tippen können – man legt selten nur einen Tisch an.
+      container.querySelector("input[type=text]")?.focus();
+    };
+    btn.onclick = anlegen;
+    name.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") anlegen();
+    });
+
+    card.append(btn, status);
+
+    // Startsammlung: 12 Tische von Hand einzeln anzulegen ist mühsam.
+    if (store.getTables(true).length === 0) {
+      const schnell = document.createElement("div");
+      schnell.className = "callout";
+      schnell.innerHTML = `<b>Schnellstart:</b> Soll ich eine Grundausstattung anlegen? Namen und Plätze
+        lassen sich danach einzeln anpassen.`;
+      const btn8 = document.createElement("button");
+      btn8.className = "btn btn-secondary";
+      btn8.textContent = "10 drinnen + 6 draußen anlegen";
+      btn8.onclick = () => {
+        for (let i = 1; i <= 10; i++) store.addTable({ name: `Tisch ${i}`, seats: 4, area: "innen" });
+        for (let i = 1; i <= 6; i++) store.addTable({ name: `T${i}`, seats: 4, area: "draussen" });
+        rerender();
+      };
+      schnell.appendChild(btn8);
+      card.appendChild(schnell);
+    }
+    return card;
+  }
+
+  function buildListe() {
+    const card = document.createElement("section");
+    card.className = "card";
+    const tische = store.getTables(true);
+    card.innerHTML = `<h2>Alle Tische</h2>`;
+    if (tische.length === 0) {
+      card.innerHTML += `<p class="muted small">Noch keine Tische angelegt.</p>`;
+      return card;
+    }
+
+    const innen = tische.filter((t) => t.area === "innen");
+    const draussen = tische.filter((t) => t.area === "draussen");
+    const summe = (list) => list.filter((t) => t.active !== false).reduce((s, t) => s + t.seats, 0);
+
+    const zusammen = document.createElement("p");
+    zusammen.className = "muted small";
+    zusammen.textContent = `Drinnen: ${innen.length} Tische, ${summe(innen)} Plätze · Draußen: ${draussen.length} Tische, ${summe(
+      draussen
+    )} Plätze`;
+    card.appendChild(zusammen);
+
+    for (const [titel, liste] of [
+      ["Drinnen", innen],
+      ["Draußen", draussen],
+    ]) {
+      if (liste.length === 0) continue;
+      const h = document.createElement("p");
+      h.className = "muted small res-bereich";
+      h.innerHTML = `<b>${titel}</b>`;
+      card.appendChild(h);
+
+      const scroll = document.createElement("div");
+      scroll.style.overflowX = "auto";
+      const table = document.createElement("table");
+      table.className = "calc-table";
+      table.innerHTML = `<thead><tr><th>Name</th><th>Plätze</th><th>Bereich</th><th></th></tr></thead>`;
+      const tbody = document.createElement("tbody");
+      for (const t of liste) {
+        const tr = document.createElement("tr");
+        if (t.active === false) tr.style.opacity = "0.5";
+
+        const nameTd = document.createElement("td");
+        const nameInp = document.createElement("input");
+        nameInp.type = "text";
+        nameInp.value = t.name;
+        nameInp.style.width = "140px";
+        nameInp.onchange = () => {
+          store.updateTable(t.id, { name: nameInp.value });
+          rerender();
+        };
+        nameTd.appendChild(nameInp);
+
+        const plTd = document.createElement("td");
+        const plInp = document.createElement("input");
+        plInp.type = "number";
+        plInp.min = "1";
+        plInp.value = t.seats;
+        plInp.style.width = "70px";
+        plInp.onchange = () => {
+          store.updateTable(t.id, { seats: plInp.value });
+          rerender();
+        };
+        plTd.appendChild(plInp);
+
+        const brTd = document.createElement("td");
+        const brSel = document.createElement("select");
+        brSel.innerHTML = `<option value="innen" ${t.area === "innen" ? "selected" : ""}>Drinnen</option><option value="draussen" ${
+          t.area === "draussen" ? "selected" : ""
+        }>Draußen</option>`;
+        brSel.onchange = () => {
+          store.updateTable(t.id, { area: brSel.value });
+          rerender();
+        };
+        brTd.appendChild(brSel);
+
+        const aktTd = document.createElement("td");
+        aktTd.className = "employee-actions";
+        const um = document.createElement("button");
+        um.className = "btn btn-secondary";
+        um.textContent = t.active === false ? "Aktivieren" : "Deaktivieren";
+        um.title = "Vorübergehend nicht nutzbar (z.B. defekt), ohne bestehende Reservierungen zu verlieren";
+        um.onclick = () => {
+          store.updateTable(t.id, { active: t.active === false });
+          rerender();
+        };
+        const del = document.createElement("button");
+        del.className = "btn btn-link";
+        del.textContent = "✕";
+        del.title = "Tisch löschen";
+        del.onclick = async () => {
+          if (await confirmDialog(`Tisch „${t.name}" löschen? Bestehende Zuweisungen auf diesen Tisch werden aufgehoben.`)) {
+            store.removeTable(t.id);
+            rerender();
+          }
+        };
+        aktTd.append(um, del);
+
+        tr.append(nameTd, plTd, brTd, aktTd);
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      scroll.appendChild(table);
+      card.appendChild(scroll);
+    }
+    return card;
+  }
+
+  function buildEinstellungen() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>Verweildauer</h2>`;
+
+    const erklaerung = document.createElement("p");
+    erklaerung.className = "muted small";
+    erklaerung.textContent =
+      "Wie lange ein Tisch pro Reservierung als belegt gilt. Daran erkennt das System, ob zwei Reservierungen am selben Tisch kollidieren – bei 2 Stunden ist ein Tisch um 18:00 und 19:00 doppelt belegt, um 18:00 und 20:00 nicht.";
+    card.appendChild(erklaerung);
+
+    const aktuell = Number(store.getSettings().reservation?.durationMinutes) || 120;
+    const reihe = document.createElement("div");
+    reihe.className = "handoff-days";
+    for (const min of [60, 90, 120, 150, 180]) {
+      const b = document.createElement("button");
+      b.className = "btn " + (aktuell === min ? "btn-primary" : "btn-secondary");
+      const std = Math.floor(min / 60);
+      const rest = min % 60;
+      b.textContent = std === 0 ? `${rest} Min` : `${std} Std${rest ? ` ${rest} Min` : ""}`;
+      b.onclick = () => {
+        store.updateSettings({ reservation: { ...store.getSettings().reservation, durationMinutes: min } });
+        rerender();
+      };
+      reihe.appendChild(b);
+    }
+    card.appendChild(reihe);
+
+    const gesperrt = store.getSettings().reservation?.terraceClosedDates || [];
+    if (gesperrt.length > 0) {
+      const p = document.createElement("p");
+      p.className = "muted small";
+      p.textContent = `Terrasse gesperrt an: ${gesperrt.slice(-10).join(", ")} (umschalten auf der Reservierungs-Seite).`;
+      card.appendChild(p);
+    }
+    return card;
+  }
+
+  rerender();
+  return container;
+}
+
+export { renderTablesAdmin };

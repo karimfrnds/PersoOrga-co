@@ -8,6 +8,7 @@ import { renderAdminDays } from "./adminDays.js";
 import { renderEmployees } from "./employees.js";
 import { renderTasksAdmin } from "./tasksAdmin.js";
 import { renderStockAdmin } from "./stockAdmin.js";
+import { renderTablesAdmin } from "./tablesAdmin.js";
 import { renderShiftPlanningAdmin } from "./shiftPlanningAdmin.js";
 import { renderSettings } from "./settings.js";
 import { renderExport } from "./exportpage.js";
@@ -31,6 +32,7 @@ function renderAdmin(navigate) {
     { id: "tasks", label: "Aufgaben", render: () => renderTasksAdmin() },
     { id: "planning", label: "Schichtplanung", render: () => renderShiftPlanningAdmin() },
     { id: "stock", label: "Vorräte", render: () => renderStockAdmin() },
+    { id: "tables", label: "Tische", render: () => renderTablesAdmin() },
     { id: "hours", label: "Stunden", render: () => renderHours(navigate) },
     { id: "export", label: "Berichte", render: () => renderExport() },
     { id: "beta", label: "🧪 Beta", render: () => renderBeta(navigate) },

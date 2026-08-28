@@ -580,3 +580,56 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .handoff-when { margin-top: 14px; }
 .handoff-days { display: flex; gap: 8px; margin-bottom: 10px; }
 .handoff-days .btn { flex: 1; }
+
+/* ---- Reservierungen ---- */
+/* .card ist selbst schon ein Spalten-Flexbox – ohne das Zurücksetzen auf row stünde hier alles
+   untereinander statt als eine Leiste. */
+.res-daybar { display: flex; flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
+.res-daylabel { flex: 1 1 200px; font-size: 18px; }
+.res-daylabel .muted { margin-left: 6px; font-weight: 400; }
+
+.res-stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.res-stats > div { display: flex; flex-direction: column; }
+.res-stat-zahl { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.res-stat-warn { color: var(--orange); }
+
+/* Eine Reservierung. Der farbige Balken links zeigt den Zustand, ohne dass man lesen muss. */
+.res-row { border-left: 5px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0 10px 12px; }
+.res-row:last-child { border-bottom: none; }
+.res-row-head { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.res-time { font-size: 22px; font-weight: 700; min-width: 68px; }
+.res-main { flex: 1 1 220px; }
+.res-name { font-size: 17px; }
+.res-tisch { color: var(--green); }
+.res-kein-tisch { color: var(--orange); font-weight: 600; }
+.res-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.res-da-btn { min-width: 110px; }
+
+.res-offen { border-left-color: var(--orange); }
+.res-zugewiesen { border-left-color: var(--green); }
+.res-da { border-left-color: var(--green-dark); background: var(--green-light); }
+.res-weg { border-left-color: var(--border); opacity: 0.6; }
+.res-storniert { border-left-color: var(--border); opacity: 0.5; text-decoration-color: var(--gray); }
+.res-storniert .res-name { text-decoration: line-through; }
+
+/* Tischauswahl direkt unter der Zeile */
+.res-tischwahl { margin: 12px 0 4px; padding: 12px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border); }
+.res-bereich { margin: 8px 0 4px; }
+.res-tische { display: flex; flex-wrap: wrap; gap: 8px; }
+.res-tisch-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px; padding: 10px 8px;
+  border-radius: 10px; border: 2px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font: inherit; }
+.res-tisch-btn:hover:not(:disabled) { border-color: var(--green); }
+.res-tisch-name { font-weight: 700; }
+.res-tisch-btn.gewaehlt { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+.res-tisch-btn.gesperrt { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+
+.res-form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.res-form-row .field { flex: 1 1 150px; }
+.res-dialog-danger { display: flex; justify-content: space-between; align-items: center; margin-top: 14px;
+  padding-top: 10px; border-top: 1px solid var(--border); }
+
+@media (max-width: 700px) {
+  .res-actions { width: 100%; }
+  .res-actions .btn { flex: 1; }
+}
+.res-warn { color: var(--orange); font-weight: 600; font-size: 14px; margin-top: 2px; }

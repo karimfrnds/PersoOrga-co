@@ -134,7 +134,7 @@ const EMPTY_STATE = {
   stock: [], // [{name, status}] – Vorräte-Ampel
   stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
   stockDeliveries: [], // [{id, itemName, quantity, unit, date}] – per Lieferschein-Foto erkannte Lieferungen
-  stockSales: [], // [{id, productName, quantitySold, date}] – per SumUp-Verkaufsbericht-Foto erkannte Verkäufe
+  stockSales: [], // [{id, productName, quantitySold, kind, date}] – per SumUp-Verkaufsbericht erkannte Verkäufe
   employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
@@ -1138,14 +1138,29 @@ function buildDeliveryReply(items) {
 
 function buildSalesReply(items) {
   const lines = items.map((it, i) => `${i + 1}. ${it.productName} – ${it.quantitySold}x`);
-  const heading = items.length === 1 ? "🧾 Verkauf erkannt und mit dem Bestand verrechnet:" : `🧾 ${items.length} Produkte erkannt und mit dem Bestand verrechnet:`;
-  return [heading, ...lines].join("\n");
+  const heading = items.length === 1 ? "🧾 Verkauf erkannt:" : `🧾 ${items.length} Produkte erkannt:`;
+  // Bewusst kein "ist verrechnet": das passiert erst beim nächsten iPad-Abgleich, und für ein neu
+  // angelegtes Rezept ohne Zutaten passiert es gar nicht, bis der Chef die Zutaten eingetragen hat.
+  return [
+    heading,
+    ...lines,
+    "",
+    "Wird beim nächsten Abgleich mit dem Bestand verrechnet. Unbekannte Produkte lege ich automatisch an – die stehen dann am Laptop unter Bestand zum Einordnen.",
+  ].join("\n");
 }
 
 /** Liest ein Foto per Claude Vision aus und erkennt dabei selbst, ob es ein Lieferschein/eine Rechnung
  * (gelieferte Artikel + Menge) oder ein SumUp-Verkaufsbericht (verkaufte Produkte + Anzahl) ist. Wirft bei
  * echten Fehlern (Anthropic nicht erreichbar o.ä.). */
-async function extractStockDocument(env, imageBase64, mimeType, caption, today) {
+async function extractStockDocument(env, imageBase64, mimeType, caption, today, state) {
+  // Was das System schon kennt, wird mitgegeben: so bekommt "Capp. gross" dieselbe Einordnung wie das
+  // bereits vorhandene "Cappuccino", statt beim naechsten Bericht anders zu landen.
+  const bekannteProdukte = [
+    ...(state?.recipes || []).map((r) => `- ${r.productName} = rezept`),
+    ...(state?.stock || []).map((s) => `- ${s.name} = artikel`),
+  ]
+    .slice(0, 120)
+    .join("\n");
   const tool = {
     name: "extract_stock_document",
     description:
@@ -1183,6 +1198,12 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
               },
               productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
               quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
+              kind: {
+                type: "string",
+                enum: ["artikel", "rezept"],
+                description:
+                  "Nur bei documentType=verkaufsbericht: Wird dieses Produkt so, wie es verkauft wird, auch EINGEKAUFT ('artikel', 1 Verkauf = 1 Stück weniger im Lager, z.B. Flaschengetränke, Dosen, zugekaufte Snacks), oder wird es im Café aus mehreren Zutaten ZUBEREITET ('rezept', z.B. Cappuccino aus Bohnen und Milch, Bowls, Cocktails)? Im Zweifel IMMER 'rezept' wählen: ein Rezept ohne Zutaten zieht nichts ab und richtet keinen Schaden an, ein falscher Artikel zieht dagegen von einem Lagerbestand ab, den es gar nicht gibt.",
+              },
             },
           },
         },
@@ -1217,7 +1238,9 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
               type: "text",
               text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht.`,
+              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht.${
+                bekannteProdukte ? `\n\nDiese Produkte kennt das System schon, mit ihrer jeweiligen Einordnung – halte dich bei gleichen oder sehr ähnlichen Namen unbedingt an dieselbe Einordnung:\n${bekannteProdukte}` : ""
+              }`,
             },
           ],
         },
@@ -1261,12 +1284,20 @@ async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, 
  * Laptop-Upload genutzt, damit beide Wege exakt gleich funktionieren (und nicht mit der Zeit auseinanderlaufen).
  * Gibt den Antworttext plus die erkannten Positionen zurück, damit der Laptop sie anzeigen kann. */
 async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
-  const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
+  const extracted = await extractStockDocument(env, base64, mimeType, caption, today, state);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
 
   if (extracted.documentType === "verkaufsbericht") {
     const items = (Array.isArray(extracted.items) ? extracted.items : [])
-      .map((it) => ({ id: crypto.randomUUID(), productName: String(it.productName || "").trim(), quantitySold: Number(it.quantitySold) || 0, date }))
+      .map((it) => ({
+        id: crypto.randomUUID(),
+        productName: String(it.productName || "").trim(),
+        quantitySold: Number(it.quantitySold) || 0,
+        // Vorschlag, ob das ein eingekaufter Artikel oder ein zubereitetes Rezept ist. Bewusst nur ein
+        // Vorschlag – das iPad legt danach an, markiert aber als "bitte prüfen".
+        kind: it.kind === "artikel" ? "artikel" : "rezept",
+        date,
+      }))
       .filter((it) => it.productName && it.quantitySold > 0);
     if (items.length === 0) return { art: "verkaufsbericht", items: [], text: "Konnte im Verkaufsbericht keine Produkte erkennen." };
     await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
@@ -1317,7 +1348,7 @@ async function handleAdminStockItem(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "setAmount"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "setAmount", "reviewed"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
   if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
@@ -1348,9 +1379,9 @@ async function handleAdminRecipe(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "reviewed"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if (kind !== "create" && !String(body?.recipeId || "").trim()) return jsonResponse({ error: "Rezept fehlt." }, 400);
-  if (kind !== "delete" && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
+  if (!["delete", "reviewed"].includes(kind) && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
 
   const zutaten = (Array.isArray(body?.ingredients) ? body.ingredients : [])
     .map((z) => ({ stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }))

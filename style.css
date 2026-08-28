@@ -575,3 +575,8 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 /* Abschluss-Balken über dem Schichtplan am Laptop */
 .plan-publish { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .plan-publish .btn { align-self: flex-start; }
+
+/* Aufgabe weitergeben: Tag-Auswahl im Dialog */
+.handoff-when { margin-top: 14px; }
+.handoff-days { display: flex; gap: 8px; margin-bottom: 10px; }
+.handoff-days .btn { flex: 1; }

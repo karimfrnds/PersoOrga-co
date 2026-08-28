@@ -417,8 +417,35 @@ async function performTaskSync() {
   for (const s of remoteSales) {
     if (!s.id || appliedSaleIds.has(s.id)) continue;
     const recipe = store.getRecipeByProductName(s.productName);
-    if (recipe) store.applyProductSale(recipe.id, s.quantitySold, s.date);
-    else syncWarnings.push(`Verkauf "${s.productName}" (${s.quantitySold}x): kein Rezept hinterlegt (Admin → Vorräte).`);
+    if (recipe) {
+      store.applyProductSale(recipe.id, s.quantitySold, s.date);
+    } else {
+      const artikel = store.getStockItemByName(s.productName);
+      if (artikel && artikel.unit) {
+        // Wird genau so eingekauft, wie es verkauft wird: 1 verkauft = 1 Stück weniger.
+        store.applyDirectSale(artikel.id, s.quantitySold, s.date, s.productName);
+      } else if (artikel) {
+        // Artikel ohne Mengenführung (nur Ampel) – da gibt es nichts abzuziehen.
+        syncWarnings.push(`Verkauf "${s.productName}": Artikel wird ohne Menge geführt, nichts abgezogen.`);
+      } else if (s.kind === "artikel") {
+        // Unbekannt und laut Beleg-Erkennung ein eingekauftes Produkt: als Artikel mit Stück-Führung
+        // anlegen und den Verkauf sofort abziehen. Der Bestand startet bei 0 und wird dadurch negativ –
+        // das ist gewollt und sichtbar: es zeigt genau, wie viel seit dem Anlegen rausgegangen ist.
+        const neu = store.addStockItem(s.productName, { unit: "Stück", currentAmount: 0, lowThreshold: 0, needsReview: true });
+        if (neu) {
+          store.applyDirectSale(neu.id, s.quantitySold, s.date, s.productName);
+          syncWarnings.push(`Neuer Artikel "${s.productName}" aus dem Verkaufsbericht angelegt – bitte am Laptop unter Bestand prüfen.`);
+        }
+      } else {
+        // Alles andere wird als Rezept angelegt, absichtlich OHNE Zutaten. Ein leeres Rezept zieht nichts
+        // ab – lieber vorerst nichts verrechnen, als von einem falschen Artikel abzubuchen. Sobald der Chef
+        // die Zutaten einträgt, greift die Verrechnung ab dem nächsten Bericht.
+        const neu = store.addRecipe(s.productName, [], { needsReview: true });
+        if (neu) {
+          syncWarnings.push(`Neues Rezept "${s.productName}" angelegt – bitte am Laptop unter Bestand die Zutaten eintragen.`);
+        }
+      }
+    }
     appliedSaleIds.add(s.id);
     newSaleIds = true;
   }
@@ -439,10 +466,14 @@ async function performTaskSync() {
       if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold })) {
         syncWarnings.push(`Artikel-Änderung: Artikel nicht gefunden (evtl. schon gelöscht).`);
       }
+      // Bearbeiten IST das Prüfen: der Hinweis "bitte einordnen" kann danach weg.
+      store.markStockItemReviewed(c.itemId);
     } else if (c.kind === "delete") {
       store.removeStockItem(c.itemId);
     } else if (c.kind === "setAmount") {
       store.setStockAmount(c.itemId, c.currentAmount, "Chef (Laptop)");
+    } else if (c.kind === "reviewed") {
+      store.markStockItemReviewed(c.itemId);
     }
     appliedStockChangeIds.add(c.id);
     newStockChangeIds = true;
@@ -457,8 +488,11 @@ async function performTaskSync() {
   for (const c of remoteRecipeChanges) {
     if (!c.id || appliedRecipeChangeIds.has(c.id)) continue;
     if (c.kind === "create") store.addRecipe(c.productName, c.ingredients || []);
-    else if (c.kind === "update") store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [] });
-    else if (c.kind === "delete") store.removeRecipe(c.recipeId);
+    else if (c.kind === "update") {
+      store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [] });
+      store.markRecipeReviewed(c.recipeId); // Zutaten eingetragen = eingeordnet
+    } else if (c.kind === "delete") store.removeRecipe(c.recipeId);
+    else if (c.kind === "reviewed") store.markRecipeReviewed(c.recipeId);
     appliedRecipeChangeIds.add(c.id);
     newRecipeChangeIds = true;
   }
@@ -640,8 +674,9 @@ async function performTaskSync() {
     unit: s.unit || "",
     currentAmount: s.unit ? s.currentAmount : null,
     lowThreshold: s.unit ? s.lowThreshold : null,
+    needsReview: !!s.needsReview,
   }));
-  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients }));
+  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
   // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
   const employeeDetails = store.getEmployees(true).map((e) => ({

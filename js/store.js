@@ -724,6 +724,9 @@ export const store = {
       currentAmount: unit ? Number(opts.currentAmount) || 0 : null,
       lowThreshold: unit ? Number(opts.lowThreshold) || 0 : null,
       consumptionLog: [],
+      // true = automatisch aus einem Beleg angelegt und noch nicht vom Chef bestaetigt. Solange das steht,
+      // taucht der Artikel oben in der Bestand-Ansicht zum Einordnen auf.
+      needsReview: !!opts.needsReview,
     };
     if (!item.name) return null;
     if (unit) recomputeStockStatus(item);
@@ -808,8 +811,14 @@ export const store = {
   getRecipes() {
     return [...data.recipes].sort((a, b) => a.productName.localeCompare(b.productName));
   },
-  addRecipe(productName, ingredients = []) {
-    const recipe = { id: uid(), productName: String(productName || "").trim(), ingredients: [...ingredients] };
+  addRecipe(productName, ingredients = [], opts = {}) {
+    const recipe = {
+      id: uid(),
+      productName: String(productName || "").trim(),
+      ingredients: [...ingredients],
+      // wie bei Artikeln: automatisch angelegt und noch ohne Zutaten -> muss einmal angeschaut werden
+      needsReview: !!opts.needsReview,
+    };
     if (!recipe.productName) return null;
     data.recipes.push(recipe);
     persist();
@@ -828,6 +837,17 @@ export const store = {
   },
   /** Nachsichtiger Vergleich, damit ein per SumUp-Bericht erkannter Produktname (z.B. "Cappuccino Grande")
    * zum hinterlegten Rezept (z.B. "Cappuccino") passt. */
+  /** Vorrats-Artikel per Name, nachsichtig – gleiche Logik wie bei Rezepten, damit "Hefeweizen 0,5" aus
+   * einem Kassenbericht auch den Artikel "Hefeweizen" trifft. */
+  getStockItemByName(name) {
+    const needle = String(name || "").trim().toLowerCase();
+    if (!needle) return null;
+    return (
+      data.stock.find((s) => s.name.trim().toLowerCase() === needle) ||
+      data.stock.find((s) => s.name.trim().toLowerCase().includes(needle) || needle.includes(s.name.trim().toLowerCase())) ||
+      null
+    );
+  },
   getRecipeByProductName(name) {
     const needle = String(name || "").trim().toLowerCase();
     if (!needle) return null;
@@ -836,6 +856,35 @@ export const store = {
       data.recipes.find((r) => r.productName.trim().toLowerCase().includes(needle) || needle.includes(r.productName.trim().toLowerCase())) ||
       null
     );
+  },
+  /** Verkauf eines Produkts, das GENAU SO eingekauft wird (Flaschengetränke, zugekaufte Snacks): 1 verkauft
+   * = 1 Stück weniger. Dafür braucht es kein Rezept mit einer einzigen Zutat "sich selbst". */
+  applyDirectSale(stockItemId, quantitySold, date, productName) {
+    const item = data.stock.find((s) => s.id === stockItemId);
+    if (!item || !item.unit) return null;
+    const qty = Number(quantitySold) || 0;
+    item.currentAmount = round2((Number(item.currentAmount) || 0) - qty);
+    recomputeStockStatus(item);
+    if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
+    item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: productName || item.name, quantitySold: qty, consumed: qty });
+    item.consumptionLog = item.consumptionLog.slice(0, 20);
+    persist();
+    return item;
+  },
+  /** Der Chef hat einen automatisch angelegten Artikel bzw. ein Rezept angeschaut – Hinweis verschwindet. */
+  markStockItemReviewed(id) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item) return null;
+    item.needsReview = false;
+    persist();
+    return item;
+  },
+  markRecipeReviewed(id) {
+    const r = data.recipes.find((x) => x.id === id);
+    if (!r) return null;
+    r.needsReview = false;
+    persist();
+    return r;
   },
   /** Verrechnet einen Verkauf (aus einem SumUp-Verkaufsbericht) gegen die Zutaten des Rezepts: zieht die
    * jeweilige Menge × Verkaufsanzahl von jedem Zutat-Artikel ab und berechnet dessen Ampel neu. */

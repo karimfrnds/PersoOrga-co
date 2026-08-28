@@ -40,18 +40,113 @@ function renderStock(state, { onChanged }) {
       const card = document.createElement("section");
       card.className = "card";
       card.innerHTML = `<p class="muted small">Noch keine Vorräte bekannt – das iPad muss sich mindestens einmal abgeglichen haben.</p>`;
+      frag.appendChild(buildUpload());
+      frag.appendChild(buildPruefliste(items));
       frag.appendChild(card);
+      frag.appendChild(buildRezepte(items));
       return frag;
     }
 
     const fehlend = items.filter((i) => i.status !== "ok");
     frag.appendChild(buildUpload());
+    frag.appendChild(buildPruefliste(items));
     frag.appendChild(buildEinkaufsliste(fehlend));
     frag.appendChild(buildListe(items));
     frag.appendChild(buildLieferung(items));
     frag.appendChild(buildRezepte(items));
     frag.appendChild(buildBewegungen());
     return frag;
+  }
+
+  /** Was aus einem Verkaufsbericht automatisch angelegt wurde und noch nicht eingeordnet ist.
+   *
+   * Die Erkennung rät bei neuen Produkten, ob sie eingekauft (Artikel) oder zubereitet (Rezept) werden.
+   * Am Namen allein ist das nicht sicher zu entscheiden – ob ein Croissant zugekauft oder selbst gebacken
+   * wird, weiß nur das Café. Deshalb landet jeder Neuzugang hier, bis er einmal bestätigt ist. */
+  function buildPruefliste(items) {
+    const card = document.createElement("section");
+    card.className = "card";
+    const neueArtikel = items.filter((i) => i.needsReview);
+    const neueRezepte = (state.recipes || []).filter((r) => r.needsReview);
+    const gesamt = neueArtikel.length + neueRezepte.length;
+    if (gesamt === 0) {
+      card.style.display = "none";
+      return card;
+    }
+
+    card.innerHTML = `
+      <h2>🆕 ${gesamt} ${gesamt === 1 ? "neues Produkt" : "neue Produkte"} einordnen</h2>
+      <p class="muted small">Aus einem Verkaufsbericht automatisch angelegt. Die Einordnung ist geraten –
+      bitte einmal prüfen. <b>Rezepte ziehen erst etwas vom Bestand ab, wenn Zutaten eingetragen sind.</b></p>`;
+    const status = document.createElement("p");
+    status.className = "muted small";
+
+    const liste = document.createElement("div");
+    liste.className = "task-list";
+
+    for (const item of neueArtikel) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(item.name)}</b> <span class="badge badge-gray">Artikel</span></span>
+        <span class="muted small task-row-meta">Wird 1:1 abgezogen · Bestand jetzt ${item.currentAmount ?? 0} ${escapeHtml(item.unit || "")}</span></div>`;
+      const akt = document.createElement("div");
+      akt.className = "employee-actions";
+
+      const passt = document.createElement("button");
+      passt.className = "btn btn-primary";
+      passt.textContent = "Passt";
+      passt.onclick = () => aktion(() => stockItemAction({ kind: "reviewed", itemId: item.id }), status);
+      const bearbeiten = document.createElement("button");
+      bearbeiten.className = "btn btn-secondary";
+      bearbeiten.textContent = "Bearbeiten";
+      bearbeiten.onclick = () => openArtikelDialog(item);
+      // Falsch geraten: Artikel raus, stattdessen ein Rezept mit demselben Namen. Der Artikel wurde eben
+      // erst automatisch angelegt und hat keine Historie, die verloren gehen könnte.
+      const umwandeln = document.createElement("button");
+      umwandeln.className = "btn btn-secondary";
+      umwandeln.textContent = "→ Ist ein Rezept";
+      umwandeln.title = "Wird aus Zutaten zubereitet, nicht so eingekauft";
+      umwandeln.onclick = () =>
+        aktion(async () => {
+          await recipeAction({ kind: "create", productName: item.name, ingredients: [] });
+          await stockItemAction({ kind: "delete", itemId: item.id });
+        }, status);
+      akt.append(passt, bearbeiten, umwandeln);
+      row.appendChild(akt);
+      liste.appendChild(row);
+    }
+
+    for (const rez of neueRezepte) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      const ohneZutaten = (rez.ingredients || []).length === 0;
+      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(rez.productName)}</b> <span class="badge badge-gray">Rezept</span></span>
+        <span class="muted small task-row-meta">${
+          ohneZutaten ? "⚠ Noch keine Zutaten – zieht bisher nichts vom Bestand ab" : `${rez.ingredients.length} Zutaten hinterlegt`
+        }</span></div>`;
+      const akt = document.createElement("div");
+      akt.className = "employee-actions";
+
+      const zutaten = document.createElement("button");
+      zutaten.className = "btn btn-primary";
+      zutaten.textContent = ohneZutaten ? "Zutaten eintragen" : "Bearbeiten";
+      zutaten.onclick = () => openRezeptDialog(rez, items);
+      const umwandeln = document.createElement("button");
+      umwandeln.className = "btn btn-secondary";
+      umwandeln.textContent = "→ Ist ein Artikel";
+      umwandeln.title = "Wird genau so eingekauft, wie es verkauft wird (z.B. Flaschengetränk)";
+      umwandeln.onclick = () =>
+        aktion(async () => {
+          await stockItemAction({ kind: "create", name: rez.productName, unit: "Stück", currentAmount: 0, lowThreshold: 0 });
+          await recipeAction({ kind: "delete", recipeId: rez.id });
+        }, status);
+      akt.append(zutaten, umwandeln);
+      row.appendChild(akt);
+      liste.appendChild(row);
+    }
+
+    card.append(liste, status);
+    return card;
   }
 
   /** Änderung einreichen und Ansicht neu laden. Fehler landen als Hinweis in der jeweiligen Karte. */

@@ -14,7 +14,7 @@
 // danach geht es automatisch weiter zum Kassenabschluss.
 // ============================================================================
 import { store } from "../store.js";
-import { escapeHtml, todayStr, euro, hours } from "../format.js";
+import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
 import { alertDialog } from "../dialog.js";
@@ -756,34 +756,121 @@ function renderKiosk(navigate) {
     return list;
   }
 
+  /** Weitergeben: an WEN und auf WELCHEN TAG.
+   *
+   * Der Tag ist wichtig: bleibt die Aufgabe auf heute, zählt sie weiter als offen und blockiert das
+   * Ausstempeln der letzten Person – die Aufgabe ist dann weitergegeben, hält aber trotzdem alle fest.
+   * Deshalb ist "morgen" vorausgewählt, sobald die Person heute gar nicht mehr im Dienst ist. */
   function openHandoffPicker(day, task, fromEmp) {
     const others = store.getEmployees(false).filter((e) => e.id !== fromEmp.id);
+    const heute = todayStr();
+    const morgen = addDaysISO(heute, 1);
+    let zielDatum = heute;
+    let gewaehlt = null;
+
     const overlay = document.createElement("div");
     overlay.className = "overlay";
     const box = document.createElement("div");
     box.className = "dialog";
     box.innerHTML = `<h2>Weitergeben an?</h2><p class="muted small">„${escapeHtml(task.text)}" wird der ausgewählten Person zugeordnet.</p>`;
+
     if (others.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
       empty.textContent = "Keine anderen aktiven Mitarbeiter vorhanden.";
       box.appendChild(empty);
-    } else {
-      const list = document.createElement("div");
-      list.className = "employee-list";
-      for (const other of others) {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-secondary btn-huge";
-        btn.textContent = other.name;
-        btn.onclick = () => {
-          store.handoffTask(day.id, task.id, other.id, fromEmp.name);
-          overlay.remove();
-          rerender();
-        };
-        list.appendChild(btn);
-      }
-      box.appendChild(list);
+      const cancelLeer = document.createElement("button");
+      cancelLeer.className = "btn btn-link";
+      cancelLeer.textContent = "Abbrechen";
+      cancelLeer.onclick = () => overlay.remove();
+      box.appendChild(cancelLeer);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      return;
     }
+
+    // ---- Wer? ----
+    const list = document.createElement("div");
+    list.className = "employee-list";
+    for (const other of others) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-secondary btn-huge";
+      btn.textContent = other.name;
+      btn.onclick = () => {
+        gewaehlt = other;
+        // Ist die Person heute gar nicht mehr im Dienst, wäre "heute" nur eine Aufgabe, die niemand macht
+        // und die abends alle blockiert – dann ist morgen die sinnvollere Vorauswahl.
+        zielDatum = store.getOpenShiftForEmployeeToday(other.id, heute) ? heute : morgen;
+        zeichneTag();
+      };
+      list.appendChild(btn);
+    }
+    box.appendChild(list);
+
+    // ---- Wann? (erst sichtbar, wenn jemand gewählt ist) ----
+    const tagBereich = document.createElement("div");
+    tagBereich.className = "handoff-when";
+    box.appendChild(tagBereich);
+
+    function zeichneTag() {
+      tagBereich.innerHTML = "";
+      if (!gewaehlt) return;
+
+      const frage = document.createElement("p");
+      frage.innerHTML = `<b>An ${escapeHtml(gewaehlt.name)} – für welchen Tag?</b>`;
+      tagBereich.appendChild(frage);
+
+      const reihe = document.createElement("div");
+      reihe.className = "handoff-days";
+      const knopf = (label, datum) => {
+        const b = document.createElement("button");
+        b.className = "btn " + (zielDatum === datum ? "btn-primary" : "btn-secondary");
+        b.textContent = label;
+        b.onclick = () => {
+          zielDatum = datum;
+          zeichneTag();
+        };
+        return b;
+      };
+      reihe.append(knopf("Heute", heute), knopf("Morgen", morgen));
+      tagBereich.appendChild(reihe);
+
+      const anderes = document.createElement("label");
+      anderes.className = "field";
+      anderes.innerHTML = `<span>Anderer Tag</span>`;
+      const datumInput = document.createElement("input");
+      datumInput.type = "date";
+      datumInput.min = heute;
+      datumInput.value = zielDatum;
+      datumInput.onchange = () => {
+        if (datumInput.value >= heute) {
+          zielDatum = datumInput.value;
+          zeichneTag();
+        }
+      };
+      anderes.appendChild(datumInput);
+      tagBereich.appendChild(anderes);
+
+      const hinweis = document.createElement("p");
+      hinweis.className = zielDatum === heute ? "callout callout-warn" : "muted small";
+      hinweis.textContent =
+        zielDatum === heute
+          ? "Bleibt die Aufgabe auf heute, zählt sie weiter als offen – die letzte Person im Dienst kann dann nicht ausstempeln, bis sie erledigt ist."
+          : `Die Aufgabe taucht am ${dateDe(zielDatum)} bei ${gewaehlt.name} auf und blockiert den heutigen Feierabend nicht mehr.`;
+      tagBereich.appendChild(hinweis);
+
+      const uebernehmen = document.createElement("button");
+      uebernehmen.className = "btn btn-primary btn-huge";
+      uebernehmen.textContent = "↪ Weitergeben";
+      uebernehmen.onclick = () => {
+        store.handoffTask(day.id, task.id, gewaehlt.id, fromEmp.name);
+        if (zielDatum !== day.date) store.moveTaskToDay(day.id, task.id, zielDatum);
+        overlay.remove();
+        rerender();
+      };
+      tagBereich.appendChild(uebernehmen);
+    }
+
     const cancelBtn = document.createElement("button");
     cancelBtn.className = "btn btn-link";
     cancelBtn.textContent = "Abbrechen";

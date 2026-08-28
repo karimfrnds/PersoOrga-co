@@ -164,6 +164,12 @@ const EMPTY_STATE = {
   // am iPad vergeben, damit kein PIN im Klartext das Gerät verlässt.
   employeeDetails: [], // [{id, name, role, hourlyWage, isMinijob, minijobLimit, active, hasPin}]
   employeeChanges: [], // [{id, kind:"create"|"update"|"deactivate"|"activate", ...}]
+  // Wochen, deren Schichtplan der Chef abgeschlossen hat: [{weekStart, publishedAt}].
+  // Das ist der Schalter für ALLE Schicht-Benachrichtigungen: Solange eine Woche hier nicht steht, erfährt
+  // niemand, ob er zu- oder abgesagt wurde. Erst beim Abschließen geht die Info gebündelt raus.
+  publishedWeeks: [],
+  // Warteschlange dazu für den iPad (wie stockDeliveries & Co.): [{id, weekStart, action, at}]
+  weekPublications: [],
 };
 
 async function getState(env) {
@@ -202,6 +208,8 @@ async function getState(env) {
       recipeChanges: Array.isArray(parsed.recipeChanges) ? parsed.recipeChanges : [],
       employeeDetails: Array.isArray(parsed.employeeDetails) ? parsed.employeeDetails : [],
       employeeChanges: Array.isArray(parsed.employeeChanges) ? parsed.employeeChanges : [],
+      publishedWeeks: Array.isArray(parsed.publishedWeeks) ? parsed.publishedWeeks : [],
+      weekPublications: Array.isArray(parsed.weekPublications) ? parsed.weekPublications : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -416,9 +424,21 @@ async function handleMe(request, env) {
     }
   }
 
+  // Fertige Wochenpläne: nur Wochen, die der Chef abgeschlossen hat, und nur ab der laufenden Woche.
+  // Hier stehen ausdrücklich die Namen der Kollegen drin – das ist der Sinn der Sache: jeder soll sehen,
+  // mit wem er arbeitet und wen er im Zweifel wegen eines Tauschs fragen kann. In der noch offenen Planung
+  // (belegteSchichten oben) bleiben die Namen dagegen weiterhin verborgen.
+  const aktuellerMontag = mondayOf(today);
+  const wochenplaene = (state.publishedWeeks || [])
+    .filter((w) => w.weekStart >= aktuellerMontag)
+    .sort((a, b) => (a.weekStart < b.weekStart ? -1 : 1))
+    .slice(0, 4)
+    .map((w) => ({ ...buildWochenplan(state, w.weekStart), publishedAt: w.publishedAt }));
+
   return jsonResponse({
     name,
     heute: today,
+    wochenplaene,
     kennzahlenFreigegeben: (state.financials || []).length > 0,
     dieseWoche: summe(mondayOf(today), today),
     dieserMonat: summe(today.slice(0, 7) + "-01", today),
@@ -591,6 +611,86 @@ function withEmployeeNotification(state, employeeName, text) {
   return [...list, { id: crypto.randomUUID(), employeeName, text, createdAt: new Date().toISOString(), readAt: null }].slice(-300);
 }
 
+/** Ist der Schichtplan dieser Woche abgeschlossen?
+ *
+ * Das ist der Schalter für alle Schicht-Benachrichtigungen. Solange eine Woche NICHT abgeschlossen ist,
+ * bekommt niemand eine Nachricht über Zu- oder Absagen: der Chef plant in Ruhe, schiebt Leute hin und her,
+ * und das Team erfährt das Ergebnis erst gebündelt, wenn der Plan wirklich steht. Danach zählt jede weitere
+ * Änderung als Änderung am fertigen Plan und geht sofort raus – sonst würde jemand umgeplant, ohne es zu
+ * erfahren. */
+function istWocheAbgeschlossen(state, datumOderWochenstart) {
+  const weekStart = mondayOf(datumOderWochenstart);
+  return (state.publishedWeeks || []).some((w) => w.weekStart === weekStart);
+}
+
+const kleinschreiben = (s) => String(s || "").trim().toLowerCase();
+
+/** Der fertige Wochenplan einer Woche, so wie er auf Papier aussieht: pro Tag alle Schichten mit Zeiten und
+ * der Person, die sie übernimmt. Bewusst inklusive der unbesetzten Schichten (name: null) – auch eine Lücke
+ * ist eine Information. Gezeigt wird nur, was der Chef fest eingeteilt hat. */
+function buildWochenplan(state, weekStart) {
+  const rolleVon = (name) =>
+    (state.employeeRoles || []).find((r) => kleinschreiben(r.name) === kleinschreiben(name))?.role || "service";
+
+  // Wer hat an welchem Tag welche Schicht fest? Küche und Service haben eigene Schicht-IDs, die sich
+  // überschneiden ("frueh1" gibt es in beiden) – deshalb gehört der Bereich mit in den Schlüssel.
+  const zuteilung = new Map();
+  const bucket = (state.availability || {})[weekStart];
+  for (const [name, entry] of Object.entries(bucket?.entries || {})) {
+    for (const day of entry?.days || []) {
+      if (!day.confirmedSlotId || !day.bossConfirmed) continue;
+      const bereich = rolleVon(name) === "kueche" ? "kueche" : "service";
+      zuteilung.set(`${day.date}|${bereich}|${day.confirmedSlotId}`, { name, note: day.note || "" });
+    }
+  }
+
+  const krankAm = (name, date) =>
+    (state.sickReports || []).some(
+      (r) => kleinschreiben(r.employeeName) === kleinschreiben(name) && r.from <= date && (r.to || r.from) >= date
+    );
+
+  const tage = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysISO(weekStart, i);
+    const schichten = [];
+    for (const bereich of ["service", "kueche"]) {
+      for (const slot of state.shiftSlots?.[bereich] || []) {
+        if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
+        const zeiten = slot.weekdayOverrides?.[i] ? { ...slot, ...slot.weekdayOverrides[i] } : slot;
+        const wer = zuteilung.get(`${date}|${bereich}|${slot.id}`);
+        schichten.push({
+          bereich,
+          label: slot.label,
+          from: zeiten.from,
+          to: zeiten.to,
+          name: wer?.name || null,
+          krank: wer ? krankAm(wer.name, date) : false,
+        });
+      }
+    }
+    tage.push({ date, schichten });
+  }
+  return { weekStart, tage };
+}
+
+/** Die eigenen Schichten einer Person in einer Woche, als fertige Textzeilen für die Sammel-Nachricht. */
+function eigeneSchichtenText(plan, name) {
+  const zeilen = [];
+  for (const tag of plan.tage) {
+    for (const s of tag.schichten) {
+      if (kleinschreiben(s.name) !== kleinschreiben(name)) continue;
+      zeilen.push(`${WEEKDAY_LABELS_DE[wochentagIndex(tag.date)]}, ${formatDateDe(tag.date)}: ${s.label}, ${s.from}–${s.to} Uhr`);
+    }
+  }
+  return zeilen;
+}
+
+function wochentagIndex(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return wd === 0 ? 6 : wd - 1;
+}
+
 /** Sucht die Schicht-Definition (Zeiten) passend zur Rolle der Person. Die Definitionen kommen vom iPad,
  * damit sie nicht doppelt gepflegt werden. Service und Bar teilen sich denselben Plan. */
 function findSlotDefinition(state, employeeName, slotLabel) {
@@ -632,18 +732,82 @@ async function handleAdminShiftDecision(request, env) {
   if (decision === "confirm") patch.plannedShifts = [...(state.plannedShifts || []), { ...entry, from: "", to: "", note }];
   else patch.shiftRejections = [...(state.shiftRejections || []), entry];
 
-  // Die Person soll es auch auf dem Handy erfahren, nicht erst beim nächsten Öffnen des Kiosks am iPad.
-  const slotDef = findSlotDefinition(state, employeeName, slotLabel);
-  const zeit = slotDef ? `${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr` : slotLabel;
-  patch.employeeNotifications = withEmployeeNotification(
-    state,
-    employeeName,
-    decision === "confirm"
-      ? `✅ Deine Schicht am ${formatDateDe(date)} (${zeit}) ist bestätigt.${note ? `\n📝 ${note}` : ""}`
-      : `❌ Deine Schicht am ${formatDateDe(date)} (${zeit}) wurde abgelehnt. Bitte trage eine andere Schicht ein.`
-  );
+  // Benachrichtigt wird NUR, wenn der Plan dieser Woche schon abgeschlossen ist. Vorher plant der Chef in
+  // Ruhe und niemand bekommt Zwischenstände mit – die Info geht gebündelt raus, wenn er die Woche abschließt.
+  // Danach ist jede Änderung eine Änderung am fertigen Plan und muss sofort ankommen.
+  if (istWocheAbgeschlossen(state, date)) {
+    const slotDef = findSlotDefinition(state, employeeName, slotLabel);
+    const zeit = slotDef ? `${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr` : slotLabel;
+    patch.employeeNotifications = withEmployeeNotification(
+      state,
+      employeeName,
+      decision === "confirm"
+        ? `🔄 Änderung am Schichtplan: Du hast jetzt am ${formatDateDe(date)} die Schicht ${zeit}.${note ? `\n📝 ${note}` : ""}`
+        : `🔄 Änderung am Schichtplan: Deine Schicht am ${formatDateDe(date)} (${zeit}) entfällt.`
+    );
+  }
   await patchState(env, patch);
-  return jsonResponse({ ok: true });
+  return jsonResponse({ ok: true, benachrichtigt: istWocheAbgeschlossen(state, date) });
+}
+
+/** Chef schließt den Schichtplan einer Woche ab: ab jetzt sieht das Team den fertigen Plan und bekommt
+ * EINE gebündelte Nachricht mit den eigenen Schichten. Auch wer leer ausgegangen ist, wird informiert –
+ * sonst wartet die Person weiter auf eine Antwort, die nie kommt.
+ *
+ * Der Eintrag geht zusätzlich in eine Warteschlange, die der iPad abarbeitet: er bleibt die maßgebliche
+ * Instanz, würde die Freigabe sonst aber beim nächsten Abgleich wieder überschreiben. */
+async function handleAdminPublishWeek(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const weekStart = String(body?.weekStart || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return jsonResponse({ error: "Woche fehlt oder ist ungültig." }, 400);
+  const montag = mondayOf(weekStart);
+  const oeffnen = body?.action === "unpublish";
+  const state = await getState(env);
+  const jetzt = new Date().toISOString();
+
+  if (oeffnen) {
+    await patchState(env, {
+      publishedWeeks: (state.publishedWeeks || []).filter((w) => w.weekStart !== montag),
+      weekPublications: [...(state.weekPublications || []), { id: crypto.randomUUID(), weekStart: montag, action: "unpublish", at: jetzt }].slice(-100),
+    });
+    return jsonResponse({ ok: true, weekStart: montag, abgeschlossen: false, benachrichtigt: 0 });
+  }
+
+  const plan = buildWochenplan(state, montag);
+  const wocheEnde = addDaysISO(montag, 6);
+  const zeitraum = `${formatDateDe(montag)} – ${formatDateDe(wocheEnde)}`;
+
+  // Wer muss Bescheid wissen? Alle mit einer Schicht – plus alle, die sich für diese Woche gemeldet haben
+  // und nichts bekommen haben. Genau die warten sonst vergeblich auf eine Antwort.
+  const eingeteilt = new Set();
+  for (const tag of plan.tage) for (const s of tag.schichten) if (s.name) eingeteilt.add(s.name);
+  const beworben = Object.keys((state.availability || {})[montag]?.entries || {});
+  const empfaenger = new Set([...eingeteilt, ...beworben]);
+
+  let notifs = state.employeeNotifications;
+  for (const name of empfaenger) {
+    const zeilen = eigeneSchichtenText(plan, name);
+    const text =
+      zeilen.length > 0
+        ? `📋 Der Schichtplan für ${zeitraum} steht fest.\n\nDeine Schichten:\n${zeilen.map((z) => `• ${z}`).join("\n")}\n\nDen ganzen Plan siehst du unter „Schichtplan der Woche".`
+        : `📋 Der Schichtplan für ${zeitraum} steht fest. Für dich ist diese Woche keine Schicht dabei.\n\nDen ganzen Plan siehst du unter „Schichtplan der Woche".`;
+    notifs = withEmployeeNotification({ employeeNotifications: notifs }, name, text);
+  }
+
+  await patchState(env, {
+    publishedWeeks: [...(state.publishedWeeks || []).filter((w) => w.weekStart !== montag), { weekStart: montag, publishedAt: jetzt }],
+    weekPublications: [...(state.weekPublications || []), { id: crypto.randomUUID(), weekStart: montag, action: "publish", at: jetzt }].slice(-100),
+    employeeNotifications: notifs,
+  });
+  return jsonResponse({ ok: true, weekStart: montag, abgeschlossen: true, benachrichtigt: empfaenger.size });
 }
 
 /** Vorräte vom Laptop: "wieder da" bzw. eine Lieferung erfassen – beides über die bestehenden
@@ -1911,13 +2075,18 @@ async function handleTelegram(request, env) {
       if (newShifts.length === 0) {
         replyText = `Konnte daraus keinen Schichtplan erkennen. Magst du es anders formulieren (z.B. „Anna bekommt Montag Früh1")?`;
       } else {
-        // Auch bei Zuweisung per Telegram soll die Person es auf dem Handy sehen (gleiches Verhalten wie
-        // über die Laptop-Ansicht).
+        // Wie am Laptop: benachrichtigt wird nur, wenn der Plan dieser Woche schon abgeschlossen ist –
+        // sonst plant der Chef weiter, ohne dass das Team Zwischenstände mitbekommt.
         let notifs = state.employeeNotifications;
         for (const s of newShifts) {
+          if (!istWocheAbgeschlossen(state, s.date)) continue;
           const def = findSlotDefinition(state, s.employeeName, s.slotLabel);
           const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : s.slotLabel || `${s.from}–${s.to} Uhr`;
-          notifs = withEmployeeNotification({ employeeNotifications: notifs }, s.employeeName, `✅ Deine Schicht am ${formatDateDe(s.date)} (${zeit}) ist bestätigt.`);
+          notifs = withEmployeeNotification(
+            { employeeNotifications: notifs },
+            s.employeeName,
+            `🔄 Änderung am Schichtplan: Du hast jetzt am ${formatDateDe(s.date)} die Schicht ${zeit}.`
+          );
         }
         await patchState(env, { plannedShifts: [...(state.plannedShifts || []), ...newShifts], employeeNotifications: notifs });
         const unresolved = newShifts.filter((s) => !knownNames.has(s.employeeName.toLowerCase()));
@@ -1965,12 +2134,13 @@ async function handleTelegram(request, env) {
       } else {
         let rejNotifs = state.employeeNotifications;
         for (const r of newRejections) {
+          if (!istWocheAbgeschlossen(state, r.date)) continue; // vor dem Abschließen bleibt alles still
           const def = findSlotDefinition(state, r.employeeName, r.slotLabel);
           const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : r.slotLabel;
           rejNotifs = withEmployeeNotification(
             { employeeNotifications: rejNotifs },
             r.employeeName,
-            `❌ Deine Schicht am ${formatDateDe(r.date)} (${zeit}) wurde abgelehnt. Bitte trage eine andere Schicht ein.`
+            `🔄 Änderung am Schichtplan: Deine Schicht am ${formatDateDe(r.date)} (${zeit}) entfällt.`
           );
         }
         await patchState(env, { shiftRejections: [...(state.shiftRejections || []), ...newRejections], employeeNotifications: rejNotifs });
@@ -2052,6 +2222,10 @@ async function handleState(request, env) {
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     if (Array.isArray(body.recipes)) patch.recipes = body.recipes;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
+    // Abgeschlossene Wochen: das iPad hat die Freigaben aus der Warteschlange übernommen und schickt hier
+    // seinen maßgeblichen Stand zurück. Nur setzen, wenn wirklich mitgeschickt – sonst würde ein älteres
+    // iPad (noch ohne dieses Feld) die Freigaben löschen und alle Pläne wären wieder unveröffentlicht.
+    if (Array.isArray(body.publishedWeeks)) patch.publishedWeeks = body.publishedWeeks;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -2348,6 +2522,7 @@ export default {
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
+      if (url.pathname === "/admin/publish-week") return handleAdminPublishWeek(request, env);
       if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);

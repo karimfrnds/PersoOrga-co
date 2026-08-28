@@ -559,3 +559,19 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   .day-row-numbers { width: 100%; justify-content: space-between; }
   .topnav { flex-direction: column; align-items: flex-start; }
 }
+
+/* Fertiger Wochenplan in der Handy-Ansicht: pro Tag ein Block, darunter Schicht | Name.
+   Bewusst keine Tabelle – auf einem Handy wäre die zu schmal und müsste seitlich scrollen. */
+.wp-tag { margin-top: 14px; }
+.wp-tag-kopf { font-weight: 600; padding-bottom: 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.wp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; }
+.wp-row + .wp-row { margin-top: 2px; }
+.wp-schicht { flex: 1 1 auto; line-height: 1.25; }
+.wp-name { flex: 0 0 auto; text-align: right; font-weight: 600; }
+.wp-mine { background: var(--green-light); }
+.wp-mine .wp-name { color: var(--green); }
+.wp-frei .wp-name { font-weight: 400; }
+
+/* Abschluss-Balken über dem Schichtplan am Laptop */
+.plan-publish { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.plan-publish .btn { align-self: flex-start; }

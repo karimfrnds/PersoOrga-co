@@ -516,6 +516,27 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
   }
 
+  // Abgeschlossene Schichtpläne: der Chef gibt eine Woche am Laptop frei, das iPad übernimmt das als
+  // eigenen Stand. Ohne diesen Schritt würde der nächste Push die Freigabe in der Cloud wieder löschen –
+  // die Leute sähen ihren fertigen Plan dann plötzlich nicht mehr.
+  const remotePublications = Array.isArray(remote.weekPublications) ? remote.weekPublications : [];
+  const appliedPublicationIds = new Set(cfg.appliedPublicationIds || []);
+  let newPublicationIds = false;
+  for (const p of remotePublications) {
+    if (!p.id || appliedPublicationIds.has(p.id)) continue;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(p.weekStart)) {
+      if (p.action === "unpublish") store.setWeekUnpublished(p.weekStart);
+      else store.setWeekPublished(p.weekStart, p.at);
+    } else {
+      syncWarnings.push(`Schichtplan-Freigabe: ungültige Woche "${p.weekStart}".`);
+    }
+    appliedPublicationIds.add(p.id);
+    newPublicationIds = true;
+  }
+  if (newPublicationIds) {
+    store.updateTaskInboxConfig({ appliedPublicationIds: [...appliedPublicationIds].slice(-300) });
+  }
+
   // Verfügbarkeiten, die Mitarbeiter über ihr HANDY eingetragen haben -> lokal übernehmen.
   // Ohne diesen Schritt landen sie zwar in der Cloud (der Chef sieht sie am Laptop), das iPad erfährt aber
   // nie davon: die Person sähe ihre eigene Eingabe im Kiosk nicht und die Ausgrau-/Kaskaden-Logik liefe nie.
@@ -653,6 +674,7 @@ async function performTaskSync() {
     employeeDetails,
     authPins,
     adminPinHash,
+    publishedWeeks: store.getPublishedWeeks(),
   });
 
   store.updateTaskInboxConfig({

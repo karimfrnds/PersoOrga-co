@@ -147,6 +147,7 @@ function renderMain() {
 
   wrap.appendChild(buildPostfach());
   wrap.appendChild(buildShifts());
+  wrap.appendChild(buildWochenplan());
   wrap.appendChild(buildAvailability());
   wrap.appendChild(buildSick());
   wrap.appendChild(buildNumbers());
@@ -265,6 +266,104 @@ function buildShifts() {
     list.appendChild(row);
   }
   card.appendChild(list);
+  return card;
+}
+
+/** Der fertige Wochenplan – erscheint erst, wenn der Chef die Woche abgeschlossen hat.
+ *
+ * Hier stehen bewusst die Namen der Kollegen: jeder soll sehen, mit wem er arbeitet, und wen er fragen kann,
+ * wenn er tauschen möchte. Solange eine Woche noch geplant wird, gibt es hier nichts zu sehen – das ist der
+ * Sinn der Sache, niemand soll Zwischenstände mitbekommen. */
+function buildWochenplan() {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>📋 Schichtplan der Woche</h2>`;
+
+  const plaene = me.wochenplaene || [];
+  if (plaene.length === 0) {
+    const p = document.createElement("p");
+    p.className = "muted small";
+    p.textContent = "Sobald der Chef den Plan für eine Woche abgeschlossen hat, steht er hier – mit allen Schichten und wer sie übernimmt.";
+    card.appendChild(p);
+    return card;
+  }
+
+  // Standard ist die Woche, in der wir gerade sind; sonst die erste fertige.
+  const aktuellerMontag = mondayOf(me.heute);
+  let index = Math.max(0, plaene.findIndex((p) => p.weekStart === aktuellerMontag));
+
+  const nav = document.createElement("div");
+  nav.className = "week-nav";
+  const inhalt = document.createElement("div");
+
+  const zeichne = () => {
+    const plan = plaene[index];
+    nav.innerHTML = "";
+    if (plaene.length > 1) {
+      const zurueck = document.createElement("button");
+      zurueck.className = "btn btn-secondary";
+      zurueck.textContent = "←";
+      zurueck.disabled = index === 0;
+      zurueck.onclick = () => {
+        index--;
+        zeichne();
+      };
+      const vor = document.createElement("button");
+      vor.className = "btn btn-secondary";
+      vor.textContent = "→";
+      vor.disabled = index >= plaene.length - 1;
+      vor.onclick = () => {
+        index++;
+        zeichne();
+      };
+      const label = document.createElement("span");
+      label.className = "week-nav-label";
+      label.textContent = `${dateDeShort(plan.weekStart)} – ${dateDeShort(addDaysISO(plan.weekStart, 6))}`;
+      nav.append(zurueck, label, vor);
+    } else {
+      const label = document.createElement("span");
+      label.className = "week-nav-label";
+      label.textContent = `${dateDeShort(plan.weekStart)} – ${dateDeShort(addDaysISO(plan.weekStart, 6))}`;
+      nav.appendChild(label);
+    }
+
+    inhalt.innerHTML = "";
+    for (const tag of plan.tage) {
+      const block = document.createElement("div");
+      block.className = "wp-tag";
+      const kopf = document.createElement("div");
+      kopf.className = "wp-tag-kopf";
+      kopf.textContent = `${WEEKDAYS[weekdayIndex(tag.date)]}, ${dateDeShort(tag.date)}`;
+      if (tag.date === me.heute) kopf.textContent += " · heute";
+      block.appendChild(kopf);
+
+      if (tag.schichten.length === 0) {
+        const leer = document.createElement("div");
+        leer.className = "muted small";
+        leer.textContent = "keine Schichten";
+        block.appendChild(leer);
+      }
+      for (const s of tag.schichten) {
+        const row = document.createElement("div");
+        const ichSelbst = s.name && s.name.trim().toLowerCase() === me.name.trim().toLowerCase();
+        row.className = "wp-row" + (ichSelbst ? " wp-mine" : "") + (s.name ? "" : " wp-frei");
+        row.innerHTML = `<span class="wp-schicht">${escapeHtml(s.label)}<br/><span class="muted small">${escapeHtml(s.from)}–${escapeHtml(
+          s.to
+        )}</span></span><span class="wp-name">${
+          s.name ? escapeHtml(s.name) + (ichSelbst ? " (du)" : "") + (s.krank ? " 🤒" : "") : '<span class="muted">frei</span>'
+        }</span>`;
+        block.appendChild(row);
+      }
+      inhalt.appendChild(block);
+    }
+  };
+  zeichne();
+
+  card.append(nav, inhalt);
+  const fuss = document.createElement("p");
+  fuss.className = "muted small";
+  fuss.textContent = "Wenn du tauschen möchtest, frag die Person direkt – abgesprochene Tauschs muss der Chef noch eintragen.";
+  card.appendChild(fuss);
   return card;
 }
 

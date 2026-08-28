@@ -98,6 +98,8 @@ function defaultData() {
         appliedStockChangeIds: [],
         appliedRecipeChangeIds: [],
         appliedEmployeeChangeIds: [],
+        // IDs der am Laptop abgeschlossenen (bzw. wieder geöffneten) Wochenpläne, die schon übernommen wurden.
+        appliedPublicationIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -116,6 +118,9 @@ function defaultData() {
     // Krankmeldungen (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
     // { id, employeeId, date, note, reportedAt }
     sickDays: [],
+    // Wochen, deren Schichtplan der Chef abgeschlossen hat: [{ weekStart, publishedAt }].
+    // Solange eine Woche hier nicht steht, erfahren die Mitarbeiter nichts über Zu- oder Absagen.
+    publishedWeeks: [],
   };
 }
 
@@ -166,6 +171,7 @@ function load() {
       stock: parsed.stock ?? base.stock,
       recipes: parsed.recipes ?? base.recipes,
       sickDays: parsed.sickDays ?? base.sickDays,
+      publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -876,6 +882,24 @@ export const store = {
     persist();
   },
 
+  // ---- Abgeschlossene Schichtpläne (der Chef gibt eine Woche am Laptop frei) ----
+  /** Merkt sich, dass eine Woche abgeschlossen ist. Erneutes Abschließen aktualisiert nur den Zeitpunkt,
+   * damit ein zweiter Abgleich keinen doppelten Eintrag anlegt. */
+  setWeekPublished(weekStart, publishedAt) {
+    if (!weekStart) return;
+    const vorhanden = data.publishedWeeks.find((w) => w.weekStart === weekStart);
+    if (vorhanden) vorhanden.publishedAt = publishedAt || vorhanden.publishedAt;
+    else data.publishedWeeks.push({ weekStart, publishedAt: publishedAt || new Date().toISOString() });
+    persist();
+  },
+  setWeekUnpublished(weekStart) {
+    data.publishedWeeks = data.publishedWeeks.filter((w) => w.weekStart !== weekStart);
+    persist();
+  },
+  getPublishedWeeks() {
+    return [...data.publishedWeeks];
+  },
+
   // ---- Vergessenes Ausstempeln erkennen (für die Bot-Erinnerung) ----
   /** PIN-Schichten, die an einem VERGANGENEN Tag begonnen haben und noch offen sind (Ausstempeln vergessen).
    * Betrachtet nur die letzten paar Tage, damit uralte/kaputte Daten nicht ewig als "offen" auftauchen. */
@@ -1069,6 +1093,7 @@ export const store = {
       stock: parsed.stock ?? [],
       recipes: parsed.recipes ?? [],
       sickDays: parsed.sickDays ?? [],
+      publishedWeeks: parsed.publishedWeeks ?? [],
     };
     persist();
   },

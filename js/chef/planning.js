@@ -5,9 +5,15 @@
 // Zusagen und Ablehnen geht direkt in der Zelle (✓ / ✗), ohne Zwischendialog.
 // ============================================================================
 import { escapeHtml, dateDe } from "../format.js";
-import { decideShift } from "./api.js";
+import { decideShift, publishWeek } from "./api.js";
 
 const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+// Beides bewusst ausserhalb von renderPlanning: nach jeder Änderung wird die ganze Ansicht neu aufgebaut.
+// Läge die gewählte Woche innerhalb, spränge die Ansicht bei jeder Zusage zurück auf die Standardwoche,
+// und eine Erfolgsmeldung wäre sofort wieder weg.
+let gewaehlteWoche = null;
+let letzterHinweis = null;
 
 function mondayOf(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -35,7 +41,8 @@ function slotAmTag(slot, wochentagIndex) {
 
 function renderPlanning(state, { onChanged, today }) {
   const el = document.createElement("div");
-  let weekStart = addDaysISO(mondayOf(today), 7); // Standard: die Woche, für die geplant wird
+  // Standard: die Woche, für die geplant wird. Eine einmal gewählte Woche bleibt über das Neuaufbauen hinweg.
+  if (!gewaehlteWoche) gewaehlteWoche = addDaysISO(mondayOf(today), 7);
   let busy = false;
 
   const rolleVon = (name) =>
@@ -50,7 +57,7 @@ function renderPlanning(state, { onChanged, today }) {
   /** Alle Verfügbarkeits-Einträge der Woche, flach: {name, date, slots[], confirmedSlotId, bossConfirmed, note} */
   function eintraege() {
     const out = [];
-    const bucket = (state.availability || {})[weekStart];
+    const bucket = (state.availability || {})[gewaehlteWoche];
     for (const [name, entry] of Object.entries(bucket?.entries || {})) {
       for (const day of entry?.days || []) out.push({ name, ...day });
     }
@@ -68,6 +75,15 @@ function renderPlanning(state, { onChanged, today }) {
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>📅 Schichtplan</h1>`;
 
+    // Erfolgsmeldung des letzten Vorgangs – sie überlebt das Neuaufbauen und verschwindet danach.
+    if (letzterHinweis) {
+      const box = document.createElement("div");
+      box.className = "callout";
+      box.textContent = letzterHinweis;
+      frag.appendChild(box);
+      letzterHinweis = null;
+    }
+
     const nav = document.createElement("div");
     nav.className = "week-nav";
     const prev = document.createElement("button");
@@ -75,29 +91,30 @@ function renderPlanning(state, { onChanged, today }) {
     prev.textContent = "←";
     prev.title = "Vorherige Woche";
     prev.onclick = () => {
-      weekStart = addDaysISO(weekStart, -7);
+      gewaehlteWoche = addDaysISO(gewaehlteWoche, -7);
       rerender();
     };
     const label = document.createElement("span");
     label.className = "week-nav-label";
-    label.textContent = `${dateDe(weekStart)} – ${dateDe(addDaysISO(weekStart, 6))}`;
+    label.textContent = `${dateDe(gewaehlteWoche)} – ${dateDe(addDaysISO(gewaehlteWoche, 6))}`;
     const next = document.createElement("button");
     next.className = "btn btn-secondary";
     next.textContent = "→";
     next.title = "Nächste Woche";
     next.onclick = () => {
-      weekStart = addDaysISO(weekStart, 7);
+      gewaehlteWoche = addDaysISO(gewaehlteWoche, 7);
       rerender();
     };
     const heute = document.createElement("button");
     heute.className = "btn btn-secondary";
     heute.textContent = "Aktuelle Woche";
     heute.onclick = () => {
-      weekStart = mondayOf(today);
+      gewaehlteWoche = mondayOf(today);
       rerender();
     };
     nav.append(prev, label, next, heute);
     frag.appendChild(nav);
+    frag.appendChild(buildAbschluss());
 
     if (!state.shiftSlots) {
       const c = document.createElement("section");
@@ -116,6 +133,148 @@ function renderPlanning(state, { onChanged, today }) {
     legend.textContent = `✅ fest eingeteilt · 🔶 wartet auf dich · grau = Schicht entfällt an dem Tag · „frei" = noch niemand eingeteilt`;
     frag.appendChild(legend);
     return frag;
+  }
+
+  /** Zählt für die aktuell gezeigte Woche zusammen, was der Abschluss bedeutet: wie viele Schichten
+   * besetzt bzw. offen sind, wer eine Schicht bekommt und wer sich gemeldet hat, aber leer ausgeht. */
+  function zaehleWoche() {
+    const alle = eintraege();
+    let besetzt = 0;
+    let offen = 0;
+    const eingeteilt = new Set();
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysISO(gewaehlteWoche, i);
+      for (const [slots, kueche] of [
+        [state.shiftSlots?.service || [], false],
+        [state.shiftSlots?.kueche || [], true],
+      ]) {
+        for (const slot of slots) {
+          if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
+          const wer = alle.find(
+            (e) => e.date === date && e.confirmedSlotId === slot.id && e.bossConfirmed && istKueche(e.name) === kueche
+          );
+          if (wer) {
+            besetzt++;
+            eingeteilt.add(wer.name);
+          } else {
+            offen++;
+          }
+        }
+      }
+    }
+    // Wer sich gemeldet hat, aber nichts bekommen hat – die warten sonst vergeblich auf eine Antwort.
+    const beworben = Object.keys((state.availability || {})[gewaehlteWoche]?.entries || {});
+    const leerAusgegangen = beworben.filter((n) => !eingeteilt.has(n));
+    return { besetzt, offen, eingeteilt, leerAusgegangen, empfaenger: new Set([...eingeteilt, ...leerAusgegangen]) };
+  }
+
+  /** Der Abschluss-Balken: solange die Woche nicht abgeschlossen ist, weiß das Team von nichts. */
+  function buildAbschluss() {
+    const card = document.createElement("section");
+    card.className = "card plan-publish";
+    const freigabe = (state.publishedWeeks || []).find((w) => w.weekStart === gewaehlteWoche);
+
+    if (freigabe) {
+      const wann = freigabe.publishedAt
+        ? new Date(freigabe.publishedAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+        : "";
+      const info = document.createElement("div");
+      info.className = "callout";
+      info.innerHTML = `<b>✅ Plan abgeschlossen${wann ? ` am ${escapeHtml(wann)}` : ""}.</b><br/>
+        Alle sehen den fertigen Plan in ihrem Bereich. <b>Änderungen ab jetzt gehen sofort an die betroffene
+        Person raus</b> – niemand wird umgeplant, ohne es zu erfahren.`;
+      card.appendChild(info);
+
+      const oeffnen = document.createElement("button");
+      oeffnen.className = "btn btn-secondary";
+      oeffnen.textContent = "🔓 Wieder öffnen";
+      oeffnen.title = "Zum Umplanen ohne Benachrichtigungen. Das Team sieht den Plan dann nicht mehr.";
+      oeffnen.onclick = () => abschliessen("unpublish");
+      card.appendChild(oeffnen);
+      return card;
+    }
+
+    const zahl = state.shiftSlots ? zaehleWoche() : null;
+    const info = document.createElement("p");
+    info.className = "muted small";
+    info.innerHTML = zahl
+      ? `Das Team weiß noch nichts von dieser Woche. <b>${zahl.besetzt} Schichten besetzt${
+          zahl.offen > 0 ? `, ${zahl.offen} noch offen` : ""
+        }</b> · ${zahl.empfaenger.size} ${zahl.empfaenger.size === 1 ? "Person wird" : "Personen werden"} informiert.`
+      : "Die Schichtzeiten sind noch nicht da.";
+    card.appendChild(info);
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-primary";
+    btn.textContent = "✅ Plan abschließen & Team informieren";
+    btn.disabled = !zahl;
+    btn.onclick = () => openAbschlussDialog(zahl);
+    card.appendChild(btn);
+    return card;
+  }
+
+  /** Bewusst mit Zwischenschritt: Abschließen verschickt Nachrichten an echte Menschen, das soll kein
+   * Klick nebenbei sein. Der Dialog sagt vorher, wer was bekommt und was noch offen ist. */
+  function openAbschlussDialog(zahl) {
+    const namen = [...zahl.eingeteilt].sort((a, b) => a.localeCompare(b));
+    const leer = [...zahl.leerAusgegangen].sort((a, b) => a.localeCompare(b));
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>Plan abschließen</h2>
+        <p class="muted small">${escapeHtml(dateDe(gewaehlteWoche))} – ${escapeHtml(dateDe(addDaysISO(gewaehlteWoche, 6)))}</p>
+        ${
+          zahl.offen > 0
+            ? `<div class="callout callout-warn"><b>${zahl.offen} ${
+                zahl.offen === 1 ? "Schicht ist" : "Schichten sind"
+              } noch nicht besetzt.</b> Du kannst trotzdem abschließen – die Lücken bleiben dann im Plan sichtbar.</div>`
+            : `<div class="callout">Alle Schichten sind besetzt.</div>`
+        }
+        <p class="muted small"><b>Bekommt eine Schicht (${namen.length})</b><br/>${
+          namen.length ? escapeHtml(namen.join(", ")) : "<i>niemand</i>"
+        }</p>
+        ${
+          leer.length
+            ? `<p class="muted small"><b>Hat sich gemeldet, geht leer aus (${leer.length})</b><br/>${escapeHtml(
+                leer.join(", ")
+              )}<br/><i>Bekommt eine kurze Absage – sonst wartet die Person weiter.</i></p>`
+            : ""
+        }
+        <p class="muted small" id="pub-status"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" id="pub-cancel">Abbrechen</button>
+          <button class="btn btn-primary" id="pub-ok">Abschließen &amp; informieren</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#pub-cancel").onclick = () => overlay.remove();
+    overlay.querySelector("#pub-ok").onclick = async () => {
+      const status = overlay.querySelector("#pub-status");
+      overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      status.className = "muted small";
+      status.textContent = "Wird abgeschlossen…";
+      try {
+        const res = await publishWeek(gewaehlteWoche);
+        overlay.remove();
+        hinweis(`✅ Plan abgeschlossen. ${res.benachrichtigt} ${res.benachrichtigt === 1 ? "Person wurde" : "Personen wurden"} informiert.`);
+        await onChanged();
+      } catch (e) {
+        status.className = "callout callout-warn";
+        status.textContent = "⚠ " + e.message;
+        overlay.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    };
+  }
+
+  async function abschliessen(action) {
+    try {
+      await publishWeek(gewaehlteWoche, action);
+      hinweis(action === "unpublish" ? "🔓 Woche wieder geöffnet. Änderungen bleiben jetzt still." : "✅ Plan abgeschlossen.");
+      await onChanged();
+    } catch (e) {
+      zeigeFehler(e.message);
+    }
   }
 
   function buildPlan(titel, slots, kueche) {
@@ -138,7 +297,7 @@ function renderPlanning(state, { onChanged, today }) {
     // ("sind genug Leute da?") direkt im Kopf der Tabelle.
     const besetzung = [];
     for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
+      const date = addDaysISO(gewaehlteWoche, i);
       const relevanteSlots = slots.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i));
       const besetzt = relevanteSlots.filter((s) =>
         alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && istKueche(e.name) === kueche && !istKrank(e.name, date))
@@ -150,7 +309,7 @@ function renderPlanning(state, { onChanged, today }) {
     const hr = document.createElement("tr");
     hr.innerHTML = `<th>Schicht</th>`;
     for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
+      const date = addDaysISO(gewaehlteWoche, i);
       const { besetzt, gesamt } = besetzung[i];
       const voll = gesamt > 0 && besetzt === gesamt;
       const th = document.createElement("th");
@@ -182,7 +341,7 @@ function renderPlanning(state, { onChanged, today }) {
       tr.appendChild(nameTd);
 
       for (let i = 0; i < 7; i++) {
-        const date = addDaysISO(weekStart, i);
+        const date = addDaysISO(gewaehlteWoche, i);
         const gilt = !slot.allowedWeekdays || slot.allowedWeekdays.includes(i);
         tr.appendChild(buildCell(slotAmTag(slot, i), date, gilt, kueche, alle));
       }
@@ -350,6 +509,11 @@ function renderPlanning(state, { onChanged, today }) {
     busy = false;
   }
 
+  /** Erfolgsmeldung, die das Neuaufbauen der Ansicht übersteht (onChanged baut alles neu auf). */
+  function hinweis(text) {
+    letzterHinweis = text;
+  }
+
   /** Fehler als Hinweis oben in der Ansicht statt als blockierender Dialog – beim schnellen Durchklicken
    * eines Wochenplans wäre ein Dialog pro Klick unbrauchbar. */
   function zeigeFehler(text) {
@@ -363,8 +527,8 @@ function renderPlanning(state, { onChanged, today }) {
 
 
   function buildKranke() {
-    const wochenEnde = addDaysISO(weekStart, 6);
-    const krank = (state.sickReports || []).filter((r) => (r.to || r.from) >= weekStart && r.from <= wochenEnde);
+    const wochenEnde = addDaysISO(gewaehlteWoche, 6);
+    const krank = (state.sickReports || []).filter((r) => (r.to || r.from) >= gewaehlteWoche && r.from <= wochenEnde);
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `<h2>🤒 Krankmeldungen diese Woche</h2>`;

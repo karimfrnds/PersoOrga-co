@@ -89,6 +89,10 @@ const getOverview = () => request("/admin/overview");
 const decideShift = (employeeName, date, slotLabel, decision, note) =>
   request("/admin/shift-decision", { method: "POST", body: { employeeName, date, slotLabel, decision, note } });
 
+/** Schichtplan einer Woche abschließen (oder wieder öffnen). Erst dadurch erfährt das Team, wer wann
+ * arbeitet – vorher bleiben Zu- und Absagen bewusst unsichtbar. */
+const publishWeek = (weekStart, action) => request("/admin/publish-week", { method: "POST", body: { weekStart, action } });
+
 const markRestocked = (itemName) => request("/admin/stock", { method: "POST", body: { kind: "restock", itemName } });
 
 const recordDelivery = (itemName, quantity, unit, date) =>
@@ -119,6 +123,7 @@ export {
   login,
   getOverview,
   decideShift,
+  publishWeek,
   markRestocked,
   recordDelivery,
   uploadDocument,

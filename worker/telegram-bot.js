@@ -1066,50 +1066,91 @@ async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, 
     const base64 = arrayBufferToBase64(buffer);
     const mimeType = knownMimeType || (filePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg");
 
-    const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
-
-    if (extracted.documentType === "verkaufsbericht") {
-      const items = (Array.isArray(extracted.items) ? extracted.items : [])
-        .map((it) => ({ id: crypto.randomUUID(), productName: String(it.productName || "").trim(), quantitySold: Number(it.quantitySold) || 0, date }))
-        .filter((it) => it.productName && it.quantitySold > 0);
-      if (items.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte im Verkaufsbericht keine Produkte erkennen.");
-        return;
-      }
-      await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
-      await sendTelegramMessage(env, chatId, buildSalesReply(items));
-    } else {
-      const items = (Array.isArray(extracted.items) ? extracted.items : [])
-        .map((it) => ({
-          id: crypto.randomUUID(),
-          itemName: String(it.itemName || "").trim(),
-          quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : null,
-          unit: String(it.unit || "").trim(),
-          date,
-        }))
-        .filter((it) => it.itemName);
-
-      if (items.length === 0) {
-        await sendTelegramMessage(env, chatId, "Konnte darauf keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung/Bestellung?");
-        return;
-      }
-
-      await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
-
-      const stock = state.stock || [];
-      const unresolved = items.filter((it) => {
-        const needle = it.itemName.toLowerCase();
-        return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
-      });
-      let reply = buildDeliveryReply(items);
-      if (unresolved.length > 0) {
-        reply += `\n\n⚠ Diese Artikel kenne ich nicht aus der Vorräte-Liste (Admin → Vorräte), bitte manuell prüfen: ${unresolved.map((it) => it.itemName).join(", ")}`;
-      }
-      await sendTelegramMessage(env, chatId, reply);
-    }
+    const ergebnis = await verarbeiteBeleg(env, base64, mimeType, caption, today, state);
+    await sendTelegramMessage(env, chatId, ergebnis.text);
   } catch (e) {
     await sendTelegramMessage(env, chatId, `⚠ Fehler beim Verarbeiten der Datei: ${e.message}`);
+  }
+}
+
+/** Wertet einen Beleg aus und schreibt das Erkannte in die passende Warteschlange. Von Telegram UND vom
+ * Laptop-Upload genutzt, damit beide Wege exakt gleich funktionieren (und nicht mit der Zeit auseinanderlaufen).
+ * Gibt den Antworttext plus die erkannten Positionen zurück, damit der Laptop sie anzeigen kann. */
+async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
+  const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
+
+  if (extracted.documentType === "verkaufsbericht") {
+    const items = (Array.isArray(extracted.items) ? extracted.items : [])
+      .map((it) => ({ id: crypto.randomUUID(), productName: String(it.productName || "").trim(), quantitySold: Number(it.quantitySold) || 0, date }))
+      .filter((it) => it.productName && it.quantitySold > 0);
+    if (items.length === 0) return { art: "verkaufsbericht", items: [], text: "Konnte im Verkaufsbericht keine Produkte erkennen." };
+    await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
+    return { art: "verkaufsbericht", items, text: buildSalesReply(items) };
+  }
+
+  const items = (Array.isArray(extracted.items) ? extracted.items : [])
+    .map((it) => ({
+      id: crypto.randomUUID(),
+      itemName: String(it.itemName || "").trim(),
+      quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : null,
+      unit: String(it.unit || "").trim(),
+      date,
+    }))
+    .filter((it) => it.itemName);
+  if (items.length === 0) {
+    return { art: "lieferschein", items: [], text: "Konnte darauf keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung/Bestellung?" };
+  }
+
+  await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
+
+  const stock = state.stock || [];
+  const unresolved = items.filter((it) => {
+    const needle = it.itemName.toLowerCase();
+    return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
+  });
+  let text = buildDeliveryReply(items);
+  if (unresolved.length > 0) {
+    // Diese Artikel legt der iPad beim nächsten Abgleich selbst an – kein manueller Schritt nötig,
+    // aber ein Blick lohnt sich (Schreibweise, Warnschwelle).
+    text += `\n\nℹ Neu in der Vorräte-Liste, wird automatisch angelegt: ${unresolved
+      .map((it) => it.itemName)
+      .join(", ")}. Schau bei Gelegenheit unter Vorräte, ob Schreibweise und Warnschwelle passen.`;
+  }
+  return { art: "lieferschein", items, unresolved: unresolved.map((it) => it.itemName), text };
+}
+
+/** Beleg-Upload aus der Laptop-Ansicht (PDF oder Foto). Nutzt denselben Weg wie der Telegram-Upload. */
+async function handleAdminDocument(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  if (!env.ANTHROPIC_API_KEY) return jsonResponse({ error: "ANTHROPIC_API_KEY fehlt im Worker." }, 503);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const mimeType = String(body?.mimeType || "");
+  const base64 = String(body?.dataBase64 || "");
+  const ERLAUBT = ["application/pdf", "image/jpeg", "image/png"];
+  if (!ERLAUBT.includes(mimeType)) {
+    return jsonResponse({ error: "Nur PDF, JPG oder PNG können ausgewertet werden." }, 400);
+  }
+  if (!base64) return jsonResponse({ error: "Keine Datei empfangen." }, 400);
+  // Grobe Größenprüfung (Base64 ist ca. 4/3 der Dateigröße). Anthropic nimmt max. 32 MB pro Anfrage.
+  if (base64.length > 24 * 1024 * 1024) {
+    return jsonResponse({ error: "Die Datei ist zu groß (max. ca. 18 MB)." }, 400);
+  }
+
+  try {
+    const state = await getState(env);
+    const ergebnis = await verarbeiteBeleg(env, base64, mimeType, String(body?.caption || ""), todayBerlin(), state);
+    return jsonResponse(ergebnis);
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 502);
   }
 }
 
@@ -2159,6 +2200,7 @@ export default {
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
+      if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       return jsonResponse({ error: "unbekannter Endpunkt" }, 404);
     }
 

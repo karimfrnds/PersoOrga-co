@@ -94,4 +94,16 @@ const markRestocked = (itemName) => request("/admin/stock", { method: "POST", bo
 const recordDelivery = (itemName, quantity, unit, date) =>
   request("/admin/stock", { method: "POST", body: { kind: "delivery", itemName, quantity, unit, date } });
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOverview, decideShift, markRestocked, recordDelivery };
+/** Beleg (PDF/Foto) auswerten lassen. Die Datei wird als Base64 geschickt – der Worker gibt sie an die
+ * Bilderkennung weiter und schreibt das Erkannte in dieselbe Warteschlange wie beim Telegram-Upload. */
+async function uploadDocument(file) {
+  const dataBase64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden."));
+    reader.readAsDataURL(file);
+  });
+  return request("/admin/document", { method: "POST", body: { mimeType: file.type, dataBase64, caption: "" } });
+}
+
+export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOverview, decideShift, markRestocked, recordDelivery, uploadDocument };

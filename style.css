@@ -490,6 +490,13 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .picker-current { border-color: var(--green); background: var(--green-light); }
 .picker-warn .picker-name { color: var(--orange); }
 
+.upload-zone {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 26px 18px; cursor: pointer; color: var(--gray);
+}
+.upload-zone:hover { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+
 /* ---- Chef-Ansicht (chef.html, eigener Einstieg für den Laptop) ---- */
 .chef-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .chef-login { max-width: 520px; }

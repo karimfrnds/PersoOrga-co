@@ -4,13 +4,17 @@
 // beim nächsten Abgleich übernimmt.
 // ============================================================================
 import { escapeHtml, dateDe, todayStr } from "../format.js";
-import { markRestocked, recordDelivery } from "./api.js";
+import { markRestocked, recordDelivery, uploadDocument } from "./api.js";
 
 const STATUS = {
   leer: { label: "🔴 Leer", rank: 0 },
   knapp: { label: "🟠 Wird knapp", rank: 1 },
   ok: { label: "✅ Ok", rank: 2 },
 };
+
+// Ergebnis des letzten Beleg-Uploads. Muss AUSSERHALB der Render-Funktion liegen: nach dem Hochladen wird
+// die ganze Ansicht neu aufgebaut, und eine nur lokal gehaltene Anzeige wäre dabei sofort wieder weg.
+let letzterUpload = null;
 
 function renderStock(state, { onChanged }) {
   const el = document.createElement("div");
@@ -41,10 +45,90 @@ function renderStock(state, { onChanged }) {
     }
 
     const fehlend = items.filter((i) => i.status !== "ok");
+    frag.appendChild(buildUpload());
     frag.appendChild(buildEinkaufsliste(fehlend));
     frag.appendChild(buildListe(items));
     frag.appendChild(buildLieferung(items));
     return frag;
+  }
+
+  /** Beleg hochladen (z.B. METRO-Auftragsbestätigung als PDF) und automatisch einpflegen lassen. */
+  function buildUpload() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `
+      <h2>📄 Beleg hochladen</h2>
+      <p class="muted small">Lieferschein, Rechnung oder Bestellung (z.B. METRO-Auftragsbestätigung) als PDF oder Foto –
+      auch mehrseitig. Genauso ein SumUp-Verkaufsbericht: der wird über die hinterlegten Rezepte gegen den Bestand
+      gerechnet. Was erkannt wird, landet automatisch im System; unbekannte Artikel werden dabei neu angelegt.</p>
+    `;
+
+    const zone = document.createElement("label");
+    zone.className = "upload-zone";
+    zone.innerHTML = `<span><b>Datei auswählen</b><br/><span class="muted small">PDF, JPG oder PNG</span></span>`;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,image/jpeg,image/png";
+    input.style.display = "none";
+    zone.appendChild(input);
+
+    const status = document.createElement("p");
+    status.className = "muted small";
+    const ergebnis = document.createElement("div");
+
+    // Ergebnis des letzten Uploads wieder anzeigen (überlebt das Neuladen der Ansicht).
+    if (letzterUpload) {
+      status.className = letzterUpload.fehler ? "callout callout-warn" : "callout";
+      status.textContent = (letzterUpload.fehler ? "⚠ " : "") + letzterUpload.text;
+      const res = letzterUpload;
+      if ((res.items || []).length > 0) {
+        const liste = document.createElement("div");
+        liste.className = "task-list";
+        liste.style.marginTop = "10px";
+        for (const it of res.items) {
+          const row = document.createElement("div");
+          row.className = "task-row";
+          const text =
+            res.art === "verkaufsbericht"
+              ? `${it.productName} – ${it.quantitySold}x verkauft`
+              : `${it.itemName} – ${it.quantity != null ? `${it.quantity} ${it.unit || ""}`.trim() : "Menge unklar"}`;
+          const neu = (res.unresolved || []).includes(it.itemName);
+          row.innerHTML = `<div class="task-row-text"><span>${escapeHtml(text)}</span>${
+            neu ? `<span class="muted small task-row-meta">war noch nicht in der Liste – wird angelegt</span>` : ""
+          }</div>`;
+          liste.appendChild(row);
+        }
+        ergebnis.appendChild(liste);
+        const hinweis = document.createElement("p");
+        hinweis.className = "muted small";
+        hinweis.textContent = "Der Bestand aktualisiert sich, sobald das iPad das nächste Mal abgleicht.";
+        ergebnis.appendChild(hinweis);
+      }
+    }
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      letzterUpload = null;
+      ergebnis.innerHTML = "";
+      status.className = "muted small";
+      status.textContent = `„${file.name}" wird ausgewertet… Das kann bei mehrseitigen Belegen einen Moment dauern.`;
+      zone.style.pointerEvents = "none";
+      try {
+        const res = await uploadDocument(file);
+        letzterUpload = res;
+        await onChanged(); // baut die Ansicht neu auf und zeigt das Ergebnis von oben
+      } catch (e) {
+        letzterUpload = { fehler: true, text: e.message, items: [] };
+        status.className = "callout callout-warn";
+        status.textContent = "⚠ " + e.message;
+        zone.style.pointerEvents = "";
+        input.value = "";
+      }
+    };
+
+    card.append(zone, status, ergebnis);
+    return card;
   }
 
   function buildEinkaufsliste(fehlend) {

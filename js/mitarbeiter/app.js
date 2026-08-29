@@ -8,6 +8,7 @@ import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 
 const outlet = document.getElementById("outlet");
 const WEEKDAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+const WEEKDAY_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 let me = null;
 // Kurzmeldung, die nach dem Neuladen EINMAL oben erscheint (sonst wäre sie durch das Rerendern sofort weg).
@@ -288,7 +289,6 @@ function buildWochenplan() {
     return card;
   }
 
-  // Standard ist die Woche, in der wir gerade sind; sonst die erste fertige.
   const aktuellerMontag = mondayOf(me.heute);
   let index = Math.max(0, plaene.findIndex((p) => p.weekStart === aktuellerMontag));
 
@@ -299,72 +299,143 @@ function buildWochenplan() {
   const zeichne = () => {
     const plan = plaene[index];
     nav.innerHTML = "";
+    const label = document.createElement("span");
+    label.className = "week-nav-label";
+    label.textContent = `${dateDeShort(plan.weekStart)} – ${dateDeShort(addDaysISO(plan.weekStart, 6))}`;
     if (plaene.length > 1) {
       const zurueck = document.createElement("button");
       zurueck.className = "btn btn-secondary";
       zurueck.textContent = "←";
       zurueck.disabled = index === 0;
-      zurueck.onclick = () => {
-        index--;
-        zeichne();
-      };
+      zurueck.onclick = () => { index--; zeichne(); };
       const vor = document.createElement("button");
       vor.className = "btn btn-secondary";
       vor.textContent = "→";
       vor.disabled = index >= plaene.length - 1;
-      vor.onclick = () => {
-        index++;
-        zeichne();
-      };
-      const label = document.createElement("span");
-      label.className = "week-nav-label";
-      label.textContent = `${dateDeShort(plan.weekStart)} – ${dateDeShort(addDaysISO(plan.weekStart, 6))}`;
+      vor.onclick = () => { index++; zeichne(); };
       nav.append(zurueck, label, vor);
     } else {
-      const label = document.createElement("span");
-      label.className = "week-nav-label";
-      label.textContent = `${dateDeShort(plan.weekStart)} – ${dateDeShort(addDaysISO(plan.weekStart, 6))}`;
       nav.appendChild(label);
     }
 
     inhalt.innerHTML = "";
-    for (const tag of plan.tage) {
-      const block = document.createElement("div");
-      block.className = "wp-tag";
-      const kopf = document.createElement("div");
-      kopf.className = "wp-tag-kopf";
-      kopf.textContent = `${WEEKDAYS[weekdayIndex(tag.date)]}, ${dateDeShort(tag.date)}`;
-      if (tag.date === me.heute) kopf.textContent += " · heute";
-      block.appendChild(kopf);
-
-      if (tag.schichten.length === 0) {
-        const leer = document.createElement("div");
-        leer.className = "muted small";
-        leer.textContent = "keine Schichten";
-        block.appendChild(leer);
-      }
-      for (const s of tag.schichten) {
-        const row = document.createElement("div");
-        const ichSelbst = s.name && s.name.trim().toLowerCase() === me.name.trim().toLowerCase();
-        row.className = "wp-row" + (ichSelbst ? " wp-mine" : "") + (s.name ? "" : " wp-frei");
-        row.innerHTML = `<span class="wp-schicht">${escapeHtml(s.label)}<br/><span class="muted small">${escapeHtml(s.from)}–${escapeHtml(
-          s.to
-        )}</span></span><span class="wp-name">${
-          s.name ? escapeHtml(s.name) + (ichSelbst ? " (du)" : "") + (s.krank ? " 🤒" : "") : '<span class="muted">frei</span>'
-        }</span>`;
-        block.appendChild(row);
-      }
-      inhalt.appendChild(block);
-    }
+    inhalt.appendChild(buildPlanTabelle(plan));
   };
   zeichne();
 
   card.append(nav, inhalt);
   const fuss = document.createElement("p");
   fuss.className = "muted small";
-  fuss.textContent = "Wenn du tauschen möchtest, frag die Person direkt – abgesprochene Tauschs muss der Chef noch eintragen.";
+  fuss.textContent = "Deine Schichten sind grün. Wenn du tauschen möchtest, frag die Person direkt – abgesprochene Tauschs muss der Chef noch eintragen.";
   card.appendChild(fuss);
   return card;
+}
+
+/** Der Wochenplan als Tabelle, aufgebaut wie der Papier-Schichtplan: Zeilen = Schichten, Spalten = Tage.
+ *
+ * Die frühere Ansicht listete jeden Tag einzeln untereinander auf – das waren über hundert Zeilen und
+ * man musste ewig scrollen, um zu sehen, wer wann arbeitet. Als Tabelle passt eine ganze Woche auf einen
+ * Blick. Auf dem Handy ist sie seitlich schiebbar; die Schicht-Spalte bleibt dabei stehen, sonst wüsste
+ * man nach zwei Tagen nicht mehr, welche Zeile man liest. */
+function buildPlanTabelle(plan) {
+  const wrap = document.createElement("div");
+
+  // Alle Schichten der Woche sammeln, in der Reihenfolge, in der sie am ersten Tag vorkommen, der sie hat.
+  // So bleibt die Ordnung des Papierplans erhalten, auch wenn eine Schicht nur an manchen Tagen gilt.
+  const reihenfolge = [];
+  const gesehen = new Set();
+  for (const tag of plan.tage) {
+    for (const s of tag.schichten) {
+      const key = s.bereich + "|" + s.label;
+      if (gesehen.has(key)) continue;
+      gesehen.add(key);
+      reihenfolge.push({ bereich: s.bereich, label: s.label });
+    }
+  }
+  if (reihenfolge.length === 0) {
+    const leer = document.createElement("p");
+    leer.className = "muted small";
+    leer.textContent = "Für diese Woche sind keine Schichten hinterlegt.";
+    return leer;
+  }
+
+  const meinName = String(me.name || "").trim().toLowerCase();
+  const zelleFinden = (tag, eintrag) => tag.schichten.find((s) => s.bereich === eintrag.bereich && s.label === eintrag.label);
+
+  for (const bereich of ["service", "kueche"]) {
+    const zeilen = reihenfolge.filter((r) => r.bereich === bereich);
+    if (zeilen.length === 0) continue;
+
+    const titel = document.createElement("div");
+    titel.className = "muted small wp-bereich";
+    titel.innerHTML = `<b>${bereich === "service" ? "Service / Bar" : "Küche"}</b>`;
+    wrap.appendChild(titel);
+
+    const scroll = document.createElement("div");
+    scroll.className = "wp-scroll";
+    const tabelle = document.createElement("table");
+    tabelle.className = "wp-tabelle";
+
+    const kopf = document.createElement("tr");
+    kopf.innerHTML = `<th class="wp-ecke">Schicht</th>`;
+    for (const tag of plan.tage) {
+      const th = document.createElement("th");
+      const heute = tag.date === me.heute;
+      th.className = heute ? "wp-heute" : "";
+      th.innerHTML = `${WEEKDAY_KURZ[weekdayIndex(tag.date)]}<br/><span class="muted small">${dateDeShort(tag.date)}</span>`;
+      kopf.appendChild(th);
+    }
+    tabelle.appendChild(kopf);
+
+    for (const eintrag of zeilen) {
+      const tr = document.createElement("tr");
+      const kopfZelle = document.createElement("th");
+      kopfZelle.className = "wp-ecke";
+      // Die Zeiten stehen an der Schicht, nicht in jeder Zelle – sonst steht dieselbe Zeit siebenmal da.
+      // Genommen wird die HÄUFIGSTE Zeit der Woche, nicht die des ersten Tages: bei "Service 1" hat
+      // ausgerechnet der Montag eine Ausnahme (bis 17:00), und die stünde sonst als Regel oben, während
+      // alle normalen Tage als Abweichung erschienen.
+      const zellen = plan.tage.map((t) => zelleFinden(t, eintrag)).filter(Boolean);
+      const haeufigkeit = new Map();
+      for (const z of zellen) {
+        const k = z.from + "–" + z.to;
+        haeufigkeit.set(k, (haeufigkeit.get(k) || 0) + 1);
+      }
+      const haeufigste = [...haeufigkeit.entries()].sort((x, y) => y[1] - x[1])[0]?.[0] || "";
+      const beispiel = zellen.find((z) => z.from + "–" + z.to === haeufigste) || zellen[0];
+      kopfZelle.innerHTML = `${escapeHtml(eintrag.label)}<br/><span class="muted small">${
+        beispiel ? escapeHtml(beispiel.from) + "–" + escapeHtml(beispiel.to) : ""
+      }</span>`;
+      tr.appendChild(kopfZelle);
+
+      for (const tag of plan.tage) {
+        const s = zelleFinden(tag, eintrag);
+        const td = document.createElement("td");
+        if (!s) {
+          // Die Schicht gilt an dem Tag gar nicht – bewusst anders als "frei", das ist ein Unterschied.
+          td.className = "wp-entfaellt";
+          td.textContent = "–";
+        } else if (!s.name) {
+          td.className = "wp-offen";
+          td.textContent = "frei";
+        } else {
+          const ichSelbst = s.name.trim().toLowerCase() === meinName;
+          td.className = ichSelbst ? "wp-ich" : "";
+          // Weicht die Zeit an dem Tag ab, steht sie in der Zelle – sonst wäre die Angabe oben falsch.
+          const abweichend = beispiel && (s.from !== beispiel.from || s.to !== beispiel.to);
+          td.innerHTML =
+            escapeHtml(s.name) + (s.krank ? " 🤒" : "") +
+            (abweichend ? `<br/><span class="muted small">${escapeHtml(s.from)}–${escapeHtml(s.to)}</span>` : "");
+        }
+        if (tag.date === me.heute) td.classList.add("wp-heute");
+        tr.appendChild(td);
+      }
+      tabelle.appendChild(tr);
+    }
+    scroll.appendChild(tabelle);
+    wrap.appendChild(scroll);
+  }
+  return wrap;
 }
 
 /** Verfügbarkeit für die kommende Woche eintragen: pro Tag antippen, was man übernehmen könnte. */

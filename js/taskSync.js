@@ -279,7 +279,7 @@ async function performTaskSync() {
       } else if (!rs.date) {
         syncWarnings.push(`Schicht-Zuweisung für ${rs.employeeName}: kein gültiges Datum erkannt.`);
       } else {
-        const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(rs.slotLabel));
+        const slot = store.getShiftSlotsForRole(match.role, rs.date).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(rs.slotLabel));
         if (!slot) {
           syncWarnings.push(`Schicht-Zuweisung für ${rs.employeeName} am ${rs.date}: Schicht "${rs.slotLabel}" nicht erkannt (erwartet z.B. Früh1/Mittel/Spät2).`);
         } else {
@@ -640,7 +640,9 @@ async function performTaskSync() {
           const slotIds = (day.slots || []).map((s) => s.id).filter(Boolean);
           if (slotIds.length === 0) continue;
           const d = store.getOrCreateDayByDate(day.date);
-          store.commitAvailability(d.id, match.id, slotIds);
+          // Den Zeitstempel der Einreichung MITGEBEN: nur so bleibt der Merk-Schlüssel stabil und
+          // dieselbe Einreichung wird nicht bei jedem Abgleich erneut angewendet.
+          store.commitAvailability(d.id, match.id, slotIds, entry.submittedAt);
         }
       }
       appliedAvailabilityKeys.add(key);

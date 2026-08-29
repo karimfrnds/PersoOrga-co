@@ -684,3 +684,23 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .oeffnung-zeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .oeffnung-tag { min-width: 92px; font-weight: 600; }
 .oeffnung-zeile input[type=time] { width: 110px; }
+
+/* Vorschlag, der zwar geht, aber nicht ideal passt (zu klein oder belegt) */
+.res-vorschlag-eng { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+.res-vorschlag-eng:hover { background: var(--orange); color: #fff; }
+
+/* Wochenplan der Mitarbeiter als Tabelle */
+.wp-bereich { margin: 12px 0 4px; }
+.wp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.wp-tabelle { border-collapse: collapse; width: 100%; font-size: 14px; }
+.wp-tabelle th, .wp-tabelle td { border: 1px solid var(--border); padding: 6px 8px; text-align: center;
+  vertical-align: middle; white-space: nowrap; }
+.wp-tabelle th { font-weight: 600; background: var(--bg); }
+/* Die Schicht-Spalte bleibt beim seitlichen Schieben stehen – sonst weiss man nach zwei Tagen nicht
+   mehr, welche Zeile man liest. */
+.wp-ecke { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--card-bg);
+  min-width: 108px; box-shadow: 1px 0 0 var(--border); }
+.wp-ich { background: var(--green-light); color: var(--green-dark); font-weight: 700; }
+.wp-offen { color: var(--gray); }
+.wp-entfaellt { color: var(--gray); opacity: 0.45; }
+.wp-heute { box-shadow: inset 0 3px 0 var(--green); }

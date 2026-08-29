@@ -125,6 +125,28 @@ function renderReservations() {
   let zuweisenFuer = null;
   let ansicht = "plan"; // "plan" | "liste" – im Betrieb ist der Plan die häufigere Frage
   let planZeit = jetztAufViertelstunde();
+  // Solange niemand von Hand eine Uhrzeit gewählt hat, läuft die Anzeige mit der echten Zeit mit.
+  // Sonst stünde der Plan im Betrieb den ganzen Abend auf der Uhrzeit vom Aufsperren.
+  let zeitFolgtUhr = true;
+  let uhrTakt = null;
+
+  const uhrStarten = () => {
+    if (uhrTakt) clearInterval(uhrTakt);
+    uhrTakt = setInterval(() => {
+      if (!zeitFolgtUhr || ansicht !== "plan" || datum !== todayStr()) return;
+      const jetzt = jetztAufViertelstunde();
+      if (jetzt === planZeit) return; // nur neu zeichnen, wenn sich wirklich etwas ändert
+      planZeit = jetzt;
+      rerender();
+    }, 30000);
+    // Läuft die Seite nicht mehr im Dokument (Ansicht gewechselt), den Takt beenden.
+    const wacht = setInterval(() => {
+      if (!container.isConnected) {
+        clearInterval(uhrTakt);
+        clearInterval(wacht);
+      }
+    }, 60000);
+  };
 
   function rerender() {
     container.innerHTML = "";
@@ -148,6 +170,7 @@ function renderReservations() {
     frag.appendChild(buildTagWahl());
     frag.appendChild(buildKopfzahlen());
     frag.appendChild(buildUmschalter());
+    frag.appendChild(buildWalkInKnopf());
     if (ansicht === "plan") frag.appendChild(buildPlan());
     else frag.appendChild(buildListe());
     frag.appendChild(buildNeu());
@@ -268,6 +291,85 @@ function renderReservations() {
     return reihe;
   }
 
+  /** Walk-in als eigener Knopf: jemand steht da, und man will nicht erst suchen, welcher Tisch frei ist.
+   * Der Dialog schlägt die freien Tische zur passenden Personenzahl vor. */
+  function buildWalkInKnopf() {
+    const reihe = document.createElement("div");
+    reihe.className = "handoff-days";
+    const btn = document.createElement("button");
+    btn.className = "btn btn-primary btn-huge";
+    btn.textContent = "🚶 Walk-in setzen";
+    btn.onclick = () => openWalkInFrei();
+    reihe.appendChild(btn);
+    return reihe;
+  }
+
+  /** Walk-in ohne vorher gewählten Tisch: erst Personenzahl, dann passende freie Tische. */
+  function openWalkInFrei() {
+    let personenAnzahl = 2;
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>🚶 Walk-in setzen</h2>
+        <p class="muted small">${escapeHtml(dateDe(datum))} · ${escapeHtml(planZeit)} Uhr</p>
+      </div>`;
+    const box = overlay.querySelector(".dialog");
+
+    const feld = document.createElement("label");
+    feld.className = "field";
+    feld.innerHTML = "<span>Wie viele Personen?</span>";
+    const personen = personenFeld(personenAnzahl);
+    feld.appendChild(personen);
+    box.appendChild(feld);
+
+    const titel = document.createElement("div");
+    titel.className = "muted small res-bereich";
+    box.appendChild(titel);
+    const liste = document.createElement("div");
+    liste.className = "res-tische";
+    box.appendChild(liste);
+
+    const zeichneTische = () => {
+      personenAnzahl = personen.wert();
+      titel.innerHTML = `<b>Freie Tische für ${personenAnzahl} ${personenAnzahl === 1 ? "Person" : "Personen"}</b> – antippen setzt direkt`;
+      liste.innerHTML = "";
+      const vorschlaege = store.getCombinationSuggestions(datum, planZeit, personenAnzahl, "egal").slice(0, 8);
+      if (vorschlaege.length === 0) {
+        const leer = document.createElement("div");
+        leer.className = "callout callout-warn";
+        leer.textContent = "Gerade ist nichts frei, was passt. Du kannst unten trotzdem einen Tisch aus dem Plan wählen.";
+        liste.appendChild(leer);
+        return;
+      }
+      for (const v of vorschlaege) {
+        const b = document.createElement("button");
+        b.className = "res-vorschlag" + (v.count > 1 ? " res-vorschlag-kombi" : "");
+        b.innerHTML =
+          `<span class="res-tisch-name">${escapeHtml(v.names.join(" + "))}</span>` +
+          `<span class="muted small">${v.seats} Plätze${v.count > 1 ? " · zusammengeschoben" : ""}</span>`;
+        b.onclick = () => {
+          store.addWalkIn({ date: datum, time: planZeit, guests: personenAnzahl, tableIds: v.tableIds });
+          overlay.remove();
+          rerender();
+        };
+        liste.appendChild(b);
+      }
+    };
+    personen.querySelector("input").addEventListener("change", zeichneTische);
+    zeichneTische();
+
+    const aktionen = document.createElement("div");
+    aktionen.className = "dialog-actions";
+    const ab = document.createElement("button");
+    ab.className = "btn btn-secondary";
+    ab.textContent = "Abbrechen";
+    ab.onclick = () => overlay.remove();
+    aktionen.appendChild(ab);
+    box.appendChild(aktionen);
+    document.body.appendChild(overlay);
+  }
+
   function buildPlan() {
     const card = document.createElement("section");
     card.className = "card";
@@ -281,17 +383,27 @@ function renderReservations() {
     const sel = zeitAuswahl(planZeit);
     sel.onchange = () => {
       planZeit = sel.value;
+      zeitFolgtUhr = false; // bewusst gewählt – ab jetzt nicht mehr automatisch weiterspringen
       rerender();
     };
     const jetztBtn = document.createElement("button");
     jetztBtn.className = "btn btn-secondary";
     jetztBtn.textContent = "Jetzt";
+    jetztBtn.className = "btn " + (zeitFolgtUhr && datum === todayStr() ? "btn-primary" : "btn-secondary");
+    jetztBtn.title = "Zurück auf die aktuelle Uhrzeit – die Anzeige läuft dann von selbst mit";
     jetztBtn.onclick = () => {
       planZeit = jetztAufViertelstunde();
       datum = todayStr();
+      zeitFolgtUhr = true;
       rerender();
     };
     kopf.append(label, sel, jetztBtn);
+    if (zeitFolgtUhr && datum === todayStr()) {
+      const live = document.createElement("span");
+      live.className = "muted small";
+      live.textContent = "🕒 läuft mit";
+      kopf.appendChild(live);
+    }
     card.appendChild(kopf);
 
     card.appendChild(buildTischplan({ datum, zeit: planZeit, onTisch: (t) => openTischDialog(t) }));
@@ -345,7 +457,41 @@ function renderReservations() {
     const aktionen = document.createElement("div");
     aktionen.className = "plan-aktionen";
 
-    // Walk-in: der häufigste Handgriff am Plan, deshalb ganz oben und ohne Namensabfrage.
+    // Wartende Reservierungen direkt hierhin setzen. Ohne das musste man in die Liste wechseln, dort
+    // die Person suchen und den Tisch erneut auswählen – am Plan ist der Tisch ja schon in der Hand.
+    const ohneTisch = store
+      .getReservationsByDate(datum)
+      .filter((r) => !["storniert", "weg", "noshow"].includes(r.status) && (r.tableIds || []).length === 0);
+    if (ohneTisch.length > 0) {
+      const titel = document.createElement("div");
+      titel.className = "muted small res-bereich";
+      titel.innerHTML = `<b>Hierhin setzen</b> – wartet noch auf einen Tisch`;
+      box.appendChild(titel);
+
+      const wahl = document.createElement("div");
+      wahl.className = "res-tische";
+      for (const r of ohneTisch) {
+        const passt = r.guests <= t.seats;
+        const konflikte = store.getTableConflicts(t.id, datum, r.time, r.id);
+        const b2 = document.createElement("button");
+        b2.className = "res-vorschlag" + (passt && konflikte.length === 0 ? "" : " res-vorschlag-eng");
+        b2.innerHTML =
+          `<span class="res-tisch-name">${escapeHtml(r.time)} · ${escapeHtml(r.name)}</span>` +
+          `<span class="muted small">${r.guests} ${r.guests === 1 ? "Person" : "Personen"}${
+            passt ? "" : ` · nur ${t.seats} Plätze`
+          }${konflikte.length ? " · Tisch belegt" : ""}</span>`;
+        b2.onclick = async () => {
+          if (konflikte.length > 0 && !(await trotzdemPlatzieren(t, konflikte, false))) return;
+          store.updateReservation(r.id, { tableIds: [t.id] });
+          schliessen();
+          rerender();
+        };
+        wahl.appendChild(b2);
+      }
+      box.appendChild(wahl);
+    }
+
+    // Walk-in: der häufigste Handgriff am Plan, deshalb ohne Namensabfrage.
     const walkin = document.createElement("button");
     walkin.className = "btn btn-primary btn-huge";
     walkin.textContent = "🚶 Walk-in setzen";
@@ -835,6 +981,7 @@ function renderReservations() {
   }
 
   rerender();
+  uhrStarten();
   return container;
 }
 

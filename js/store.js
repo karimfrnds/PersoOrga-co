@@ -624,7 +624,15 @@ export const store = {
   /** "An den Chef senden": macht die Auswahl verbindlich (1 Schicht -> sofort fest + ausgegraut für
    * andere, mehrere -> offene Kandidaten) und stößt die Kaskaden-Auflösung an. Bereits anderweitig fest
    * vergebene Schichten werden dabei aus der eigenen Auswahl entfernt (Sicherheitsnetz). */
-  commitAvailability(dayId, employeeId, slotIds) {
+  /** Verfügbarkeit einer Person für einen Tag festhalten.
+   *
+   * submittedAt: Wird eine Einreichung vom Server übernommen, MUSS deren Zeitstempel mitgegeben werden.
+   * Sonst bekäme der Eintrag hier einen neuen, das iPad schickte den wieder hoch, und beim nächsten
+   * Abgleich hielte es dieselbe Einreichung für eine neue – und wendete sie endlos wieder an. Dabei fiel
+   * jedes Mal eine Chef-Bestätigung weg. Aufgefallen ist das nur bei der Mittelschicht: alle anderen
+   * Schichten bestätigen sich bei nur einer Auswahl selbst, die Mittelschicht braucht immer den Chef.
+   */
+  commitAvailability(dayId, employeeId, slotIds, submittedAt) {
     const d = this.getDay(dayId);
     if (!d) return;
     const role = roleOf(employeeId);
@@ -633,13 +641,18 @@ export const store = {
     );
     const clean = [...new Set(Array.isArray(slotIds) ? slotIds : [])].filter((id) => !takenByOthers.has(id));
     const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+    const vorher = idx >= 0 ? d.availability[idx] : null;
+    // Eine bereits erteilte Chef-Bestätigung bleibt bestehen, solange die bestätigte Schicht weiterhin
+    // zur Auswahl gehört. Sonst würde jede erneute Übernahme die Entscheidung des Chefs wegwerfen.
+    const bestaetigungBleibt = !!vorher?.bossConfirmed && vorher.confirmedSlotId && clean.includes(vorher.confirmedSlotId);
     const entry = {
-      id: idx >= 0 ? d.availability[idx].id : uid(),
+      id: vorher ? vorher.id : uid(),
       employeeId,
       slotIds: clean,
-      confirmedSlotId: clean.length === 1 ? clean[0] : null,
-      bossConfirmed: clean.length === 1 ? autoConfirmsWithoutBoss(clean[0]) : false,
-      submittedAt: new Date().toISOString(),
+      confirmedSlotId: bestaetigungBleibt ? vorher.confirmedSlotId : clean.length === 1 ? clean[0] : null,
+      bossConfirmed: bestaetigungBleibt ? true : clean.length === 1 ? autoConfirmsWithoutBoss(clean[0]) : false,
+      note: vorher?.note || "",
+      submittedAt: submittedAt || new Date().toISOString(),
     };
     if (idx >= 0) d.availability[idx] = entry;
     else d.availability.push(entry);

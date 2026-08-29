@@ -656,7 +656,10 @@ async function handleBookingPage(env) {
 // Die eigene Adresse als Grundlage fuer alle Anfragen. Eine RELATIVE Adresse wie "slots" wuerde von
 // /booking aus bei /slots landen (der letzte Teil des Pfades gilt als Dateiname, nicht als Ordner) –
 // und damit auf einem Endpunkt, den es nicht gibt.
-const BASIS = location.pathname.replace(/\/+$/, "");
+// BEWUSST OHNE regulaeren Ausdruck: dieser Code steht in einem Text-Baustein des Workers, und der
+// verschluckt einzelne Backslashes. Aus /\/+$/ wuerde //+$/ – fuer JavaScript ein Kommentar, und die
+// ganze Seite bliebe leer.
+const BASIS = location.pathname.endsWith("/") ? location.pathname.slice(0, -1) : location.pathname;
 const MAX_GUESTS = ${cfg.maxGuestsOnline};
 const MAX_TAGE = ${cfg.maxDaysAhead};
 const app = document.getElementById("app");

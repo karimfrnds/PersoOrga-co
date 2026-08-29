@@ -13,6 +13,8 @@ import { confirmDialog } from "../dialog.js";
 import { buildTischplan } from "./tableplan.js";
 import { todayStr } from "../format.js";
 
+const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
 function renderTablesAdmin() {
   const container = document.createElement("div");
   container.className = "page";
@@ -34,6 +36,8 @@ function renderTablesAdmin() {
     frag.appendChild(buildAnordnen());
     frag.appendChild(buildListe());
     frag.appendChild(buildEinstellungen());
+    frag.appendChild(buildOeffnungszeiten());
+    frag.appendChild(buildOnline());
     return frag;
   }
 
@@ -337,6 +341,122 @@ function renderTablesAdmin() {
       p.textContent = `Terrasse gesperrt an: ${gesperrt.slice(-10).join(", ")} (umschalten auf der Reservierungs-Seite).`;
       card.appendChild(p);
     }
+    return card;
+  }
+
+  /** Öffnungszeiten – Grundlage für die Online-Buchung. Ohne sie könnte ein Gast für 3 Uhr nachts oder
+   * für einen Ruhetag reservieren. Gelten NUR für die Buchung; die Schichtzeiten der Mitarbeiter sind
+   * davon unberührt. */
+  function buildOeffnungszeiten() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>Öffnungszeiten</h2>
+      <p class="muted small">Innerhalb dieser Zeiten können Gäste online reservieren. An einem Ruhetag geht
+      gar nichts. Die Schichtzeiten der Mitarbeiter ändern sich dadurch nicht.</p>`;
+
+    const zeiten = store.getSettings().reservation?.openingHours || [];
+    const speichern = (index, patch) => {
+      const neu = zeiten.map((z, i) => (i === index ? { ...z, ...patch } : z));
+      store.updateSettings({ reservation: { ...store.getSettings().reservation, openingHours: neu } });
+      rerender();
+    };
+
+    for (let i = 0; i < 7; i++) {
+      const z = zeiten[i] || { closed: false, from: "09:00", to: "22:00" };
+      const zeile = document.createElement("div");
+      zeile.className = "oeffnung-zeile";
+
+      const tag = document.createElement("span");
+      tag.className = "oeffnung-tag";
+      tag.textContent = WOCHENTAGE[i];
+
+      const zu = document.createElement("button");
+      zu.className = "btn " + (z.closed ? "btn-primary" : "btn-secondary");
+      zu.textContent = z.closed ? "Ruhetag" : "Geöffnet";
+      zu.onclick = () => speichern(i, { closed: !z.closed });
+
+      zeile.append(tag, zu);
+
+      if (!z.closed) {
+        const von = document.createElement("input");
+        von.type = "time";
+        von.step = "900";
+        von.value = z.from;
+        von.onchange = () => speichern(i, { from: von.value });
+        const bis = document.createElement("input");
+        bis.type = "time";
+        bis.step = "900";
+        bis.value = z.to;
+        bis.onchange = () => speichern(i, { to: bis.value });
+        const strich = document.createElement("span");
+        strich.textContent = "–";
+        zeile.append(von, strich, bis);
+
+        if (z.to <= z.from) {
+          const warn = document.createElement("span");
+          warn.className = "res-warn";
+          warn.textContent = "Ende liegt vor dem Anfang";
+          zeile.appendChild(warn);
+        }
+      }
+      card.appendChild(zeile);
+    }
+    return card;
+  }
+
+  /** Regeln für die Online-Buchung auf der Website. */
+  function buildOnline() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>Online-Reservierung</h2>`;
+    const r = store.getSettings().reservation || {};
+    const setzen = (patch) => {
+      store.updateSettings({ reservation: { ...store.getSettings().reservation, ...patch } });
+      rerender();
+    };
+
+    const an = document.createElement("button");
+    an.className = "btn " + (r.onlineEnabled === false ? "btn-secondary" : "btn-primary");
+    an.textContent = r.onlineEnabled === false ? "❌ Online-Buchung ist aus" : "✅ Online-Buchung ist an";
+    an.title = "Schaltet das Formular auf der Website ab, ohne es entfernen zu müssen";
+    an.onclick = () => setzen({ onlineEnabled: r.onlineEnabled === false });
+    card.appendChild(an);
+
+    const reihe = document.createElement("div");
+    reihe.className = "res-form-row";
+    const feld = (label, hinweis, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      const h = document.createElement("span");
+      h.className = "muted small";
+      h.textContent = hinweis;
+      l.appendChild(h);
+      return l;
+    };
+    const zahl = (wert, min, max, onChange) => {
+      const i = document.createElement("input");
+      i.type = "number";
+      i.min = String(min);
+      i.max = String(max);
+      i.value = String(wert);
+      i.onchange = () => onChange(Math.min(max, Math.max(min, Number(i.value) || min)));
+      return i;
+    };
+
+    reihe.append(
+      feld("Größte Gruppe online", "Größere Gruppen sollen anrufen", zahl(r.maxGuestsOnline ?? 8, 1, 50, (v) => setzen({ maxGuestsOnline: v }))),
+      feld("Vorlauf in Minuten", "So kurzfristig geht es noch", zahl(r.minLeadMinutes ?? 60, 0, 1440, (v) => setzen({ minLeadMinutes: v }))),
+      feld("Wie viele Tage im Voraus", "Weiter in die Zukunft geht nicht", zahl(r.maxDaysAhead ?? 60, 1, 365, (v) => setzen({ maxDaysAhead: v })))
+    );
+    card.appendChild(reihe);
+
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    hinweis.textContent =
+      `Gast-Buchungen kommen ohne Tisch herein und stehen unter Reservierungen als „ohne Tisch" – den Tisch vergibst du wie gewohnt selbst.`;
+    card.appendChild(hinweis);
     return card;
   }
 

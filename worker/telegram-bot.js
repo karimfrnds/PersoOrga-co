@@ -170,6 +170,19 @@ const EMPTY_STATE = {
   publishedWeeks: [],
   // Warteschlange dazu für den iPad (wie stockDeliveries & Co.): [{id, weekStart, action, at}]
   weekPublications: [],
+  // --- Online-Reservierung ---
+  // Tische vom iPad, damit der Worker selbst prüfen kann, ob überhaupt noch etwas frei ist.
+  // [{id, name, seats, area, active, combinesWith}]
+  tables: [],
+  // Belegte Zeitfenster vom iPad – BEWUSST OHNE Namen und Telefonnummern. Für die Frage "ist noch etwas
+  // frei?" braucht es die nicht, und Gästedaten haben in der Cloud nichts verloren, solange sie dort
+  // keinen Zweck erfüllen. [{date, time, tableIds, guests}]
+  reservationSlots: [],
+  // Öffnungszeiten + Regeln für die Online-Buchung, ebenfalls vom iPad.
+  reservationConfig: null,
+  // Warteschlange der Gast-Buchungen, die der iPad abholt.
+  // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
+  reservationRequests: [],
 };
 
 async function getState(env) {
@@ -210,6 +223,10 @@ async function getState(env) {
       employeeChanges: Array.isArray(parsed.employeeChanges) ? parsed.employeeChanges : [],
       publishedWeeks: Array.isArray(parsed.publishedWeeks) ? parsed.publishedWeeks : [],
       weekPublications: Array.isArray(parsed.weekPublications) ? parsed.weekPublications : [],
+      tables: Array.isArray(parsed.tables) ? parsed.tables : [],
+      reservationSlots: Array.isArray(parsed.reservationSlots) ? parsed.reservationSlots : [],
+      reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
+      reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -316,6 +333,485 @@ async function requireSession(request, env, role) {
   }
   if (session.role !== role) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
   return { session };
+}
+
+// ============================================================================
+// Online-Reservierung für Gäste (öffentlich erreichbar, ohne Anmeldung).
+//
+// Der Worker entscheidet SELBST, ob noch etwas frei ist – Gäste buchen nachts und am Ruhetag, da ist
+// das iPad aus. Grundlage sind Tische, belegte Zeitfenster und Öffnungszeiten, die das iPad ohnehin
+// bei jedem Abgleich mitschickt. Die Buchung landet dann in einer Warteschlange, die der iPad abholt:
+// er bleibt die maßgebliche Instanz, hier wird nichts endgültig entschieden.
+//
+// Der Tisch wird bewusst NICHT automatisch vergeben. Der Worker garantiert nur, dass Kapazität da ist;
+// wer wohin kommt, entscheidet der Chef am iPad. Das ist auch der Grund, warum ein theoretisch mögliches
+// gleichzeitiges Buchen des letzten Tisches nicht schlimm ist: dann steht eine Reservierung mehr in der
+// Liste "ohne Tisch", statt dass zwei Gäste denselben Tisch zugesagt bekommen.
+// ============================================================================
+
+// Pro Stunde und Anschluss. Gezählt werden nur ERFOLGREICHE Buchungen: nur die belegen Plätze.
+// Nicht zu knapp gewählt, weil sich mehrere Gäste eine Adresse teilen können (z.B. wenn sie aus dem
+// WLAN des Cafés buchen) – die Bremse soll Bots stoppen, nicht echte Gäste.
+const BUCHUNG_MAX_PRO_IP = 10;
+const BUCHUNG_LOCK_SECONDS = 3600;
+const REQUEST_AUFBEWAHRUNG_TAGE = 60; // danach werden Gästedaten in der Warteschlange gelöscht
+
+function minutenAusZeit(t) {
+  const [h, m] = String(t || "").split(":").map(Number);
+  return (Number(h) || 0) * 60 + (Number(m) || 0);
+}
+function zeitAusMinuten(min) {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+function wochentagIndexIso(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return wd === 0 ? 6 : wd - 1;
+}
+
+/** Zusammengefasste Regeln, mit Standardwerten falls das iPad noch nichts geschickt hat. */
+function buchungsConfig(state) {
+  const c = state.reservationConfig || {};
+  return {
+    durationMinutes: Number(c.durationMinutes) || 120,
+    openingHours: Array.isArray(c.openingHours) ? c.openingHours : [],
+    maxDaysAhead: Number(c.maxDaysAhead) || 60,
+    minLeadMinutes: Number.isFinite(Number(c.minLeadMinutes)) ? Number(c.minLeadMinutes) : 60,
+    maxGuestsOnline: Number(c.maxGuestsOnline) || 8,
+    onlineEnabled: c.onlineEnabled !== false,
+    terraceClosedDates: Array.isArray(c.terraceClosedDates) ? c.terraceClosedDates : [],
+    cafeName: String(c.cafeName || "").trim(),
+  };
+}
+
+/** Welche Tische sind zu dieser Zeit belegt? Berücksichtigt auch die Buchungen, die schon in der
+ * Warteschlange stehen und vom iPad noch nicht abgeholt wurden – sonst würde dieselbe Kapazität
+ * mehrfach vergeben, solange das iPad aus ist. */
+function belegteTische(state, cfg, date, time) {
+  const start = minutenAusZeit(time);
+  const ende = start + cfg.durationMinutes;
+  const belegt = new Set();
+  for (const slot of state.reservationSlots || []) {
+    if (slot.date !== date) continue;
+    const s = minutenAusZeit(slot.time);
+    if (!(start < s + cfg.durationMinutes && s < ende)) continue;
+    for (const id of slot.tableIds || []) belegt.add(id);
+  }
+  return belegt;
+}
+
+/** Reicht die noch freie Kapazität für so viele Personen?
+ *
+ * Geprüft wird dieselbe Regel wie in der App: ein einzelner freier Tisch mit genug Plätzen, oder
+ * mehrere Tische, die laut Nachbarschaft zusammengeschoben werden können.
+ *
+ * Buchungen aus der Warteschlange haben noch keinen Tisch. Sie werden deshalb über ihre Personenzahl
+ * berücksichtigt: die dafür nötigen Plätze gelten als vergeben.
+ */
+function istFrei(state, cfg, date, time, guests, area) {
+  const belegt = belegteTische(state, cfg, date, time);
+  const terrasseZu = cfg.terraceClosedDates.includes(date);
+  const start = minutenAusZeit(time);
+
+  let frei = (state.tables || []).filter((t) => t.active !== false && !belegt.has(t.id));
+  if (terrasseZu) frei = frei.filter((t) => t.area !== "draussen");
+  if (area === "innen" || area === "draussen") frei = frei.filter((t) => t.area === area);
+  if (frei.length === 0) return false;
+
+  // Noch nicht zugewiesene Buchungen aus der Warteschlange: ihre Personenzahl blockiert Plätze.
+  // Die größten zuerst wegnehmen, sonst käme man auf ein zu günstiges Ergebnis.
+  const wartend = (state.reservationRequests || [])
+    .filter((r) => r.date === date && Math.abs(minutenAusZeit(r.time) - start) < cfg.durationMinutes)
+    .sort((a, b) => b.guests - a.guests);
+  const uebrig = [...frei].sort((a, b) => b.seats - a.seats);
+  for (const w of wartend) {
+    const idx = uebrig.findIndex((t) => t.seats >= w.guests);
+    if (idx >= 0) uebrig.splice(idx, 1);
+    else uebrig.shift(); // passt nirgends allein – trotzdem einen Tisch als verbraucht ansehen
+  }
+  if (uebrig.length === 0) return false;
+
+  // Ein einzelner Tisch reicht?
+  if (uebrig.some((t) => t.seats >= guests)) return true;
+
+  // Sonst: gibt es eine zusammenhängende Kombination mit genug Plätzen?
+  const freiIds = new Set(uebrig.map((t) => t.id));
+  const byId = new Map(uebrig.map((t) => [t.id, t]));
+  for (const start2 of uebrig) {
+    // Von diesem Tisch aus über die Nachbarschaften laufen und Plätze aufsummieren (höchstens 3 Tische).
+    const besucht = new Set([start2.id]);
+    let plaetze = start2.seats;
+    let grenze = [start2];
+    while (besucht.size < 3) {
+      let naechster = null;
+      for (const t of grenze) {
+        for (const n of t.combinesWith || []) {
+          if (freiIds.has(n) && !besucht.has(n) && byId.get(n).area === start2.area) {
+            naechster = byId.get(n);
+            break;
+          }
+        }
+        if (naechster) break;
+      }
+      if (!naechster) break;
+      besucht.add(naechster.id);
+      plaetze += naechster.seats;
+      grenze = [...besucht].map((id) => byId.get(id));
+      if (plaetze >= guests) return true;
+    }
+  }
+  return false;
+}
+
+/** Buchbare Uhrzeiten eines Tages: im Viertelstunden-Takt innerhalb der Öffnungszeiten, und nur
+ * solche, für die auch wirklich noch Platz ist. */
+function freieZeiten(state, cfg, date, guests, area, jetztISO) {
+  const wd = wochentagIndexIso(date);
+  const tag = cfg.openingHours[wd];
+  if (!tag || tag.closed) return { zeiten: [], grund: "ruhetag" };
+
+  const von = minutenAusZeit(tag.from);
+  // Die letzte Buchung soll noch sitzen können: Ende minus Verweildauer wäre streng, das würde bei
+  // 2 Stunden fast den halben Abend sperren. Stattdessen bis eine Stunde vor Schluss.
+  const bis = Math.max(von, minutenAusZeit(tag.to) - 60);
+
+  // Kurzfristigkeit: heute erst ab jetzt + Vorlauf.
+  const heute = jetztISO.slice(0, 10);
+  const jetztMin = Number(jetztISO.slice(11, 13)) * 60 + Number(jetztISO.slice(14, 16));
+  const frueheste = date === heute ? jetztMin + cfg.minLeadMinutes : -1;
+
+  const zeiten = [];
+  for (let m = von; m <= bis; m += 15) {
+    if (m < frueheste) continue;
+    if (istFrei(state, cfg, date, zeitAusMinuten(m), guests, area)) zeiten.push(zeitAusMinuten(m));
+  }
+  return { zeiten, grund: zeiten.length === 0 ? "ausgebucht" : null };
+}
+
+/** Kurze, am Telefon gut vorlesbare Nummer – ohne Zeichen, die man verwechseln kann (0/O, 1/I). */
+function buchungsCode() {
+  const alphabet = "ACDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  const bytes = crypto.getRandomValues(new Uint8Array(5));
+  for (const b of bytes) code += alphabet[b % alphabet.length];
+  return code;
+}
+
+/** Freie Uhrzeiten für einen Tag. Öffentlich, ohne Anmeldung – gibt bewusst NUR Uhrzeiten zurück,
+ * keine Tische, keine Namen, keine Auslastung. Wer wann bei euch sitzt, geht Fremde nichts an. */
+async function handleBookingSlots(request, env) {
+  const url = new URL(request.url);
+  const date = String(url.searchParams.get("date") || "");
+  const guests = Math.max(1, Math.min(99, Number(url.searchParams.get("guests")) || 2));
+  const area = ["innen", "draussen", "egal"].includes(url.searchParams.get("area")) ? url.searchParams.get("area") : "egal";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return jsonResponse({ error: "Bitte ein gültiges Datum wählen." }, 400);
+
+  const state = await getState(env);
+  const cfg = buchungsConfig(state);
+  if (!cfg.onlineEnabled) return jsonResponse({ zeiten: [], grund: "aus" });
+  if ((state.tables || []).length === 0) return jsonResponse({ zeiten: [], grund: "nicht_eingerichtet" });
+  if (guests > cfg.maxGuestsOnline) return jsonResponse({ zeiten: [], grund: "zu_gross", maxGuests: cfg.maxGuestsOnline });
+
+  const heute = todayBerlin();
+  if (date < heute) return jsonResponse({ zeiten: [], grund: "vergangen" });
+  if (date > addDaysISO(heute, cfg.maxDaysAhead)) return jsonResponse({ zeiten: [], grund: "zu_weit" });
+
+  const jetztISO = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+  return jsonResponse(freieZeiten(state, cfg, date, guests, area, jetztISO));
+}
+
+/** Gast schickt eine Buchung ab. Landet in einer Warteschlange – der iPad holt sie ab und legt daraus
+ * eine echte Reservierung an. Ein Tisch wird hier NICHT vergeben, das macht der Chef. */
+async function handleBookingCreate(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+
+  // Missbrauchsschutz: begrenzt, wie oft von derselben Stelle gebucht werden kann. Fängt vor allem
+  // versehentliches Mehrfach-Absenden und stumpfe Bots ab.
+  const kennung = "book:" + clientKey(request);
+  const bisher = Number((await env.TASKS_KV.get(kennung)) || 0);
+  if (bisher >= BUCHUNG_MAX_PRO_IP) {
+    return jsonResponse({ error: "Von hier wurden gerade sehr viele Reservierungen gesendet. Bitte ruft uns kurz an." }, 429);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+
+  // Honeypot: ein für Menschen unsichtbares Feld. Ist es ausgefüllt, war ein Bot am Werk. Antwort
+  // bewusst wie ein Erfolg, damit der Bot nichts dazulernt.
+  if (String(body?.website || "").trim()) return jsonResponse({ ok: true, code: buchungsCode() });
+
+  const name = String(body?.name || "").trim().slice(0, 80);
+  const phone = String(body?.phone || "").trim().slice(0, 40);
+  const note = String(body?.note || "").trim().slice(0, 300);
+  const date = String(body?.date || "");
+  const time = String(body?.time || "");
+  const guests = Math.max(1, Math.min(99, Number(body?.guests) || 0));
+  const area = ["innen", "draussen", "egal"].includes(body?.area) ? body.area : "egal";
+
+  if (!name) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
+  if (!phone) return jsonResponse({ error: "Bitte eine Telefonnummer angeben, damit wir euch erreichen können." }, 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+    return jsonResponse({ error: "Bitte Datum und Uhrzeit wählen." }, 400);
+  }
+
+  const state = await getState(env);
+  const cfg = buchungsConfig(state);
+  if (!cfg.onlineEnabled) return jsonResponse({ error: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an." }, 503);
+  if (guests > cfg.maxGuestsOnline) {
+    return jsonResponse({ error: `Ab ${cfg.maxGuestsOnline + 1} Personen sprechen wir das lieber persönlich ab – bitte ruft uns an.` }, 400);
+  }
+  const heute = todayBerlin();
+  if (date < heute || date > addDaysISO(heute, cfg.maxDaysAhead)) {
+    return jsonResponse({ error: "Für diesen Tag können wir online leider nichts annehmen." }, 400);
+  }
+
+  // Noch einmal prüfen, ob wirklich frei: zwischen dem Laden der Zeiten und dem Absenden kann Zeit
+  // vergangen sein, in der jemand anderes gebucht hat.
+  const jetztISO = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+  const { zeiten } = freieZeiten(state, cfg, date, guests, area, jetztISO);
+  if (!zeiten.includes(time)) {
+    return jsonResponse({ error: "Diese Uhrzeit ist inzwischen leider vergeben. Bitte wählt eine andere." }, 409);
+  }
+
+  const code = buchungsCode();
+  const eintrag = { id: crypto.randomUUID(), code, date, time, name, phone, guests, area, note, createdAt: new Date().toISOString() };
+
+  // Alte Einträge aufräumen: Gästedaten sollen nicht unbegrenzt in der Cloud liegen. Der iPad hat sie
+  // längst abgeholt, hier werden sie nur zwischengelagert.
+  const grenze = addDaysISO(heute, -REQUEST_AUFBEWAHRUNG_TAGE);
+  const bestand = (state.reservationRequests || []).filter((r) => (r.date || "") >= grenze);
+
+  await patchState(env, { reservationRequests: [...bestand, eintrag].slice(-500) });
+  await env.TASKS_KV.put(kennung, String(bisher + 1), { expirationTtl: BUCHUNG_LOCK_SECONDS });
+
+  if (env.OWNER_CHAT_ID) {
+    const bereich = area === "innen" ? "drinnen" : area === "draussen" ? "draußen" : "egal";
+    await sendTelegramMessage(
+      env,
+      env.OWNER_CHAT_ID,
+      `🍽 Neue Online-Reservierung\n${formatDateDe(date)} um ${time} Uhr\n${name} · ${guests} ${
+        guests === 1 ? "Person" : "Personen"
+      } · ${bereich}\n📞 ${phone}${note ? `\n📝 ${note}` : ""}\nNr. ${code}`
+    );
+  }
+  return jsonResponse({ ok: true, code });
+}
+
+/** Die Buchungsseite selbst. Wird auf der Website in einen Rahmen eingebettet, läuft aber komplett
+ * hier – so muss im Website-Baukasten nichts weiter eingerichtet werden als ein HTML-Element. */
+async function handleBookingPage(env) {
+  const state = await getState(env);
+  const cfg = buchungsConfig(state);
+  const name = cfg.cafeName || "Reservierung";
+  const html = `<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${escapeHtmlWorker(name)}</title>
+<style>
+  :root { --gruen:#1f6f54; --gruen-d:#16543f; --hell:#e7f4ee; --rand:#e2e4e8; --text:#1c1f23; --grau:#6b7280; }
+  @media (prefers-color-scheme: dark) {
+    :root { --hell:#133326; --rand:#33363c; --text:#e9eaec; --grau:#9aa0a8; --gruen:#3fa585; --gruen-d:#2c8069; }
+    body { background:#16181c; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         color:var(--text); font-size:16px; line-height:1.45; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .hint { color:var(--grau); font-size:14px; margin:0 0 16px; }
+  label { display:block; margin-bottom:12px; }
+  label > span { display:block; font-size:14px; font-weight:600; margin-bottom:4px; }
+  input, select, textarea { width:100%; padding:11px 12px; font-size:16px; font-family:inherit;
+    border:1px solid var(--rand); border-radius:10px; background:transparent; color:var(--text); }
+  textarea { resize:vertical; min-height:64px; }
+  .reihe { display:flex; gap:10px; flex-wrap:wrap; }
+  .reihe > label { flex:1 1 130px; }
+  .zaehler { display:flex; gap:6px; }
+  .zaehler input { text-align:center; }
+  .zbtn { flex:0 0 46px; font-size:22px; font-weight:700; border:1px solid var(--rand); border-radius:10px;
+          background:transparent; color:var(--text); cursor:pointer; }
+  .zbtn:disabled { opacity:.35; cursor:not-allowed; }
+  .zeiten { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 12px; }
+  .zeit { padding:10px 14px; border:2px solid var(--rand); border-radius:10px; background:transparent;
+          color:var(--text); font-size:16px; font-family:inherit; cursor:pointer; }
+  .zeit[aria-pressed="true"] { border-color:var(--gruen); background:var(--hell); color:var(--gruen-d); font-weight:700; }
+  button.senden { width:100%; padding:15px; font-size:17px; font-weight:700; border:none; border-radius:12px;
+                  background:var(--gruen); color:#fff; cursor:pointer; font-family:inherit; }
+  button.senden:disabled { opacity:.5; cursor:not-allowed; }
+  .melde { padding:12px 14px; border-radius:10px; background:var(--hell); margin:12px 0; font-size:15px; }
+  .fehler { background:#fdf0dd; color:#8a5a00; }
+  @media (prefers-color-scheme: dark) { .fehler { background:#3a2a12; color:#e2952f; } }
+  .datenschutz { color:var(--grau); font-size:12px; margin-top:14px; }
+  .erfolg { text-align:center; padding:24px 8px; }
+  .code { font-size:30px; font-weight:800; letter-spacing:3px; margin:10px 0; color:var(--gruen-d); }
+  .versteckt { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+</style></head>
+<body>
+<div id="app"></div>
+<script>
+const MAX_GUESTS = ${cfg.maxGuestsOnline};
+const MAX_TAGE = ${cfg.maxDaysAhead};
+const app = document.getElementById("app");
+const heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+const spaetestens = new Date(Date.now() + MAX_TAGE * 86400000).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+let daten = { date: heute, guests: 2, area: "egal", time: "" };
+
+const GRUND_TEXT = {
+  ruhetag: "An diesem Tag haben wir geschlossen.",
+  ausgebucht: "Für diesen Tag ist online leider nichts mehr frei. Ruft uns gerne an – manchmal geht doch noch etwas.",
+  zu_gross: "Für so viele Personen sprechen wir das lieber persönlich ab. Bitte ruft uns an.",
+  zu_weit: "So weit im Voraus nehmen wir online noch keine Reservierungen an.",
+  vergangen: "Dieser Tag liegt in der Vergangenheit.",
+  aus: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an.",
+  nicht_eingerichtet: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an.",
+};
+
+function el(html) { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; }
+
+function zeichne() {
+  app.innerHTML = "";
+  app.appendChild(el('<h1>Tisch reservieren</h1>'));
+  app.appendChild(el('<p class="hint">Wir melden uns nur, falls es ein Problem gibt.</p>'));
+
+  const reihe = el('<div class="reihe"></div>');
+
+  const datum = el('<label><span>Tag</span><input type="date" id="f-date"></label>');
+  const dInput = datum.querySelector("input");
+  dInput.min = heute; dInput.max = spaetestens; dInput.value = daten.date;
+  dInput.onchange = () => { daten.date = dInput.value; daten.time = ""; ladeZeiten(); };
+  reihe.appendChild(datum);
+
+  const pers = el('<label><span>Personen</span><div class="zaehler"><button type="button" class="zbtn" id="f-minus">−</button><input type="number" id="f-guests" min="1" inputmode="numeric"><button type="button" class="zbtn" id="f-plus">+</button></div></label>');
+  const gInput = pers.querySelector("#f-guests");
+  gInput.value = daten.guests;
+  gInput.max = MAX_GUESTS;
+  const setG = (n) => { daten.guests = Math.min(MAX_GUESTS, Math.max(1, n)); gInput.value = daten.guests; daten.time = ""; ladeZeiten(); };
+  pers.querySelector("#f-minus").onclick = () => setG(daten.guests - 1);
+  pers.querySelector("#f-plus").onclick = () => setG(daten.guests + 1);
+  gInput.onchange = () => setG(Number(gInput.value) || 1);
+  reihe.appendChild(pers);
+
+  const bereich = el('<label><span>Wo möchtet ihr sitzen?</span><select id="f-area"><option value="egal">Egal</option><option value="innen">Drinnen</option><option value="draussen">Draußen</option></select></label>');
+  const aSel = bereich.querySelector("select");
+  aSel.value = daten.area;
+  aSel.onchange = () => { daten.area = aSel.value; daten.time = ""; ladeZeiten(); };
+  reihe.appendChild(bereich);
+
+  app.appendChild(reihe);
+  app.appendChild(el('<span style="display:block;font-size:14px;font-weight:600;margin-bottom:4px">Uhrzeit</span>'));
+  app.appendChild(el('<div class="zeiten" id="f-zeiten"><span class="hint">Lade freie Zeiten…</span></div>'));
+
+  const rest = el('<div id="f-rest"></div>');
+  rest.appendChild(el('<label><span>Name</span><input type="text" id="f-name" autocomplete="name" maxlength="80"></label>'));
+  rest.appendChild(el('<label><span>Telefon</span><input type="tel" id="f-phone" autocomplete="tel" maxlength="40"></label>'));
+  rest.appendChild(el('<label><span>Anmerkung (optional)</span><textarea id="f-note" maxlength="300" placeholder="z.B. Kinderstuhl, Geburtstag, Rollstuhl"></textarea></label>'));
+  rest.appendChild(el('<label class="versteckt"><span>Website</span><input type="text" id="f-website" tabindex="-1" autocomplete="off"></label>'));
+  rest.appendChild(el('<div id="f-melde"></div>'));
+  rest.appendChild(el('<button class="senden" id="f-senden" disabled>Reservierung anfragen</button>'));
+  rest.appendChild(el('<p class="datenschutz">Wir speichern Name, Telefonnummer und eure Angaben nur, um die Reservierung zu bearbeiten, und löschen sie danach wieder. Weitergegeben wird nichts.</p>'));
+  app.appendChild(rest);
+
+  document.getElementById("f-senden").onclick = senden;
+  ladeZeiten();
+}
+
+async function ladeZeiten() {
+  const box = document.getElementById("f-zeiten");
+  if (!box) return;
+  aktualisiereSendeKnopf();
+  box.innerHTML = '<span class="hint">Lade freie Zeiten…</span>';
+  try {
+    const res = await fetch("slots?date=" + daten.date + "&guests=" + daten.guests + "&area=" + daten.area);
+    const d = await res.json();
+    box.innerHTML = "";
+    if (!d.zeiten || d.zeiten.length === 0) {
+      box.appendChild(el('<div class="melde fehler">' + (GRUND_TEXT[d.grund] || "Für diesen Tag ist leider nichts frei.") + '</div>'));
+    } else {
+      for (const z of d.zeiten) {
+        const b = el('<button type="button" class="zeit">' + z + '</button>');
+        b.setAttribute("aria-pressed", daten.time === z ? "true" : "false");
+        b.onclick = () => { daten.time = z; zeichneZeiten(d.zeiten); aktualisiereSendeKnopf(); };
+        box.appendChild(b);
+      }
+    }
+  } catch {
+    box.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
+  }
+  aktualisiereSendeKnopf();
+}
+
+function zeichneZeiten(zeiten) {
+  const box = document.getElementById("f-zeiten");
+  [...box.querySelectorAll(".zeit")].forEach((b) => b.setAttribute("aria-pressed", b.textContent === daten.time ? "true" : "false"));
+}
+
+function aktualisiereSendeKnopf() {
+  const b = document.getElementById("f-senden");
+  if (!b) return;
+  const name = (document.getElementById("f-name")?.value || "").trim();
+  const phone = (document.getElementById("f-phone")?.value || "").trim();
+  b.disabled = !(daten.time && name && phone);
+}
+document.addEventListener("input", aktualisiereSendeKnopf);
+
+async function senden() {
+  const b = document.getElementById("f-senden");
+  const melde = document.getElementById("f-melde");
+  b.disabled = true;
+  melde.innerHTML = '<div class="melde">Wird gesendet…</div>';
+  try {
+    const res = await fetch("", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: daten.date, time: daten.time, guests: daten.guests, area: daten.area,
+        name: document.getElementById("f-name").value,
+        phone: document.getElementById("f-phone").value,
+        note: document.getElementById("f-note").value,
+        website: document.getElementById("f-website").value,
+      }),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      melde.innerHTML = '<div class="melde fehler">' + (d.error || "Das hat leider nicht geklappt.") + '</div>';
+      b.disabled = false;
+      if (res.status === 409) ladeZeiten();
+      return;
+    }
+    const datumText = new Date(daten.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<div class="erfolg"><h1>Danke!</h1>' +
+      '<p>Wir haben eure Reservierung für <b>' + datumText + ' um ' + daten.time + ' Uhr</b> (' + daten.guests + ' Personen) notiert.</p>' +
+      '<p class="hint">Eure Reservierungsnummer:</p><div class="code">' + d.code + '</div>' +
+      '<p class="hint">Am besten kurz notieren. Wir melden uns nur, falls es ein Problem gibt.</p></div>'
+    ));
+  } catch {
+    melde.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
+    b.disabled = false;
+  }
+}
+
+zeichne();
+</script>
+</body></html>`;
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      // Kurz zwischenspeichern lassen: die Seite ändert sich selten, die freien Zeiten holt sie ohnehin frisch.
+      "Cache-Control": "public, max-age=300",
+      ...CORS_HEADERS,
+    },
+  });
+}
+
+/** Kleine HTML-Maskierung für die Buchungsseite (der Worker hat sonst keine). */
+function escapeHtmlWorker(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 async function handleAuthLogin(request, env) {
@@ -2257,6 +2753,11 @@ async function handleState(request, env) {
     // seinen maßgeblichen Stand zurück. Nur setzen, wenn wirklich mitgeschickt – sonst würde ein älteres
     // iPad (noch ohne dieses Feld) die Freigaben löschen und alle Pläne wären wieder unveröffentlicht.
     if (Array.isArray(body.publishedWeeks)) patch.publishedWeeks = body.publishedWeeks;
+    // Grundlage der Online-Buchung. Wie oben: nur setzen, wenn wirklich mitgeschickt – ein iPad ohne
+    // diese Felder würde sonst die Buchungsseite lahmlegen.
+    if (Array.isArray(body.tables)) patch.tables = body.tables;
+    if (Array.isArray(body.reservationSlots)) patch.reservationSlots = body.reservationSlots;
+    if (body.reservationConfig && typeof body.reservationConfig === "object") patch.reservationConfig = body.reservationConfig;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -2541,6 +3042,18 @@ export default {
     if (url.pathname === "/availability") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleAvailability(request, env);
+    }
+
+    // Öffentliche Buchungsseite für Gäste – bewusst ohne jede Anmeldung, sie steht ja auf der Website.
+    // Muss VOR dem Anmelde-Block stehen: der behandelt nur /auth/, /me und /admin/.
+    if (url.pathname === "/booking" || url.pathname === "/booking/") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      if (request.method === "POST") return handleBookingCreate(request, env);
+      return handleBookingPage(env);
+    }
+    if (url.pathname === "/booking/slots") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleBookingSlots(request, env);
     }
 
     // Handy/Laptop – eigene Anmeldung, getrennt vom WEBHOOK_SECRET (siehe Kommentar bei requireSession).

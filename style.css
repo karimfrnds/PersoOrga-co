@@ -679,3 +679,8 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .plan-punkt { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border-width: 2px;
   border-style: solid; vertical-align: -1px; margin-right: 3px; }
 .plan-aktionen { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+/* Öffnungszeiten im Admin */
+.oeffnung-zeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oeffnung-tag { min-width: 92px; font-weight: 600; }
+.oeffnung-zeile input[type=time] { width: 110px; }

@@ -140,6 +140,18 @@ function buildAvailabilityUpdatePayload() {
   return { weekStart, entries };
 }
 
+/** Belegte Zeitfenster für die Kapazitätsprüfung der Online-Buchung – ab heute und nur so weit in die
+ * Zukunft, wie online überhaupt gebucht werden kann. Ohne Namen, ohne Telefonnummern, ohne Notizen. */
+function buildReservationSlotsPayload() {
+  const heute = todayStr();
+  const tage = Number(store.getSettings().reservation?.maxDaysAhead) || 60;
+  const bis = addDaysISO(heute, tage);
+  return store
+    .getReservations?.()
+    ?.filter((r) => r.date >= heute && r.date <= bis && !["storniert", "noshow", "weg"].includes(r.status))
+    ?.map((r) => ({ date: r.date, time: r.time, guests: r.guests, tableIds: r.tableIds || [] })) || [];
+}
+
 async function fetchRemoteState(cfg) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     headers: { Authorization: `Bearer ${cfg.workerSecret}` },
@@ -550,6 +562,37 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
   }
 
+  // Online-Reservierungen von der Website -> als echte Reservierung anlegen. Bewusst OHNE Tisch:
+  // der Server garantiert nur, dass Platz da war; wer wohin kommt, entscheidet der Chef am iPad.
+  const remoteRequests = Array.isArray(remote.reservationRequests) ? remote.reservationRequests : [];
+  const appliedReservationIds = new Set(cfg.appliedReservationIds || []);
+  let newReservationIds = false;
+  for (const q of remoteRequests) {
+    if (!q.id || appliedReservationIds.has(q.id)) continue;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(q.date) && /^\d{2}:\d{2}$/.test(q.time) && String(q.name || "").trim()) {
+      const angelegt = store.addReservation({
+        date: q.date,
+        time: q.time,
+        name: q.name,
+        phone: q.phone,
+        guests: q.guests,
+        area: q.area,
+        note: q.note,
+        source: "web",
+      });
+      // Die Nummer, die der Gast auf dem Bildschirm gesehen hat, muss dieselbe bleiben – sonst kann
+      // er sie am Telefon nennen und niemand findet die Reservierung.
+      if (angelegt && q.code) store.updateReservationCode(angelegt.id, q.code);
+    } else {
+      syncWarnings.push(`Online-Reservierung "${q.name || "?"}" konnte nicht übernommen werden (unvollständige Angaben).`);
+    }
+    appliedReservationIds.add(q.id);
+    newReservationIds = true;
+  }
+  if (newReservationIds) {
+    store.updateTaskInboxConfig({ appliedReservationIds: [...appliedReservationIds].slice(-500) });
+  }
+
   // Abgeschlossene Schichtpläne: der Chef gibt eine Woche am Laptop frei, das iPad übernimmt das als
   // eigenen Stand. Ohne diesen Schritt würde der nächste Push die Freigabe in der Cloud wieder löschen –
   // die Leute sähen ihren fertigen Plan dann plötzlich nicht mehr.
@@ -689,6 +732,30 @@ async function performTaskSync() {
     active: e.active !== false,
     hasPin: !!e.pin,
   }));
+  // Grundlage der Online-Buchung. Die belegten Zeitfenster gehen BEWUSST OHNE Namen und Telefonnummern
+  // raus: für die Frage "ist noch etwas frei?" braucht es die nicht, und Gästedaten haben in der Cloud
+  // nichts verloren, solange sie dort keinen Zweck erfüllen.
+  const tables = store.getTables().map((t) => ({
+    id: t.id,
+    name: t.name,
+    seats: t.seats,
+    area: t.area,
+    active: t.active !== false,
+    combinesWith: t.combinesWith || [],
+  }));
+  const reservationSlots = buildReservationSlotsPayload();
+  const einstellungen = store.getSettings().reservation || {};
+  const reservationConfig = {
+    durationMinutes: einstellungen.durationMinutes,
+    openingHours: einstellungen.openingHours,
+    maxDaysAhead: einstellungen.maxDaysAhead,
+    minLeadMinutes: einstellungen.minLeadMinutes,
+    maxGuestsOnline: einstellungen.maxGuestsOnline,
+    onlineEnabled: einstellungen.onlineEnabled,
+    // Nur die kommenden Sperrtage – vergangene interessieren die Buchungsseite nicht.
+    terraceClosedDates: (einstellungen.terraceClosedDates || []).filter((d) => d >= todayStr()),
+  };
+
   const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
@@ -710,6 +777,9 @@ async function performTaskSync() {
     authPins,
     adminPinHash,
     publishedWeeks: store.getPublishedWeeks(),
+    tables,
+    reservationSlots,
+    reservationConfig,
   });
 
   store.updateTaskInboxConfig({

@@ -37,6 +37,24 @@ function defaultData() {
       // sich gar nicht sagen, ob 18:00 und 19:00 am selben Tisch ein Konflikt sind.
       reservation: {
         durationMinutes: 120,
+        // Öffnungszeiten pro Wochentag (0=Mo .. 6=So). Braucht es für die Online-Buchung: ohne sie
+        // könnte jemand für 3 Uhr nachts oder für einen Ruhetag reservieren.
+        // closed=true -> an dem Tag gar keine Buchung möglich.
+        openingHours: [
+          { closed: false, from: "09:00", to: "22:00" }, // Mo
+          { closed: false, from: "09:00", to: "22:00" }, // Di
+          { closed: false, from: "09:00", to: "23:00" }, // Mi
+          { closed: false, from: "09:00", to: "23:00" }, // Do
+          { closed: false, from: "09:00", to: "23:00" }, // Fr
+          { closed: false, from: "09:00", to: "23:00" }, // Sa
+          { closed: false, from: "09:00", to: "22:00" }, // So
+        ],
+        // Wie weit im Voraus Gäste online buchen dürfen, und wie kurzfristig noch.
+        maxDaysAhead: 60,
+        minLeadMinutes: 60,
+        // Ab dieser Gruppengröße nicht mehr online buchbar – große Gruppen wollen abgesprochen sein.
+        maxGuestsOnline: 8,
+        onlineEnabled: true,
         // Tage, an denen draussen nicht bedient wird (Regen). "YYYY-MM-DD"[] – der Tischplan zeigt die
         // Terrassentische an dem Tag dann als nicht nutzbar an.
         terraceClosedDates: [],
@@ -108,6 +126,8 @@ function defaultData() {
         appliedEmployeeChangeIds: [],
         // IDs der am Laptop abgeschlossenen (bzw. wieder geöffneten) Wochenpläne, die schon übernommen wurden.
         appliedPublicationIds: [],
+        // IDs der Online-Reservierungen von der Website, die schon übernommen wurden.
+        appliedReservationIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -1082,6 +1102,19 @@ export const store = {
       if (patch.status === "da" && !r.arrivedAt) r.arrivedAt = new Date().toISOString();
       if (patch.status !== "da" && patch.status !== "weg") r.arrivedAt = null;
     }
+    persist();
+    return r;
+  },
+  /** Alle Reservierungen (für den Abgleich mit der Cloud). */
+  getReservations() {
+    return [...data.reservations];
+  },
+  /** Übernimmt die Nummer, die der Gast online schon auf dem Bildschirm gesehen hat. Sonst könnte er
+   * sie am Telefon nennen und niemand fände die Reservierung wieder. */
+  updateReservationCode(id, code) {
+    const r = data.reservations.find((x) => x.id === id);
+    if (!r || !code) return null;
+    r.code = String(code).trim().toUpperCase();
     persist();
     return r;
   },

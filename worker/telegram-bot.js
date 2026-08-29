@@ -653,6 +653,10 @@ async function handleBookingPage(env) {
 <body>
 <div id="app"></div>
 <script>
+// Die eigene Adresse als Grundlage fuer alle Anfragen. Eine RELATIVE Adresse wie "slots" wuerde von
+// /booking aus bei /slots landen (der letzte Teil des Pfades gilt als Dateiname, nicht als Ordner) –
+// und damit auf einem Endpunkt, den es nicht gibt.
+const BASIS = location.pathname.replace(/\/+$/, "");
 const MAX_GUESTS = ${cfg.maxGuestsOnline};
 const MAX_TAGE = ${cfg.maxDaysAhead};
 const app = document.getElementById("app");
@@ -725,7 +729,7 @@ async function ladeZeiten() {
   aktualisiereSendeKnopf();
   box.innerHTML = '<span class="hint">Lade freie Zeiten…</span>';
   try {
-    const res = await fetch("slots?date=" + daten.date + "&guests=" + daten.guests + "&area=" + daten.area);
+    const res = await fetch(BASIS + "/slots?date=" + daten.date + "&guests=" + daten.guests + "&area=" + daten.area);
     const d = await res.json();
     box.innerHTML = "";
     if (!d.zeiten || d.zeiten.length === 0) {
@@ -764,7 +768,7 @@ async function senden() {
   b.disabled = true;
   melde.innerHTML = '<div class="melde">Wird gesendet…</div>';
   try {
-    const res = await fetch("", {
+    const res = await fetch(BASIS, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

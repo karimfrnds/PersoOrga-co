@@ -12,6 +12,7 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr, dateDe } from "../format.js";
 import { confirmDialog } from "../dialog.js";
+import { buildTischplan } from "./tableplan.js";
 
 function addDaysISO(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -88,6 +89,32 @@ function personenFeld(wert) {
   return box;
 }
 
+/** Aktuelle Uhrzeit, abgerundet auf die letzte Viertelstunde – passt damit ins selbe Raster wie die
+ * Auswahlfelder. Abgerundet und nicht gerundet: um 18:50 will man sehen, wer JETZT sitzt, nicht wer
+ * um 19:00 kommt. */
+function jetztAufViertelstunde() {
+  const d = new Date();
+  const m = Math.floor(d.getMinutes() / 15) * 15;
+  const h = Math.min(Math.max(d.getHours(), ZEIT_VON), ZEIT_BIS);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Rückfrage, bevor ein belegter oder gesperrter Tisch trotzdem vergeben wird. Nennt den konkreten
+ * Grund, damit die Entscheidung mit Wissen getroffen wird und nicht gegen eine Fehlermeldung. */
+function trotzdemPlatzieren(tisch, konflikte, terrasseGesperrt) {
+  // Der Text geht als HTML in den Dialog – Namen deshalb escapen, sonst zerlegt ein Name mit spitzen
+  // Klammern die Anzeige.
+  const gruende = [];
+  if (terrasseGesperrt) gruende.push("🌧 Die Terrasse ist für diesen Tag gesperrt (Regen).");
+  for (const k of konflikte) {
+    gruende.push(`🕒 ${escapeHtml(k.time)} Uhr: <b>${escapeHtml(k.name)}</b> (${k.guests} ${k.guests === 1 ? "Person" : "Personen"})`);
+  }
+  return confirmDialog(
+    `<b>${escapeHtml(tisch.name)}</b> ist nicht frei:<br/><br/>${gruende.join("<br/>")}<br/><br/>Trotzdem hierhin setzen?`,
+    { title: "Trotzdem platzieren?", okLabel: "Trotzdem platzieren" }
+  );
+}
+
 function renderReservations() {
   const container = document.createElement("div");
   container.className = "page";
@@ -96,6 +123,8 @@ function renderReservations() {
   // Welche Reservierung gerade einen Tisch bekommt (null = keine). Bewusst kein Dialog:
   // die Tischauswahl klappt direkt unter der Zeile auf, damit die Liste sichtbar bleibt.
   let zuweisenFuer = null;
+  let ansicht = "plan"; // "plan" | "liste" – im Betrieb ist der Plan die häufigere Frage
+  let planZeit = jetztAufViertelstunde();
 
   function rerender() {
     container.innerHTML = "";
@@ -118,7 +147,9 @@ function renderReservations() {
 
     frag.appendChild(buildTagWahl());
     frag.appendChild(buildKopfzahlen());
-    frag.appendChild(buildListe());
+    frag.appendChild(buildUmschalter());
+    if (ansicht === "plan") frag.appendChild(buildPlan());
+    else frag.appendChild(buildListe());
     frag.appendChild(buildNeu());
     return frag;
   }
@@ -215,6 +246,199 @@ function renderReservations() {
       card.appendChild(box);
     }
     return card;
+  }
+
+  function buildUmschalter() {
+    const reihe = document.createElement("div");
+    reihe.className = "handoff-days";
+    for (const [id, label] of [
+      ["plan", "🗺 Tischplan"],
+      ["liste", "📋 Liste"],
+    ]) {
+      const b = document.createElement("button");
+      b.className = "btn " + (ansicht === id ? "btn-primary" : "btn-secondary");
+      b.textContent = label;
+      b.onclick = () => {
+        ansicht = id;
+        zuweisenFuer = null;
+        rerender();
+      };
+      reihe.appendChild(b);
+    }
+    return reihe;
+  }
+
+  function buildPlan() {
+    const card = document.createElement("section");
+    card.className = "card";
+
+    // Zeitleiste: der Plan zeigt die Belegung zu EINER Uhrzeit. Damit lässt sich vorausschauen
+    // ("wie sieht es um 19:00 aus?"), ohne selbst nachzurechnen.
+    const kopf = document.createElement("div");
+    kopf.className = "res-daybar plan-zeitleiste";
+    const label = document.createElement("span");
+    label.innerHTML = "<b>Belegung um</b>";
+    const sel = zeitAuswahl(planZeit);
+    sel.onchange = () => {
+      planZeit = sel.value;
+      rerender();
+    };
+    const jetztBtn = document.createElement("button");
+    jetztBtn.className = "btn btn-secondary";
+    jetztBtn.textContent = "Jetzt";
+    jetztBtn.onclick = () => {
+      planZeit = jetztAufViertelstunde();
+      datum = todayStr();
+      rerender();
+    };
+    kopf.append(label, sel, jetztBtn);
+    card.appendChild(kopf);
+
+    card.appendChild(buildTischplan({ datum, zeit: planZeit, onTisch: (t) => openTischDialog(t) }));
+
+    const legende = document.createElement("p");
+    legende.className = "muted small";
+    legende.innerHTML =
+      '<span class="plan-punkt plan-frei"></span> frei · ' +
+      '<span class="plan-punkt plan-reserviert"></span> später reserviert · ' +
+      '<span class="plan-punkt plan-besetzt"></span> besetzt · Tisch antippen zum Setzen';
+    card.appendChild(legende);
+    return card;
+  }
+
+  /** Antippen eines Tisches im Plan: zeigt, was darauf los ist, und bietet genau die Handgriffe an,
+   * die an dieser Stelle sinnvoll sind – Walk-in setzen, Gast als da markieren, Tisch frei machen. */
+  function openTischDialog(t) {
+    const { belegt, naechste, alle } = store.getTableOccupancy(t.id, datum, planZeit);
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>${escapeHtml(t.name)}</h2>
+        <p class="muted small">${t.seats} Plätze · ${t.area === "innen" ? "Drinnen" : "Draußen"} · Stand ${escapeHtml(planZeit)} Uhr</p>
+      </div>`;
+    const box = overlay.querySelector(".dialog");
+    const schliessen = () => overlay.remove();
+
+    if (alle.length > 0) {
+      const liste = document.createElement("div");
+      liste.className = "task-list";
+      for (const r of alle) {
+        const zeile = document.createElement("div");
+        zeile.className = "task-row";
+        const marke = r === belegt ? "🔴 jetzt" : r === naechste ? "🟡 als nächstes" : "";
+        zeile.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(r.time)}</b> ${escapeHtml(r.name)} · ${r.guests} ${
+          r.guests === 1 ? "Person" : "Personen"
+        }</span><span class="muted small task-row-meta">${marke}${r.status === "da" ? " · sitzt da" : ""}${
+          r.status === "weg" ? " · gegangen" : ""
+        }${r.note ? ` · 📝 ${escapeHtml(r.note)}` : ""}</span></div>`;
+        liste.appendChild(zeile);
+      }
+      box.appendChild(liste);
+    } else {
+      const frei = document.createElement("p");
+      frei.className = "callout";
+      frei.textContent = "Für diesen Tag ist hier nichts reserviert.";
+      box.appendChild(frei);
+    }
+
+    const aktionen = document.createElement("div");
+    aktionen.className = "plan-aktionen";
+
+    // Walk-in: der häufigste Handgriff am Plan, deshalb ganz oben und ohne Namensabfrage.
+    const walkin = document.createElement("button");
+    walkin.className = "btn btn-primary btn-huge";
+    walkin.textContent = "🚶 Walk-in setzen";
+    walkin.onclick = () => {
+      schliessen();
+      openWalkIn(t);
+    };
+    aktionen.appendChild(walkin);
+
+    if (belegt && belegt.status !== "da") {
+      const da = document.createElement("button");
+      da.className = "btn btn-secondary";
+      da.textContent = `✓ ${belegt.name} ist da`;
+      da.onclick = () => {
+        store.updateReservation(belegt.id, { status: "da" });
+        schliessen();
+        rerender();
+      };
+      aktionen.appendChild(da);
+    }
+    if (belegt && belegt.status === "da") {
+      const weg = document.createElement("button");
+      weg.className = "btn btn-secondary";
+      weg.textContent = "Tisch frei machen";
+      weg.title = "Gäste sind gegangen";
+      weg.onclick = () => {
+        store.updateReservation(belegt.id, { status: "weg" });
+        schliessen();
+        rerender();
+      };
+      aktionen.appendChild(weg);
+    }
+
+    const zu = document.createElement("button");
+    zu.className = "btn btn-link";
+    zu.textContent = "Schließen";
+    zu.onclick = schliessen;
+    aktionen.appendChild(zu);
+
+    box.appendChild(aktionen);
+    document.body.appendChild(overlay);
+  }
+
+  /** Laufkundschaft setzen: nur die Personenzahl, sonst nichts. Name, Telefon und Bereich braucht
+   * niemand, wenn die Leute schon vor einem stehen. */
+  function openWalkIn(t) {
+    const { belegt, naechste } = store.getTableOccupancy(t.id, datum, planZeit);
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="dialog">
+        <h2>🚶 Walk-in an ${escapeHtml(t.name)}</h2>
+        <p class="muted small">${t.seats} Plätze · ab ${escapeHtml(planZeit)} Uhr</p>
+      </div>`;
+    const box = overlay.querySelector(".dialog");
+
+    if (belegt) {
+      const warn = document.createElement("div");
+      warn.className = "callout callout-warn";
+      warn.innerHTML = `Hier sitzt gerade <b>${escapeHtml(belegt.name)}</b> (${escapeHtml(belegt.time)} Uhr).`;
+      box.appendChild(warn);
+    } else if (naechste) {
+      // Der wichtigste Hinweis überhaupt: bis wann darf der Tisch belegt werden?
+      const info = document.createElement("div");
+      info.className = "callout";
+      info.innerHTML = `Frei bis <b>${escapeHtml(naechste.time)} Uhr</b> – dann kommt ${escapeHtml(naechste.name)}.`;
+      box.appendChild(info);
+    }
+
+    const feld = document.createElement("label");
+    feld.className = "field";
+    feld.innerHTML = "<span>Wie viele Personen?</span>";
+    const personen = personenFeld(Math.min(t.seats, 2));
+    feld.appendChild(personen);
+    box.appendChild(feld);
+
+    const aktionen = document.createElement("div");
+    aktionen.className = "dialog-actions";
+    const abbrechen = document.createElement("button");
+    abbrechen.className = "btn btn-secondary";
+    abbrechen.textContent = "Abbrechen";
+    abbrechen.onclick = () => overlay.remove();
+    const setzen = document.createElement("button");
+    setzen.className = "btn btn-primary";
+    setzen.textContent = "Setzen";
+    setzen.onclick = () => {
+      store.addWalkIn({ date: datum, time: planZeit, guests: personen.wert(), tableIds: [t.id] });
+      overlay.remove();
+      rerender();
+    };
+    aktionen.append(abbrechen, setzen);
+    box.appendChild(aktionen);
+    document.body.appendChild(overlay);
   }
 
   function buildListe() {
@@ -395,16 +619,22 @@ function renderReservations() {
         const btn = document.createElement("button");
         btn.className = "res-tisch-btn" + (gewaehlt ? " gewaehlt" : "") + (gesperrt ? " gesperrt" : "");
         btn.innerHTML = `<span class="res-tisch-name">${escapeHtml(t.name)}</span><span class="muted small">${t.seats} Pl.</span>`;
-        btn.disabled = gesperrt;
         if (konflikte.length > 0 && !gewaehlt) {
-          btn.title = `Belegt: ${konflikte.map((k) => `${k.time} ${k.name}`).join(", ")}`;
+          btn.title = `Belegt: ${konflikte.map((k) => `${k.time} ${k.name}`).join(", ")} – antippen für "trotzdem platzieren"`;
         } else if (gesperrt) {
-          btn.title = "Terrasse ist heute gesperrt";
+          btn.title = "Terrasse ist heute gesperrt – antippen für \"trotzdem platzieren\"";
         }
-        btn.onclick = () => {
+        // Belegte Tische sind markiert, aber NICHT gesperrt: im Betrieb gibt es genug Gründe, es
+        // trotzdem zu tun (Gäste gehen früher, jemand rückt zusammen, Tisch wird geteilt). Statt es zu
+        // verbieten, wird einmal nachgefragt und der Grund genannt.
+        btn.onclick = async () => {
           const jetzt = new Set(r.tableIds || []);
-          if (jetzt.has(t.id)) jetzt.delete(t.id);
-          else jetzt.add(t.id);
+          if (jetzt.has(t.id)) {
+            jetzt.delete(t.id);
+          } else {
+            if (gesperrt && !(await trotzdemPlatzieren(t, konflikte, terrasseZu && t.area === "draussen"))) return;
+            jetzt.add(t.id);
+          }
           store.updateReservation(r.id, { tableIds: [...jetzt] });
           rerender();
         };
@@ -553,7 +783,7 @@ function renderReservations() {
     };
 
     const name = mk("text", { placeholder: "Name des Gastes" });
-    const zeit = zeitAuswahl("19:00");
+    const zeit = zeitAuswahl("10:00");
     const personen = personenFeld(2);
     const telefon = mk("tel", { placeholder: "optional" });
     const notiz = mk("text", { placeholder: "z.B. Kinderstuhl, Geburtstag" });

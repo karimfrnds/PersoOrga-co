@@ -651,3 +651,31 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   cursor: pointer; font-family: inherit; }
 .zaehler-btn:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
 .zaehler-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---- Visueller Tischplan ---- */
+.plan-wrap { display: flex; flex-direction: column; gap: 6px; }
+.plan-titel { font-size: 15px; margin-top: 6px; }
+.plan-flaeche { position: relative; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); overflow: hidden; }
+.plan-gesperrt { opacity: 0.55; }
+.plan-zeitleiste { border: none; padding: 0; background: none; }
+
+.plan-tisch { position: absolute; width: 17%; min-width: 92px; padding: 8px 6px; border-radius: 12px;
+  border: 2px solid var(--border); background: var(--card-bg); color: var(--text);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-family: inherit; cursor: pointer; text-align: center; }
+.plan-name { font-weight: 700; font-size: 16px; }
+.plan-plaetze { font-size: 12px; opacity: 0.65; }
+.plan-info { font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.plan-zieht { z-index: 5; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+
+.plan-frei { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+.plan-reserviert { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+.plan-besetzt { border-color: #b3261e; background: #fdecea; color: #8c1d18; }
+@media (prefers-color-scheme: dark) {
+  .plan-besetzt { background: #3a1512; color: #f2b8b5; }
+}
+
+.plan-punkt { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border-width: 2px;
+  border-style: solid; vertical-align: -1px; margin-right: 3px; }
+.plan-aktionen { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }

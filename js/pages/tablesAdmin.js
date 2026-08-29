@@ -10,6 +10,8 @@
 import { store } from "../store.js";
 import { escapeHtml } from "../format.js";
 import { confirmDialog } from "../dialog.js";
+import { buildTischplan } from "./tableplan.js";
+import { todayStr } from "../format.js";
 
 function renderTablesAdmin() {
   const container = document.createElement("div");
@@ -29,6 +31,7 @@ function renderTablesAdmin() {
       zusammengeschoben werden können – daraus schlägt das System bei größeren Gruppen passende
       Kombinationen vor.</p>`;
     frag.appendChild(buildNeu());
+    frag.appendChild(buildAnordnen());
     frag.appendChild(buildListe());
     frag.appendChild(buildEinstellungen());
     return frag;
@@ -103,6 +106,26 @@ function renderTablesAdmin() {
       schnell.appendChild(btn8);
       card.appendChild(schnell);
     }
+    return card;
+  }
+
+  /** Den Plan einrichten: Tische an die Stelle ziehen, an der sie im Raum wirklich stehen.
+   * Bewusst hier im Admin und nicht auf der Reservierungs-Seite – im Betrieb soll niemand aus Versehen
+   * den halben Plan verschieben. */
+  function buildAnordnen() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>Plan anordnen</h2>
+      <p class="muted small">Zieh die Tische dorthin, wo sie im Raum stehen. Diese Anordnung sehen alle
+      später unter Reservierungen → Tischplan. Die Farben zeigen dort die Belegung – hier geht es nur ums
+      Anordnen.</p>`;
+    if (store.getTables().length === 0) {
+      card.innerHTML += `<p class="muted small">Erst Tische anlegen.</p>`;
+      return card;
+    }
+    // Neu aufbauen nach dem Ziehen wäre störend (der Finger ist noch unten) – die Position wird beim
+    // Loslassen gespeichert, die Ansicht bleibt wie sie ist.
+    card.appendChild(buildTischplan({ datum: todayStr(), zeit: "03:00", verschiebbar: true }));
     return card;
   }
 

@@ -1050,6 +1050,19 @@ export const store = {
     persist();
     return r;
   },
+  /** Laufkundschaft: jemand steht da und wird gesetzt. Kein Name, keine Telefonnummer, keine Rückfrage –
+   * es zählt nur, dass der Tisch ab jetzt besetzt ist. Gilt sofort als angekommen, denn die Gäste sind ja da. */
+  addWalkIn({ date, time, guests, tableIds = [] }) {
+    const r = this.addReservation({ date, time, name: "Laufkundschaft", guests, area: "innen", source: "walkin", tableIds });
+    if (!r) return null;
+    r.status = "da";
+    r.arrivedAt = new Date().toISOString();
+    // Der Bereich ergibt sich aus dem Tisch, an dem sie sitzen – nicht aus einem Wunsch, den niemand geäußert hat.
+    const ersterTisch = tableIds.map((id) => this.getTable(id)).find(Boolean);
+    if (ersterTisch) r.area = ersterTisch.area;
+    persist();
+    return r;
+  },
   updateReservation(id, patch) {
     const r = data.reservations.find((x) => x.id === id);
     if (!r) return null;
@@ -1119,6 +1132,43 @@ export const store = {
       return startA < startB + dauer && startB < endeA;
     });
   },
+  /** Position eines Tisches im Plan, in Prozent der Planfläche (0–100). Prozent statt Pixel, damit der
+   * Plan auf iPad und Laptop gleich aussieht. */
+  setTablePosition(id, x, y) {
+    const t = data.tables.find((x2) => x2.id === id);
+    if (!t) return null;
+    t.x = Math.min(96, Math.max(0, Number(x) || 0));
+    t.y = Math.min(94, Math.max(0, Number(y) || 0));
+    persist();
+    return t;
+  },
+
+  /** Wie ist es um einen Tisch zu einer bestimmten Uhrzeit bestellt?
+   *
+   * belegt   = eine Reservierung läuft gerade auf diesem Tisch
+   * naechste = die nächste, die später an dem Tag noch kommt
+   *
+   * Beides zusammen beantwortet die Frage, die im Service wirklich gestellt wird: "Kann ich da jemanden
+   * hinsetzen, und wenn ja, bis wann?"
+   */
+  getTableOccupancy(tableId, date, time) {
+    const dauer = Number(data.settings.reservation?.durationMinutes) || 120;
+    const minuten = (t) => {
+      const [h, m] = String(t || "").split(":").map(Number);
+      return (Number(h) || 0) * 60 + (Number(m) || 0);
+    };
+    const jetzt = minuten(time);
+    const amTisch = data.reservations
+      .filter((r) => r.date === date && r.tableIds?.includes(tableId) && !["storniert", "noshow"].includes(r.status))
+      .sort((a, b) => (a.time < b.time ? -1 : 1));
+
+    // "weg" heißt: Gäste sind gegangen, der Tisch ist wieder frei – auch wenn das Zeitfenster noch läuft.
+    const belegt =
+      amTisch.find((r) => r.status !== "weg" && minuten(r.time) <= jetzt && jetzt < minuten(r.time) + dauer) || null;
+    const naechste = amTisch.find((r) => r.status !== "weg" && minuten(r.time) > jetzt) || null;
+    return { belegt, naechste, alle: amTisch };
+  },
+
   /** Stehen diese Tische so, dass man sie zu EINER Tafel zusammenschieben kann?
    *
    * Es reicht nicht, dass jeder Tisch irgendeinen Nachbarn in der Auswahl hat – die ganze Auswahl muss

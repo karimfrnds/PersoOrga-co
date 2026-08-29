@@ -485,7 +485,13 @@ function freieZeiten(state, cfg, date, guests, area, jetztISO) {
     if (m < frueheste) continue;
     if (istFrei(state, cfg, date, zeitAusMinuten(m), guests, area)) zeiten.push(zeitAusMinuten(m));
   }
-  return { zeiten, grund: zeiten.length === 0 ? "ausgebucht" : null };
+  if (zeiten.length > 0) return { zeiten, grund: null };
+
+  // "Ausgebucht" waere hier oft falsch: am Abend liegt schlicht keine Uhrzeit mehr vor dem Feierabend.
+  // Fuer den Gast ist das ein wichtiger Unterschied – sonst denkt er, das Cafe sei voll, dabei macht es
+  // gleich zu.
+  if (frueheste > bis) return { zeiten: [], grund: "heute_vorbei" };
+  return { zeiten: [], grund: "ausgebucht" };
 }
 
 /** Kurze, am Telefon gut vorlesbare Nummer – ohne Zeichen, die man verwechseln kann (0/O, 1/I). */
@@ -670,6 +676,7 @@ let daten = { date: heute, guests: 2, area: "egal", time: "" };
 const GRUND_TEXT = {
   ruhetag: "An diesem Tag haben wir geschlossen.",
   ausgebucht: "Für diesen Tag ist online leider nichts mehr frei. Ruft uns gerne an – manchmal geht doch noch etwas.",
+  heute_vorbei: "Für heute nehmen wir online keine Reservierungen mehr an. Ruft uns gerne an, oder wählt einen anderen Tag.",
   zu_gross: "Für so viele Personen sprechen wir das lieber persönlich ab. Bitte ruft uns an.",
   zu_weit: "So weit im Voraus nehmen wir online noch keine Reservierungen an.",
   vergangen: "Dieser Tag liegt in der Vergangenheit.",

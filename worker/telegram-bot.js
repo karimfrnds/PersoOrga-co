@@ -619,61 +619,84 @@ async function handleBookingPage(env) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${escapeHtmlWorker(name)}</title>
 <style>
-  :root { --gruen:#1f6f54; --gruen-d:#16543f; --hell:#e7f4ee; --rand:#e2e4e8; --text:#1c1f23; --grau:#6b7280; }
+  :root { --gruen:#1f6f54; --gruen-d:#16543f; --hell:#e7f4ee; --rand:#e2e4e8; --text:#1c1f23; --grau:#6b7280; --feld:#fff; }
   @media (prefers-color-scheme: dark) {
-    :root { --hell:#133326; --rand:#33363c; --text:#e9eaec; --grau:#9aa0a8; --gruen:#3fa585; --gruen-d:#2c8069; }
+    :root { --hell:#133326; --rand:#33363c; --text:#e9eaec; --grau:#9aa0a8; --gruen:#3fa585; --gruen-d:#2c8069; --feld:#1f2226; }
     body { background:#16181c; }
   }
   * { box-sizing:border-box; }
-  body { margin:0; padding:16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  body { margin:0; padding:14px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
          color:var(--text); font-size:16px; line-height:1.45; }
-  h1 { font-size:22px; margin:0 0 4px; }
-  .hint { color:var(--grau); font-size:14px; margin:0 0 16px; }
-  label { display:block; margin-bottom:12px; }
-  label > span { display:block; font-size:14px; font-weight:600; margin-bottom:4px; }
-  input, select, textarea { width:100%; padding:11px 12px; font-size:16px; font-family:inherit;
-    border:1px solid var(--rand); border-radius:10px; background:transparent; color:var(--text); }
-  textarea { resize:vertical; min-height:64px; }
-  .reihe { display:flex; gap:10px; flex-wrap:wrap; }
-  .reihe > label { flex:1 1 130px; }
-  .zaehler { display:flex; gap:6px; }
-  .zaehler input { text-align:center; }
-  .zbtn { flex:0 0 46px; font-size:22px; font-weight:700; border:1px solid var(--rand); border-radius:10px;
-          background:transparent; color:var(--text); cursor:pointer; }
+  h1 { font-size:21px; margin:0 0 2px; }
+  .hint { color:var(--grau); font-size:14px; margin:0 0 14px; }
+  label { display:block; margin-bottom:10px; }
+  label > span.titel { display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--grau);
+    text-transform:uppercase; letter-spacing:.4px; }
+  input, select, textarea { width:100%; padding:12px; font-size:16px; font-family:inherit;
+    border:1px solid var(--rand); border-radius:10px; background:var(--feld); color:var(--text); }
+  textarea { resize:vertical; min-height:58px; }
+
+  /* Auf dem Handy steht jedes Feld fuer sich. Nebeneinander waren sie so schmal, dass Datum und
+     Personenzahl abgeschnitten wurden. Ab Tablet-Breite duerfen sie sich eine Zeile teilen. */
+  .reihe { display:grid; grid-template-columns:1fr; gap:10px; }
+  @media (min-width:560px) { .reihe { grid-template-columns:1fr 1fr 1fr; } }
+
+  .zaehler { display:flex; gap:8px; }
+  .zaehler input { text-align:center; font-weight:700; }
+  .zbtn { flex:0 0 52px; font-size:24px; font-weight:700; border:1px solid var(--rand); border-radius:10px;
+          background:var(--feld); color:var(--text); cursor:pointer; }
   .zbtn:disabled { opacity:.35; cursor:not-allowed; }
-  .zeiten { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 12px; }
-  .zeit { padding:10px 14px; border:2px solid var(--rand); border-radius:10px; background:transparent;
-          color:var(--text); font-size:16px; font-family:inherit; cursor:pointer; }
-  .zeit[aria-pressed="true"] { border-color:var(--gruen); background:var(--hell); color:var(--gruen-d); font-weight:700; }
+
+  /* Tageszeiten statt einer Wand aus 50 Knoepfen. */
+  .abschnitte { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .abschnitt { flex:1 1 0; min-width:74px; padding:9px 4px; border:1px solid var(--rand); border-radius:10px;
+    background:var(--feld); color:var(--text); font:inherit; font-size:14px; cursor:pointer; line-height:1.2; }
+  .abschnitt b { display:block; font-size:14px; }
+  .abschnitt small { color:var(--grau); font-size:11px; }
+  .abschnitt[aria-pressed="true"] { border-color:var(--gruen); background:var(--hell); color:var(--gruen-d); }
+  .abschnitt[aria-pressed="true"] small { color:var(--gruen-d); }
+
+  .zeiten { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  @media (min-width:560px) { .zeiten { grid-template-columns:repeat(6,1fr); } }
+  .zeit { padding:11px 2px; border:1px solid var(--rand); border-radius:10px; background:var(--feld);
+          color:var(--text); font-size:15px; font-family:inherit; cursor:pointer; }
+  .zeit[aria-pressed="true"] { border-color:var(--gruen); background:var(--gruen); color:#fff; font-weight:700; }
+
   button.senden { width:100%; padding:15px; font-size:17px; font-weight:700; border:none; border-radius:12px;
-                  background:var(--gruen); color:#fff; cursor:pointer; font-family:inherit; }
-  button.senden:disabled { opacity:.5; cursor:not-allowed; }
-  .melde { padding:12px 14px; border-radius:10px; background:var(--hell); margin:12px 0; font-size:15px; }
+                  background:var(--gruen); color:#fff; cursor:pointer; font-family:inherit; margin-top:4px; }
+  button.senden:disabled { opacity:.45; cursor:not-allowed; }
+  .melde { padding:11px 13px; border-radius:10px; background:var(--hell); margin:10px 0; font-size:15px; }
   .fehler { background:#fdf0dd; color:#8a5a00; }
   @media (prefers-color-scheme: dark) { .fehler { background:#3a2a12; color:#e2952f; } }
-  .datenschutz { color:var(--grau); font-size:12px; margin-top:14px; }
-  .erfolg { text-align:center; padding:24px 8px; }
-  .code { font-size:30px; font-weight:800; letter-spacing:3px; margin:10px 0; color:var(--gruen-d); }
+  .datenschutz { color:var(--grau); font-size:12px; margin-top:12px; }
+  .erfolg { text-align:center; padding:20px 8px; }
+  .code { font-size:30px; font-weight:800; letter-spacing:3px; margin:8px 0; color:var(--gruen-d); }
   .versteckt { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  .zusammenfassung { background:var(--hell); color:var(--gruen-d); border-radius:10px; padding:10px 12px;
+    font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:10px;
+    justify-content:space-between; }
+  .aendern { flex:0 0 auto; background:none; border:none; color:var(--gruen-d); font:inherit; font-size:14px;
+    font-weight:600; text-decoration:underline; cursor:pointer; padding:2px 0; }
 </style></head>
 <body>
 <div id="app"></div>
 <script>
+var MAX_GUESTS = ${cfg.maxGuestsOnline};
+var MAX_TAGE = ${cfg.maxDaysAhead};
 // Die eigene Adresse als Grundlage fuer alle Anfragen. Eine RELATIVE Adresse wie "slots" wuerde von
-// /booking aus bei /slots landen (der letzte Teil des Pfades gilt als Dateiname, nicht als Ordner) –
-// und damit auf einem Endpunkt, den es nicht gibt.
-// BEWUSST OHNE regulaeren Ausdruck: dieser Code steht in einem Text-Baustein des Workers, und der
-// verschluckt einzelne Backslashes. Aus /\/+$/ wuerde //+$/ – fuer JavaScript ein Kommentar, und die
-// ganze Seite bliebe leer.
-const BASIS = location.pathname.endsWith("/") ? location.pathname.slice(0, -1) : location.pathname;
-const MAX_GUESTS = ${cfg.maxGuestsOnline};
-const MAX_TAGE = ${cfg.maxDaysAhead};
-const app = document.getElementById("app");
-const heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
-const spaetestens = new Date(Date.now() + MAX_TAGE * 86400000).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
-let daten = { date: heute, guests: 2, area: "egal", time: "" };
+// /booking aus bei /slots landen (der letzte Teil des Pfades gilt als Dateiname, nicht als Ordner).
+// Bewusst ohne regulaeren Ausdruck: dieser Code steht in einem Text-Baustein des Workers, und der
+// verschluckt einzelne Backslashes.
+var BASIS = location.pathname.endsWith("/") ? location.pathname.slice(0, -1) : location.pathname;
 
-const GRUND_TEXT = {
+var app = document.getElementById("app");
+var heute = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+var spaetestens = new Date(Date.now() + MAX_TAGE * 86400000).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+var daten = { date: heute, guests: 2, area: "egal", time: "" };
+var freieZeiten = [];
+var abschnitt = null;
+
+var GRUND_TEXT = {
   ruhetag: "An diesem Tag haben wir geschlossen.",
   ausgebucht: "Für diesen Tag ist online leider nichts mehr frei. Ruft uns gerne an – manchmal geht doch noch etwas.",
   heute_vorbei: "Für heute nehmen wir online keine Reservierungen mehr an. Ruft uns gerne an, oder wählt einen anderen Tag.",
@@ -681,133 +704,209 @@ const GRUND_TEXT = {
   zu_weit: "So weit im Voraus nehmen wir online noch keine Reservierungen an.",
   vergangen: "Dieser Tag liegt in der Vergangenheit.",
   aus: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an.",
-  nicht_eingerichtet: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an.",
+  nicht_eingerichtet: "Online-Reservierung ist gerade nicht möglich. Bitte ruft uns an."
 };
 
-function el(html) { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; }
+// Uhrzeiten nach Tageszeit gruppieren. Eine flache Liste waere auf dem Handy ein Block aus ueber
+// fuenfzig Knoepfen - man scrollt ewig und findet nichts. Gezeigt wird immer nur ein Abschnitt.
+var ABSCHNITTE = [
+  { id: "vormittag", label: "Vormittag", bis: 12 },
+  { id: "mittag", label: "Mittag", bis: 15 },
+  { id: "nachmittag", label: "Nachmittag", bis: 18 },
+  { id: "abend", label: "Abend", bis: 24 }
+];
+function abschnittVon(zeit) {
+  var h = Number(zeit.slice(0, 2));
+  for (var i = 0; i < ABSCHNITTE.length; i++) if (h < ABSCHNITTE[i].bis) return ABSCHNITTE[i].id;
+  return "abend";
+}
+
+function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; }
+function $(id) { return document.getElementById(id); }
 
 function zeichne() {
   app.innerHTML = "";
   app.appendChild(el('<h1>Tisch reservieren</h1>'));
   app.appendChild(el('<p class="hint">Wir melden uns nur, falls es ein Problem gibt.</p>'));
 
-  const reihe = el('<div class="reihe"></div>');
+  var reihe = el('<div class="reihe"></div>');
 
-  const datum = el('<label><span>Tag</span><input type="date" id="f-date"></label>');
-  const dInput = datum.querySelector("input");
+  var datum = el('<label><span class="titel">Tag</span><input type="date" id="f-date"></label>');
+  var dInput = datum.querySelector("input");
   dInput.min = heute; dInput.max = spaetestens; dInput.value = daten.date;
-  dInput.onchange = () => { daten.date = dInput.value; daten.time = ""; ladeZeiten(); };
+  dInput.onchange = function () { daten.date = dInput.value; daten.time = ""; abschnitt = null; ladeZeiten(); };
   reihe.appendChild(datum);
 
-  const pers = el('<label><span>Personen</span><div class="zaehler"><button type="button" class="zbtn" id="f-minus">−</button><input type="number" id="f-guests" min="1" inputmode="numeric"><button type="button" class="zbtn" id="f-plus">+</button></div></label>');
-  const gInput = pers.querySelector("#f-guests");
+  var pers = el('<label><span class="titel">Personen</span><div class="zaehler"><button type="button" class="zbtn" id="f-minus">−</button><input type="number" id="f-guests" min="1" inputmode="numeric"><button type="button" class="zbtn" id="f-plus">+</button></div></label>');
+  var gInput = pers.querySelector("#f-guests");
   gInput.value = daten.guests;
   gInput.max = MAX_GUESTS;
-  const setG = (n) => { daten.guests = Math.min(MAX_GUESTS, Math.max(1, n)); gInput.value = daten.guests; daten.time = ""; ladeZeiten(); };
-  pers.querySelector("#f-minus").onclick = () => setG(daten.guests - 1);
-  pers.querySelector("#f-plus").onclick = () => setG(daten.guests + 1);
-  gInput.onchange = () => setG(Number(gInput.value) || 1);
+  function setG(n) {
+    daten.guests = Math.min(MAX_GUESTS, Math.max(1, n));
+    gInput.value = daten.guests;
+    $("f-minus").disabled = daten.guests <= 1;
+    $("f-plus").disabled = daten.guests >= MAX_GUESTS;
+    daten.time = ""; abschnitt = null; ladeZeiten();
+  }
+  pers.querySelector("#f-minus").onclick = function () { setG(daten.guests - 1); };
+  pers.querySelector("#f-plus").onclick = function () { setG(daten.guests + 1); };
+  gInput.onchange = function () { setG(Number(gInput.value) || 1); };
   reihe.appendChild(pers);
 
-  const bereich = el('<label><span>Wo möchtet ihr sitzen?</span><select id="f-area"><option value="egal">Egal</option><option value="innen">Drinnen</option><option value="draussen">Draußen</option></select></label>');
-  const aSel = bereich.querySelector("select");
+  var bereich = el('<label><span class="titel">Wo</span><select id="f-area"><option value="egal">Egal</option><option value="innen">Drinnen</option><option value="draussen">Draußen</option></select></label>');
+  var aSel = bereich.querySelector("select");
   aSel.value = daten.area;
-  aSel.onchange = () => { daten.area = aSel.value; daten.time = ""; ladeZeiten(); };
+  aSel.onchange = function () { daten.area = aSel.value; daten.time = ""; abschnitt = null; ladeZeiten(); };
   reihe.appendChild(bereich);
 
   app.appendChild(reihe);
-  app.appendChild(el('<span style="display:block;font-size:14px;font-weight:600;margin-bottom:4px">Uhrzeit</span>'));
-  app.appendChild(el('<div class="zeiten" id="f-zeiten"><span class="hint">Lade freie Zeiten…</span></div>'));
+  app.appendChild(el('<span class="titel" id="f-zeittitel" style="display:block;margin:14px 0 6px">Uhrzeit</span>'));
+  app.appendChild(el('<div id="f-zeitbereich"><p class="hint">Lade freie Zeiten…</p></div>'));
+  app.appendChild(el('<div id="f-rest"></div>'));
 
-  const rest = el('<div id="f-rest"></div>');
-  rest.appendChild(el('<label><span>Name</span><input type="text" id="f-name" autocomplete="name" maxlength="80"></label>'));
-  rest.appendChild(el('<label><span>Telefon</span><input type="tel" id="f-phone" autocomplete="tel" maxlength="40"></label>'));
-  rest.appendChild(el('<label><span>Anmerkung (optional)</span><textarea id="f-note" maxlength="300" placeholder="z.B. Kinderstuhl, Geburtstag, Rollstuhl"></textarea></label>'));
+  $("f-minus").disabled = daten.guests <= 1;
+  $("f-plus").disabled = daten.guests >= MAX_GUESTS;
+  ladeZeiten();
+}
+
+function zeichneZeiten() {
+  var box = $("f-zeitbereich");
+  box.innerHTML = "";
+  if (freieZeiten.length === 0) return;
+
+  // Nur Abschnitte anbieten, in denen wirklich etwas frei ist – leere Knoepfe waeren nur Ballast.
+  var gruppen = [];
+  for (var i = 0; i < ABSCHNITTE.length; i++) {
+    var a = ABSCHNITTE[i];
+    var zeiten = freieZeiten.filter(function (z) { return abschnittVon(z) === a.id; });
+    if (zeiten.length > 0) gruppen.push({ id: a.id, label: a.label, zeiten: zeiten });
+  }
+  if (!abschnitt || !gruppen.some(function (g) { return g.id === abschnitt; })) abschnitt = gruppen[0].id;
+
+  if (gruppen.length > 1) {
+    var leiste = el('<div class="abschnitte"></div>');
+    gruppen.forEach(function (g) {
+      var b = el('<button type="button" class="abschnitt"><b>' + g.label + '</b><small>' + g.zeiten.length + ' frei</small></button>');
+      b.setAttribute("aria-pressed", abschnitt === g.id ? "true" : "false");
+      b.onclick = function () { abschnitt = g.id; zeichneZeiten(); };
+      leiste.appendChild(b);
+    });
+    box.appendChild(leiste);
+  }
+
+  var raster = el('<div class="zeiten"></div>');
+  var aktuelle = gruppen.filter(function (g) { return g.id === abschnitt; })[0];
+  aktuelle.zeiten.forEach(function (z) {
+    var b = el('<button type="button" class="zeit">' + z + '</button>');
+    b.setAttribute("aria-pressed", daten.time === z ? "true" : "false");
+    b.onclick = function () { daten.time = z; zeichneZeiten(); zeichneRest(); };
+    raster.appendChild(b);
+  });
+  box.appendChild(raster);
+}
+
+// Name und Telefon erscheinen erst, wenn eine Uhrzeit gewaehlt ist. Vorher waeren sie nur Fuellmasse,
+// und die Seite passte auf dem Handy nicht mehr auf einen Bildschirm.
+function zeichneRest() {
+  var rest = $("f-rest");
+  rest.innerHTML = "";
+
+  // Schritt 1 (Tag, Personen, Uhrzeit) klappt zusammen, sobald eine Zeit steht. Sonst stuenden die
+  // Kontaktfelder unterhalb von fuenfzig Knoepfen und man muesste auf dem Handy im Rahmen scrollen.
+  var auswahlSichtbar = !daten.time;
+  var reihe = document.querySelector(".reihe");
+  if (reihe) reihe.style.display = auswahlSichtbar ? "" : "none";
+  var zeitTitel = $("f-zeittitel");
+  if (zeitTitel) zeitTitel.style.display = auswahlSichtbar ? "" : "none";
+  var zeitbereich = $("f-zeitbereich");
+  if (zeitbereich) zeitbereich.style.display = auswahlSichtbar ? "" : "none";
+  if (!daten.time) return;
+
+  var datumText = new Date(daten.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+  var kopf = el('<div class="zusammenfassung"><span>' + datumText + ', ' + daten.time + ' Uhr · ' + daten.guests + (daten.guests === 1 ? ' Person' : ' Personen') + '</span><button type="button" class="aendern">Ändern</button></div>');
+  kopf.querySelector(".aendern").onclick = function () {
+    daten.time = "";
+    zeichneZeiten();
+    zeichneRest();
+  };
+  rest.appendChild(kopf);
+  rest.appendChild(el('<label><span class="titel">Name</span><input type="text" id="f-name" autocomplete="name" maxlength="80"></label>'));
+  rest.appendChild(el('<label><span class="titel">Telefon</span><input type="tel" id="f-phone" autocomplete="tel" maxlength="40"></label>'));
+  rest.appendChild(el('<label><span class="titel">Anmerkung (optional)</span><textarea id="f-note" maxlength="300" placeholder="z.B. Kinderstuhl, Geburtstag"></textarea></label>'));
   rest.appendChild(el('<label class="versteckt"><span>Website</span><input type="text" id="f-website" tabindex="-1" autocomplete="off"></label>'));
   rest.appendChild(el('<div id="f-melde"></div>'));
   rest.appendChild(el('<button class="senden" id="f-senden" disabled>Reservierung anfragen</button>'));
   rest.appendChild(el('<p class="datenschutz">Wir speichern Name, Telefonnummer und eure Angaben nur, um die Reservierung zu bearbeiten, und löschen sie danach wieder. Weitergegeben wird nichts.</p>'));
-  app.appendChild(rest);
-
-  document.getElementById("f-senden").onclick = senden;
-  ladeZeiten();
-}
-
-async function ladeZeiten() {
-  const box = document.getElementById("f-zeiten");
-  if (!box) return;
-  aktualisiereSendeKnopf();
-  box.innerHTML = '<span class="hint">Lade freie Zeiten…</span>';
-  try {
-    const res = await fetch(BASIS + "/slots?date=" + daten.date + "&guests=" + daten.guests + "&area=" + daten.area);
-    const d = await res.json();
-    box.innerHTML = "";
-    if (!d.zeiten || d.zeiten.length === 0) {
-      box.appendChild(el('<div class="melde fehler">' + (GRUND_TEXT[d.grund] || "Für diesen Tag ist leider nichts frei.") + '</div>'));
-    } else {
-      for (const z of d.zeiten) {
-        const b = el('<button type="button" class="zeit">' + z + '</button>');
-        b.setAttribute("aria-pressed", daten.time === z ? "true" : "false");
-        b.onclick = () => { daten.time = z; zeichneZeiten(d.zeiten); aktualisiereSendeKnopf(); };
-        box.appendChild(b);
-      }
-    }
-  } catch {
-    box.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
-  }
-  aktualisiereSendeKnopf();
-}
-
-function zeichneZeiten(zeiten) {
-  const box = document.getElementById("f-zeiten");
-  [...box.querySelectorAll(".zeit")].forEach((b) => b.setAttribute("aria-pressed", b.textContent === daten.time ? "true" : "false"));
+  $("f-senden").onclick = senden;
+  $("f-name").focus();
 }
 
 function aktualisiereSendeKnopf() {
-  const b = document.getElementById("f-senden");
+  var b = $("f-senden");
   if (!b) return;
-  const name = (document.getElementById("f-name")?.value || "").trim();
-  const phone = (document.getElementById("f-phone")?.value || "").trim();
+  var name = ($("f-name") && $("f-name").value || "").trim();
+  var phone = ($("f-phone") && $("f-phone").value || "").trim();
   b.disabled = !(daten.time && name && phone);
 }
 document.addEventListener("input", aktualisiereSendeKnopf);
 
-async function senden() {
-  const b = document.getElementById("f-senden");
-  const melde = document.getElementById("f-melde");
+function ladeZeiten() {
+  var box = $("f-zeitbereich");
+  if (!box) return;
+  $("f-rest").innerHTML = "";
+  box.innerHTML = '<p class="hint">Lade freie Zeiten…</p>';
+  fetch(BASIS + "/slots?date=" + daten.date + "&guests=" + daten.guests + "&area=" + daten.area)
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      freieZeiten = d.zeiten || [];
+      if (freieZeiten.length === 0) {
+        box.innerHTML = "";
+        box.appendChild(el('<div class="melde fehler">' + (GRUND_TEXT[d.grund] || "Für diesen Tag ist leider nichts frei.") + '</div>'));
+        return;
+      }
+      zeichneZeiten();
+      zeichneRest();
+    })
+    .catch(function () {
+      box.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
+    });
+}
+
+function senden() {
+  var b = $("f-senden");
+  var melde = $("f-melde");
   b.disabled = true;
   melde.innerHTML = '<div class="melde">Wird gesendet…</div>';
-  try {
-    const res = await fetch(BASIS, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: daten.date, time: daten.time, guests: daten.guests, area: daten.area,
-        name: document.getElementById("f-name").value,
-        phone: document.getElementById("f-phone").value,
-        note: document.getElementById("f-note").value,
-        website: document.getElementById("f-website").value,
-      }),
-    });
-    const d = await res.json();
-    if (!res.ok) {
-      melde.innerHTML = '<div class="melde fehler">' + (d.error || "Das hat leider nicht geklappt.") + '</div>';
+  fetch(BASIS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date: daten.date, time: daten.time, guests: daten.guests, area: daten.area,
+      name: $("f-name").value, phone: $("f-phone").value,
+      note: $("f-note").value, website: $("f-website").value
+    })
+  })
+    .then(function (res) { return res.json().then(function (d) { return { res: res, d: d }; }); })
+    .then(function (x) {
+      if (!x.res.ok) {
+        melde.innerHTML = '<div class="melde fehler">' + (x.d.error || "Das hat leider nicht geklappt.") + '</div>';
+        b.disabled = false;
+        if (x.res.status === 409) ladeZeiten();
+        return;
+      }
+      var datumText = new Date(daten.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+      app.innerHTML = "";
+      app.appendChild(el(
+        '<div class="erfolg"><h1>Danke!</h1>' +
+        '<p>Wir haben eure Reservierung für <b>' + datumText + ' um ' + daten.time + ' Uhr</b> (' + daten.guests + ' Personen) notiert.</p>' +
+        '<p class="hint">Eure Reservierungsnummer:</p><div class="code">' + x.d.code + '</div>' +
+        '<p class="hint">Am besten kurz notieren. Wir melden uns nur, falls es ein Problem gibt.</p></div>'
+      ));
+    })
+    .catch(function () {
+      melde.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
       b.disabled = false;
-      if (res.status === 409) ladeZeiten();
-      return;
-    }
-    const datumText = new Date(daten.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
-    app.innerHTML = "";
-    app.appendChild(el(
-      '<div class="erfolg"><h1>Danke!</h1>' +
-      '<p>Wir haben eure Reservierung für <b>' + datumText + ' um ' + daten.time + ' Uhr</b> (' + daten.guests + ' Personen) notiert.</p>' +
-      '<p class="hint">Eure Reservierungsnummer:</p><div class="code">' + d.code + '</div>' +
-      '<p class="hint">Am besten kurz notieren. Wir melden uns nur, falls es ein Problem gibt.</p></div>'
-    ));
-  } catch {
-    melde.innerHTML = '<div class="melde fehler">Keine Verbindung. Bitte später nochmal versuchen.</div>';
-    b.disabled = false;
-  }
+    });
 }
 
 zeichne();

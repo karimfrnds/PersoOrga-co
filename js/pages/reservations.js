@@ -182,7 +182,7 @@ function renderReservations() {
     card.className = "card res-daybar";
 
     const zurueck = document.createElement("button");
-    zurueck.className = "btn btn-secondary";
+    zurueck.className = "btn btn-secondary res-nav-btn";
     zurueck.textContent = "←";
     zurueck.onclick = () => {
       datum = addDaysISO(datum, -1);
@@ -197,7 +197,7 @@ function renderReservations() {
     label.innerHTML = `<b>${dateDe(datum)}</b><span class="muted">${zusatz}</span>`;
 
     const vor = document.createElement("button");
-    vor.className = "btn btn-secondary";
+    vor.className = "btn btn-secondary res-nav-btn";
     vor.textContent = "→";
     vor.onclick = () => {
       datum = addDaysISO(datum, 1);

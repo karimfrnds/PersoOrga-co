@@ -5,6 +5,7 @@
 // ============================================================================
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 import { markRestocked, recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
+import { bewerteKandidaten } from "../nameMatch.js";
 
 const STATUS = {
   leer: { label: "🔴 Leer", rank: 0 },
@@ -89,6 +90,7 @@ function renderStock(state, { onChanged }) {
       row.className = "task-row";
       row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(item.name)}</b> <span class="badge badge-gray">Artikel</span></span>
         <span class="muted small task-row-meta">Wird 1:1 abgezogen · Bestand jetzt ${item.currentAmount ?? 0} ${escapeHtml(item.unit || "")}</span></div>`;
+      row.appendChild(buildZuordnung(item, "artikel", status));
       const akt = document.createElement("div");
       akt.className = "employee-actions";
 
@@ -124,6 +126,7 @@ function renderStock(state, { onChanged }) {
         <span class="muted small task-row-meta">${
           ohneZutaten ? "⚠ Noch keine Zutaten – zieht bisher nichts vom Bestand ab" : `${rez.ingredients.length} Zutaten hinterlegt`
         }</span></div>`;
+      row.appendChild(buildZuordnung(rez, "rezept", status));
       const akt = document.createElement("div");
       akt.className = "employee-actions";
 
@@ -147,6 +150,68 @@ function renderStock(state, { onChanged }) {
 
     card.append(liste, status);
     return card;
+  }
+
+  /** "Gehört das zu einem Produkt, das es schon gibt?"
+   *
+   * Der eigentliche Grund für Doppelgänger: Auf dem METRO-Lieferschein heißt das Bier
+   * "Paulaner Hefe-Weissbier naturtrüb 0,5l 20er", im SumUp-Bericht "Paulaner Hefeweizen". Kein Name
+   * steckt im anderen, und Ähnlichkeit allein reicht nicht, um automatisch zu entscheiden – ein
+   * Fehlgriff würde stillschweigend vom falschen Bestand abbuchen.
+   *
+   * Deshalb schlägt das System hier die ähnlichsten vorhandenen Produkte vor. Ein Klick führt beide
+   * zusammen: der Doppelgänger verschwindet, sein Name bleibt als Zweitname gemerkt, und ab dem
+   * nächsten Bericht wird er sofort richtig zugeordnet.
+   */
+  function buildZuordnung(neu, art, status) {
+    const box = document.createElement("div");
+    const eigenerName = art === "rezept" ? neu.productName : neu.name;
+
+    // Alles, was es schon gibt – außer dem Neuling selbst.
+    const artikel = (state.stock || []).filter((s) => s.id !== neu.id && !s.needsReview);
+    const rezepte = (state.recipes || []).filter((r) => r.id !== neu.id && !r.needsReview);
+    const kandidaten = [
+      ...bewerteKandidaten(artikel, "name", eigenerName).map((k) => ({ ...k, art: "artikel" })),
+      ...bewerteKandidaten(rezepte, "productName", eigenerName).map((k) => ({ ...k, art: "rezept" })),
+    ]
+      .sort((a, b) => b.punkte - a.punkte)
+      .slice(0, 3);
+
+    if (kandidaten.length === 0) return box;
+
+    const titel = document.createElement("div");
+    titel.className = "muted small";
+    titel.innerHTML = `<b>Gehört das zu …?</b> Dann werden beide zusammengeführt und der Name künftig erkannt.`;
+    box.appendChild(titel);
+
+    const reihe = document.createElement("div");
+    reihe.className = "res-tische";
+    for (const k of kandidaten) {
+      const b2 = document.createElement("button");
+      b2.className = "res-vorschlag";
+      const zielName = k.art === "rezept" ? k.eintrag.productName : k.eintrag.name;
+      b2.innerHTML =
+        `<span class="res-tisch-name">${escapeHtml(zielName)}</span>` +
+        `<span class="muted small">${k.art === "rezept" ? "Rezept" : "Artikel"} · ${Math.round(k.punkte * 100)} % ähnlich</span>`;
+      b2.onclick = () =>
+        aktion(async () => {
+          // Verschiedene Arten lassen sich nicht verschmelzen – dann wird der Name nur als Zweitname
+          // gemerkt und der Doppelgänger gelöscht.
+          if (k.art === art) {
+            if (art === "rezept") await recipeAction({ kind: "merge", recipeId: neu.id, targetId: k.eintrag.id });
+            else await stockItemAction({ kind: "merge", itemId: neu.id, targetId: k.eintrag.id });
+          } else if (k.art === "rezept") {
+            await recipeAction({ kind: "alias", recipeId: k.eintrag.id, alias: eigenerName });
+            await stockItemAction({ kind: "delete", itemId: neu.id });
+          } else {
+            await stockItemAction({ kind: "alias", itemId: k.eintrag.id, alias: eigenerName });
+            await recipeAction({ kind: "delete", recipeId: neu.id });
+          }
+        }, status);
+      reihe.appendChild(b2);
+    }
+    box.appendChild(reihe);
+    return box;
   }
 
   /** Änderung einreichen und Ansicht neu laden. Fehler landen als Hinweis in der jeweiligen Karte. */

@@ -1858,7 +1858,8 @@ async function handleAdminStockItem(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "setAmount", "reviewed"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind === "merge" && !String(body?.targetId || "").trim()) return jsonResponse({ error: "Ziel-Artikel fehlt." }, 400);
   if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
   if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
@@ -1871,10 +1872,64 @@ async function handleAdminStockItem(request, env) {
     unit: body?.unit === undefined ? undefined : String(body.unit).trim(),
     lowThreshold: body?.lowThreshold === undefined ? undefined : Number(body.lowThreshold) || 0,
     currentAmount: body?.currentAmount === undefined ? undefined : Number(body.currentAmount) || 0,
+    targetId: String(body?.targetId || "") || null,
+    alias: String(body?.alias || "").trim(),
   };
   const state = await getState(env);
-  await patchState(env, { stockChanges: [...(state.stockChanges || []), eintrag] });
+  // Die Änderung SOFORT auch auf die eigene Kopie anwenden. Ohne das reicht der Laptop nur einen Wunsch
+  // ein, und die Liste zeigt bis zum nächsten iPad-Abgleich unverändert den alten Stand – ein gelöschter
+  // Artikel stünde weiter da, als wäre nichts passiert. Der iPad bleibt trotzdem maßgeblich und
+  // korrigiert beim nächsten Abgleich.
+  await patchState(env, {
+    stockChanges: [...(state.stockChanges || []), eintrag].slice(-200),
+    stock: stockVorschau(state.stock || [], eintrag),
+  });
   return jsonResponse({ ok: true });
+}
+
+/** Bildet eine Artikel-Änderung auf der Worker-Kopie nach, damit sie am Laptop sofort sichtbar ist. */
+function stockVorschau(stock, e) {
+  if (e.kind === "delete") return stock.filter((s) => s.id !== e.itemId);
+  if (e.kind === "merge") {
+    // Der Doppelgänger verschwindet, sein Name bleibt als Zweitname am richtigen Artikel.
+    const von = stock.find((s) => s.id === e.itemId);
+    return stock
+      .filter((s) => s.id !== e.itemId)
+      .map((s) => (s.id === e.targetId && von ? { ...s, aliases: [...(s.aliases || []), von.name] } : s));
+  }
+  if (e.kind === "alias") {
+    return stock.map((s) => (s.id === e.itemId ? { ...s, aliases: [...(s.aliases || []), e.alias] } : s));
+  }
+  if (e.kind === "create") {
+    const unit = e.unit || "";
+    return [
+      ...stock,
+      {
+        id: "vorlaeufig-" + e.id,
+        name: e.name,
+        status: "ok",
+        unit,
+        currentAmount: unit ? Number(e.currentAmount) || 0 : null,
+        lowThreshold: unit ? Number(e.lowThreshold) || 0 : null,
+        needsReview: false,
+      },
+    ];
+  }
+  return stock.map((s) => {
+    if (s.id !== e.itemId) return s;
+    if (e.kind === "setAmount") return { ...s, currentAmount: Number(e.currentAmount) || 0 };
+    if (e.kind === "reviewed") return { ...s, needsReview: false };
+    if (e.kind === "update") {
+      return {
+        ...s,
+        name: e.name || s.name,
+        unit: e.unit === undefined ? s.unit : e.unit,
+        lowThreshold: e.lowThreshold === undefined ? s.lowThreshold : e.lowThreshold,
+        needsReview: false,
+      };
+    }
+    return s;
+  });
 }
 
 /** Rezepte anlegen/bearbeiten/löschen – vom Laptop aus, ebenfalls über eine Warteschlange. */
@@ -1889,9 +1944,9 @@ async function handleAdminRecipe(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "reviewed"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "reviewed", "merge", "alias"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if (kind !== "create" && !String(body?.recipeId || "").trim()) return jsonResponse({ error: "Rezept fehlt." }, 400);
-  if (!["delete", "reviewed"].includes(kind) && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
+  if (!["delete", "reviewed", "merge", "alias"].includes(kind) && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
 
   const zutaten = (Array.isArray(body?.ingredients) ? body.ingredients : [])
     .map((z) => ({ stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }))
@@ -1903,10 +1958,39 @@ async function handleAdminRecipe(request, env) {
     recipeId: String(body?.recipeId || "") || null,
     productName: String(body?.productName || "").trim(),
     ingredients: zutaten,
+    targetId: String(body?.targetId || "") || null,
+    alias: String(body?.alias || "").trim(),
   };
   const state = await getState(env);
-  await patchState(env, { recipeChanges: [...(state.recipeChanges || []), eintrag] });
+  // Wie bei den Artikeln: sofort auf die eigene Kopie anwenden, sonst wirkt die Änderung folgenlos.
+  await patchState(env, {
+    recipeChanges: [...(state.recipeChanges || []), eintrag].slice(-200),
+    recipes: rezeptVorschau(state.recipes || [], eintrag),
+  });
   return jsonResponse({ ok: true });
+}
+
+/** Bildet eine Rezept-Änderung auf der Worker-Kopie nach (siehe stockVorschau). */
+function rezeptVorschau(recipes, e) {
+  if (e.kind === "delete") return recipes.filter((r) => r.id !== e.recipeId);
+  if (e.kind === "merge") {
+    const von = recipes.find((r) => r.id === e.recipeId);
+    return recipes
+      .filter((r) => r.id !== e.recipeId)
+      .map((r) => (r.id === e.targetId && von ? { ...r, aliases: [...(r.aliases || []), von.productName] } : r));
+  }
+  if (e.kind === "alias") {
+    return recipes.map((r) => (r.id === e.recipeId ? { ...r, aliases: [...(r.aliases || []), e.alias] } : r));
+  }
+  if (e.kind === "create") {
+    return [...recipes, { id: "vorlaeufig-" + e.id, productName: e.productName, ingredients: e.ingredients || [], needsReview: false }];
+  }
+  return recipes.map((r) => {
+    if (r.id !== e.recipeId) return r;
+    if (e.kind === "reviewed") return { ...r, needsReview: false };
+    if (e.kind === "update") return { ...r, productName: e.productName || r.productName, ingredients: e.ingredients || [], needsReview: false };
+    return r;
+  });
 }
 
 /** Mitarbeiter anlegen/bearbeiten/deaktivieren – vom Laptop aus. Der PIN ist bewusst NICHT dabei: der wird

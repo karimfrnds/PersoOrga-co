@@ -183,46 +183,68 @@ function showMessages(nachrichten) {
   };
 }
 
-/** Postfach: alle Nachrichten vom Chef, auch bereits gelesene – zum Nachschlagen. */
+/** Postfach: alle Nachrichten vom Chef, auch bereits gelesene.
+ *
+ * Standardmäßig ZUGEKLAPPT. Vorher nahm es oben auf dem Handy den halben Bildschirm ein, obwohl man
+ * meistens wegen der Schichten hier ist. Gibt es Ungelesenes, klappt es von selbst auf – dann ist es ja
+ * der Grund, warum man hinschaut. */
 function buildPostfach() {
   const card = document.createElement("section");
   card.className = "card";
   const nachrichten = me.postfach || [];
   const ungelesen = nachrichten.filter((n) => !n.gelesen).length;
-  card.innerHTML = `<h2>📬 Postfach${ungelesen > 0 ? ` <span class="badge badge-orange">${ungelesen} neu</span>` : ""}</h2>`;
+
+  const kopf = document.createElement("button");
+  kopf.className = "klapp-kopf";
+  const inhalt = document.createElement("div");
+  let offen = ungelesen > 0;
+
+  const zeichneKopf = () => {
+    kopf.innerHTML =
+      `<span><b>📬 Postfach</b>${
+        ungelesen > 0 ? ` <span class="badge badge-orange">${ungelesen} neu</span>` : ` <span class="muted small">${nachrichten.length}</span>`
+      }</span><span class="klapp-pfeil">${offen ? "▾" : "▸"}</span>`;
+    kopf.setAttribute("aria-expanded", offen ? "true" : "false");
+    inhalt.style.display = offen ? "block" : "none";
+  };
+  kopf.onclick = () => {
+    offen = !offen;
+    zeichneKopf();
+  };
 
   if (nachrichten.length === 0) {
     const p = document.createElement("p");
     p.className = "muted small";
     p.textContent = "Noch keine Nachrichten.";
-    card.appendChild(p);
-    return card;
+    inhalt.appendChild(p);
+  } else {
+    const zeige = (anzahl) => {
+      inhalt.innerHTML = "";
+      const list = document.createElement("div");
+      list.className = "task-list";
+      for (const n of nachrichten.slice(0, anzahl)) {
+        const row = document.createElement("div");
+        row.className = "task-row";
+        const datum = new Date(n.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+        row.innerHTML = `<div class="task-row-text"><span>${escapeHtml(n.text).replace(/\n/g, "<br/>")}</span><span class="muted small task-row-meta">${datum}${
+          n.gelesen ? "" : " · neu"
+        }</span></div>`;
+        list.appendChild(row);
+      }
+      inhalt.appendChild(list);
+      if (nachrichten.length > anzahl) {
+        const mehr = document.createElement("button");
+        mehr.className = "btn btn-secondary";
+        mehr.textContent = `Ältere anzeigen (${nachrichten.length - anzahl})`;
+        mehr.onclick = () => zeige(nachrichten.length);
+        inhalt.appendChild(mehr);
+      }
+    };
+    zeige(5);
   }
 
-  const zeige = (anzahl) => {
-    card.querySelector(".task-list")?.remove();
-    card.querySelector(".pf-more")?.remove();
-    const list = document.createElement("div");
-    list.className = "task-list";
-    for (const n of nachrichten.slice(0, anzahl)) {
-      const row = document.createElement("div");
-      row.className = "task-row";
-      const datum = new Date(n.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
-      row.innerHTML = `<div class="task-row-text"><span>${escapeHtml(n.text).replace(/\n/g, "<br/>")}</span><span class="muted small task-row-meta">${datum}${
-        n.gelesen ? "" : " · neu"
-      }</span></div>`;
-      list.appendChild(row);
-    }
-    card.appendChild(list);
-    if (nachrichten.length > anzahl) {
-      const mehr = document.createElement("button");
-      mehr.className = "btn btn-secondary pf-more";
-      mehr.textContent = `Ältere anzeigen (${nachrichten.length - anzahl})`;
-      mehr.onclick = () => zeige(nachrichten.length);
-      card.appendChild(mehr);
-    }
-  };
-  zeige(5);
+  zeichneKopf();
+  card.append(kopf, inhalt);
   return card;
 }
 

@@ -486,6 +486,12 @@ async function performTaskSync() {
       store.setStockAmount(c.itemId, c.currentAmount, "Chef (Laptop)");
     } else if (c.kind === "reviewed") {
       store.markStockItemReviewed(c.itemId);
+    } else if (c.kind === "merge") {
+      if (!store.mergeStockItem(c.itemId, c.targetId)) {
+        syncWarnings.push(`Zusammenführen von Artikeln: einer der beiden ist nicht mehr da.`);
+      }
+    } else if (c.kind === "alias") {
+      store.addNameAlias("artikel", c.itemId, c.alias);
     }
     appliedStockChangeIds.add(c.id);
     newStockChangeIds = true;
@@ -505,6 +511,11 @@ async function performTaskSync() {
       store.markRecipeReviewed(c.recipeId); // Zutaten eingetragen = eingeordnet
     } else if (c.kind === "delete") store.removeRecipe(c.recipeId);
     else if (c.kind === "reviewed") store.markRecipeReviewed(c.recipeId);
+    else if (c.kind === "merge") {
+      if (!store.mergeRecipe(c.recipeId, c.targetId)) {
+        syncWarnings.push(`Zusammenführen von Rezepten: eines der beiden ist nicht mehr da.`);
+      }
+    } else if (c.kind === "alias") store.addNameAlias("rezept", c.recipeId, c.alias);
     appliedRecipeChangeIds.add(c.id);
     newRecipeChangeIds = true;
   }
@@ -720,8 +731,9 @@ async function performTaskSync() {
     currentAmount: s.unit ? s.currentAmount : null,
     lowThreshold: s.unit ? s.lowThreshold : null,
     needsReview: !!s.needsReview,
+    aliases: s.aliases || [],
   }));
-  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview }));
+  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [] }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
   // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
   const employeeDetails = store.getEmployees(true).map((e) => ({

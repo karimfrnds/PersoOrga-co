@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { todayStr, dateDe } from "./format.js";
+import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
 
 const STORAGE_KEY = "cafeapp_v1";
 
@@ -785,6 +786,38 @@ export const store = {
     persist();
     return item;
   },
+  /** Führt ein irrtümlich doppelt angelegtes Produkt mit dem richtigen zusammen: der alte Name wird als
+   * Zweitname gemerkt, ein etwaiger Bestand übernommen, der Doppelgänger verschwindet. */
+  mergeStockItem(vonId, aufId) {
+    const von = data.stock.find((s) => s.id === vonId);
+    const auf = data.stock.find((s) => s.id === aufId);
+    if (!von || !auf || vonId === aufId) return null;
+    this.addNameAlias("artikel", aufId, von.name);
+    for (const a of von.aliases || []) this.addNameAlias("artikel", aufId, a);
+    // Der Doppelgänger wurde aus einem Verkauf angelegt und steht deshalb meist im Minus. Genau dieser
+    // Verbrauch gehört zum richtigen Artikel – deshalb wird er übernommen, nicht verworfen.
+    if (auf.unit && von.unit && Number.isFinite(Number(von.currentAmount))) {
+      auf.currentAmount = round2((Number(auf.currentAmount) || 0) + (Number(von.currentAmount) || 0));
+      recomputeStockStatus(auf);
+    }
+    if (Array.isArray(von.consumptionLog) && von.consumptionLog.length) {
+      auf.consumptionLog = [...(auf.consumptionLog || []), ...von.consumptionLog].slice(0, 20);
+    }
+    data.stock = data.stock.filter((s) => s.id !== vonId);
+    persist();
+    return auf;
+  },
+  /** Dasselbe für ein doppelt angelegtes Rezept. */
+  mergeRecipe(vonId, aufId) {
+    const von = data.recipes.find((r) => r.id === vonId);
+    const auf = data.recipes.find((r) => r.id === aufId);
+    if (!von || !auf || vonId === aufId) return null;
+    this.addNameAlias("rezept", aufId, von.productName);
+    for (const a of von.aliases || []) this.addNameAlias("rezept", aufId, a);
+    data.recipes = data.recipes.filter((r) => r.id !== vonId);
+    persist();
+    return auf;
+  },
   removeStockItem(id) {
     data.stock = data.stock.filter((s) => s.id !== id);
     persist();
@@ -888,25 +921,42 @@ export const store = {
   },
   /** Nachsichtiger Vergleich, damit ein per SumUp-Bericht erkannter Produktname (z.B. "Cappuccino Grande")
    * zum hinterlegten Rezept (z.B. "Cappuccino") passt. */
-  /** Vorrats-Artikel per Name, nachsichtig – gleiche Logik wie bei Rezepten, damit "Hefeweizen 0,5" aus
-   * einem Kassenbericht auch den Artikel "Hefeweizen" trifft. */
+  /** Vorrats-Artikel per Name. Sucht zuerst exakt, dann über gemerkte Zweitnamen, dann über Ähnlichkeit. */
   getStockItemByName(name) {
-    const needle = String(name || "").trim().toLowerCase();
-    if (!needle) return null;
-    return (
-      data.stock.find((s) => s.name.trim().toLowerCase() === needle) ||
-      data.stock.find((s) => s.name.trim().toLowerCase().includes(needle) || needle.includes(s.name.trim().toLowerCase())) ||
-      null
-    );
+    return findeNachName(data.stock, "name", name);
   },
   getRecipeByProductName(name) {
-    const needle = String(name || "").trim().toLowerCase();
-    if (!needle) return null;
-    return (
-      data.recipes.find((r) => r.productName.trim().toLowerCase() === needle) ||
-      data.recipes.find((r) => r.productName.trim().toLowerCase().includes(needle) || needle.includes(r.productName.trim().toLowerCase())) ||
-      null
-    );
+    return findeNachName(data.recipes, "productName", name);
+  },
+  /** Kandidaten für ein Produkt, das keinem Eintrag sicher zuzuordnen war – beste zuerst.
+   * Grundlage für die Rückfrage "Gehört das zu …?" in der Bestand-Ansicht. */
+  getNameVorschlaege(name, limit = 4) {
+    const artikel = bewerteKandidaten(data.stock, "name", name).map((k) => ({ ...k, art: "artikel" }));
+    const rezepte = bewerteKandidaten(data.recipes, "productName", name).map((k) => ({ ...k, art: "rezept" }));
+    return [...artikel, ...rezepte].sort((a, b) => b.punkte - a.punkte).slice(0, limit);
+  },
+  /** Merkt sich, dass ein Produktname zu einem Artikel bzw. Rezept gehört. Ab dann trifft er sofort.
+   * Das ist der eigentliche Lernschritt: Ähnlichkeit allein wird bei Namen wie "Paulaner Hefe-Weissbier
+   * 0,5l" (Lieferschein) und "Paulaner Hefeweizen" (Kassenbericht) nie zuverlässig sein. */
+  addNameAlias(art, id, alias) {
+    const liste = art === "rezept" ? data.recipes : data.stock;
+    const eintrag = liste.find((x) => x.id === id);
+    const sauber = String(alias || "").trim();
+    if (!eintrag || !sauber) return null;
+    if (!Array.isArray(eintrag.aliases)) eintrag.aliases = [];
+    const norm = normalisiereProduktname(sauber);
+    if (!eintrag.aliases.some((a) => normalisiereProduktname(a) === norm)) eintrag.aliases.push(sauber);
+    persist();
+    return eintrag;
+  },
+  removeNameAlias(art, id, alias) {
+    const liste = art === "rezept" ? data.recipes : data.stock;
+    const eintrag = liste.find((x) => x.id === id);
+    if (!eintrag || !Array.isArray(eintrag.aliases)) return null;
+    const norm = normalisiereProduktname(alias);
+    eintrag.aliases = eintrag.aliases.filter((a) => normalisiereProduktname(a) !== norm);
+    persist();
+    return eintrag;
   },
   /** Verkauf eines Produkts, das GENAU SO eingekauft wird (Flaschengetränke, zugekaufte Snacks): 1 verkauft
    * = 1 Stück weniger. Dafür braucht es kein Rezept mit einer einzigen Zutat "sich selbst". */

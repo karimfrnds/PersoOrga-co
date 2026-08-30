@@ -618,65 +618,156 @@ async function handleBookingPage(env) {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${escapeHtmlWorker(name)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { --gruen:#1f6f54; --gruen-d:#16543f; --hell:#e7f4ee; --rand:#e2e4e8; --text:#1c1f23; --grau:#6b7280; --feld:#fff; }
-  @media (prefers-color-scheme: dark) {
-    :root { --hell:#133326; --rand:#33363c; --text:#e9eaec; --grau:#9aa0a8; --gruen:#3fa585; --gruen-d:#2c8069; --feld:#1f2226; }
-    body { background:#16181c; }
+  /* ------------------------------------------------------------------------
+     Bewusst dunkel und eigenständig statt hell und beliebig: die Seite steckt
+     als Block auf der Website und soll wie ein Teil des Ladens wirken, nicht
+     wie ein Formular von der Stange.
+     Farbwelt: fast schwarz mit warmem Grünstich, warmes Off-White, das Grün
+     des Cafés als einzige Signalfarbe. Kantige Geometrie, feine Linien statt
+     Schatten, enge große Typo gegen weit gesperrte Kleinbuchstaben-Labels.
+     ------------------------------------------------------------------------ */
+  :root {
+    color-scheme: dark;              /* damit auch der native Datums-Wähler dunkel kommt */
+    --tinte: #101210;                /* Grund */
+    --flaeche: #191c19;              /* Felder und Kacheln */
+    --flaeche-hoch: #21251f;
+    --linie: #2f342e;
+    --text: #f1efe7;                 /* warmes Off-White, kein reines Weiss */
+    --leise: #8d8f85;
+    --akzent: #6fd39f;               /* das Grün, fürs Dunkle aufgehellt */
+    --akzent-tief: #0f2a1e;
   }
-  * { box-sizing:border-box; }
-  body { margin:0; padding:14px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-         color:var(--text); font-size:16px; line-height:1.45; }
-  h1 { font-size:21px; margin:0 0 2px; }
-  .hint { color:var(--grau); font-size:14px; margin:0 0 14px; }
-  label { display:block; margin-bottom:10px; }
-  label > span.titel { display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--grau);
-    text-transform:uppercase; letter-spacing:.4px; }
-  input, select, textarea { width:100%; padding:12px; font-size:16px; font-family:inherit;
-    border:1px solid var(--rand); border-radius:10px; background:var(--feld); color:var(--text); }
-  textarea { resize:vertical; min-height:58px; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 22px 18px 26px;
+    background: var(--tinte);
+    color: var(--text);
+    font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    /* Ein sehr zurückhaltender Lichtschein oben – gibt dem Block Tiefe, ohne aufzufallen. */
+    background-image: radial-gradient(120% 60% at 50% -10%, rgba(111,211,159,0.10), transparent 60%);
+    background-repeat: no-repeat;
+  }
 
-  /* Auf dem Handy steht jedes Feld fuer sich. Nebeneinander waren sie so schmal, dass Datum und
-     Personenzahl abgeschnitten wurden. Ab Tablet-Breite duerfen sie sich eine Zeile teilen. */
-  .reihe { display:grid; grid-template-columns:1fr; gap:10px; }
-  @media (min-width:560px) { .reihe { grid-template-columns:1fr 1fr 1fr; } }
+  h1 {
+    font-size: 30px;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .hint { color: var(--leise); font-size: 14px; margin: 0 0 22px; }
 
-  .zaehler { display:flex; gap:8px; }
-  .zaehler input { text-align:center; font-weight:700; }
-  .zbtn { flex:0 0 52px; font-size:24px; font-weight:700; border:1px solid var(--rand); border-radius:10px;
-          background:var(--feld); color:var(--text); cursor:pointer; }
-  .zbtn:disabled { opacity:.35; cursor:not-allowed; }
+  /* Kleine, weit gesperrte Marker – gibt dem Ganzen den redaktionellen Ton. */
+  .schritt {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--leise); margin: 0 0 12px;
+  }
+  .schritt::after { content: ""; flex: 1; height: 1px; background: var(--linie); }
+  .schritt .nr { color: var(--akzent); }
 
-  /* Tageszeiten statt einer Wand aus 50 Knoepfen. */
-  .abschnitte { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-  .abschnitt { flex:1 1 0; min-width:74px; padding:9px 4px; border:1px solid var(--rand); border-radius:10px;
-    background:var(--feld); color:var(--text); font:inherit; font-size:14px; cursor:pointer; line-height:1.2; }
-  .abschnitt b { display:block; font-size:14px; }
-  .abschnitt small { color:var(--grau); font-size:11px; }
-  .abschnitt[aria-pressed="true"] { border-color:var(--gruen); background:var(--hell); color:var(--gruen-d); }
-  .abschnitt[aria-pressed="true"] small { color:var(--gruen-d); }
+  label { display: block; margin-bottom: 14px; }
+  /* Gilt auch fuer den Uhrzeit-Titel, der ausserhalb eines label steht. */
+  .titel {
+    display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--leise); margin-bottom: 6px;
+  }
+  input, select, textarea {
+    width: 100%; padding: 14px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--linie); border-radius: 4px;
+    background: var(--flaeche); color: var(--text);
+    transition: border-color .15s ease;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--akzent); }
+  textarea { resize: vertical; min-height: 62px; }
+  select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--leise) 50%), linear-gradient(135deg, var(--leise) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 22px, calc(100% - 14px) 22px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+  }
 
-  .zeiten { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-  @media (min-width:560px) { .zeiten { grid-template-columns:repeat(6,1fr); } }
-  .zeit { padding:11px 2px; border:1px solid var(--rand); border-radius:10px; background:var(--feld);
-          color:var(--text); font-size:15px; font-family:inherit; cursor:pointer; }
-  .zeit[aria-pressed="true"] { border-color:var(--gruen); background:var(--gruen); color:#fff; font-weight:700; }
+  /* Am Handy steht jedes Feld für sich – nebeneinander wurden Datum und Anzahl abgeschnitten. */
+  .reihe { display: grid; grid-template-columns: 1fr; gap: 0; }
+  @media (min-width: 620px) { .reihe { grid-template-columns: 1fr 1fr 1fr; gap: 14px; } }
 
-  button.senden { width:100%; padding:15px; font-size:17px; font-weight:700; border:none; border-radius:12px;
-                  background:var(--gruen); color:#fff; cursor:pointer; font-family:inherit; margin-top:4px; }
-  button.senden:disabled { opacity:.45; cursor:not-allowed; }
-  .melde { padding:11px 13px; border-radius:10px; background:var(--hell); margin:10px 0; font-size:15px; }
-  .fehler { background:#fdf0dd; color:#8a5a00; }
-  @media (prefers-color-scheme: dark) { .fehler { background:#3a2a12; color:#e2952f; } }
-  .datenschutz { color:var(--grau); font-size:12px; margin-top:12px; }
-  .erfolg { text-align:center; padding:20px 8px; }
-  .code { font-size:30px; font-weight:800; letter-spacing:3px; margin:8px 0; color:var(--gruen-d); }
-  .versteckt { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
-  .zusammenfassung { background:var(--hell); color:var(--gruen-d); border-radius:10px; padding:10px 12px;
-    font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:10px;
-    justify-content:space-between; }
-  .aendern { flex:0 0 auto; background:none; border:none; color:var(--gruen-d); font:inherit; font-size:14px;
-    font-weight:600; text-decoration:underline; cursor:pointer; padding:2px 0; }
+  .zaehler { display: flex; gap: 8px; }
+  .zaehler input { text-align: center; font-weight: 700; font-size: 18px; }
+  .zbtn {
+    flex: 0 0 54px; font-size: 22px; font-weight: 500;
+    border: 1px solid var(--linie); border-radius: 4px;
+    background: var(--flaeche); color: var(--text); cursor: pointer;
+  }
+  .zbtn:hover:not(:disabled) { border-color: var(--akzent); color: var(--akzent); }
+  .zbtn:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* Tageszeiten als Reiter statt einer Wand aus fünfzig Knöpfen. */
+  .abschnitte { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--linie); }
+  .abschnitt {
+    flex: 1 1 0; min-width: 0; padding: 10px 2px 11px; border: none; border-bottom: 2px solid transparent;
+    background: none; color: var(--leise); font: inherit; font-size: 13px; cursor: pointer; line-height: 1.25;
+    margin-bottom: -1px;
+  }
+  .abschnitt b { display: block; font-weight: 500; letter-spacing: 0.01em; }
+  .abschnitt small { font-size: 10.5px; letter-spacing: 0.08em; opacity: .75; }
+  .abschnitt[aria-pressed="true"] { color: var(--text); border-bottom-color: var(--akzent); }
+  .abschnitt[aria-pressed="true"] small { color: var(--akzent); opacity: 1; }
+
+  .zeiten { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  @media (min-width: 620px) { .zeiten { grid-template-columns: repeat(6, 1fr); } }
+  .zeit {
+    padding: 13px 2px; border: 1px solid var(--linie); border-radius: 4px;
+    background: var(--flaeche); color: var(--text);
+    font-size: 15px; font-family: inherit; font-variant-numeric: tabular-nums;
+    cursor: pointer; transition: border-color .12s ease, background .12s ease;
+  }
+  .zeit:hover { border-color: var(--akzent); }
+  .zeit[aria-pressed="true"] {
+    background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tief); font-weight: 700;
+  }
+
+  button.senden {
+    width: 100%; padding: 17px; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    border: none; border-radius: 4px;
+    background: var(--akzent); color: var(--akzent-tief);
+    cursor: pointer; font-family: inherit; margin-top: 6px;
+  }
+  button.senden:disabled { background: var(--flaeche-hoch); color: var(--leise); cursor: not-allowed; }
+
+  .melde { padding: 13px 15px; border-radius: 4px; background: var(--flaeche-hoch); margin: 12px 0; font-size: 15px;
+           border-left: 2px solid var(--akzent); }
+  .fehler { border-left-color: #d8a14a; color: #e8c48c; }
+  .datenschutz { color: var(--leise); font-size: 12px; line-height: 1.5; margin-top: 16px; }
+
+  .zusammenfassung {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 1px solid var(--akzent); border-radius: 4px; padding: 14px 15px; margin-bottom: 20px;
+    background: linear-gradient(180deg, rgba(111,211,159,0.08), transparent);
+    font-size: 15px; font-weight: 500;
+  }
+  .aendern {
+    flex: 0 0 auto; background: none; border: none; color: var(--akzent); font: inherit;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+    cursor: pointer; padding: 4px 0;
+  }
+
+  .erfolg { text-align: center; padding: 34px 6px 26px; }
+  .erfolg h1 { font-size: 34px; }
+  .code {
+    font-size: 34px; font-weight: 700; letter-spacing: 0.22em; margin: 14px 0 6px;
+    color: var(--akzent); font-variant-numeric: tabular-nums;
+  }
+  .versteckt { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 </style></head>
 <body>
 <div id="app"></div>
@@ -728,6 +819,7 @@ function zeichne() {
   app.innerHTML = "";
   app.appendChild(el('<h1>Tisch reservieren</h1>'));
   app.appendChild(el('<p class="hint">Wir melden uns nur, falls es ein Problem gibt.</p>'));
+  app.appendChild(el('<div class="schritt" id="f-schritt1"><span class="nr">01</span><span>Wann</span></div>'));
 
   var reihe = el('<div class="reihe"></div>');
 
@@ -760,7 +852,7 @@ function zeichne() {
   reihe.appendChild(bereich);
 
   app.appendChild(reihe);
-  app.appendChild(el('<span class="titel" id="f-zeittitel" style="display:block;margin:14px 0 6px">Uhrzeit</span>'));
+  app.appendChild(el('<span class="titel" id="f-zeittitel" style="display:block;margin:16px 0 8px">Uhrzeit</span>'));
   app.appendChild(el('<div id="f-zeitbereich"><p class="hint">Lade freie Zeiten…</p></div>'));
   app.appendChild(el('<div id="f-rest"></div>'));
 
@@ -818,6 +910,8 @@ function zeichneRest() {
   if (reihe) reihe.style.display = auswahlSichtbar ? "" : "none";
   var zeitTitel = $("f-zeittitel");
   if (zeitTitel) zeitTitel.style.display = auswahlSichtbar ? "" : "none";
+  var marke1 = $("f-schritt1");
+  if (marke1) marke1.style.display = auswahlSichtbar ? "" : "none";
   var zeitbereich = $("f-zeitbereich");
   if (zeitbereich) zeitbereich.style.display = auswahlSichtbar ? "" : "none";
   if (!daten.time) return;
@@ -830,6 +924,7 @@ function zeichneRest() {
     zeichneRest();
   };
   rest.appendChild(kopf);
+  rest.appendChild(el('<div class="schritt"><span class="nr">02</span><span>Wer</span></div>'));
   rest.appendChild(el('<label><span class="titel">Name</span><input type="text" id="f-name" autocomplete="name" maxlength="80"></label>'));
   rest.appendChild(el('<label><span class="titel">Telefon</span><input type="tel" id="f-phone" autocomplete="tel" maxlength="40"></label>'));
   rest.appendChild(el('<label><span class="titel">Anmerkung (optional)</span><textarea id="f-note" maxlength="300" placeholder="z.B. Kinderstuhl, Geburtstag"></textarea></label>'));

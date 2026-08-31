@@ -205,6 +205,9 @@ const EMPTY_STATE = {
   reservationSlots: [],
   // Öffnungszeiten + Regeln für die Online-Buchung, ebenfalls vom iPad.
   reservationConfig: null,
+  // Verdichtete Auswertungs-Daten vom iPad (er kennt Rezepte und Preise vollstaendig).
+  produktStatistik: [], // [{productName, menge, umsatz, materialkosten, kostenJeStueck, tage}]
+  reservationStats: [], // [{date, anzahl, gaeste, walkins, storniert, erschienen, ...}] – ohne Namen
   // Warteschlange der Gast-Buchungen, die der iPad abholt.
   // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
   reservationRequests: [],
@@ -252,6 +255,8 @@ async function getState(env) {
       reservationSlots: Array.isArray(parsed.reservationSlots) ? parsed.reservationSlots : [],
       reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
       reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
+      produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
+      reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -3097,6 +3102,8 @@ async function handleState(request, env) {
     if (Array.isArray(body.tables)) patch.tables = body.tables;
     if (Array.isArray(body.reservationSlots)) patch.reservationSlots = body.reservationSlots;
     if (body.reservationConfig && typeof body.reservationConfig === "object") patch.reservationConfig = body.reservationConfig;
+    if (Array.isArray(body.produktStatistik)) patch.produktStatistik = body.produktStatistik;
+    if (Array.isArray(body.reservationStats)) patch.reservationStats = body.reservationStats;
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);

@@ -748,7 +748,16 @@ async function performTaskSync() {
     packLabel: s.packLabel || "",
     pricePerUnit: s.pricePerUnit ?? null,
     priceSource: s.priceSource || null,
+    // Verbrauch der letzten 30 Tage – daraus rechnet die Laptop-Ansicht die Reichweite. Bewusst der
+    // ROHWERT plus die Zahl der Tage mit Verbrauch, nicht ein fertiges Ergebnis: so lässt sich am
+    // Laptop zeigen, worauf die Aussage beruht.
+    verbrauch30: store.getConsumptionSince(s.id, 30),
   }));
+  // Was sich mit welchem Produkt verdienen lässt (90 Tage). Auf dem iPad gerechnet, weil nur er die
+  // Rezepte und Einkaufspreise vollständig kennt.
+  const produktStatistik = store.getProductStats(isoDaysAgo(90), todayStr());
+  // Reservierungen als Tageszahlen – ausdrücklich ohne Namen und Telefonnummern.
+  const reservationStats = store.getReservationStats(isoDaysAgo(90), todayStr());
   const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [] }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
   // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
@@ -810,6 +819,8 @@ async function performTaskSync() {
     tables,
     reservationSlots,
     reservationConfig,
+    produktStatistik,
+    reservationStats,
   });
 
   store.updateTaskInboxConfig({

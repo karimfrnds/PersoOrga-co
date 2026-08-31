@@ -44,15 +44,22 @@ function renderForecast(state) {
   if (fertig.length < 7) {
     const c = document.createElement("section");
     c.className = "card";
-    c.innerHTML = `<p class="muted">Dafür sind noch zu wenige abgeschlossene Tage da (${fertig.length}).
-    Ab etwa einer vollen Woche lassen sich erste Muster zeigen, für belastbare Wochentags-Durchschnitte
-    braucht es eher ein paar Wochen.</p>`;
+    c.innerHTML = `<p class="muted">Für Umsatz-Auswertungen sind noch zu wenige abgeschlossene Tage da
+    (${fertig.length}). Ab etwa einer vollen Woche lassen sich erste Muster zeigen.</p>`;
     frag.appendChild(c);
+    // Bestand und Produkte hängen nicht an abgeschlossenen Tagen – die können schon jetzt helfen.
+    frag.appendChild(buildRenner(state));
+    frag.appendChild(buildReichweite(state));
+    frag.appendChild(buildReservierungen(state, heute));
     el.appendChild(frag);
     return el;
   }
 
   frag.appendChild(buildTrend(fertig, heute));
+  frag.appendChild(buildWareneinsatz(fertig));
+  frag.appendChild(buildRenner(state));
+  frag.appendChild(buildReichweite(state));
+  frag.appendChild(buildReservierungen(state, heute));
   frag.appendChild(buildWochentage(fertig));
   frag.appendChild(buildHochrechnung(fertig, heute));
   frag.appendChild(buildPersonal(fertig));
@@ -124,6 +131,271 @@ function buildTrend(fertig, heute) {
   info.className = "muted small";
   info.textContent = `Verglichen werden Tagesdurchschnitte: ${jetzt.length} Tage gegen ${davor.length} Tage. Bei der Lohnquote ist ein Rückgang günstig.`;
   card.appendChild(info);
+  return card;
+}
+
+/** Wareneinsatz und Prime Cost über die Zeit.
+ *
+ * Gerechnet wird ausschliesslich über Tage, an denen der Wareneinsatz auch erfasst ist. Ein Tag ohne
+ * hochgeladenen Kassenbericht hätte 0 EUR Wareneinsatz und würde die Quote schöner aussehen lassen,
+ * als sie ist – das wäre die gefährlichste Art von Fehler in dieser Ansicht.
+ */
+function buildWareneinsatz(fertig) {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>Wareneinsatz & Prime Cost</h2>`;
+
+  const mitWaren = fertig.filter((r) => Number(r.materialkosten) > 0);
+  if (mitWaren.length === 0) {
+    card.innerHTML += `<p class="muted small">Noch keine Daten. Der Wareneinsatz entsteht automatisch, sobald
+      drei Dinge zusammenkommen: Kassenberichte sind hochgeladen, bei den Artikeln stehen Einkaufspreise,
+      und die verkauften Produkte sind einem Rezept oder Artikel zugeordnet (Bestand → neue Produkte einordnen).</p>`;
+    return card;
+  }
+
+  const rechne = (rows) => {
+    const u = summe(rows, "umsatzGesamt");
+    const w = summe(rows, "materialkosten");
+    const l = round2(summe(rows, "totalLohn") + summe(rows, "totalLohnnebenkosten"));
+    return { umsatz: u, ware: w, lohn: l, wareQuote: u > 0 ? (w / u) * 100 : 0,
+             lohnQuote: u > 0 ? (l / u) * 100 : 0, prime: u > 0 ? ((w + l) / u) * 100 : 0 };
+  };
+  const gesamt = rechne(mitWaren);
+
+  const table = document.createElement("table");
+  table.className = "calc-table";
+  table.innerHTML = `<thead><tr><th></th><th>Betrag</th><th>Anteil am Umsatz</th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  const zeile = (label, betrag, anteil, fett) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${fett ? "<b>" + label + "</b>" : label}</td><td>${euro(betrag)}</td>
+      <td>${fett ? "<b>" + prozent(anteil) + "</b>" : prozent(anteil)}</td>`;
+    tb.appendChild(tr);
+  };
+  zeile("Wareneinsatz", gesamt.ware, gesamt.wareQuote);
+  zeile("Personal", gesamt.lohn, gesamt.lohnQuote);
+  zeile("Prime Cost", round2(gesamt.ware + gesamt.lohn), gesamt.prime, true);
+  table.appendChild(tb);
+  const scroll = document.createElement("div");
+  scroll.style.overflowX = "auto";
+  scroll.appendChild(table);
+  card.appendChild(scroll);
+
+  const einordnung = document.createElement("p");
+  einordnung.className = gesamt.prime > 70 ? "callout callout-warn" : "callout";
+  einordnung.innerHTML =
+    `<b>Prime Cost sind Ware und Personal zusammen</b> – die beiden Blöcke, die sich täglich beeinflussen
+     lassen. Miete, Energie und Versicherung stehen ohnehin fest. ` +
+    (gesamt.prime > 70
+      ? `Bei ${prozent(gesamt.prime)} bleibt davon wenig übrig.`
+      : `Unter etwa 70 % gilt als gesund, ihr liegt bei ${prozent(gesamt.prime)}.`);
+  card.appendChild(einordnung);
+
+  // Entwicklung: letzte 4 Wochen gegen davor – nur wenn beide Zeiträume erfasste Tage haben.
+  const heute = todayStr();
+  const jetzt = mitWaren.filter((r) => r.date > addDaysISO(heute, -28));
+  const davor = mitWaren.filter((r) => r.date > addDaysISO(heute, -56) && r.date <= addDaysISO(heute, -28));
+  if (jetzt.length >= 3 && davor.length >= 3) {
+    const a = rechne(jetzt);
+    const b = rechne(davor);
+    const diff = round2(a.wareQuote - b.wareQuote);
+    const p = document.createElement("p");
+    p.className = "muted small";
+    // Beim Wareneinsatz ist WENIGER besser – wie bei der Lohnquote.
+    p.innerHTML =
+      `Wareneinsatzquote letzte 4 Wochen: <b>${prozent(a.wareQuote)}</b> (${jetzt.length} Tage), ` +
+      `4 Wochen davor: ${prozent(b.wareQuote)} (${davor.length} Tage) – ` +
+      `<b style="color:${diff <= 0 ? "var(--green)" : "var(--orange)"}">${diff > 0 ? "+" : ""}${String(diff).replace(".", ",")} Punkte</b>. ` +
+      `Ein Rückgang ist günstig.`;
+    card.appendChild(p);
+  }
+
+  const basis = document.createElement("p");
+  basis.className = "muted small";
+  basis.textContent =
+    `Grundlage sind ${mitWaren.length} von ${fertig.length} abgeschlossenen Tagen – nur auf denen ist der ` +
+    `Wareneinsatz erfasst. Tage ohne Kassenbericht sind bewusst ausgelassen, sonst sähen die Quoten zu gut aus.`;
+  card.appendChild(basis);
+  return card;
+}
+
+/** Was läuft und was nicht – aus den Kassenberichten. */
+function buildRenner(state) {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>Renner & Penner</h2>`;
+  const produkte = [...(state.produktStatistik || [])];
+  if (produkte.length === 0) {
+    card.innerHTML += `<p class="muted small">Noch keine Verkaufsdaten. Sie entstehen, sobald ein
+      SumUp-Kassenbericht hochgeladen wurde.</p>`;
+    return card;
+  }
+
+  const nachMenge = [...produkte].sort((a, b) => b.menge - a.menge);
+  const oben = nachMenge.slice(0, 8);
+  const unten = nachMenge.slice(-5).reverse().filter((p) => !oben.includes(p));
+
+  const tabelle = (liste, titel) => {
+    const t = document.createElement("div");
+    const h = document.createElement("p");
+    h.className = "muted small res-bereich";
+    h.innerHTML = `<b>${titel}</b>`;
+    t.appendChild(h);
+    const table = document.createElement("table");
+    table.className = "calc-table";
+    table.innerHTML = `<thead><tr><th>Produkt</th><th>Verkauft</th><th>Umsatz</th><th>Materialkosten</th><th>Deckungsbeitrag</th></tr></thead>`;
+    const tb = document.createElement("tbody");
+    for (const p of liste) {
+      const db = p.umsatz > 0 && p.materialkosten != null ? round2(p.umsatz - p.materialkosten) : null;
+      const dbQuote = db !== null && p.umsatz > 0 ? round2((db / p.umsatz) * 100) : null;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escapeHtml(p.productName)}</td><td>${p.menge}×</td>
+        <td>${p.umsatz > 0 ? euro(p.umsatz) : '<span class="muted">–</span>'}</td>
+        <td>${p.materialkosten != null ? euro(p.materialkosten) : '<span class="muted">unbekannt</span>'}</td>
+        <td>${db !== null ? `<b>${euro(db)}</b> <span class="muted small">(${prozent(dbQuote)})</span>` : '<span class="muted">–</span>'}</td>`;
+      tb.appendChild(tr);
+    }
+    table.appendChild(tb);
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    scroll.appendChild(table);
+    t.appendChild(scroll);
+    return t;
+  };
+
+  card.appendChild(tabelle(oben, "Läuft am besten"));
+  if (unten.length > 0) card.appendChild(tabelle(unten, "Läuft am wenigsten"));
+
+  const ohneKosten = produkte.filter((p) => p.materialkosten == null).length;
+  const info = document.createElement("p");
+  info.className = "muted small";
+  info.innerHTML =
+    `Letzte 90 Tage. <b>Deckungsbeitrag</b> ist Umsatz minus Materialkosten – was ein Produkt wirklich
+     einbringt, bevor Personal und Miete abgehen. ` +
+    (ohneKosten > 0
+      ? `Bei ${ohneKosten} von ${produkte.length} Produkten fehlen die Materialkosten – dort ist entweder
+         kein Rezept hinterlegt oder einer Zutat fehlt der Einkaufspreis. Lieber keine Zahl als eine zu niedrige.`
+      : `Für alle Produkte sind die Materialkosten bekannt.`);
+  card.appendChild(info);
+  return card;
+}
+
+/** Wie lange reicht der Bestand noch? Aus Verbrauch und aktuellem Stand. */
+function buildReichweite(state) {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>Reichweite & Bestellvorschlag</h2>`;
+
+  const artikel = (state.stock || []).filter((s) => s.unit && s.verbrauch30 && s.verbrauch30.menge > 0);
+  if (artikel.length === 0) {
+    card.innerHTML += `<p class="muted small">Noch kein Verbrauch erfasst. Sobald Kassenberichte hochgeladen
+      sind und die Produkte einem Rezept oder Artikel zugeordnet wurden, steht hier, wie lange der Bestand
+      noch reicht.</p>`;
+    return card;
+  }
+
+  const mitReichweite = artikel
+    .map((s) => {
+      // Nur Tage MIT Verbrauch zählen: bei zwei Ruhetagen pro Woche sähe der Tagesschnitt sonst
+      // kleiner aus und die Reichweite länger, als sie ist.
+      const proTag = s.verbrauch30.tage > 0 ? s.verbrauch30.menge / s.verbrauch30.tage : 0;
+      const tage = proTag > 0 ? Math.floor((Number(s.currentAmount) || 0) / proTag) : null;
+      return { ...s, proTag: round2(proTag), tage };
+    })
+    .filter((s) => s.tage !== null)
+    .sort((a, b) => a.tage - b.tage);
+
+  const scroll = document.createElement("div");
+  scroll.style.overflowX = "auto";
+  const table = document.createElement("table");
+  table.className = "calc-table";
+  table.innerHTML = `<thead><tr><th>Artikel</th><th>Bestand</th><th>Ø Verbrauch/Tag</th><th>Reicht noch</th><th>Bestellen</th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  for (const s of mitReichweite.slice(0, 15)) {
+    // Vorschlag: so viele Gebinde, dass es wieder zwei Wochen reicht.
+    const bedarf = Math.max(0, s.proTag * 14 - (Number(s.currentAmount) || 0));
+    const gebinde = s.packSize > 1 ? Math.ceil(bedarf / s.packSize) : Math.ceil(bedarf);
+    const dringend = s.tage <= 3;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(s.name)} <span class="muted small">${s.bereich === "bar" ? "Bar" : "Küche"}</span></td>
+      <td>${s.currentAmount} ${escapeHtml(s.unit)}</td>
+      <td>${s.proTag} ${escapeHtml(s.unit)}</td>
+      <td style="color:${dringend ? "var(--orange)" : "inherit"};font-weight:${dringend ? 600 : 400}">${
+        s.tage === 0 ? "heute leer" : s.tage + " Tage"
+      }</td>
+      <td>${bedarf > 0 ? `${gebinde} ${escapeHtml(s.packSize > 1 ? s.packLabel || "Gebinde" : s.unit)}` : '<span class="muted">–</span>'}</td>`;
+    tb.appendChild(tr);
+  }
+  table.appendChild(tb);
+  scroll.appendChild(table);
+  card.appendChild(scroll);
+
+  const info = document.createElement("p");
+  info.className = "muted small";
+  info.textContent =
+    "Verbrauch der letzten 30 Tage, gerechnet nur über Tage mit tatsächlichem Verbrauch – Ruhetage würden " +
+    "den Schnitt sonst drücken und die Reichweite zu lang erscheinen lassen. Der Bestellvorschlag füllt auf " +
+    "zwei Wochen auf. Das ist eine Fortschreibung, keine Vorhersage: eine Aktion oder ein Feiertag steht nicht drin.";
+  card.appendChild(info);
+  return card;
+}
+
+/** Was die Reservierungen über den Betrieb sagen. */
+function buildReservierungen(state, heute) {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>Reservierungen</h2>`;
+  const stats = (state.reservationStats || []).filter((s) => s.date <= heute);
+  if (stats.length === 0) {
+    card.innerHTML += `<p class="muted small">Noch keine Daten. Sie entstehen mit jeder Reservierung und
+      jedem Walk-in, den ihr am iPad erfasst.</p>`;
+    return card;
+  }
+
+  const s = (key) => stats.reduce((sum, d) => sum + (Number(d[key]) || 0), 0);
+  const reserviert = s("anzahl");
+  const gaeste = s("gaeste");
+  const walkins = s("walkins");
+  const walkinGaeste = s("walkinGaeste");
+  const storniert = s("storniert");
+  const erschienen = s("erschienen");
+  // No-Show: nicht erschienen, obwohl nicht abgesagt. Nur über Tage, die vorbei sind – bei heutigen
+  // Reservierungen steht das Ergebnis noch aus.
+  const vergangen = stats.filter((d) => d.date < heute);
+  const vAnzahl = vergangen.reduce((sum, d) => sum + d.anzahl - d.storniert, 0);
+  const vErschienen = vergangen.reduce((sum, d) => sum + d.erschienen, 0);
+  const noShow = vAnzahl > 0 ? round2(((vAnzahl - vErschienen) / vAnzahl) * 100) : null;
+  const anteilReserviert = gaeste + walkinGaeste > 0 ? round2((gaeste / (gaeste + walkinGaeste)) * 100) : 0;
+
+  const zeile = document.createElement("div");
+  zeile.className = "res-stats";
+  zeile.innerHTML = `
+    <div><span class="res-stat-zahl">${reserviert}</span><span class="muted small">Reservierungen</span></div>
+    <div><span class="res-stat-zahl">${gaeste}</span><span class="muted small">Gäste reserviert</span></div>
+    <div><span class="res-stat-zahl">${walkinGaeste}</span><span class="muted small">Gäste spontan</span></div>
+    <div><span class="res-stat-zahl">${storniert}</span><span class="muted small">abgesagt</span></div>`;
+  card.appendChild(zeile);
+
+  const box = document.createElement("p");
+  box.className = "callout";
+  box.innerHTML =
+    `<b>${prozent(anteilReserviert)} eurer Gäste kommen mit Reservierung</b>, der Rest spontan. ` +
+    (noShow === null
+      ? "Für eine No-Show-Quote sind noch keine vergangenen Tage erfasst."
+      : noShow > 10
+      ? `<b>No-Show-Quote: ${prozent(noShow)}</b> – das ist hoch. Jede nicht erschienene Reservierung ist ein Tisch, der leer blieb, obwohl ihr ihn hättet vergeben können.`
+      : `No-Show-Quote: <b>${prozent(noShow)}</b>.`);
+  card.appendChild(box);
+
+  if (noShow !== null) {
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    hinweis.textContent =
+      `Als No-Show zählt, was weder abgesagt noch als angekommen markiert wurde – über ${vergangen.length} ` +
+      `vergangene Tage. Wird im Betrieb nicht konsequent auf „Ist da" getippt, sieht die Quote schlechter aus, ` +
+      `als sie ist. Das ist die einzige Zahl hier, die von eurer Disziplin am iPad abhängt.`;
+    card.appendChild(hinweis);
+  }
   return card;
 }
 

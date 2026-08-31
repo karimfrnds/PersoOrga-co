@@ -11,7 +11,7 @@ import { maybeRunDailyBackup } from "./backup.js";
 // erkennbar, ob das iPad schon die neue Fassung geladen hat oder noch eine gespeicherte: GitHub Pages
 // erlaubt dem Browser, die Dateien 10 Minuten zu behalten. Steht hier nach einer Änderung noch die alte
 // Nummer, ist es der Zwischenspeicher – und kein fehlender Upload.
-const APP_VERSION = "2026-08-31.1";
+const APP_VERSION = "2026-08-31.2";
 
 const outlet = document.getElementById("outlet");
 const versionEl = document.getElementById("app-version");

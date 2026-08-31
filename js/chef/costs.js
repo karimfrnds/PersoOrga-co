@@ -221,9 +221,73 @@ function renderCosts(state) {
       <div class="summary-line"><span>Lohnkosten gesamt</span><span><b>${euro(lohnGesamt)}</b> (${String(quote).replace(".", ",")}% vom Umsatz)</span></div>
       <div class="summary-line"><span>Stunden</span><span>${hours(sum("totalHours"))}</span></div>
       <div class="summary-line"><span>Umschlag</span><span>${euro(sum("umschlag"))}</span></div>
-      <p class="muted small">${rows.length} Tag(e) im Zeitraum.</p>
     `;
+    card.appendChild(buildWareneinsatz(rows, umsatz, lohnGesamt));
+    const fuss = document.createElement("p");
+    fuss.className = "muted small";
+    fuss.textContent = `${rows.length} Tag(e) im Zeitraum.`;
+    card.appendChild(fuss);
     return card;
+  }
+
+  /** Wareneinsatz und Prime Cost.
+   *
+   * Prime Cost ist Wareneinsatz plus Personal – in der Gastronomie die eine Zahl, auf die geschaut wird,
+   * weil das die beiden Kostenbloecke sind, die man taeglich beeinflussen kann. Miete und Versicherung
+   * stehen ohnehin fest.
+   *
+   * Gerechnet wird nur ueber Tage, an denen der Wareneinsatz auch wirklich erfasst ist: ein Tag ohne
+   * hochgeladenen Kassenbericht haette 0 EUR Wareneinsatz und wuerde die Quote schoenrechnen.
+   */
+  function buildWareneinsatz(rows, umsatz, lohnGesamt) {
+    const box = document.createElement("div");
+    const mitWaren = rows.filter((r) => Number(r.materialkosten) > 0);
+    const waren = round2(mitWaren.reduce((s, r) => s + Number(r.materialkosten), 0));
+
+    if (mitWaren.length === 0) {
+      const hinweis = document.createElement("p");
+      hinweis.className = "muted small";
+      hinweis.innerHTML =
+        `<b>Wareneinsatz: noch keine Daten.</b> Er entsteht automatisch, sobald Kassenberichte hochgeladen
+         sind, bei den Artikeln Einkaufspreise stehen und die verkauften Produkte einem Rezept oder Artikel
+         zugeordnet sind.`;
+      box.appendChild(hinweis);
+      return box;
+    }
+
+    // Fuer die Quote nur die Tage nehmen, die auch Wareneinsatz haben – sonst vergleicht man den
+    // Wareneinsatz von 12 Tagen mit dem Umsatz von 30.
+    const umsatzMitWaren = round2(mitWaren.reduce((s, r) => s + (Number(r.umsatzGesamt) || 0), 0));
+    const warenQuote = umsatzMitWaren > 0 ? round2((waren / umsatzMitWaren) * 100) : 0;
+    const lohnMitWaren = round2(
+      mitWaren.reduce((s, r) => s + (Number(r.totalLohn) || 0) + (Number(r.totalLohnnebenkosten) || 0), 0)
+    );
+    const primeCost = round2(waren + lohnMitWaren);
+    const primeQuote = umsatzMitWaren > 0 ? round2((primeCost / umsatzMitWaren) * 100) : 0;
+    const prozent = (n) => String(n).replace(".", ",") + " %";
+
+    box.innerHTML = `
+      <div class="summary-line"><span>Wareneinsatz</span><span><b>${euro(waren)}</b> (${prozent(warenQuote)} vom Umsatz)</span></div>
+      <div class="summary-line"><span>Rohertrag</span><span>${euro(round2(umsatzMitWaren - waren))}</span></div>
+      <div class="summary-line"><span><b>Prime Cost</b> (Ware + Personal)</span><span><b>${euro(primeCost)}</b> (${prozent(primeQuote)})</span></div>`;
+
+    const einordnung = document.createElement("p");
+    einordnung.className = primeQuote > 70 ? "callout callout-warn" : "callout";
+    einordnung.innerHTML =
+      primeQuote > 70
+        ? `<b>Prime Cost bei ${prozent(primeQuote)}.</b> Über etwa 70 % bleibt wenig für Miete, Energie und alles andere. Die beiden Stellschrauben sind Einkauf und Personaleinsatz.`
+        : `<b>Prime Cost bei ${prozent(primeQuote)}.</b> Ware und Personal zusammen – die beiden Blöcke, die sich täglich beeinflussen lassen. Unter etwa 70 % gilt als gesund.`;
+    box.appendChild(einordnung);
+
+    if (mitWaren.length < rows.length) {
+      const hinweis = document.createElement("p");
+      hinweis.className = "muted small";
+      hinweis.textContent =
+        `Wareneinsatz und die beiden Quoten beruhen auf ${mitWaren.length} von ${rows.length} Tagen – nur auf denen ` +
+        `ist er erfasst. Die anderen sind bewusst nicht mitgerechnet, sonst sähe die Quote besser aus, als sie ist.`;
+      box.appendChild(hinweis);
+    }
+    return box;
   }
 
   function buildPerEmployee(rows) {

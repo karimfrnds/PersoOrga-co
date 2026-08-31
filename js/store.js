@@ -265,6 +265,15 @@ function weekdayIndexOfDate(dateStr) {
 
 /** "mittel" braucht in JEDEM Fall eine explizite Chef-Bestätigung, auch wenn sie automatisch (durch
  * Einzelauswahl oder Kaskade) fest zugeteilt wurde – alle anderen Schichten gelten sofort als bestätigt. */
+/** Tage auf ein ISO-Datum addieren (auch negativ). Klein gehalten, damit der Store keine fremde
+ * Datums-Hilfe braucht. */
+function addDaysISOStore(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
 function autoConfirmsWithoutBoss(slotId) {
   return slotId !== "mittel";
 }
@@ -1022,7 +1031,7 @@ export const store = {
     recomputeStockStatus(item);
     if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
     item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: productName || item.name, quantitySold: qty, consumed: qty });
-    item.consumptionLog = item.consumptionLog.slice(0, 20);
+    item.consumptionLog = item.consumptionLog.slice(0, 120);
     if (Number.isFinite(Number(item.pricePerUnit))) this.addMaterialCost(date || todayStr(), qty * Number(item.pricePerUnit));
     persist();
     return item;
@@ -1057,7 +1066,7 @@ export const store = {
       recomputeStockStatus(item);
       if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
       item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: recipe.productName, quantitySold: qty, consumed });
-      item.consumptionLog = item.consumptionLog.slice(0, 20);
+      item.consumptionLog = item.consumptionLog.slice(0, 120);
       if (Number.isFinite(Number(item.pricePerUnit))) kosten += consumed * Number(item.pricePerUnit);
     }
     if (kosten > 0) this.addMaterialCost(date || todayStr(), kosten);
@@ -1226,6 +1235,87 @@ export const store = {
     persist();
     return r;
   },
+  /** Verbrauch eines Artikels in den letzten N Tagen – Grundlage für Reichweite und Bestellvorschlag. */
+  getConsumptionSince(stockItemId, tage) {
+    const item = data.stock.find((s) => s.id === stockItemId);
+    if (!item) return { menge: 0, tage: 0 };
+    const grenze = addDaysISOStore(todayStr(), -Math.abs(tage));
+    const relevant = (item.consumptionLog || []).filter((e) => e.date >= grenze);
+    const menge = round2(relevant.reduce((sum, e) => sum + (Number(e.consumed) || 0), 0));
+    // Nur Tage zählen, an denen wirklich etwas verbucht wurde – sonst drückt jeder Ruhetag den
+    // Schnitt und die Reichweite sähe grösser aus, als sie ist.
+    const tageMitVerbrauch = new Set(relevant.map((e) => e.date)).size;
+    return { menge, tage: tageMitVerbrauch };
+  },
+
+  /** Was sich mit einem Produkt verdienen lässt: verkaufte Menge, Umsatz und Materialkosten.
+   * Grundlage für "was läuft" und für den Deckungsbeitrag je Produkt. */
+  getProductStats(from, to) {
+    const nachProdukt = new Map();
+    for (const v of data.productSales) {
+      if ((from && v.date < from) || (to && v.date > to)) continue;
+      const key = v.productName;
+      const e = nachProdukt.get(key) || { productName: key, menge: 0, umsatz: 0, mitPreis: 0, materialkosten: 0, tage: new Set() };
+      e.menge += v.quantity;
+      if (v.revenue != null) {
+        e.umsatz = round2(e.umsatz + v.revenue);
+        e.mitPreis += v.quantity;
+      }
+      e.tage.add(v.date);
+      nachProdukt.set(key, e);
+    }
+    // Materialkosten je Stück aus dem Rezept bzw. dem Artikel selbst.
+    for (const e of nachProdukt.values()) {
+      e.kostenJeStueck = this.getProductUnitCost(e.productName);
+      e.materialkosten = e.kostenJeStueck === null ? null : round2(e.kostenJeStueck * e.menge);
+      e.tage = e.tage.size;
+    }
+    return [...nachProdukt.values()].sort((a, b) => b.menge - a.menge);
+  },
+
+  /** Was ein einzelnes Stück dieses Produkts im Einkauf kostet. null, wenn es sich nicht bestimmen
+   * lässt – etwa weil kein Rezept hinterlegt ist oder einer Zutat der Preis fehlt. Bewusst null statt
+   * einer Teilsumme: ein zu niedriger Wareneinsatz wäre schlimmer als gar keiner. */
+  getProductUnitCost(productName) {
+    const rezept = this.getRecipeByProductName(productName);
+    if (rezept) {
+      if (!rezept.ingredients || rezept.ingredients.length === 0) return null;
+      let summe = 0;
+      for (const z of rezept.ingredients) {
+        const artikel = data.stock.find((s) => s.id === z.stockItemId);
+        if (!artikel || artikel.pricePerUnit == null) return null;
+        summe += (Number(z.amount) || 0) * artikel.pricePerUnit;
+      }
+      return roundPreis(summe);
+    }
+    const artikel = this.getStockItemByName(productName);
+    if (artikel && artikel.pricePerUnit != null) return roundPreis(artikel.pricePerUnit);
+    return null;
+  },
+
+  /** Reservierungen zu Tageszahlen verdichtet – ohne Namen und Telefonnummern. */
+  getReservationStats(from, to) {
+    const nachTag = new Map();
+    for (const r of data.reservations) {
+      if ((from && r.date < from) || (to && r.date > to)) continue;
+      const e = nachTag.get(r.date) || { date: r.date, anzahl: 0, gaeste: 0, walkins: 0, walkinGaeste: 0,
+                                         storniert: 0, erschienen: 0, offen: 0, zeiten: [] };
+      if (r.source === "walkin") {
+        e.walkins++;
+        e.walkinGaeste += r.guests;
+      } else {
+        e.anzahl++;
+        e.gaeste += r.guests;
+        if (r.status === "storniert") e.storniert++;
+        else if (r.status === "da" || r.status === "weg") e.erschienen++;
+        else e.offen++;
+        e.zeiten.push(r.time);
+      }
+      nachTag.set(r.date, e);
+    }
+    return [...nachTag.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  },
+
   // ---- Inventur ----
   /** Was bei einer Inventur zu zaehlen ist: alle mengengefuehrten Artikel eines Bereichs mit ihrem
    * Soll-Bestand. Artikel ohne Einheit (reine Ampel) tauchen nicht auf – da gibt es nichts zu zaehlen. */

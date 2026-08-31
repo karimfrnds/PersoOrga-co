@@ -40,6 +40,31 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+/** Alle berechtigten Telegram-Chats. OWNER_CHAT_ID darf mehrere IDs enthalten, durch Komma getrennt –
+ * so koennen Chef und Geschaeftspartner denselben Bot benutzen und bekommen beide alle Meldungen. */
+function ownerChatIds(env) {
+  return String(env.OWNER_CHAT_ID || "")
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+function istBerechtigt(env, chatId) {
+  return ownerChatIds(env).includes(String(chatId));
+}
+/** Schickt eine Meldung an ALLE berechtigten Chats. Fehler bei einem Empfaenger duerfen die anderen
+ * nicht mitreissen – sonst bekommt niemand mehr etwas, nur weil einer den Bot blockiert hat. */
+async function sendToOwners(env, text) {
+  const ids = ownerChatIds(env);
+  for (const id of ids) {
+    try {
+      await sendTelegramMessage(env, id, text);
+    } catch (e) {
+      console.error("Konnte Chat " + id + " nicht erreichen:", e);
+    }
+  }
+  return ids.length;
+}
+
 function todayBerlin() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
@@ -594,11 +619,10 @@ async function handleBookingCreate(request, env) {
   await patchState(env, { reservationRequests: [...bestand, eintrag].slice(-500) });
   await env.TASKS_KV.put(kennung, String(bisher + 1), { expirationTtl: BUCHUNG_LOCK_SECONDS });
 
-  if (env.OWNER_CHAT_ID) {
+  if (ownerChatIds(env).length > 0) {
     const bereich = area === "innen" ? "drinnen" : area === "draussen" ? "draußen" : "egal";
-    await sendTelegramMessage(
+    await sendToOwners(
       env,
-      env.OWNER_CHAT_ID,
       `🍽 Neue Online-Reservierung\n${formatDateDe(date)} um ${time} Uhr\n${name} · ${guests} ${
         guests === 1 ? "Person" : "Personen"
       } · ${bereich}\n📞 ${phone}${note ? `\n📝 ${note}` : ""}\nNr. ${code}`
@@ -1233,9 +1257,9 @@ async function handleMeSick(request, env) {
   const report = { id: crypto.randomUUID(), employeeName: guard.session.name, from, to, note, createdAt: new Date().toISOString() };
   await patchState(env, { sickReports: [...(state.sickReports || []), report] });
 
-  if (env.OWNER_CHAT_ID) {
+  if (ownerChatIds(env).length > 0) {
     const zeitraum = from === to ? formatDateDe(from) : `${formatDateDe(from)} – ${formatDateDe(to)}`;
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🤒 Krankmeldung: ${guard.session.name} (${zeitraum})${note ? `\n„${note}"` : ""}`);
+    await sendToOwners(env, `🤒 Krankmeldung: ${guard.session.name} (${zeitraum})${note ? `\n„${note}"` : ""}`);
   }
   return jsonResponse({ ok: true });
 }
@@ -2797,11 +2821,11 @@ async function handleTelegram(request, env) {
   const chatId = message?.chat?.id;
   if ((!text && !photo && !doc) || chatId === undefined) return new Response("ok", { status: 200 });
 
-  if (!env.OWNER_CHAT_ID) {
-    await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen.`);
+  if (ownerChatIds(env).length === 0) {
+    await sendTelegramMessage(env, chatId, `Setup: Deine Chat-ID ist ${chatId}. Bitte als OWNER_CHAT_ID-Secret im Worker hinterlegen. Mehrere Personen: die IDs mit Komma trennen.`);
     return new Response("ok", { status: 200 });
   }
-  if (String(chatId) !== String(env.OWNER_CHAT_ID)) {
+  if (!istBerechtigt(env, chatId)) {
     return new Response("ok", { status: 200 });
   }
 
@@ -3098,10 +3122,9 @@ async function handleAvailability(request, env) {
 
   await patchState(env, { availability: { ...current.availability, [weekStart]: bucket } });
 
-  if (justCompleted && env.OWNER_CHAT_ID) {
-    await sendTelegramMessage(
+  if (justCompleted && ownerChatIds(env).length > 0) {
+    await sendToOwners(
       env,
-      env.OWNER_CHAT_ID,
       `✅ Alle ${activeNames.length} Mitarbeiter haben ihre Verfügbarkeit für die Woche ab ${formatDateDe(weekStart)} eingetragen. Schick mir „verfügbarkeiten" für die Übersicht.`
     );
   }
@@ -3128,8 +3151,8 @@ async function handleNote(request, env) {
   const text = String(body.text || "").trim();
   if (!text) return new Response("bad request", { status: 400, headers: CORS_HEADERS });
 
-  if (env.OWNER_CHAT_ID) {
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📝 Notiz von ${employeeName}:\n${text}`);
+  if (ownerChatIds(env).length > 0) {
+    await sendToOwners(env, `📝 Notiz von ${employeeName}:\n${text}`);
   }
 
   // Zusätzlich sammeln, damit "nachrichten" später eine Übersicht aller Notizen zeigen kann.
@@ -3159,13 +3182,13 @@ async function handleEvent(request, env) {
     return new Response("bad request", { status: 400, headers: CORS_HEADERS });
   }
 
-  if (env.OWNER_CHAT_ID) {
+  if (ownerChatIds(env).length > 0) {
     if (body.type === "clock_in") {
-      await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🟢 ${body.employeeName} hat sich eingestempelt (${body.time} Uhr).`);
+      await sendToOwners(env, `🟢 ${body.employeeName} hat sich eingestempelt (${body.time} Uhr).`);
     } else if (body.type === "clock_out") {
-      await sendTelegramMessage(env, env.OWNER_CHAT_ID, `🔴 ${body.employeeName} hat sich ausgestempelt (${body.time} Uhr).`);
+      await sendToOwners(env, `🔴 ${body.employeeName} hat sich ausgestempelt (${body.time} Uhr).`);
     } else if (body.type === "day_closed") {
-      await sendTelegramMessage(env, env.OWNER_CHAT_ID, buildDayClosedReply(body));
+      await sendToOwners(env, buildDayClosedReply(body));
     }
   }
 
@@ -3204,7 +3227,7 @@ function buildNotesDigestReply(state) {
 
 /** Cron Trigger (optional, siehe README): morgens/abends eine kurze Erinnerung schicken. */
 async function handleScheduled(env) {
-  if (!env.OWNER_CHAT_ID) return;
+  if (ownerChatIds(env).length === 0) return;
   const hour = berlinHour();
   if (hour !== MORNING_HOUR && hour !== EVENING_HOUR) return;
 
@@ -3218,7 +3241,7 @@ async function handleScheduled(env) {
       todaysTasks.length === 0
         ? "☀️ Guten Morgen! Keine besonderen Aufgaben für heute hinterlegt."
         : `☀️ Guten Morgen! ${todaysTasks.length} Aufgabe(n) für heute, davon ${open.length} noch offen.\n\n${buildListReply({ ...state, tasks: todaysTasks }, today)}`;
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
+    await sendToOwners(env, text);
 
     if (weekdayOf(today) === REMINDER_WEEKDAY) {
       await remindMissingAvailability(env, state, today);
@@ -3230,7 +3253,7 @@ async function handleScheduled(env) {
     await warnStaleOpenShifts(env, state);
   } else if (hour === EVENING_HOUR && open.length > 0) {
     const text = `🌙 Heute Abend noch offen (${open.length}):\n\n${buildListReply({ ...state, tasks: open }, today)}`;
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, text);
+    await sendToOwners(env, text);
   }
 }
 
@@ -3244,9 +3267,8 @@ async function remindMissingAvailability(env, state, today) {
   const submitted = new Set(Object.keys(bucket?.entries || {}));
   const missing = activeNames.filter((n) => !submitted.has(n));
   if (missing.length === 0) return;
-  await sendTelegramMessage(
+  await sendToOwners(
     env,
-    env.OWNER_CHAT_ID,
     `📋 Diese Personen haben noch keine Verfügbarkeit für die Woche ab ${formatDateDe(weekStart)} eingetragen: ${missing.join(", ")}.`
   );
 }
@@ -3260,7 +3282,7 @@ async function sendWeeklySummary(env, state, today) {
   // - hier darf es auch mal ein längerfristiges Muster sein, nicht nur der Blick auf die letzten zwei Wochen.
   const insights = await generateInsights(env, state.financials, 60);
   if (insights) reply += `\n\n💡 ${insights}`;
-  await sendTelegramMessage(env, env.OWNER_CHAT_ID, `📅 Wochenrückblick\n\n${reply}`);
+  await sendToOwners(env, `📅 Wochenrückblick\n\n${reply}`);
 }
 
 /** Warnt einmalig pro Person und Monat, sobald ein Minijobber diesen Monat 85% seiner Verdienstgrenze
@@ -3291,7 +3313,7 @@ async function warnMinijobLimits(env, state, today) {
   }
   if (changed) await patchState(env, { minijobWarned: warned });
   if (warnings.length > 0) {
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `⚠️ Minijob-Grenze rückt näher (dieser Monat):\n${warnings.join("\n")}`);
+    await sendToOwners(env, `⚠️ Minijob-Grenze rückt näher (dieser Monat):\n${warnings.join("\n")}`);
   }
 }
 
@@ -3313,7 +3335,7 @@ async function warnStaleOpenShifts(env, state) {
   if (changed) await patchState(env, { staleShiftWarned: warned });
   if (toWarn.length > 0) {
     const lines = toWarn.map((s) => `- ${s.employeeName}: seit ${formatDateDe(s.date)} ${s.from} Uhr noch eingestempelt`);
-    await sendTelegramMessage(env, env.OWNER_CHAT_ID, `⏰ Vergessenes Ausstempeln?\n${lines.join("\n")}`);
+    await sendToOwners(env, `⏰ Vergessenes Ausstempeln?\n${lines.join("\n")}`);
   }
 }
 

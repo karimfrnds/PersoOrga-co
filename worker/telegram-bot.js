@@ -2257,9 +2257,14 @@ async function handleAdminRecipe(request, env) {
   if (kind !== "create" && !String(body?.recipeId || "").trim()) return jsonResponse({ error: "Rezept fehlt." }, 400);
   if (!["delete", "reviewed", "merge", "alias"].includes(kind) && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
 
+  // Eine Zutat ist entweder ein Artikel ODER ein anderes Rezept (z.B. ein Grundmix).
   const zutaten = (Array.isArray(body?.ingredients) ? body.ingredients : [])
-    .map((z) => ({ stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }))
-    .filter((z) => z.stockItemId && z.amount > 0);
+    .map((z) =>
+      z?.recipeId
+        ? { recipeId: String(z.recipeId), amount: Number(z?.amount) || 0, unit: String(z?.unit || "").trim() }
+        : { stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }
+    )
+    .filter((z) => (z.recipeId || z.stockItemId) && z.amount > 0);
 
   const eintrag = {
     id: crypto.randomUUID(),
@@ -2267,6 +2272,8 @@ async function handleAdminRecipe(request, env) {
     recipeId: String(body?.recipeId || "") || null,
     productName: String(body?.productName || "").trim(),
     ingredients: zutaten,
+    yieldAmount: body?.yieldAmount === undefined ? undefined : Number(body.yieldAmount),
+    yieldUnit: body?.yieldUnit === undefined ? undefined : String(body.yieldUnit).trim(),
     targetId: String(body?.targetId || "") || null,
     alias: String(body?.alias || "").trim(),
   };
@@ -2292,12 +2299,15 @@ function rezeptVorschau(recipes, e) {
     return recipes.map((r) => (r.id === e.recipeId ? { ...r, aliases: [...(r.aliases || []), e.alias] } : r));
   }
   if (e.kind === "create") {
-    return [...recipes, { id: "vorlaeufig-" + e.id, productName: e.productName, ingredients: e.ingredients || [], needsReview: false }];
+    return [...recipes, { id: "vorlaeufig-" + e.id, productName: e.productName, ingredients: e.ingredients || [], needsReview: false, yieldAmount: e.yieldAmount || 1, yieldUnit: e.yieldUnit || "Portion" }];
   }
   return recipes.map((r) => {
     if (r.id !== e.recipeId) return r;
     if (e.kind === "reviewed") return { ...r, needsReview: false };
-    if (e.kind === "update") return { ...r, productName: e.productName || r.productName, ingredients: e.ingredients || [], needsReview: false };
+    if (e.kind === "update")
+      return { ...r, productName: e.productName || r.productName, ingredients: e.ingredients || [], needsReview: false,
+               yieldAmount: e.yieldAmount === undefined ? r.yieldAmount : e.yieldAmount,
+               yieldUnit: e.yieldUnit === undefined ? r.yieldUnit : e.yieldUnit };
     return r;
   });
 }

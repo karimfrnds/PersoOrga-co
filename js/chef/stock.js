@@ -483,6 +483,21 @@ function renderStock(state, { onChanged }) {
     return undefined;
   }
 
+  /** Wuerde "kandidat" als Zutat in "zielId" einen Kreis ergeben? Muss auch am Laptop geprueft werden,
+   * damit gar nicht erst etwas Unmoegliches auswaehlbar ist – der Store liegt auf dem iPad. */
+  function bildetKreis(kandidatId, zielId) {
+    if (!zielId) return false;
+    const gesehen = new Set();
+    const pruefe = (id) => {
+      if (id === zielId) return true;
+      if (gesehen.has(id)) return false;
+      gesehen.add(id);
+      const r = (state.recipes || []).find((x) => x.id === id);
+      return (r?.ingredients || []).some((z) => z.recipeId && pruefe(z.recipeId));
+    };
+    return pruefe(kandidatId);
+  }
+
   function openArtikelDialog(item) {
     const neu = !item;
     const overlay = document.createElement("div");
@@ -623,6 +638,8 @@ function renderStock(state, { onChanged }) {
 
   function openRezeptDialog(rezept, artikel) {
     const neu = !rezept;
+    // Rezepte, die als Zutat taugen: alle ausser dem eigenen und solchen, die einen Kreis ergaeben.
+    const verwendbareRezepte = (state.recipes || []).filter((r) => r.id !== rezept?.id && !bildetKreis(r.id, rezept?.id));
     const zutaten = (rezept?.ingredients || []).map((z) => ({ ...z }));
     const overlay = document.createElement("div");
     overlay.className = "overlay";
@@ -635,7 +652,18 @@ function renderStock(state, { onChanged }) {
           <label class="field"><span>Produktname (wie im SumUp-Bericht)</span><input type="text" id="rz-name" value="${escapeHtml(
             rezept?.productName || ""
           )}" placeholder="z.B. Cappuccino" /></label>
-          <p class="muted small"><b>Zutaten pro verkauftem Stück</b></p>
+          <div class="res-form-row">
+            <label class="field"><span>Ergibt</span><input type="number" id="rz-yield" step="0.01" min="0.01" value="${
+              rezept?.yieldAmount ?? 1
+            }" /></label>
+            <label class="field"><span>Einheit davon</span><input type="text" id="rz-yieldunit" value="${escapeHtml(
+              rezept?.yieldUnit || "Portion"
+            )}" placeholder="Portion, g, ml" /></label>
+          </div>
+          <p class="muted small">Bei einem Verkaufsprodukt: <b>1 Portion</b>. Bei einer Vorbereitung wie
+          einem Grundmix das, was ein Ansatz ergibt (z.B. <b>2000 g</b>) – nur dann lässt sich
+          „200 g Grundmix" in einem anderen Rezept ausrechnen.</p>
+          <p class="muted small"><b>Zutaten für einen Ansatz</b> – Artikel oder ein anderes Rezept</p>
           <div id="rz-list" class="task-list"></div>
           <button class="btn btn-secondary" id="rz-add" style="margin-top:8px">＋ Zutat hinzufügen</button>
           <p class="muted small" id="rz-status"></p>
@@ -649,15 +677,47 @@ function renderStock(state, { onChanged }) {
       zutaten.forEach((z, idx) => {
         const row = document.createElement("div");
         row.className = "task-add-row";
+        // Zur Auswahl stehen Artikel UND andere Rezepte – ein Grundmix ist selbst ein Rezept und muss
+        // sich in Pancakes einsetzen lassen. Rezepte, die einen Kreis ergäben, fehlen in der Liste.
         const sel = document.createElement("select");
+        const gruppeA = document.createElement("optgroup");
+        gruppeA.label = "Artikel";
         for (const a of artikel) {
           const o = document.createElement("option");
-          o.value = a.id;
+          o.value = "a:" + a.id;
           o.textContent = `${a.name} (${a.unit})`;
           if (a.id === z.stockItemId) o.selected = true;
-          sel.appendChild(o);
+          gruppeA.appendChild(o);
         }
-        sel.onchange = () => (z.stockItemId = sel.value);
+        sel.appendChild(gruppeA);
+        if (verwendbareRezepte.length > 0) {
+          const gruppeR = document.createElement("optgroup");
+          gruppeR.label = "Andere Rezepte";
+          for (const r of verwendbareRezepte) {
+            const o = document.createElement("option");
+            o.value = "r:" + r.id;
+            o.textContent = `${r.productName} (ergibt ${r.yieldAmount ?? 1} ${r.yieldUnit || "Portion"})`;
+            if (r.id === z.recipeId) o.selected = true;
+            gruppeR.appendChild(o);
+          }
+          sel.appendChild(gruppeR);
+        }
+        sel.onchange = () => {
+          const [art, id] = sel.value.split(":");
+          if (art === "r") {
+            z.recipeId = id;
+            delete z.stockItemId;
+            const r = verwendbareRezepte.find((x) => x.id === id);
+            z.unit = r?.yieldUnit || "Portion";
+          } else {
+            z.stockItemId = id;
+            delete z.recipeId;
+            delete z.unit;
+          }
+          const merk = nameInput.value;
+          zeichne();
+          overlay.querySelector("#rz-name").value = merk;
+        };
         const menge = document.createElement("input");
         menge.type = "number";
         menge.step = "0.01";
@@ -674,7 +734,16 @@ function renderStock(state, { onChanged }) {
           zeichne();
           overlay.querySelector("#rz-name").value = merk;
         };
-        row.append(sel, menge, weg);
+        // Bei einem Unter-Rezept steht dabei, in welcher Einheit die Menge gemeint ist.
+        const einheit = document.createElement("span");
+        einheit.className = "muted small";
+        if (z.recipeId) {
+          const r = verwendbareRezepte.find((x) => x.id === z.recipeId);
+          einheit.textContent = z.unit || r?.yieldUnit || "";
+        } else {
+          einheit.textContent = artikel.find((a) => a.id === z.stockItemId)?.unit || "";
+        }
+        row.append(sel, menge, einheit, weg);
         liste.appendChild(row);
       });
 
@@ -701,7 +770,13 @@ function renderStock(state, { onChanged }) {
             kind: neu ? "create" : "update",
             recipeId: rezept?.id,
             productName: name,
-            ingredients: zutaten.map((z) => ({ stockItemId: z.stockItemId, amount: Number(z.amount) || 0 })),
+            yieldAmount: overlay.querySelector("#rz-yield").value,
+            yieldUnit: overlay.querySelector("#rz-yieldunit").value.trim(),
+            ingredients: zutaten.map((z) =>
+              z.recipeId
+                ? { recipeId: z.recipeId, amount: Number(z.amount) || 0, unit: z.unit || "" }
+                : { stockItemId: z.stockItemId, amount: Number(z.amount) || 0 }
+            ),
           });
           overlay.remove();
           await onChanged();

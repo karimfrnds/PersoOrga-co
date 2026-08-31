@@ -531,9 +531,10 @@ async function performTaskSync() {
   let newRecipeChangeIds = false;
   for (const c of remoteRecipeChanges) {
     if (!c.id || appliedRecipeChangeIds.has(c.id)) continue;
-    if (c.kind === "create") store.addRecipe(c.productName, c.ingredients || []);
+    if (c.kind === "create") store.addRecipe(c.productName, c.ingredients || [], { yieldAmount: c.yieldAmount, yieldUnit: c.yieldUnit });
     else if (c.kind === "update") {
-      store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [] });
+      store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [],
+        yieldAmount: c.yieldAmount, yieldUnit: c.yieldUnit });
       store.markRecipeReviewed(c.recipeId); // Zutaten eingetragen = eingeordnet
     } else if (c.kind === "delete") store.removeRecipe(c.recipeId);
     else if (c.kind === "reviewed") store.markRecipeReviewed(c.recipeId);
@@ -798,7 +799,7 @@ async function performTaskSync() {
   const produktStatistik = store.getProductStats(isoDaysAgo(90), todayStr());
   // Reservierungen als Tageszahlen – ausdrücklich ohne Namen und Telefonnummern.
   const reservationStats = store.getReservationStats(isoDaysAgo(90), todayStr());
-  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [] }));
+  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [], yieldAmount: r.yieldAmount ?? 1, yieldUnit: r.yieldUnit || "Portion" }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
   // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
   const employeeDetails = store.getEmployees(true).map((e) => ({

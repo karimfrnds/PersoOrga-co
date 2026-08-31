@@ -913,8 +913,14 @@ export const store = {
 
     if (rezepte) {
       const vorher = data.recipes.length;
-      data.recipes = nurUngeprueft ? data.recipes.filter((r) => !r.needsReview) : [];
+      const bleibtR = nurUngeprueft ? data.recipes.filter((r) => !r.needsReview) : [];
+      const entfernteRezepte = new Set(data.recipes.filter((r) => !bleibtR.includes(r)).map((r) => r.id));
+      data.recipes = bleibtR;
       geloeschteRezepte = vorher - data.recipes.length;
+      // Zutaten, die auf ein geloeschtes Rezept zeigen, entfernen – sonst zeigt ein Rezept ins Leere.
+      for (const r of data.recipes) {
+        if (Array.isArray(r.ingredients)) r.ingredients = r.ingredients.filter((z) => !z.recipeId || !entfernteRezepte.has(z.recipeId));
+      }
     }
     if (artikel) {
       const vorher = data.stock.length;
@@ -1035,6 +1041,11 @@ export const store = {
       ingredients: [...ingredients],
       // wie bei Artikeln: automatisch angelegt und noch ohne Zutaten -> muss einmal angeschaut werden
       needsReview: !!opts.needsReview,
+      // Wie viel ein Durchlauf ergibt. Bei einem Verkaufsprodukt ist das 1 Portion – bei einer
+      // Vorbereitung wie einem Grundmix aber z.B. 2000 g. Ohne diese Angabe waere "200 g Grundmix"
+      // in einem anderen Rezept nicht ausrechenbar: mal ist ein Grundmix eine Portion, mal ein Eimer.
+      yieldAmount: Number(opts.yieldAmount) > 0 ? round2(opts.yieldAmount) : 1,
+      yieldUnit: String(opts.yieldUnit || "Portion").trim() || "Portion",
     };
     if (!recipe.productName) return null;
     data.recipes.push(recipe);
@@ -1044,9 +1055,35 @@ export const store = {
   updateRecipe(id, patch) {
     const r = data.recipes.find((x) => x.id === id);
     if (!r) return;
+    // Zutaten, die auf ein Rezept zeigen, duerfen keinen Kreis bilden: ein Grundmix, der sich selbst
+    // (auch ueber Umwege) enthaelt, wuerde beim Verrechnen endlos laufen.
+    if (Array.isArray(patch.ingredients)) {
+      patch = { ...patch, ingredients: patch.ingredients.filter((z) => !z.recipeId || !this.wuerdeKreisBilden(id, z.recipeId)) };
+    }
     Object.assign(r, patch);
+    if (patch.yieldAmount !== undefined) r.yieldAmount = Number(patch.yieldAmount) > 0 ? round2(patch.yieldAmount) : 1;
+    if (patch.yieldUnit !== undefined) r.yieldUnit = String(patch.yieldUnit).trim() || "Portion";
     persist();
     return r;
+  },
+
+  /** Wuerde es einen Kreis geben, wenn "rezeptId" die Zutat "zutatRezeptId" bekaeme? */
+  wuerdeKreisBilden(rezeptId, zutatRezeptId) {
+    if (rezeptId === zutatRezeptId) return true;
+    const gesehen = new Set();
+    const pruefe = (id) => {
+      if (id === rezeptId) return true;
+      if (gesehen.has(id)) return false;
+      gesehen.add(id);
+      const r = data.recipes.find((x) => x.id === id);
+      return (r?.ingredients || []).some((z) => z.recipeId && pruefe(z.recipeId));
+    };
+    return pruefe(zutatRezeptId);
+  },
+
+  /** Rezepte, die als Zutat in "rezeptId" verwendet werden duerfen (ohne Kreis zu bilden). */
+  getVerwendbareRezepte(rezeptId) {
+    return data.recipes.filter((r) => r.id !== rezeptId && !this.wuerdeKreisBilden(rezeptId, r.id));
   },
   removeRecipe(id) {
     data.recipes = data.recipes.filter((r) => r.id !== id);
@@ -1142,20 +1179,55 @@ export const store = {
     const recipe = data.recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
     const qty = Number(quantitySold) || 0;
+    const kosten = this.verrechneRezept(recipeId, qty, date || todayStr(), recipe.productName, new Set());
+    if (kosten > 0) this.addMaterialCost(date || todayStr(), kosten);
+    persist();
+  },
+
+  /** Zieht die Zutaten eines Rezepts ab – und geht dabei durch Unter-Rezepte hindurch.
+   *
+   * Ein Grundmix ist selbst ein Rezept: verkauft man 10 Pancakes mit je 200 g Grundmix, und der Grundmix
+   * ergibt laut Rezept 2000 g, dann sind das 10 x 200 / 2000 = 1 Durchlauf Grundmix, dessen Zutaten
+   * abgezogen werden. Ohne diese Umrechnung ueber die Ergiebigkeit waere "200 g Grundmix" bedeutungslos.
+   *
+   * Verbucht wird immer nur auf echten Artikeln – ein Rezept hat keinen Bestand. Der Verbrauchsverlauf
+   * nennt das VERKAUFTE Produkt (also "Pancakes"), nicht den Grundmix: sonst wuesste man spaeter nicht
+   * mehr, wofuer das Mehl draufging.
+   */
+  verrechneRezept(recipeId, faktor, date, herkunftName, besucht) {
+    if (besucht.has(recipeId)) return 0; // Sicherheitsnetz gegen Kreise
+    besucht.add(recipeId);
+    const recipe = data.recipes.find((r) => r.id === recipeId);
+    if (!recipe) return 0;
     let kosten = 0;
+
     for (const ing of recipe.ingredients) {
+      const menge = (Number(ing.amount) || 0) * faktor;
+      if (menge <= 0) continue;
+
+      if (ing.recipeId) {
+        const unter = data.recipes.find((r) => r.id === ing.recipeId);
+        if (!unter) continue;
+        // Wie viele Durchlaeufe des Unter-Rezepts sind das? Menge geteilt durch seine Ergiebigkeit,
+        // die Einheiten vorher angeglichen (Rezept ergibt 2 kg, gebraucht werden 200 g).
+        const ergibt = Number(unter.yieldAmount) > 0 ? Number(unter.yieldAmount) : 1;
+        const angeglichen = rechneEinheitUm(menge, ing.unit || unter.yieldUnit, unter.yieldUnit);
+        const durchlaeufe = (angeglichen === null ? menge : angeglichen) / ergibt;
+        kosten += this.verrechneRezept(ing.recipeId, durchlaeufe, date, herkunftName, new Set(besucht));
+        continue;
+      }
+
       const item = data.stock.find((s) => s.id === ing.stockItemId);
       if (!item || !item.unit) continue;
-      const consumed = round2((Number(ing.amount) || 0) * qty);
+      const consumed = round2(menge);
       item.currentAmount = round2((Number(item.currentAmount) || 0) - consumed);
       recomputeStockStatus(item);
       if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
-      item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: recipe.productName, quantitySold: qty, consumed });
+      item.consumptionLog.unshift({ id: uid(), date, productName: herkunftName, quantitySold: faktor, consumed });
       item.consumptionLog = item.consumptionLog.slice(0, 120);
       if (Number.isFinite(Number(item.pricePerUnit))) kosten += consumed * Number(item.pricePerUnit);
     }
-    if (kosten > 0) this.addMaterialCost(date || todayStr(), kosten);
-    persist();
+    return kosten;
   },
 
   // ---- Krankmeldungen (kommen vom Handy der Mitarbeiter herein) ----
@@ -1363,19 +1435,37 @@ export const store = {
    * einer Teilsumme: ein zu niedriger Wareneinsatz wäre schlimmer als gar keiner. */
   getProductUnitCost(productName) {
     const rezept = this.getRecipeByProductName(productName);
-    if (rezept) {
-      if (!rezept.ingredients || rezept.ingredients.length === 0) return null;
-      let summe = 0;
-      for (const z of rezept.ingredients) {
-        const artikel = data.stock.find((s) => s.id === z.stockItemId);
-        if (!artikel || artikel.pricePerUnit == null) return null;
-        summe += (Number(z.amount) || 0) * artikel.pricePerUnit;
-      }
-      return roundPreis(summe);
-    }
+    if (rezept) return this.rezeptKosten(rezept.id, new Set());
     const artikel = this.getStockItemByName(productName);
     if (artikel && artikel.pricePerUnit != null) return roundPreis(artikel.pricePerUnit);
     return null;
+  },
+
+  /** Was ein Durchlauf eines Rezepts im Einkauf kostet – durch Unter-Rezepte hindurch.
+   * null, sobald einer Zutat der Preis fehlt: eine Teilsumme waere zu niedrig und damit irrefuehrender
+   * als gar keine Zahl. */
+  rezeptKosten(recipeId, besucht) {
+    if (besucht.has(recipeId)) return null;
+    besucht.add(recipeId);
+    const rezept = data.recipes.find((r) => r.id === recipeId);
+    if (!rezept || !rezept.ingredients || rezept.ingredients.length === 0) return null;
+    let summe = 0;
+    for (const z of rezept.ingredients) {
+      if (z.recipeId) {
+        const unter = data.recipes.find((r) => r.id === z.recipeId);
+        if (!unter) return null;
+        const proDurchlauf = this.rezeptKosten(z.recipeId, new Set(besucht));
+        if (proDurchlauf === null) return null;
+        const ergibt = Number(unter.yieldAmount) > 0 ? Number(unter.yieldAmount) : 1;
+        const angeglichen = rechneEinheitUm(Number(z.amount) || 0, z.unit || unter.yieldUnit, unter.yieldUnit);
+        summe += ((angeglichen === null ? Number(z.amount) || 0 : angeglichen) / ergibt) * proDurchlauf;
+        continue;
+      }
+      const artikel = data.stock.find((s) => s.id === z.stockItemId);
+      if (!artikel || artikel.pricePerUnit == null) return null;
+      summe += (Number(z.amount) || 0) * artikel.pricePerUnit;
+    }
+    return roundPreis(summe);
   },
 
   /** Reservierungen zu Tageszahlen verdichtet – ohne Namen und Telefonnummern. */
@@ -1423,6 +1513,14 @@ export const store = {
       const menge = Number(z.amount) || 0;
       if (!zName || menge <= 0) continue;
 
+      // Erst schauen, ob es dafuer schon ein REZEPT gibt: "200 g Grundmix" meint die Vorbereitung,
+      // nicht einen eingekauften Artikel. Sonst entstuende ein zweiter Eintrag gleichen Namens.
+      const unterRezept = this.getRecipeByProductName(zName);
+      if (unterRezept) {
+        zutaten.push({ recipeId: unterRezept.id, amount: menge, unit: normalisiereEinheit(z.unit) });
+        continue;
+      }
+
       let artikel = this.getStockItemByName(zName);
       if (!artikel) {
         // Die Einheit des Rezepts wird zur Einheit des Artikels – dann passt beides von Anfang an
@@ -1441,10 +1539,13 @@ export const store = {
     if (zutaten.length === 0) return { rezept: null, warnungen, neueArtikel };
 
     const vorhanden = this.getRecipeByProductName(name);
-    const rezept = vorhanden
-      ? this.updateRecipe(vorhanden.id, { productName: vorhanden.productName, ingredients: zutaten })
-      : this.addRecipe(name, zutaten, { needsReview: true });
-    return { rezept, warnungen, neueArtikel, ersetzt: !!vorhanden };
+    if (vorhanden) {
+      const ohneKreis = zutaten.filter((z) => !z.recipeId || !this.wuerdeKreisBilden(vorhanden.id, z.recipeId));
+      if (ohneKreis.length < zutaten.length) warnungen.push("eine Zutat hätte einen Kreis gebildet und wurde ausgelassen");
+      return { rezept: this.updateRecipe(vorhanden.id, { productName: vorhanden.productName, ingredients: ohneKreis }),
+               warnungen, neueArtikel, ersetzt: true };
+    }
+    return { rezept: this.addRecipe(name, zutaten, { needsReview: true }), warnungen, neueArtikel, ersetzt: false };
   },
 
   // ---- Inventur ----

@@ -355,36 +355,8 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRejectionIds: [...appliedRejectionIds].slice(-300) });
   }
 
-  // Chef meldet per Bot "X ist wieder da" -> Artikel-Status zurück auf "ok". Nachsichtiger Namens-Vergleich
-  // (exakt, sonst Teilstring), da Artikel frei benannt sind (kein festes Enum wie bei Schichten). Kennt die
-  // Vorräte-Liste den Artikel noch gar nicht, wird er automatisch neu angelegt (reine Ampel, Status "ok") -
-  // spart das manuelle Vorab-Anlegen in Admin -> Vorräte.
-  const remoteRestocks = Array.isArray(remote.stockRestocks) ? remote.stockRestocks : [];
-  const appliedRestockIds = new Set(cfg.appliedRestockIds || []);
-  let newRestockIds = false;
-  for (const rs of remoteRestocks) {
-    if (!rs.id || appliedRestockIds.has(rs.id)) continue;
-    // Die gemeinsame Namenserkennung benutzen (Zweitnamen, Umlaute, Mengenangaben, Ähnlichkeit) statt
-    // eines eigenen Vergleichs. Der alte prüfte nur EINE Richtung und fand "Erdbeeren" nicht in
-    // "Erdbeeren 500g Schale" – so entstanden Doppelgänger.
-    let match = store.getStockItemByName(rs.itemName);
-    if (!match && rs.itemName) {
-      match = store.addStockItem(rs.itemName, { needsReview: true });
-      if (match) {
-        syncWarnings.push(`Neuer Artikel "${rs.itemName}" angelegt – bitte am Laptop unter Bestand einordnen.`);
-      }
-    }
-    if (match) store.setStockStatus(match.id, "ok", "Chef");
-    else syncWarnings.push(`"${rs.itemName}" ist wieder da: kein passender Vorrats-Artikel gefunden.`);
-    appliedRestockIds.add(rs.id);
-    newRestockIds = true;
-  }
-  if (newRestockIds) {
-    store.updateTaskInboxConfig({ appliedRestockIds: [...appliedRestockIds].slice(-300) });
-  }
-
   // Vom Bot per Lieferschein-Foto/PDF erkannte Lieferungen -> als Verlauf beim jeweiligen Artikel anlegen
-  // (setzt den Status automatisch auf "ok"). Gleicher nachsichtiger Namens-Vergleich wie bei "restock". Kennt
+  // (setzt den Status automatisch auf "ok"). Kennt
   // die Vorräte-Liste den Artikel noch nicht, wird er automatisch neu angelegt (mit der auf dem Beleg
   // erkannten Einheit, Start-Bestand 0 - die Menge kommt gleich im nächsten Schritt über addStockDelivery
   // dazu) statt die Lieferung nur als Warnung zu verwerfen. Warnschwelle testweise auf 20% der ersten

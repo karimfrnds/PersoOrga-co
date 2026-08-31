@@ -118,8 +118,6 @@ function defaultData() {
         // IDs vom Bot per "reject_shift" abgelehnter Schichten, die schon per rejectAvailability()
         // übernommen wurden (gedeckelt) – verhindert doppelte Anwendung bei erneutem Sync.
         appliedRejectionIds: [],
-        // IDs vom Bot per "X ist wieder da" wiederaufgefüllter Vorräte, die schon übernommen wurden.
-        appliedRestockIds: [],
         // IDs von per Lieferschein-Foto erkannten Lieferungen, die schon als Verlauf übernommen wurden.
         appliedDeliveryIds: [],
         // IDs von per SumUp-Verkaufsbericht-Foto erkannten Verkäufen, die schon gegen Rezepte verrechnet wurden.

@@ -4,7 +4,7 @@
 // beim nächsten Abgleich übernimmt.
 // ============================================================================
 import { escapeHtml, dateDe, todayStr } from "../format.js";
-import { markRestocked, recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
+import { recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
 import { bewerteKandidaten, nameAehnlichkeit } from "../nameMatch.js";
 
 const STATUS = {
@@ -489,25 +489,6 @@ function renderStock(state, { onChanged }) {
       }</span>`;
       row.appendChild(text);
 
-      const actions = document.createElement("div");
-      actions.className = "employee-actions";
-      const btn = document.createElement("button");
-      btn.className = "btn btn-secondary";
-      btn.textContent = "Ist wieder da";
-      btn.onclick = async () => {
-        btn.disabled = true;
-        btn.textContent = "…";
-        try {
-          await markRestocked(item.name);
-          await onChanged();
-        } catch (e) {
-          btn.disabled = false;
-          btn.textContent = "Ist wieder da";
-          alert("⚠ " + e.message);
-        }
-      };
-      actions.appendChild(btn);
-      row.appendChild(actions);
       list.appendChild(row);
     }
     return list;

@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-08-31.6";
+const WORKER_VERSION = "2026-09-01.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -162,7 +162,6 @@ const EMPTY_STATE = {
   employeeMeta: [], // [{name, isMinijob, minijobLimit}] – nur für die Minijob-Grenzen-Warnung
   staleOpenShifts: [], // [{date, employeeName, from}] – vergessenes Ausstempeln
   stock: [], // [{name, status}] – Vorräte-Ampel
-  stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
   stockDeliveries: [], // [{id, itemName, quantity, unit, unitPrice, date}] – per Lieferschein erkannte Lieferungen
   stockSales: [], // [{id, productName, quantitySold, kind, salePrice, date}] – per Kassenbericht erkannte Verkäufe
   employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
@@ -239,7 +238,6 @@ async function getState(env) {
       employeeMeta: Array.isArray(parsed.employeeMeta) ? parsed.employeeMeta : [],
       staleOpenShifts: Array.isArray(parsed.staleOpenShifts) ? parsed.staleOpenShifts : [],
       stock: Array.isArray(parsed.stock) ? parsed.stock : [],
-      stockRestocks: Array.isArray(parsed.stockRestocks) ? parsed.stockRestocks : [],
       stockDeliveries: Array.isArray(parsed.stockDeliveries) ? parsed.stockDeliveries : [],
       stockSales: Array.isArray(parsed.stockSales) ? parsed.stockSales : [],
       employeeNotes: Array.isArray(parsed.employeeNotes) ? parsed.employeeNotes : [],
@@ -1570,15 +1568,11 @@ async function handleAdminStock(request, env) {
   if (!itemName) return jsonResponse({ error: "Artikelname fehlt." }, 400);
   const state = await getState(env);
 
-  if (body?.kind === "delivery") {
-    const quantity = Number(body?.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : todayBerlin();
-    const delivery = { id: crypto.randomUUID(), itemName, quantity, unit: String(body?.unit || "").trim(), date };
-    await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), delivery] });
-  } else {
-    await patchState(env, { stockRestocks: [...(state.stockRestocks || []), { id: crypto.randomUUID(), itemName }] });
-  }
+  const quantity = Number(body?.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : todayBerlin();
+  const delivery = { id: crypto.randomUUID(), itemName, quantity, unit: String(body?.unit || "").trim(), date };
+  await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), delivery].slice(-500) });
   return jsonResponse({ ok: true });
 }
 
@@ -1616,7 +1610,7 @@ async function interpretMessage(env, text, today, state) {
       properties: {
         action: {
           type: "string",
-          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "restock", "notes", "ask_anything", "other"],
+          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "notes", "ask_anything", "other"],
         },
         stats_period: {
           type: "string",
@@ -1711,17 +1705,6 @@ async function interpretMessage(env, text, today, state) {
             required: ["employeeName", "date", "slotLabel"],
           },
         },
-        items_to_restock: {
-          type: "array",
-          description: "Nur bei action=restock. Jeder wieder aufgefüllte Artikel als eigener Eintrag, auch bei mehreren auf einmal.",
-          items: {
-            type: "object",
-            properties: {
-              itemName: { type: "string", description: "Name des Artikels, wie ihn der Chef genannt hat (muss nicht exakt zur Liste passen)." },
-            },
-            required: ["itemName"],
-          },
-        },
       },
       required: ["action"],
     },
@@ -1750,7 +1733,6 @@ Bestimme die Absicht der Nachricht:
 - "who": der Nutzer will wissen, wer gerade im Café im Dienst ist (z.B. "wer ist da", "wer arbeitet gerade").
 - "stats": der Nutzer will Kennzahlen/Zusammenfassung (Umsatz, Lohnkosten, Stunden, Umschlag) sehen, z.B. "wie war der Umsatz heute", "kennzahlen", "wie lief die Woche", "wie war letzte Woche", "Zusammenfassung diesen Monat". stats_period entsprechend setzen (lastweek = die Woche VOR der aktuellen). Nennt der Nutzer ein konkretes Datum oder einen konkreten Zeitraum (z.B. "vom 1. bis 5. August", "am 12.08.", "zwischen dem 3. und 10. August"), stats_period="custom" setzen und stats_from/stats_to als YYYY-MM-DD auflösen (Jahr aus dem heutigen Datum ergänzen, falls nicht genannt). Bezieht sich die Frage auf eine einzelne Person und deren Arbeitsstunden/Lohn (z.B. "wie viele Stunden hat Anna diese Woche gemacht", "was hat Timm vom 1.-5. August gearbeitet"), zusätzlich stats_employee_name auf den erkannten Namen setzen.
 - "stock_list": der Chef will wissen, was an Vorräten fehlt oder knapp ist, z.B. "was fehlt", "einkaufsliste", "was müssen wir nachkaufen".
-- "restock": der Chef meldet, dass ein oder mehrere Artikel wieder aufgefüllt/vorhanden sind, z.B. "Kaffeebohnen sind wieder da", "Milch und Servietten sind nachgefüllt" (zwei Einträge in items_to_restock).
 - "notes": der Chef will die gesammelten Mitarbeiter-Notizen sehen, z.B. "nachrichten", "was haben die Mitarbeiter geschrieben", "zeig mir die Notizen".
 - "plan_shifts": der Chef legt fest, wer wann arbeitet – entweder den ganzen Wochenplan auf einmal ("Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17") oder gezielt EINER Person eine ihrer gemeldeten Verfügbarkeiten zuweisen ("Anna bekommt Montag Früh1", "Timm soll Mittwoch die Spät2 machen"). Nennt der Chef den Schicht-NAMEN statt einer Uhrzeit, slotLabel setzen und from/to leer lassen – slotLabel MUSS exakt einer dieser Werte sein: ${schichtNamenText} (keine anderen Varianten, keine Uhrzeiten, keine Rollenbezeichnung erfinden – bei Unsicherheit lieber nachfragen als raten) – das sorgt dafür, dass die Zuweisung korrekt mit der Verfügbarkeits-Auswahl der Person verrechnet wird (inkl. Ausgrauen für andere). Nur bei expliziter Uhrzeitangabe from/to statt slotLabel nutzen. Mittelschichten (${mittelNamen}) werden NIE automatisch bestätigt, egal was die Person ausgewählt hat – wenn der Chef eine Bestätigung ausspricht ("bestätige Annas Mittel-Schicht am Montag", "Anna bekommt Montag Mittel"), ganz normal als plan_shifts mit dem passenden Mittelschicht-Namen behandeln, das markiert sie dann als bestätigt. IMMER jede einzelne Schicht als eigenen Eintrag in shifts_to_add auflisten, niemals mehrere zusammenfassen. Wochentage ohne explizites Datum beziehen sich auf die oben genannte Zielwoche.
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
@@ -1868,11 +1850,6 @@ function buildStockListReply(state) {
   return lines.join("\n");
 }
 
-function buildRestockReply(items) {
-  const lines = items.map((i, idx) => `${idx + 1}. ${i.itemName}`);
-  const heading = items.length === 1 ? "✅ Als wieder aufgefüllt markiert:" : `✅ ${items.length} Artikel als wieder aufgefüllt markiert:`;
-  return [heading, ...lines].join("\n");
-}
 
 function buildDeliveryReply(items) {
   const lines = items.map((it, i) => `${i + 1}. ${it.itemName} – ${it.quantity != null ? `${it.quantity} ${it.unit || ""}`.trim() : "(Menge unklar)"}`);
@@ -3106,22 +3083,12 @@ async function handleTelegram(request, env) {
       }
     } else if (result.action === "stock_list") {
       replyText = buildStockListReply(state);
-    } else if (result.action === "restock") {
-      const newRestocks = (Array.isArray(result.items_to_restock) ? result.items_to_restock : [])
-        .map((i) => ({ id: crypto.randomUUID(), itemName: String(i.itemName || "").trim() }))
-        .filter((i) => i.itemName);
-      if (newRestocks.length === 0) {
-        replyText = "Konnte daraus keinen Artikel erkennen. Welcher Artikel ist wieder da?";
-      } else {
-        await patchState(env, { stockRestocks: [...(state.stockRestocks || []), ...newRestocks] });
-        replyText = buildRestockReply(newRestocks);
-      }
     } else if (result.action === "notes") {
       replyText = buildNotesDigestReply(state);
     } else if (result.action === "ask_anything") {
       replyText = await buildAskAnythingReply(env, state, text);
     } else {
-      replyText = `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt" / „Kaffeebohnen sind wieder da"\n„nachrichten"\nOder frag mich einfach direkt etwas, z.B. „wieso war der Umschlag diese Woche schlechter".`;
+      replyText = `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt"\n„nachrichten"\nOder frag mich einfach direkt etwas, z.B. „wieso war der Umschlag diese Woche schlechter".`;
     }
 
     await sendTelegramMessage(env, chatId, replyText);

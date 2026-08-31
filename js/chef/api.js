@@ -93,8 +93,6 @@ const decideShift = (employeeName, date, slotLabel, decision, note) =>
  * arbeitet – vorher bleiben Zu- und Absagen bewusst unsichtbar. */
 const publishWeek = (weekStart, action) => request("/admin/publish-week", { method: "POST", body: { weekStart, action } });
 
-const markRestocked = (itemName) => request("/admin/stock", { method: "POST", body: { kind: "restock", itemName } });
-
 const recordDelivery = (itemName, quantity, unit, date) =>
   request("/admin/stock", { method: "POST", body: { kind: "delivery", itemName, quantity, unit, date } });
 
@@ -124,7 +122,6 @@ export {
   getOverview,
   decideShift,
   publishWeek,
-  markRestocked,
   recordDelivery,
   uploadDocument,
   stockItemAction,

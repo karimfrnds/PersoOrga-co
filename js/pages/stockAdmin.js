@@ -9,6 +9,7 @@
 import { store } from "../store.js";
 import { escapeHtml, dateDe } from "../format.js";
 import { confirmDialog } from "../dialog.js";
+import { nameAehnlichkeit } from "../nameMatch.js";
 
 const STATUS_LABEL = { ok: "✅ Ok", knapp: "🟠 Wird knapp", leer: "🔴 Leer" };
 
@@ -35,6 +36,7 @@ function renderStockAdmin() {
       Der Chef bekommt außerdem eine Warnung per Telegram-Bot, sobald etwas knapp/leer ist.</p>
     `;
     frag.appendChild(buildAddCard());
+    frag.appendChild(buildZusammenfuehren());
     frag.appendChild(buildListCard());
     frag.appendChild(buildRecipesCard());
     frag.appendChild(buildAufraeumenCard());
@@ -129,6 +131,138 @@ function renderStockAdmin() {
       rerender();
     };
     card.append(btn, status);
+    return card;
+  }
+
+  /** Zwei Artikel zusammenfuehren – am iPad genauso wie am Laptop.
+   *
+   * Steht derselbe Artikel zweimal drin (einmal vom Lieferschein, einmal von Hand), gibt es sonst keinen
+   * Weg zusammen. Die Aehnlichkeitssuche schlaegt die offensichtlichen Faelle vor, ist aber bewusst
+   * streng – deshalb laesst sich immer auch von Hand waehlen. Ein Abschnitt, der sich bei fehlenden
+   * Vorschlaegen selbst ausblendet, laesst einen genau dann im Stich, wenn man ihn braucht.
+   */
+  function buildZusammenfuehren() {
+    const card = document.createElement("section");
+    card.className = "card";
+    const alle = store.getStockItems();
+    if (alle.length < 2) {
+      card.style.display = "none";
+      return card;
+    }
+
+    card.innerHTML = `<h2>🔗 Artikel zusammenführen</h2>
+      <p class="muted small">Wenn derselbe Artikel zweimal drinsteht. Der gewählte Name bleibt, der andere
+      wird als Zweitname gemerkt und künftig automatisch erkannt. Der Bestand wandert mit, sofern die
+      Einheiten zusammenpassen.</p>`;
+
+    const beschreibe = (x) => `${x.name}${x.unit ? ` (${x.currentAmount ?? 0} ${x.unit})` : ""}`;
+
+    // Vorschläge
+    const paare = [];
+    for (let i = 0; i < alle.length; i++) {
+      for (let j = i + 1; j < alle.length; j++) {
+        const punkte = nameAehnlichkeit(alle[i].name, alle[j].name);
+        if (punkte >= 0.45) paare.push({ a: alle[i], b: alle[j], punkte });
+      }
+    }
+    paare.sort((x, y) => y.punkte - x.punkte);
+    if (paare.length > 0) {
+      const titel = document.createElement("p");
+      titel.className = "muted small";
+      titel.innerHTML = "<b>Sieht nach demselben aus</b>";
+      card.appendChild(titel);
+      const liste = document.createElement("div");
+      liste.className = "task-list";
+      for (const p of paare.slice(0, 6)) {
+        const row = document.createElement("div");
+        row.className = "task-row";
+        row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(beschreibe(p.a))}</b> ↔ <b>${escapeHtml(beschreibe(p.b))}</b></span>
+          <span class="muted small task-row-meta">${Math.round(p.punkte * 100)} % ähnlich</span></div>`;
+        const akt = document.createElement("div");
+        akt.className = "employee-actions";
+        for (const [behalten, weg] of [[p.a, p.b], [p.b, p.a]]) {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-secondary";
+          btn.textContent = `${behalten.name} behalten`;
+          btn.onclick = () => {
+            store.mergeStockItem(weg.id, behalten.id);
+            rerender();
+          };
+          akt.appendChild(btn);
+        }
+        row.appendChild(akt);
+        liste.appendChild(row);
+      }
+      card.appendChild(liste);
+    }
+
+    // Von Hand
+    const titel2 = document.createElement("p");
+    titel2.className = "muted small";
+    titel2.innerHTML = paare.length > 0 ? "<b>Oder selbst auswählen</b>" : "<b>Zwei Artikel auswählen</b>";
+    card.appendChild(titel2);
+
+    const sortiert = [...alle].sort((a, b) => a.name.localeCompare(b.name));
+    const bauAuswahl = () => {
+      const sel = document.createElement("select");
+      for (const x of sortiert) {
+        const o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = beschreibe(x);
+        sel.appendChild(o);
+      }
+      return sel;
+    };
+    const feld = (label, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      return l;
+    };
+    const weg = bauAuswahl();
+    const behalten = bauAuswahl();
+    behalten.value = sortiert[1].id;
+    const reihe = document.createElement("div");
+    reihe.className = "res-form-row";
+    reihe.append(feld("Dieser verschwindet", weg), feld("…und wird zu diesem", behalten));
+    card.appendChild(reihe);
+
+    const vorschau = document.createElement("p");
+    const knopf = document.createElement("button");
+    knopf.className = "btn btn-primary";
+    knopf.textContent = "Zusammenführen";
+    const zeige = () => {
+      const a = alle.find((x) => x.id === weg.value);
+      const b = alle.find((x) => x.id === behalten.value);
+      if (!a || !b || a.id === b.id) {
+        vorschau.className = "callout callout-warn";
+        vorschau.textContent = "Bitte zwei verschiedene Artikel wählen.";
+        knopf.disabled = true;
+        return;
+      }
+      knopf.disabled = false;
+      const passt = (a.unit || "") === (b.unit || "");
+      vorschau.className = passt ? "callout" : "callout callout-warn";
+      vorschau.textContent = passt
+        ? `${a.name} verschwindet. ${b.name} bleibt, merkt sich den Namen und bekommt dessen Bestand dazu: ` +
+          `${a.currentAmount ?? 0} + ${b.currentAmount ?? 0} = ${Math.round(((Number(a.currentAmount) || 0) + (Number(b.currentAmount) || 0)) * 100) / 100} ${b.unit || ""}.`
+        : `${a.name} verschwindet und der Name wird gemerkt. Die Einheiten sind verschieden ` +
+          `(${a.unit || "keine"} / ${b.unit || "keine"}) – der Bestand wird nicht übertragen, den setzt du danach von Hand.`;
+    };
+    knopf.onclick = async () => {
+      const a = alle.find((x) => x.id === weg.value);
+      const b = alle.find((x) => x.id === behalten.value);
+      if (!a || !b) return;
+      if (!(await confirmDialog(`${a.name} verschwindet und wird zu ${b.name}. Fortfahren?`,
+        { title: "Zusammenführen?", okLabel: "Zusammenführen" }))) return;
+      store.mergeStockItem(a.id, b.id);
+      rerender();
+    };
+    weg.onchange = zeige;
+    behalten.onchange = zeige;
+    card.append(vorschau, knopf);
+    zeige();
     return card;
   }
 

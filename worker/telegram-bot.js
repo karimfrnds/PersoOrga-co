@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-01.2";
+const WORKER_VERSION = "2026-09-01.3";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2157,6 +2157,10 @@ async function handleAdminStockItem(request, env) {
     packSize: body?.packSize === undefined ? undefined : Math.max(1, Number(body.packSize) || 1),
     packLabel: body?.packLabel === undefined ? undefined : String(body.packLabel).trim(),
     pricePerUnit: body?.pricePerUnit === undefined ? undefined : Number(body.pricePerUnit),
+    // Umrechnung beim Zusammenführen ("1 Flasche = 500 ml"). Fehlt sie, rechnet der iPad selbst um,
+    // soweit die Einheiten das hergeben.
+    faktor: Number(body?.faktor) > 0 ? Number(body.faktor) : undefined,
+    bestandUebernehmen: body?.bestandUebernehmen === false ? false : undefined,
   };
   const state = await getState(env);
   // Die Änderung SOFORT auch auf die eigene Kopie anwenden. Ohne das reicht der Laptop nur einen Wunsch
@@ -2176,9 +2180,25 @@ function stockVorschau(stock, e) {
   if (e.kind === "merge") {
     // Der Doppelgänger verschwindet, sein Name bleibt als Zweitname am richtigen Artikel.
     const von = stock.find((s) => s.id === e.itemId);
+    // Der Bestand wandert mit. Der Worker kennt keine Einheiten-Tabelle – er rechnet deshalb nur mit dem
+    // Faktor, den die Oberfläche mitschickt, oder bei identischer Einheit mit 1. Sonst bleibt die Zahl hier
+    // stehen und der iPad setzt sie beim nächsten Abgleich richtig: eine geratene Zahl wäre schlimmer.
+    let faktor = null;
+    if (e.bestandUebernehmen !== false) {
+      if (Number(e.faktor) > 0) faktor = Number(e.faktor);
+      else if (von && String(von.unit || "").toLowerCase() === String(stock.find((s) => s.id === e.targetId)?.unit || "").toLowerCase()) faktor = 1;
+    }
     return stock
       .filter((s) => s.id !== e.itemId)
-      .map((s) => (s.id === e.targetId && von ? { ...s, aliases: [...(s.aliases || []), von.name] } : s));
+      .map((s) => {
+        if (s.id !== e.targetId || !von) return s;
+        const zusammen = { ...s, aliases: [...(s.aliases || []), von.name] };
+        if (faktor !== null) {
+          zusammen.currentAmount =
+            Math.round(((Number(s.currentAmount) || 0) + (Number(von.currentAmount) || 0) * faktor) * 100) / 100;
+        }
+        return zusammen;
+      });
   }
   if (e.kind === "alias") {
     return stock.map((s) => (s.id === e.itemId ? { ...s, aliases: [...(s.aliases || []), e.alias] } : s));

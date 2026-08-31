@@ -4,6 +4,8 @@
 
 import { todayStr, dateDe } from "./format.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
+// Einheiten liegen in einem eigenen Modul, weil der Laptop dieselbe Umrechnung braucht (js/einheiten.js).
+import { normalisiereEinheit, rechneEinheitUm, umrechnungFuer } from "./einheiten.js";
 
 const STORAGE_KEY = "cafeapp_v1";
 
@@ -272,36 +274,6 @@ function addDaysISOStore(dateStr, n) {
   const dt = new Date(Date.UTC(y, m - 1, d));
   dt.setUTCDate(dt.getUTCDate() + n);
   return dt.toISOString().slice(0, 10);
-}
-
-// Einheiten, die sich ineinander umrechnen lassen, mit ihrem Wert in der jeweiligen Grundeinheit.
-const EINHEITEN = {
-  g: { basis: "g", faktor: 1 }, gramm: { basis: "g", faktor: 1 },
-  kg: { basis: "g", faktor: 1000 }, kilo: { basis: "g", faktor: 1000 }, kilogramm: { basis: "g", faktor: 1000 },
-  ml: { basis: "ml", faktor: 1 }, milliliter: { basis: "ml", faktor: 1 },
-  cl: { basis: "ml", faktor: 10 },
-  l: { basis: "ml", faktor: 1000 }, liter: { basis: "ml", faktor: 1000 },
-  stueck: { basis: "stk", faktor: 1 }, stück: { basis: "stk", faktor: 1 }, stk: { basis: "stk", faktor: 1 },
-  st: { basis: "stk", faktor: 1 }, x: { basis: "stk", faktor: 1 },
-};
-function einheitInfo(u) {
-  return EINHEITEN[String(u || "").trim().toLowerCase().replace(/\.$/, "")] || null;
-}
-/** Vereinheitlicht eine Einheit aus einem Rezept auf die Schreibweise, die im System üblich ist. */
-function normalisiereEinheit(u) {
-  const info = einheitInfo(u);
-  if (!info) return String(u || "").trim();
-  return info.basis === "stk" ? "Stück" : info.basis;
-}
-/** Rechnet eine Menge von einer Einheit in eine andere um. null, wenn das nicht geht – dann wird die
- * Zutat lieber ausgelassen als mit einer geratenen Zahl übernommen. */
-function rechneEinheitUm(menge, von, nach) {
-  const a = einheitInfo(von);
-  const b = einheitInfo(nach);
-  // Gleiche Schreibweise (oder beide unbekannt, aber identisch) – dann direkt übernehmen.
-  if (String(von || "").trim().toLowerCase() === String(nach || "").trim().toLowerCase()) return round2(menge);
-  if (!a || !b || a.basis !== b.basis) return null;
-  return round2((menge * a.faktor) / b.faktor);
 }
 
 function autoConfirmsWithoutBoss(slotId) {
@@ -859,7 +831,23 @@ export const store = {
   },
   /** Führt ein irrtümlich doppelt angelegtes Produkt mit dem richtigen zusammen: der alte Name wird als
    * Zweitname gemerkt, ein etwaiger Bestand übernommen, der Doppelgänger verschwindet. */
-  mergeStockItem(vonId, aufId) {
+  /** Wie viel von der Einheit des Zielartikels steckt in EINER Einheit des verschwindenden Artikels?
+   * Beantwortet die Frage, die beim Zusammenführen von "20 Flaschen" und "10000 ml" offen bleibt.
+   * Die Logik selbst steht in einheiten.js, weil der Laptop dieselbe Antwort braucht. */
+  umrechnungsVorschlag(vonId, aufId) {
+    if (vonId === aufId) return null;
+    return umrechnungFuer(
+      data.stock.find((s) => s.id === vonId),
+      data.stock.find((s) => s.id === aufId)
+    );
+  },
+  /** Zwei Artikel zusammenführen.
+   *
+   * opts.faktor  – selbst gewählte Umrechnung ("1 Flasche = 500 ml"). Schlägt die automatische, denn wer
+   *                sie einträgt, weiß mehr über die Ware als der Einheiten-Rechner.
+   * opts.bestandUebernehmen === false – Bestand bewusst weglassen, etwa weil der Doppelgänger Unsinn enthält.
+   */
+  mergeStockItem(vonId, aufId, opts = {}) {
     const von = data.stock.find((s) => s.id === vonId);
     const auf = data.stock.find((s) => s.id === aufId);
     if (!von || !auf || vonId === aufId) return null;
@@ -868,17 +856,23 @@ export const store = {
     // Der Doppelgänger wurde aus einem Verkauf angelegt und steht deshalb meist im Minus. Genau dieser
     // Verbrauch gehört zum richtigen Artikel – deshalb wird er übernommen, nicht verworfen.
     // Der Doppelgänger steht meist im Minus, weil Verkäufe darauf gebucht wurden – genau dieser Verbrauch
-    // gehört zum richtigen Artikel. Übernommen wird er aber nur, wenn sich die Einheiten ineinander
-    // umrechnen lassen: "12 Flaschen" einfach auf "20000 ml" zu addieren ergäbe 20012 ml und wäre still
-    // falsch. Passt es nicht, bleibt der Bestand unverändert – lieber eine Lücke als eine falsche Zahl.
+    // gehört zum richtigen Artikel und soll mitwandern.
+    //
+    // Ungefragt addiert wird aber nur, was sich exakt umrechnen lässt: "12 Flaschen" einfach auf "20000 ml"
+    // zu legen ergäbe 20012 ml und wäre still falsch. Für alles andere gibt es opts.faktor – die Umrechnung,
+    // die in der Oberfläche eingetragen oder aus der Gebindegröße vorgeschlagen wird.
     let mengeUebernommen = false;
-    if (auf.unit && von.unit && Number.isFinite(Number(von.currentAmount))) {
-      const umgerechnet = rechneEinheitUm(Number(von.currentAmount) || 0, von.unit, auf.unit);
-      if (umgerechnet !== null) {
-        auf.currentAmount = round2((Number(auf.currentAmount) || 0) + umgerechnet);
-        recomputeStockStatus(auf);
-        mengeUebernommen = true;
-      }
+    let uebernommeneMenge = 0;
+    let faktor = null;
+    const eigener = Number(opts.faktor);
+    if (Number.isFinite(eigener) && eigener > 0) faktor = eigener;
+    else if (auf.unit && von.unit) faktor = rechneEinheitUm(1, von.unit, auf.unit);
+    if (opts.bestandUebernehmen === false) faktor = null;
+    if (faktor !== null && Number.isFinite(Number(von.currentAmount))) {
+      uebernommeneMenge = round2((Number(von.currentAmount) || 0) * faktor);
+      auf.currentAmount = round2((Number(auf.currentAmount) || 0) + uebernommeneMenge);
+      recomputeStockStatus(auf);
+      mengeUebernommen = true;
     }
     if (Array.isArray(von.consumptionLog) && von.consumptionLog.length) {
       auf.consumptionLog = [...(auf.consumptionLog || []), ...von.consumptionLog].slice(0, 20);
@@ -895,7 +889,14 @@ export const store = {
       if (Array.isArray(s.notSameAs)) s.notSameAs = s.notSameAs.map((id) => (id === vonId ? aufId : id)).filter((id) => id !== s.id);
     }
     persist();
-    return { artikel: auf, mengeUebernommen, alteMenge: Number(von.currentAmount) || 0, alteEinheit: von.unit };
+    return {
+      artikel: auf,
+      mengeUebernommen,
+      uebernommeneMenge,
+      faktor,
+      alteMenge: Number(von.currentAmount) || 0,
+      alteEinheit: von.unit,
+    };
   },
   /** Dasselbe für ein doppelt angelegtes Rezept. */
   mergeRecipe(vonId, aufId) {

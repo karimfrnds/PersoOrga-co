@@ -8,10 +8,12 @@
 // ============================================================================
 import { store } from "../store.js";
 import { escapeHtml, dateDe } from "../format.js";
-import { confirmDialog } from "../dialog.js";
+import { confirmDialog, promptDialog } from "../dialog.js";
 import { nameAehnlichkeit, bewerteKandidaten } from "../nameMatch.js";
 
 const STATUS_LABEL = { ok: "✅ Ok", knapp: "🟠 Wird knapp", leer: "🔴 Leer" };
+
+const zahl = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 
 function renderStockAdmin() {
   const container = document.createElement("div");
@@ -24,6 +26,80 @@ function renderStockAdmin() {
   function rerender() {
     container.innerHTML = "";
     container.appendChild(build());
+  }
+
+  /** Zwei Artikel zusammenführen – aber vorher klären, was mit dem Bestand passiert.
+   *
+   * Genau hier ging bisher der Bestand verloren: bei verschiedenen Einheiten wurde er kommentarlos
+   * fallengelassen, weil das System nicht raten wollte. Richtig ist, zu FRAGEN. Was das System weiß,
+   * steht schon im Feld (ml/l rechnet es selbst, eine Gebindegröße schlägt es vor), was es nicht weiß,
+   * trägt man in einem Feld ein. Alle drei Wege zum Zusammenführen laufen durch diese eine Stelle,
+   * damit es sich überall gleich verhält.
+   *
+   * Rückgabe: true, wenn zusammengeführt wurde.
+   */
+  async function fuehreZusammen(vonId, aufId) {
+    const von = store.getStockItems().find((s) => s.id === vonId);
+    const auf = store.getStockItems().find((s) => s.id === aufId);
+    if (!von || !auf) return false;
+    const u = store.umrechnungsVorschlag(vonId, aufId);
+    const kopf = `„${escapeHtml(von.name)}" verschwindet und wird zu „${escapeHtml(auf.name)}".`;
+    const merke = "Der Name bleibt als Zweitname gemerkt und wird künftig automatisch erkannt.";
+
+    // Einheiten passen (identisch oder exakt umrechenbar) – dann gibt es nichts zu entscheiden.
+    if (u && (u.art === "gleich" || u.art === "automatisch")) {
+      const rechnung =
+        u.art === "gleich"
+          ? `Bestand: ${zahl(u.zielMenge)} + ${zahl(u.menge)} = <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`
+          : `Bestand wird umgerechnet: ${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} = ${zahl(u.ergebnis)} ` +
+            `${escapeHtml(u.aufEinheit)}. Zusammen <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`;
+      if (!(await confirmDialog(`${kopf}<br><br>${rechnung}<br><br>${merke}`,
+        { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return false;
+      store.mergeStockItem(vonId, aufId);
+      rerender();
+      return true;
+    }
+
+    // Einer der beiden wird nicht mengengeführt – es gibt schlicht keinen Bestand zu übernehmen.
+    if (!u || u.art === "ohne-einheit" || !u.menge) {
+      if (!(await confirmDialog(`${kopf}<br><br>${merke}`, { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return false;
+      store.mergeStockItem(vonId, aufId);
+      rerender();
+      return true;
+    }
+
+    // Einheiten passen nicht zueinander: nachfragen statt raten.
+    const vorschlag = u.art === "gebinde" ? String(u.faktor) : "";
+    const woher =
+      u.art === "gebinde"
+        ? `Vorschlag aus der hinterlegten Gebindegröße – bitte einmal prüfen.`
+        : `Das kann das System nicht wissen, ${escapeHtml(u.vonEinheit)} und ${escapeHtml(u.aufEinheit)} passen nicht zusammen.`;
+    const eingabe = await promptDialog(
+      `${kopf}<br><br>Wie viel ${escapeHtml(u.aufEinheit)} ist <b>1 ${escapeHtml(u.vonEinheit)}</b>?<br>` +
+        `<span class="muted small">${woher} Leer lassen: der Bestand von ${zahl(u.menge)} ` +
+        `${escapeHtml(u.vonEinheit)} wandert dann nicht mit.</span>`,
+      { title: "Bestand umrechnen", type: "number", defaultValue: vorschlag, placeholder: `z.B. 500`, okLabel: "Weiter" }
+    );
+    if (eingabe === null) return false; // abgebrochen
+    const faktor = Number(String(eingabe).replace(",", "."));
+    if (!(Number.isFinite(faktor) && faktor > 0)) {
+      if (!(await confirmDialog(
+        `${kopf}<br><br>Ohne Umrechnung bleibt der Bestand von <b>${zahl(u.menge)} ${escapeHtml(u.vonEinheit)}</b> ` +
+          `auf der Strecke. Du kannst ihn danach von Hand setzen.`,
+        { title: "Ohne Bestand?", okLabel: "Trotzdem zusammenführen" }))) return false;
+      store.mergeStockItem(vonId, aufId, { bestandUebernehmen: false });
+      rerender();
+      return true;
+    }
+    const neu = Math.round((u.zielMenge + u.menge * faktor) * 100) / 100;
+    if (!(await confirmDialog(
+      `${kopf}<br><br>${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} × ${zahl(faktor)} = ` +
+        `${zahl(u.menge * faktor)} ${escapeHtml(u.aufEinheit)}.<br>Neuer Bestand: <b>${zahl(neu)} ` +
+        `${escapeHtml(u.aufEinheit)}</b>.<br><br>${merke}`,
+      { title: "Passt das?", okLabel: "Zusammenführen" }))) return false;
+    store.mergeStockItem(vonId, aufId, { faktor });
+    rerender();
+    return true;
   }
 
   function build() {
@@ -183,19 +259,9 @@ function renderStockAdmin() {
           const b2 = document.createElement("button");
           b2.className = "btn btn-secondary";
           b2.textContent = `${k.eintrag.name} (${Math.round(k.punkte * 100)} %)`;
-          // Rückfrage, obwohl es einen Klick kostet: Zusammenführen löscht einen Artikel und addiert die
-          // Bestände. Ein Fehlgriff am iPad wäre nur von Hand wieder auseinanderzunehmen.
-          b2.onclick = async () => {
-            const frage =
-              `„${item.name}" verschwindet und wird zu „${k.eintrag.name}".\n\n` +
-              `Der Name bleibt als Zweitname gemerkt und wird künftig automatisch erkannt.` +
-              (item.unit && k.eintrag.unit && item.unit !== k.eintrag.unit
-                ? `\n\nAchtung: verschiedene Einheiten (${item.unit} / ${k.eintrag.unit}) – der Bestand wandert nicht mit.`
-                : "");
-            if (!(await confirmDialog(frage, { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return;
-            store.mergeStockItem(item.id, k.eintrag.id);
-            rerender();
-          };
+          // Rückfrage, obwohl es einen Klick kostet: Zusammenführen löscht einen Artikel und legt die
+          // Bestände zusammen. Ein Fehlgriff am iPad wäre nur von Hand wieder auseinanderzunehmen.
+          b2.onclick = () => fuehreZusammen(item.id, k.eintrag.id);
           wahl.appendChild(b2);
         }
         row.appendChild(wahl);
@@ -268,8 +334,8 @@ function renderStockAdmin() {
 
     card.innerHTML = `<h2>🔗 Artikel zusammenführen</h2>
       <p class="muted small">Wenn derselbe Artikel zweimal drinsteht. Der gewählte Name bleibt, der andere
-      wird als Zweitname gemerkt und künftig automatisch erkannt. Der Bestand wandert mit, sofern die
-      Einheiten zusammenpassen.</p>`;
+      wird als Zweitname gemerkt und künftig automatisch erkannt. Der Bestand wandert mit – passen die
+      Einheiten nicht zueinander, wird vorher gefragt, wie umgerechnet werden soll.</p>`;
 
     const beschreibe = (x) => `${x.name}${x.unit ? ` (${x.currentAmount ?? 0} ${x.unit})` : ""}`;
 
@@ -302,10 +368,7 @@ function renderStockAdmin() {
           const btn = document.createElement("button");
           btn.className = "btn btn-secondary";
           btn.textContent = `${behalten.name} behalten`;
-          btn.onclick = () => {
-            store.mergeStockItem(weg.id, behalten.id);
-            rerender();
-          };
+          btn.onclick = () => fuehreZusammen(weg.id, behalten.id);
           akt.appendChild(btn);
         }
         const verschieden = document.createElement("button");
@@ -369,23 +432,28 @@ function renderStockAdmin() {
         return;
       }
       knopf.disabled = false;
-      const passt = (a.unit || "") === (b.unit || "");
-      vorschau.className = passt ? "callout" : "callout callout-warn";
-      vorschau.textContent = passt
-        ? `${a.name} verschwindet. ${b.name} bleibt, merkt sich den Namen und bekommt dessen Bestand dazu: ` +
-          `${a.currentAmount ?? 0} + ${b.currentAmount ?? 0} = ${Math.round(((Number(a.currentAmount) || 0) + (Number(b.currentAmount) || 0)) * 100) / 100} ${b.unit || ""}.`
-        : `${a.name} verschwindet und der Name wird gemerkt. Die Einheiten sind verschieden ` +
-          `(${a.unit || "keine"} / ${b.unit || "keine"}) – der Bestand wird nicht übertragen, den setzt du danach von Hand.`;
+      // Sagt vorher, was mit dem Bestand passiert – und ob dafür noch eine Angabe gebraucht wird.
+      const u = store.umrechnungsVorschlag(a.id, b.id);
+      const gut = u && (u.art === "gleich" || u.art === "automatisch");
+      vorschau.className = gut || !u || u.art === "ohne-einheit" || !u.menge ? "callout" : "callout callout-warn";
+      if (gut) {
+        vorschau.textContent =
+          `${a.name} verschwindet. ${b.name} bleibt, merkt sich den Namen und bekommt den Bestand dazu: ` +
+          (u.art === "gleich"
+            ? `${zahl(u.zielMenge)} + ${zahl(u.menge)} = ${zahl(u.zielMenge + u.ergebnis)} ${u.aufEinheit}.`
+            : `${zahl(u.menge)} ${u.vonEinheit} sind ${zahl(u.ergebnis)} ${u.aufEinheit}, zusammen ` +
+              `${zahl(u.zielMenge + u.ergebnis)} ${u.aufEinheit}.`);
+      } else if (!u || u.art === "ohne-einheit" || !u.menge) {
+        vorschau.textContent = `${a.name} verschwindet, der Name wird gemerkt. Ein Bestand ist nicht zu übernehmen.`;
+      } else {
+        vorschau.textContent =
+          `${a.name} verschwindet und der Name wird gemerkt. Die Einheiten sind verschieden ` +
+          `(${u.vonEinheit} / ${u.aufEinheit}) – gleich wird gefragt, wie ${zahl(u.menge)} ${u.vonEinheit} ` +
+          `umgerechnet werden sollen` +
+          (u.art === "gebinde" ? `; ${zahl(u.faktor)} steht schon als Vorschlag drin.` : ".");
+      }
     };
-    knopf.onclick = async () => {
-      const a = alle.find((x) => x.id === weg.value);
-      const b = alle.find((x) => x.id === behalten.value);
-      if (!a || !b) return;
-      if (!(await confirmDialog(`${a.name} verschwindet und wird zu ${b.name}. Fortfahren?`,
-        { title: "Zusammenführen?", okLabel: "Zusammenführen" }))) return;
-      store.mergeStockItem(a.id, b.id);
-      rerender();
-    };
+    knopf.onclick = () => fuehreZusammen(weg.value, behalten.value);
     weg.onchange = zeige;
     behalten.onchange = zeige;
     card.append(vorschau, knopf);

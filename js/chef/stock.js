@@ -6,6 +6,10 @@
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 import { recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
 import { bewerteKandidaten, nameAehnlichkeit } from "../nameMatch.js";
+import { confirmDialog, promptDialog } from "../dialog.js";
+import { umrechnungFuer } from "../einheiten.js";
+
+const zahl = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 
 const STATUS = {
   leer: { label: "🔴 Leer", rank: 0 },
@@ -194,13 +198,18 @@ function renderStock(state, { onChanged }) {
       b2.innerHTML =
         `<span class="res-tisch-name">${escapeHtml(zielName)}</span>` +
         `<span class="muted small">${k.art === "rezept" ? "Rezept" : "Artikel"} · ${Math.round(k.punkte * 100)} % ähnlich</span>`;
+      // Zwei Artikel: über die gemeinsame Stelle, damit auch hier nach der Umrechnung gefragt wird.
+      if (k.art === art && art !== "rezept") {
+        b2.onclick = () => fuehreZusammen(neu, k.eintrag, status);
+        reihe.appendChild(b2);
+        continue;
+      }
       b2.onclick = () =>
         aktion(async () => {
           // Verschiedene Arten lassen sich nicht verschmelzen – dann wird der Name nur als Zweitname
           // gemerkt und der Doppelgänger gelöscht.
           if (k.art === art) {
-            if (art === "rezept") await recipeAction({ kind: "merge", recipeId: neu.id, targetId: k.eintrag.id });
-            else await stockItemAction({ kind: "merge", itemId: neu.id, targetId: k.eintrag.id });
+            await recipeAction({ kind: "merge", recipeId: neu.id, targetId: k.eintrag.id });
           } else if (k.art === "rezept") {
             await recipeAction({ kind: "alias", recipeId: k.eintrag.id, alias: eigenerName });
             await stockItemAction({ kind: "delete", itemId: neu.id });
@@ -247,7 +256,8 @@ function renderStock(state, { onChanged }) {
     card.innerHTML = `<h2>🔗 Artikel zusammenführen</h2>
       <p class="muted small">Wenn derselbe Artikel zweimal drinsteht – etwa einmal vom Lieferschein und
       einmal von Hand. Der gewählte Name bleibt, der andere wird als Zweitname gemerkt und künftig
-      automatisch erkannt. Der Bestand wandert mit, sofern die Einheiten zusammenpassen.</p>`;
+      automatisch erkannt. Der Bestand wandert mit – passen die Einheiten nicht zueinander, wird vorher
+      gefragt, wie umgerechnet werden soll.</p>`;
 
     const beschreibe = (x) =>
       `${escapeHtml(x.name)}${x.unit ? ` (${x.currentAmount ?? 0} ${escapeHtml(x.unit)})` : ""}`;
@@ -266,8 +276,8 @@ function renderStock(state, { onChanged }) {
         row.className = "task-row";
         row.innerHTML = `<div class="task-row-text"><span><b>${beschreibe(p.a)}</b> <span class="muted">↔</span> <b>${beschreibe(p.b)}</b></span>
           <span class="muted small task-row-meta">${Math.round(p.punkte * 100)} % ähnlich${
-            (p.a.unit || "") !== (p.b.unit || "")
-              ? ` · <span class="res-warn">verschiedene Einheiten – der Bestand wird nicht übertragen</span>`
+            umrechnungFuer(p.a, p.b)?.art === "unbekannt" || umrechnungFuer(p.a, p.b)?.art === "gebinde"
+              ? ` · <span class="res-warn">verschiedene Einheiten – die Umrechnung wird gleich abgefragt</span>`
               : ""
           }</span></div>`;
         const akt = document.createElement("div");
@@ -279,7 +289,7 @@ function renderStock(state, { onChanged }) {
           const btn = document.createElement("button");
           btn.className = "btn btn-secondary";
           btn.textContent = `${behalten.name} behalten`;
-          btn.onclick = () => aktion(() => stockItemAction({ kind: "merge", itemId: weg.id, targetId: behalten.id }), status);
+          btn.onclick = () => fuehreZusammen(weg, behalten, status);
           akt.appendChild(btn);
         }
         // Der Ausweg, wenn die Automatik danebenliegt: einmal sagen, dass es zwei verschiedene Dinge
@@ -341,26 +351,108 @@ function renderStock(state, { onChanged }) {
         return;
       }
       knopf.disabled = false;
-      const passt = (a.unit || "") === (b.unit || "");
-      vorschau.className = passt ? "callout" : "callout callout-warn";
-      vorschau.innerHTML = passt
-        ? `<b>${escapeHtml(a.name)}</b> verschwindet. <b>${escapeHtml(b.name)}</b> bleibt, merkt sich den Namen
-           „${escapeHtml(a.name)}" und bekommt dessen Bestand dazu: ${a.currentAmount ?? 0} + ${b.currentAmount ?? 0}
-           = <b>${Math.round(((Number(a.currentAmount) || 0) + (Number(b.currentAmount) || 0)) * 100) / 100} ${escapeHtml(b.unit || "")}</b>.`
-        : `<b>${escapeHtml(a.name)}</b> verschwindet und der Name wird gemerkt. Die Einheiten sind
-           verschieden (${escapeHtml(a.unit || "keine")} / ${escapeHtml(b.unit || "keine")}) – der Bestand
-           wird deshalb <b>nicht</b> übertragen. Setz ihn danach einmal von Hand.`;
+      const u = umrechnungFuer(a, b);
+      const gut = u && (u.art === "gleich" || u.art === "automatisch");
+      const ohneBestand = !u || u.art === "ohne-einheit" || !u.menge;
+      vorschau.className = gut || ohneBestand ? "callout" : "callout callout-warn";
+      const bleibt = `<b>${escapeHtml(a.name)}</b> verschwindet. <b>${escapeHtml(b.name)}</b> bleibt und merkt
+        sich den Namen „${escapeHtml(a.name)}"`;
+      if (gut) {
+        vorschau.innerHTML =
+          `${bleibt} und bekommt den Bestand dazu: ` +
+          (u.art === "gleich"
+            ? `${zahl(u.zielMenge)} + ${zahl(u.menge)} = <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`
+            : `${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} sind ${zahl(u.ergebnis)} ${escapeHtml(u.aufEinheit)},
+               zusammen <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`);
+      } else if (ohneBestand) {
+        vorschau.innerHTML = `${bleibt}. Ein Bestand ist nicht zu übernehmen.`;
+      } else {
+        vorschau.innerHTML =
+          `${bleibt}. Die Einheiten sind verschieden (${escapeHtml(u.vonEinheit)} / ${escapeHtml(u.aufEinheit)})
+           – gleich wird gefragt, wie ${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} umgerechnet werden sollen` +
+          (u.art === "gebinde" ? `; <b>${zahl(u.faktor)}</b> steht schon als Vorschlag drin.` : ".");
+      }
     };
     const knopf = document.createElement("button");
     knopf.className = "btn btn-primary";
     knopf.textContent = "Zusammenführen";
     knopf.onclick = () =>
-      aktion(() => stockItemAction({ kind: "merge", itemId: weg.value, targetId: behalten.value }), status);
+      fuehreZusammen(items.find((x) => x.id === weg.value), items.find((x) => x.id === behalten.value), status);
     weg.onchange = zeigeVorschau;
     behalten.onchange = zeigeVorschau;
     card.append(vorschau, knopf, status);
     zeigeVorschau();
     return card;
+  }
+
+  /** Zwei Artikel zusammenführen – aber vorher klären, was mit dem Bestand passiert.
+   *
+   * Wortgleich zur iPad-Seite (js/pages/stockAdmin.js), und beide fragen dieselbe Funktion in
+   * einheiten.js. Der Faktor wird IMMER mitgeschickt, auch der automatisch ermittelte: der Worker
+   * kennt keine Einheiten-Tabelle und könnte die Vorschau sonst nicht rechnen.
+   *
+   * Rückgabe: true, wenn zusammengeführt wurde.
+   */
+  async function fuehreZusammen(von, auf, statusEl) {
+    if (!von || !auf || von.id === auf.id) return false;
+    const u = umrechnungFuer(von, auf);
+    const kopf = `„${escapeHtml(von.name)}" verschwindet und wird zu „${escapeHtml(auf.name)}".`;
+    const merke = "Der Name bleibt als Zweitname gemerkt und wird künftig automatisch erkannt.";
+    const schicke = (extra) =>
+      aktion(() => stockItemAction({ kind: "merge", itemId: von.id, targetId: auf.id, ...extra }), statusEl);
+
+    if (u && (u.art === "gleich" || u.art === "automatisch")) {
+      const rechnung =
+        u.art === "gleich"
+          ? `Bestand: ${zahl(u.zielMenge)} + ${zahl(u.menge)} = <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`
+          : `Bestand wird umgerechnet: ${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} = ${zahl(u.ergebnis)} ` +
+            `${escapeHtml(u.aufEinheit)}. Zusammen <b>${zahl(u.zielMenge + u.ergebnis)} ${escapeHtml(u.aufEinheit)}</b>.`;
+      if (!(await confirmDialog(`${kopf}<br><br>${rechnung}<br><br>${merke}`,
+        { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return false;
+      await schicke({ faktor: u.faktor });
+      return true;
+    }
+
+    if (!u || u.art === "ohne-einheit" || !u.menge) {
+      if (!(await confirmDialog(`${kopf}<br><br>${merke}`, { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return false;
+      await schicke({});
+      return true;
+    }
+
+    const woher =
+      u.art === "gebinde"
+        ? `Vorschlag aus der hinterlegten Gebindegröße – bitte einmal prüfen.`
+        : `Das kann das System nicht wissen, ${escapeHtml(u.vonEinheit)} und ${escapeHtml(u.aufEinheit)} passen nicht zusammen.`;
+    const eingabe = await promptDialog(
+      `${kopf}<br><br>Wie viel ${escapeHtml(u.aufEinheit)} ist <b>1 ${escapeHtml(u.vonEinheit)}</b>?<br>` +
+        `<span class="muted small">${woher} Leer lassen: der Bestand von ${zahl(u.menge)} ` +
+        `${escapeHtml(u.vonEinheit)} wandert dann nicht mit.</span>`,
+      {
+        title: "Bestand umrechnen",
+        type: "number",
+        defaultValue: u.art === "gebinde" ? String(u.faktor) : "",
+        placeholder: "z.B. 500",
+        okLabel: "Weiter",
+      }
+    );
+    if (eingabe === null) return false;
+    const faktor = Number(String(eingabe).replace(",", "."));
+    if (!(Number.isFinite(faktor) && faktor > 0)) {
+      if (!(await confirmDialog(
+        `${kopf}<br><br>Ohne Umrechnung bleibt der Bestand von <b>${zahl(u.menge)} ${escapeHtml(u.vonEinheit)}</b> ` +
+          `auf der Strecke. Du kannst ihn danach von Hand setzen.`,
+        { title: "Ohne Bestand?", okLabel: "Trotzdem zusammenführen" }))) return false;
+      await schicke({ bestandUebernehmen: false });
+      return true;
+    }
+    const neu = Math.round((u.zielMenge + u.menge * faktor) * 100) / 100;
+    if (!(await confirmDialog(
+      `${kopf}<br><br>${zahl(u.menge)} ${escapeHtml(u.vonEinheit)} × ${zahl(faktor)} = ` +
+        `${zahl(u.menge * faktor)} ${escapeHtml(u.aufEinheit)}.<br>Neuer Bestand: <b>${zahl(neu)} ` +
+        `${escapeHtml(u.aufEinheit)}</b>.<br><br>${merke}`,
+      { title: "Passt das?", okLabel: "Zusammenführen" }))) return false;
+    await schicke({ faktor });
+    return true;
   }
 
   /** Änderung einreichen und Ansicht neu laden. Fehler landen als Hinweis in der jeweiligen Karte. */

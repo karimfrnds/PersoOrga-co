@@ -476,14 +476,17 @@ async function performTaskSync() {
     } else if (c.kind === "reviewed") {
       store.markStockItemReviewed(c.itemId);
     } else if (c.kind === "merge") {
-      const zusammen = store.mergeStockItem(c.itemId, c.targetId);
+      const zusammen = store.mergeStockItem(c.itemId, c.targetId, {
+        faktor: c.faktor,
+        bestandUebernehmen: c.bestandUebernehmen,
+      });
       if (!zusammen) {
         syncWarnings.push(`Zusammenführen von Artikeln: einer der beiden ist nicht mehr da.`);
-      } else if (!zusammen.mengeUebernommen && zusammen.alteMenge !== 0) {
+      } else if (!zusammen.mengeUebernommen && zusammen.alteMenge !== 0 && c.bestandUebernehmen !== false) {
         syncWarnings.push(
           `"${zusammen.artikel.name}": der Name wurde übernommen, der Bestand von ${zusammen.alteMenge} ` +
-            `${zusammen.alteEinheit || "?"} aber nicht – das passt nicht zur Einheit ${zusammen.artikel.unit || "keine"}. ` +
-            `Bitte den Bestand einmal von Hand setzen.`
+            `${zusammen.alteEinheit || "?"} aber nicht – ohne Umrechnung nach ${zusammen.artikel.unit || "keine"} ` +
+            `wäre die Zahl geraten. Beim Zusammenführen lässt sich die Umrechnung angeben.`
         );
       }
     } else if (c.kind === "alias") {

@@ -584,6 +584,31 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
   }
 
+  // Aus Rezept-PDFs erkannte Rezepturen -> als Rezepte anlegen. Fehlende Zutaten entstehen dabei als
+  // Artikel und landen in der Prüfliste am Laptop – falls es sie unter anderem Namen schon gibt, fängt
+  // die Zuordnung sie dort ab.
+  const remoteRecipeImports = Array.isArray(remote.recipeImports) ? remote.recipeImports : [];
+  const appliedRecipeImportIds = new Set(cfg.appliedRecipeImportIds || []);
+  let newRecipeImportIds = false;
+  for (const r of remoteRecipeImports) {
+    if (!r.id || appliedRecipeImportIds.has(r.id)) continue;
+    const ergebnis = store.importRecipe({ productName: r.productName, ingredients: r.ingredients });
+    if (!ergebnis || !ergebnis.rezept) {
+      syncWarnings.push(`Rezept "${r.productName || "?"}" konnte nicht angelegt werden (keine verwertbare Zutat).`);
+    } else {
+      const teile = [];
+      if (ergebnis.ersetzt) teile.push("bestehendes Rezept aktualisiert");
+      if (ergebnis.neueArtikel > 0) teile.push(`${ergebnis.neueArtikel} neue Zutat(en) als Artikel angelegt – bitte am Laptop einordnen`);
+      for (const w of ergebnis.warnungen) teile.push(w);
+      if (teile.length > 0) syncWarnings.push(`Rezept "${r.productName}": ${teile.join(" · ")}`);
+    }
+    appliedRecipeImportIds.add(r.id);
+    newRecipeImportIds = true;
+  }
+  if (newRecipeImportIds) {
+    store.updateTaskInboxConfig({ appliedRecipeImportIds: [...appliedRecipeImportIds].slice(-300) });
+  }
+
   // Online-Reservierungen von der Website -> als echte Reservierung anlegen. Bewusst OHNE Tisch:
   // der Server garantiert nur, dass Platz da war; wer wohin kommt, entscheidet der Chef am iPad.
   const remoteRequests = Array.isArray(remote.reservationRequests) ? remote.reservationRequests : [];

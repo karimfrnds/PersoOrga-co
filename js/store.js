@@ -136,6 +136,8 @@ function defaultData() {
         appliedPublicationIds: [],
         // IDs der Online-Reservierungen von der Website, die schon übernommen wurden.
         appliedReservationIds: [],
+        // IDs der aus Rezept-PDFs erkannten Rezepturen, die schon angelegt wurden.
+        appliedRecipeImportIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -272,6 +274,36 @@ function addDaysISOStore(dateStr, n) {
   const dt = new Date(Date.UTC(y, m - 1, d));
   dt.setUTCDate(dt.getUTCDate() + n);
   return dt.toISOString().slice(0, 10);
+}
+
+// Einheiten, die sich ineinander umrechnen lassen, mit ihrem Wert in der jeweiligen Grundeinheit.
+const EINHEITEN = {
+  g: { basis: "g", faktor: 1 }, gramm: { basis: "g", faktor: 1 },
+  kg: { basis: "g", faktor: 1000 }, kilo: { basis: "g", faktor: 1000 }, kilogramm: { basis: "g", faktor: 1000 },
+  ml: { basis: "ml", faktor: 1 }, milliliter: { basis: "ml", faktor: 1 },
+  cl: { basis: "ml", faktor: 10 },
+  l: { basis: "ml", faktor: 1000 }, liter: { basis: "ml", faktor: 1000 },
+  stueck: { basis: "stk", faktor: 1 }, stück: { basis: "stk", faktor: 1 }, stk: { basis: "stk", faktor: 1 },
+  st: { basis: "stk", faktor: 1 }, x: { basis: "stk", faktor: 1 },
+};
+function einheitInfo(u) {
+  return EINHEITEN[String(u || "").trim().toLowerCase().replace(/\.$/, "")] || null;
+}
+/** Vereinheitlicht eine Einheit aus einem Rezept auf die Schreibweise, die im System üblich ist. */
+function normalisiereEinheit(u) {
+  const info = einheitInfo(u);
+  if (!info) return String(u || "").trim();
+  return info.basis === "stk" ? "Stück" : info.basis;
+}
+/** Rechnet eine Menge von einer Einheit in eine andere um. null, wenn das nicht geht – dann wird die
+ * Zutat lieber ausgelassen als mit einer geratenen Zahl übernommen. */
+function rechneEinheitUm(menge, von, nach) {
+  const a = einheitInfo(von);
+  const b = einheitInfo(nach);
+  // Gleiche Schreibweise (oder beide unbekannt, aber identisch) – dann direkt übernehmen.
+  if (String(von || "").trim().toLowerCase() === String(nach || "").trim().toLowerCase()) return round2(menge);
+  if (!a || !b || a.basis !== b.basis) return null;
+  return round2((menge * a.faktor) / b.faktor);
 }
 
 function autoConfirmsWithoutBoss(slotId) {
@@ -1314,6 +1346,52 @@ export const store = {
       nachTag.set(r.date, e);
     }
     return [...nachTag.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  },
+
+  /** Legt ein aus einem PDF erkanntes Rezept an bzw. aktualisiert es.
+   *
+   * Der heikle Teil sind die EINHEITEN. Auf dem Rezept steht "0,15 l Milch", der Artikel wird aber in ml
+   * geführt. Ohne Umrechnung würden 0,15 ml abgebucht statt 150 – der Bestand stimmte nie, und niemand
+   * käme darauf, woran es liegt. Passt eine Einheit gar nicht zur anderen (z.B. Stück gegen Gramm), wird
+   * die Zutat NICHT übernommen und gemeldet: eine geratene Umrechnung wäre schlimmer als eine Lücke.
+   *
+   * Zutaten, die es noch nicht gibt, werden als Artikel angelegt und als "bitte prüfen" markiert – dort
+   * fängt sie die Zuordnungs-Liste am Laptop ab, falls es sie unter anderem Namen schon gibt.
+   */
+  importRecipe({ productName, ingredients }) {
+    const name = String(productName || "").trim();
+    if (!name || !Array.isArray(ingredients) || ingredients.length === 0) return null;
+    const zutaten = [];
+    const warnungen = [];
+    let neueArtikel = 0;
+
+    for (const z of ingredients) {
+      const zName = String(z.name || "").trim();
+      const menge = Number(z.amount) || 0;
+      if (!zName || menge <= 0) continue;
+
+      let artikel = this.getStockItemByName(zName);
+      if (!artikel) {
+        // Die Einheit des Rezepts wird zur Einheit des Artikels – dann passt beides von Anfang an
+        // zusammen und es muss gar nicht umgerechnet werden.
+        artikel = this.addStockItem(zName, { unit: normalisiereEinheit(z.unit), currentAmount: 0, lowThreshold: 0, needsReview: true });
+        if (!artikel) continue;
+        neueArtikel++;
+      }
+      const umgerechnet = rechneEinheitUm(menge, z.unit, artikel.unit);
+      if (umgerechnet === null) {
+        warnungen.push(`${zName}: ${menge} ${z.unit || "?"} passt nicht zur Einheit des Artikels (${artikel.unit || "keine"})`);
+        continue;
+      }
+      zutaten.push({ stockItemId: artikel.id, amount: umgerechnet });
+    }
+    if (zutaten.length === 0) return { rezept: null, warnungen, neueArtikel };
+
+    const vorhanden = this.getRecipeByProductName(name);
+    const rezept = vorhanden
+      ? this.updateRecipe(vorhanden.id, { productName: vorhanden.productName, ingredients: zutaten })
+      : this.addRecipe(name, zutaten, { needsReview: true });
+    return { rezept, warnungen, neueArtikel, ersetzt: !!vorhanden };
   },
 
   // ---- Inventur ----

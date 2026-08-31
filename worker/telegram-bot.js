@@ -208,6 +208,9 @@ const EMPTY_STATE = {
   // Verdichtete Auswertungs-Daten vom iPad (er kennt Rezepte und Preise vollstaendig).
   produktStatistik: [], // [{productName, menge, umsatz, materialkosten, kostenJeStueck, tage}]
   reservationStats: [], // [{date, anzahl, gaeste, walkins, storniert, erschienen, ...}] – ohne Namen
+  // Aus Rezept-PDFs erkannte Rezepturen, die der iPad anlegt.
+  // [{id, productName, ingredients:[{name, amount, unit}], date}]
+  recipeImports: [],
   // Warteschlange der Gast-Buchungen, die der iPad abholt.
   // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
   reservationRequests: [],
@@ -255,6 +258,7 @@ async function getState(env) {
       reservationSlots: Array.isArray(parsed.reservationSlots) ? parsed.reservationSlots : [],
       reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
       reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
+      recipeImports: Array.isArray(parsed.recipeImports) ? parsed.recipeImports : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
       reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
     };
@@ -1871,6 +1875,18 @@ function buildDeliveryReply(items) {
   return [heading, ...lines].join("\n");
 }
 
+function buildRezeptReply(rezepte) {
+  const zeilen = rezepte.map(
+    (r) => `• ${r.productName}: ${r.ingredients.map((z) => `${z.amount} ${z.unit} ${z.name}`).join(", ")}`
+  );
+  return [
+    rezepte.length === 1 ? "📖 Rezept erkannt:" : `📖 ${rezepte.length} Rezepte erkannt:`,
+    ...zeilen,
+    "",
+    "Wird beim nächsten Abgleich angelegt. Zutaten, die es noch nicht gibt, lege ich als Artikel an – die stehen dann am Laptop unter Bestand zum Einordnen.",
+  ].join("\n");
+}
+
 function buildSalesReply(items) {
   const lines = items.map((it, i) => `${i + 1}. ${it.productName} – ${it.quantitySold}x`);
   const heading = items.length === 1 ? "🧾 Verkauf erkannt:" : `🧾 ${items.length} Produkte erkannt:`;
@@ -1905,12 +1921,13 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
       properties: {
         documentType: {
           type: "string",
-          enum: ["lieferschein", "verkaufsbericht"],
+          enum: ["lieferschein", "verkaufsbericht", "rezept"],
           description:
-            "'lieferschein' für Lieferschein/Rechnung/Bestellung/Auftragsbestätigung (Wareneingang, auch mehrseitig mit vielen Positionen), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang).",
+            "'lieferschein' für Lieferschein/Rechnung/Bestellung/Auftragsbestätigung (Wareneingang, auch mehrseitig mit vielen Positionen), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang), 'rezept' für eine Rezeptur/Zubereitungsanleitung, die auflistet welche Zutaten in welcher Menge in ein Produkt gehen (z.B. eine Karte oder Liste mit 'Cappuccino: 8g Bohnen, 150ml Milch').",
         },
         items: {
           type: "array",
+          description: "Nur bei documentType=lieferschein oder verkaufsbericht. Bei einem Rezept leer lassen.",
           description:
             "Nur tatsächlich auf dem Beleg erkennbare Positionen, nichts erfinden. Bei langen Bestellungen/Lieferscheinen mit vielen Zeilen ALLE Positionen auflisten, keine auslassen oder zusammenfassen. Reine Pfand-/Leergut-Zeilen (z.B. 'MW LEERGUT') NICHT mit aufnehmen, das ist kein Vorrats-Artikel.",
           items: {
@@ -1947,9 +1964,37 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
             },
           },
         },
+        recipes: {
+          type: "array",
+          description:
+            "Nur bei documentType=rezept: alle Rezepte, die auf dem Dokument stehen. Enthaelt das Dokument mehrere Rezepte, ALLE erfassen.",
+          items: {
+            type: "object",
+            properties: {
+              productName: {
+                type: "string",
+                description: "Name des fertigen Produkts, moeglichst genau so, wie es auf der Karte bzw. im Kassensystem heisst (z.B. 'Cappuccino').",
+              },
+              ingredients: {
+                type: "array",
+                description: "Die Zutaten fuer EINE Portion bzw. ein verkauftes Stueck.",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "Name der Zutat, so wie sie eingekauft wird (z.B. 'Kaffeebohnen', 'Vollmilch')." },
+                    amount: { type: "number", description: "Menge dieser Zutat fuer EINE Portion, als Zahl." },
+                    unit: { type: "string", description: "Einheit der Menge, genau wie angegeben: g, kg, ml, cl, l oder Stueck." },
+                  },
+                  required: ["name", "amount", "unit"],
+                },
+              },
+            },
+            required: ["productName", "ingredients"],
+          },
+        },
         date: { type: "string", description: "Datum auf dem Beleg als YYYY-MM-DD, falls erkennbar, sonst leerer String." },
       },
-      required: ["documentType", "items"],
+      required: ["documentType"],
     },
   };
   // PDFs gehen als "document"-Content-Block rein, Fotos als "image" – beides von Claude direkt unterstützt
@@ -1976,7 +2021,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
             fileBlock,
             {
               type: "text",
-              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang), ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl) ODER eine Rezeptur (welche Zutaten in welcher Menge in ein Produkt gehen).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
               } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht. Lies ausserdem die PREISE mit: beim Lieferschein den Netto-Einkaufspreis je EINZELSTUECK (Positionspreis geteilt durch die umgerechnete Stueckzahl), beim Kassenbericht den Verkaufspreis je verkauftem Stueck. Ist kein Preis erkennbar, lass das Feld weg statt zu raten.${
                 bekannteProdukte ? `\n\nDiese Produkte kennt das System schon, mit ihrer jeweiligen Einordnung – halte dich bei gleichen oder sehr ähnlichen Namen unbedingt an dieselbe Einordnung:\n${bekannteProdukte}` : ""
@@ -2026,6 +2071,24 @@ async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, 
 async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
   const extracted = await extractStockDocument(env, base64, mimeType, caption, today, state);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
+
+  if (extracted.documentType === "rezept") {
+    const rezepte = (Array.isArray(extracted.recipes) ? extracted.recipes : [])
+      .map((r) => ({
+        id: crypto.randomUUID(),
+        productName: String(r.productName || "").trim(),
+        ingredients: (Array.isArray(r.ingredients) ? r.ingredients : [])
+          .map((z) => ({ name: String(z.name || "").trim(), amount: Number(z.amount) || 0, unit: String(z.unit || "").trim() }))
+          .filter((z) => z.name && z.amount > 0),
+        date,
+      }))
+      .filter((r) => r.productName && r.ingredients.length > 0);
+    if (rezepte.length === 0) {
+      return { art: "rezept", items: [], text: "Konnte darin keine Rezeptur erkennen. Steht auf dem Dokument, welche Zutaten in welcher Menge in ein Produkt gehen?" };
+    }
+    await patchState(env, { recipeImports: [...(state.recipeImports || []), ...rezepte].slice(-200) });
+    return { art: "rezept", items: rezepte, text: buildRezeptReply(rezepte) };
+  }
 
   if (extracted.documentType === "verkaufsbericht") {
     const items = (Array.isArray(extracted.items) ? extracted.items : [])

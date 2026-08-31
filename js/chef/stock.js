@@ -215,11 +215,12 @@ function renderStock(state, { onChanged }) {
     return box;
   }
 
-  /** Sucht Doppelgänger im gesamten Bestand, nicht nur unter den frisch angelegten.
+  /** Artikel zusammenführen – mit Vorschlägen, aber vor allem von Hand.
    *
-   * Die Zuordnungs-Liste darüber fängt nur ab, was gerade neu entstanden ist. Wer bereits Doppelgänger im
-   * System hat – etwa weil die Erkennung früher zu streng war – fände die dort nie. Deshalb hier ein
-   * Blick über alle Artikel auf auffällig ähnliche Namen.
+   * Die automatische Ähnlichkeitssuche findet die offensichtlichen Faelle. Sie ist aber bewusst streng,
+   * damit sie nicht Erdbeeren und Erdbeermarmelade zusammenwirft – und was sie nicht findet, waere ohne
+   * eine Auswahl von Hand gar nicht zusammenzufuehren. Deshalb ist dieser Abschnitt IMMER da: die
+   * Vorschlaege sind eine Abkuerzung, kein Ersatz fuer die eigene Entscheidung.
    */
   function buildDoppelte(items) {
     const card = document.createElement("section");
@@ -227,60 +228,128 @@ function renderStock(state, { onChanged }) {
     const status = document.createElement("p");
     status.className = "muted small";
 
-    // Nur deutlich ähnliche Paare. Frisch angelegte sind schon in der Liste darüber – hier geht es um
-    // die, die bereits als geprüft gelten.
-    const paare = [];
-    const alleArtikel = items.filter((i) => !i.needsReview);
-    for (let i = 0; i < alleArtikel.length; i++) {
-      for (let j = i + 1; j < alleArtikel.length; j++) {
-        const punkte = nameAehnlichkeit(alleArtikel[i].name, alleArtikel[j].name);
-        if (punkte >= 0.55) paare.push({ a: alleArtikel[i], b: alleArtikel[j], punkte });
-      }
-    }
-    paare.sort((x, y) => y.punkte - x.punkte);
-
-    if (paare.length === 0) {
+    if (items.length < 2) {
       card.style.display = "none";
       return card;
     }
 
-    card.innerHTML = `<h2>👯 ${paare.length} mögliche Doppelgänger</h2>
-      <p class="muted small">Zwei Artikel mit sehr ähnlichem Namen – meist derselbe, einmal vom Lieferschein
-      und einmal von Hand. Zusammenführen behält den gewählten Namen, merkt sich den anderen als Zweitnamen
-      und überträgt den Bestand, sofern die Einheiten zusammenpassen.</p>`;
-
-    const liste = document.createElement("div");
-    liste.className = "task-list";
-    for (const p of paare.slice(0, 10)) {
-      const row = document.createElement("div");
-      row.className = "task-row";
-      const beschreibe = (x) =>
-        `<b>${escapeHtml(x.name)}</b>${x.unit ? ` <span class="muted small">${x.currentAmount ?? 0} ${escapeHtml(x.unit)}</span>` : ""}`;
-      row.innerHTML = `<div class="task-row-text"><span>${beschreibe(p.a)} <span class="muted">↔</span> ${beschreibe(p.b)}</span>
-        <span class="muted small task-row-meta">${Math.round(p.punkte * 100)} % ähnlich${
-          (p.a.unit || "") !== (p.b.unit || "")
-            ? ` · <span class="res-warn">verschiedene Einheiten (${escapeHtml(p.a.unit || "keine")} / ${escapeHtml(p.b.unit || "keine")}) – der Bestand wird dann nicht übertragen</span>`
-            : ""
-        }</span></div>`;
-
-      const akt = document.createElement("div");
-      akt.className = "employee-actions";
-      // Beide Richtungen anbieten – welcher Name bleiben soll, weiss nur der Mensch.
-      for (const [behalten, weg] of [
-        [p.a, p.b],
-        [p.b, p.a],
-      ]) {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-secondary";
-        btn.textContent = `${behalten.name} behalten`;
-        btn.title = `${weg.name} wird zusammengeführt und verschwindet`;
-        btn.onclick = () => aktion(() => stockItemAction({ kind: "merge", itemId: weg.id, targetId: behalten.id }), status);
-        akt.appendChild(btn);
+    const paare = [];
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const punkte = nameAehnlichkeit(items[i].name, items[j].name);
+        if (punkte >= 0.45) paare.push({ a: items[i], b: items[j], punkte });
       }
-      row.appendChild(akt);
-      liste.appendChild(row);
     }
-    card.append(liste, status);
+    paare.sort((x, y) => y.punkte - x.punkte);
+
+    card.innerHTML = `<h2>🔗 Artikel zusammenführen</h2>
+      <p class="muted small">Wenn derselbe Artikel zweimal drinsteht – etwa einmal vom Lieferschein und
+      einmal von Hand. Der gewählte Name bleibt, der andere wird als Zweitname gemerkt und künftig
+      automatisch erkannt. Der Bestand wandert mit, sofern die Einheiten zusammenpassen.</p>`;
+
+    const beschreibe = (x) =>
+      `${escapeHtml(x.name)}${x.unit ? ` (${x.currentAmount ?? 0} ${escapeHtml(x.unit)})` : ""}`;
+
+    // --- Vorschläge, falls die Namen sich ähneln ---
+    if (paare.length > 0) {
+      const titel = document.createElement("p");
+      titel.className = "muted small res-bereich";
+      titel.innerHTML = `<b>Sieht nach demselben aus</b>`;
+      card.appendChild(titel);
+
+      const liste = document.createElement("div");
+      liste.className = "task-list";
+      for (const p of paare.slice(0, 8)) {
+        const row = document.createElement("div");
+        row.className = "task-row";
+        row.innerHTML = `<div class="task-row-text"><span><b>${beschreibe(p.a)}</b> <span class="muted">↔</span> <b>${beschreibe(p.b)}</b></span>
+          <span class="muted small task-row-meta">${Math.round(p.punkte * 100)} % ähnlich${
+            (p.a.unit || "") !== (p.b.unit || "")
+              ? ` · <span class="res-warn">verschiedene Einheiten – der Bestand wird nicht übertragen</span>`
+              : ""
+          }</span></div>`;
+        const akt = document.createElement("div");
+        akt.className = "employee-actions";
+        for (const [behalten, weg] of [
+          [p.a, p.b],
+          [p.b, p.a],
+        ]) {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-secondary";
+          btn.textContent = `${behalten.name} behalten`;
+          btn.onclick = () => aktion(() => stockItemAction({ kind: "merge", itemId: weg.id, targetId: behalten.id }), status);
+          akt.appendChild(btn);
+        }
+        row.appendChild(akt);
+        liste.appendChild(row);
+      }
+      card.appendChild(liste);
+    }
+
+    // --- Von Hand: immer verfügbar ---
+    const titel2 = document.createElement("p");
+    titel2.className = "muted small res-bereich";
+    titel2.innerHTML = paare.length > 0 ? `<b>Oder selbst auswählen</b>` : `<b>Zwei Artikel auswählen</b>`;
+    card.appendChild(titel2);
+
+    const sortiert = [...items].sort((a, b) => a.name.localeCompare(b.name));
+    const auswahl = (id) => {
+      const sel = document.createElement("select");
+      for (const x of sortiert) {
+        const o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = beschreibe(x);
+        sel.appendChild(o);
+      }
+      sel.id = id;
+      return sel;
+    };
+    const reihe = document.createElement("div");
+    reihe.className = "res-form-row";
+    const feld = (label, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      return l;
+    };
+    const weg = auswahl("mg-weg");
+    const behalten = auswahl("mg-behalten");
+    if (sortiert.length > 1) behalten.value = sortiert[1].id;
+    reihe.append(feld("Dieser verschwindet", weg), feld("…und wird zu diesem", behalten));
+    card.appendChild(reihe);
+
+    const vorschau = document.createElement("p");
+    vorschau.className = "muted small";
+    const zeigeVorschau = () => {
+      const a = items.find((x) => x.id === weg.value);
+      const b = items.find((x) => x.id === behalten.value);
+      if (!a || !b || a.id === b.id) {
+        vorschau.className = "callout callout-warn";
+        vorschau.textContent = "Bitte zwei verschiedene Artikel wählen.";
+        knopf.disabled = true;
+        return;
+      }
+      knopf.disabled = false;
+      const passt = (a.unit || "") === (b.unit || "");
+      vorschau.className = passt ? "callout" : "callout callout-warn";
+      vorschau.innerHTML = passt
+        ? `<b>${escapeHtml(a.name)}</b> verschwindet. <b>${escapeHtml(b.name)}</b> bleibt, merkt sich den Namen
+           „${escapeHtml(a.name)}" und bekommt dessen Bestand dazu: ${a.currentAmount ?? 0} + ${b.currentAmount ?? 0}
+           = <b>${Math.round(((Number(a.currentAmount) || 0) + (Number(b.currentAmount) || 0)) * 100) / 100} ${escapeHtml(b.unit || "")}</b>.`
+        : `<b>${escapeHtml(a.name)}</b> verschwindet und der Name wird gemerkt. Die Einheiten sind
+           verschieden (${escapeHtml(a.unit || "keine")} / ${escapeHtml(b.unit || "keine")}) – der Bestand
+           wird deshalb <b>nicht</b> übertragen. Setz ihn danach einmal von Hand.`;
+    };
+    const knopf = document.createElement("button");
+    knopf.className = "btn btn-primary";
+    knopf.textContent = "Zusammenführen";
+    knopf.onclick = () =>
+      aktion(() => stockItemAction({ kind: "merge", itemId: weg.value, targetId: behalten.value }), status);
+    weg.onchange = zeigeVorschau;
+    behalten.onchange = zeigeVorschau;
+    card.append(vorschau, knopf, status);
+    zeigeVorschau();
     return card;
   }
 

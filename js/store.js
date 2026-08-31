@@ -846,6 +846,8 @@ export const store = {
       // Einkaufspreis je EINZELNER Mengeneinheit (netto). Grundlage für den Wareneinsatz.
       // Kommt meist automatisch vom Lieferschein, lässt sich aber überschreiben.
       pricePerUnit: Number.isFinite(Number(opts.pricePerUnit)) ? roundPreis(opts.pricePerUnit) : null,
+      // Artikel, von denen der Chef ausdruecklich gesagt hat, dass sie etwas anderes sind.
+      notSameAs: [],
       priceUpdatedAt: null,
       priceSource: null, // "beleg" | "manuell"
     };
@@ -881,7 +883,17 @@ export const store = {
     if (Array.isArray(von.consumptionLog) && von.consumptionLog.length) {
       auf.consumptionLog = [...(auf.consumptionLog || []), ...von.consumptionLog].slice(0, 20);
     }
+    // "Ist nicht dasselbe wie ..." vom verschwindenden Artikel uebernehmen und ihn selbst ueberall
+    // austragen – sonst bliebe ein Verweis auf einen Artikel, den es nicht mehr gibt.
+    for (const id of von.notSameAs || []) {
+      if (id === aufId) continue;
+      if (!Array.isArray(auf.notSameAs)) auf.notSameAs = [];
+      if (!auf.notSameAs.includes(id)) auf.notSameAs.push(id);
+    }
     data.stock = data.stock.filter((s) => s.id !== vonId);
+    for (const s of data.stock) {
+      if (Array.isArray(s.notSameAs)) s.notSameAs = s.notSameAs.map((id) => (id === vonId ? aufId : id)).filter((id) => id !== s.id);
+    }
     persist();
     return { artikel: auf, mengeUebernommen, alteMenge: Number(von.currentAmount) || 0, alteEinheit: von.unit };
   },
@@ -1103,6 +1115,30 @@ export const store = {
     const rezepte = bewerteKandidaten(data.recipes, "productName", name).map((k) => ({ ...k, art: "rezept" }));
     return [...artikel, ...rezepte].sort((a, b) => b.punkte - a.punkte).slice(0, limit);
   },
+  /** Hält fest, dass zwei Artikel AUSDRÜCKLICH NICHT dasselbe sind.
+   *
+   * Ohne das schlägt die Ähnlichkeitssuche dieselbe falsche Paarung bei jedem Aufruf wieder vor –
+   * "Erdbeeren" und "Erdbeermarmelade" ähneln sich nun mal. Die Entscheidung des Menschen muss das
+   * System sich merken können, sonst nervt es genau die Person, die es besser weiß.
+   * Wird beidseitig gespeichert, damit die Reihenfolge egal ist.
+   */
+  markNotSame(idA, idB) {
+    const a = data.stock.find((s) => s.id === idA);
+    const b = data.stock.find((s) => s.id === idB);
+    if (!a || !b || idA === idB) return null;
+    for (const [x, y] of [[a, idB], [b, idA]]) {
+      if (!Array.isArray(x.notSameAs)) x.notSameAs = [];
+      if (!x.notSameAs.includes(y)) x.notSameAs.push(y);
+    }
+    persist();
+    return true;
+  },
+  /** Gilt dieses Paar als "geklärt: verschieden"? */
+  istAlsVerschiedenMarkiert(idA, idB) {
+    const a = data.stock.find((s) => s.id === idA);
+    return !!a && Array.isArray(a.notSameAs) && a.notSameAs.includes(idB);
+  },
+
   /** Merkt sich, dass ein Produktname zu einem Artikel bzw. Rezept gehört. Ab dann trifft er sofort.
    * Das ist der eigentliche Lernschritt: Ähnlichkeit allein wird bei Namen wie "Paulaner Hefe-Weissbier
    * 0,5l" (Lieferschein) und "Paulaner Hefeweizen" (Kassenbericht) nie zuverlässig sein. */

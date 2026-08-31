@@ -9,7 +9,7 @@
 import { store } from "../store.js";
 import { escapeHtml, dateDe } from "../format.js";
 import { confirmDialog } from "../dialog.js";
-import { nameAehnlichkeit } from "../nameMatch.js";
+import { nameAehnlichkeit, bewerteKandidaten } from "../nameMatch.js";
 
 const STATUS_LABEL = { ok: "✅ Ok", knapp: "🟠 Wird knapp", leer: "🔴 Leer" };
 
@@ -36,6 +36,7 @@ function renderStockAdmin() {
       Der Chef bekommt außerdem eine Warnung per Telegram-Bot, sobald etwas knapp/leer ist.</p>
     `;
     frag.appendChild(buildAddCard());
+    frag.appendChild(buildEinordnen());
     frag.appendChild(buildZusammenfuehren());
     frag.appendChild(buildListCard());
     frag.appendChild(buildRecipesCard());
@@ -134,6 +135,121 @@ function renderStockAdmin() {
     return card;
   }
 
+  /** Was aus einem Beleg neu entstanden ist und noch nicht eingeordnet wurde.
+   *
+   * Das ist die Stelle, an der ein frisch angelegter Doppelgaenger abgefangen wird, bevor er sich
+   * einnistet: er steht ganz oben, mit den aehnlichsten vorhandenen Produkten daneben. Ein Klick
+   * fuehrt zusammen, einer sagt "passt so".
+   */
+  function buildEinordnen() {
+    const card = document.createElement("section");
+    card.className = "card";
+    const neueArtikel = store.getStockItems().filter((s) => s.needsReview);
+    const neueRezepte = store.getRecipes().filter((r) => r.needsReview);
+    if (neueArtikel.length + neueRezepte.length === 0) {
+      card.style.display = "none";
+      return card;
+    }
+
+    const gesamt = neueArtikel.length + neueRezepte.length;
+    card.innerHTML = `<h2>🆕 ${gesamt} ${gesamt === 1 ? "neuer Eintrag" : "neue Einträge"} einordnen</h2>
+      <p class="muted small">Automatisch aus einem Beleg entstanden. Prüf einmal, ob es das nicht schon gibt –
+      danach verschwindet der Hinweis.</p>`;
+
+    const liste = document.createElement("div");
+    liste.className = "task-list";
+
+    for (const item of neueArtikel) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(item.name)}</b> <span class="muted small">Artikel</span></span>
+        <span class="muted small task-row-meta">${item.unit ? `${item.currentAmount ?? 0} ${escapeHtml(item.unit)}` : "nur Ampel"}</span></div>`;
+
+      // Ähnlichste vorhandene Artikel als Zuordnungs-Vorschlag.
+      const kandidaten = bewerteKandidaten(
+        store.getStockItems().filter((s) => s.id !== item.id && !s.needsReview && !store.istAlsVerschiedenMarkiert(s.id, item.id)),
+        "name",
+        item.name
+      ).slice(0, 3);
+
+      if (kandidaten.length > 0) {
+        const hinweis = document.createElement("span");
+        hinweis.className = "muted small task-row-meta";
+        hinweis.innerHTML = "<b>Gehört das zu …?</b>";
+        row.querySelector(".task-row-text").appendChild(hinweis);
+        const wahl = document.createElement("div");
+        wahl.className = "employee-actions";
+        for (const k of kandidaten) {
+          const b2 = document.createElement("button");
+          b2.className = "btn btn-secondary";
+          b2.textContent = `${k.eintrag.name} (${Math.round(k.punkte * 100)} %)`;
+          // Rückfrage, obwohl es einen Klick kostet: Zusammenführen löscht einen Artikel und addiert die
+          // Bestände. Ein Fehlgriff am iPad wäre nur von Hand wieder auseinanderzunehmen.
+          b2.onclick = async () => {
+            const frage =
+              `„${item.name}" verschwindet und wird zu „${k.eintrag.name}".\n\n` +
+              `Der Name bleibt als Zweitname gemerkt und wird künftig automatisch erkannt.` +
+              (item.unit && k.eintrag.unit && item.unit !== k.eintrag.unit
+                ? `\n\nAchtung: verschiedene Einheiten (${item.unit} / ${k.eintrag.unit}) – der Bestand wandert nicht mit.`
+                : "");
+            if (!(await confirmDialog(frage, { title: "Dasselbe?", okLabel: "Zusammenführen" }))) return;
+            store.mergeStockItem(item.id, k.eintrag.id);
+            rerender();
+          };
+          wahl.appendChild(b2);
+        }
+        row.appendChild(wahl);
+      }
+
+      const akt = document.createElement("div");
+      akt.className = "employee-actions";
+      const passt = document.createElement("button");
+      passt.className = "btn btn-primary";
+      passt.textContent = "Ist eigenständig";
+      passt.title = "Bleibt als eigener Artikel bestehen";
+      passt.onclick = () => {
+        store.markStockItemReviewed(item.id);
+        rerender();
+      };
+      akt.appendChild(passt);
+      row.appendChild(akt);
+      liste.appendChild(row);
+    }
+
+    for (const rez of neueRezepte) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      const ohneZutaten = (rez.ingredients || []).length === 0;
+      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(rez.productName)}</b> <span class="muted small">Rezept</span></span>
+        <span class="muted small task-row-meta">${
+          ohneZutaten ? "⚠ Noch keine Zutaten – zieht bisher nichts vom Bestand ab" : `${rez.ingredients.length} Zutaten`
+        }</span></div>`;
+      const akt = document.createElement("div");
+      akt.className = "employee-actions";
+      const bearbeiten = document.createElement("button");
+      bearbeiten.className = "btn btn-primary";
+      bearbeiten.textContent = ohneZutaten ? "Zutaten eintragen" : "Bearbeiten";
+      bearbeiten.onclick = () => {
+        draft = { targetId: rez.id, productName: rez.productName, ingredients: rez.ingredients.map((i) => ({ ...i })),
+                  yieldAmount: rez.yieldAmount ?? 1, yieldUnit: rez.yieldUnit || "Portion" };
+        rerender();
+      };
+      const passt = document.createElement("button");
+      passt.className = "btn btn-secondary";
+      passt.textContent = "Passt so";
+      passt.onclick = () => {
+        store.markRecipeReviewed(rez.id);
+        rerender();
+      };
+      akt.append(bearbeiten, passt);
+      row.appendChild(akt);
+      liste.appendChild(row);
+    }
+
+    card.appendChild(liste);
+    return card;
+  }
+
   /** Zwei Artikel zusammenfuehren – am iPad genauso wie am Laptop.
    *
    * Steht derselbe Artikel zweimal drin (einmal vom Lieferschein, einmal von Hand), gibt es sonst keinen
@@ -161,6 +277,8 @@ function renderStockAdmin() {
     const paare = [];
     for (let i = 0; i < alle.length; i++) {
       for (let j = i + 1; j < alle.length; j++) {
+        // Schon als verschieden abgehakt? Dann nicht wieder anbieten.
+        if (store.istAlsVerschiedenMarkiert(alle[i].id, alle[j].id)) continue;
         const punkte = nameAehnlichkeit(alle[i].name, alle[j].name);
         if (punkte >= 0.45) paare.push({ a: alle[i], b: alle[j], punkte });
       }
@@ -190,6 +308,15 @@ function renderStockAdmin() {
           };
           akt.appendChild(btn);
         }
+        const verschieden = document.createElement("button");
+        verschieden.className = "btn btn-link";
+        verschieden.textContent = "Ist nicht dasselbe";
+        verschieden.title = "Beide bleiben. Dieses Paar wird nicht mehr vorgeschlagen.";
+        verschieden.onclick = () => {
+          store.markNotSame(p.a.id, p.b.id);
+          rerender();
+        };
+        akt.appendChild(verschieden);
         row.appendChild(akt);
         liste.appendChild(row);
       }

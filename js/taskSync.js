@@ -488,6 +488,8 @@ async function performTaskSync() {
       }
     } else if (c.kind === "alias") {
       store.addNameAlias("artikel", c.itemId, c.alias);
+    } else if (c.kind === "notsame") {
+      store.markNotSame(c.itemId, c.targetId);
     }
     appliedStockChangeIds.add(c.id);
     newStockChangeIds = true;
@@ -759,6 +761,7 @@ async function performTaskSync() {
     packLabel: s.packLabel || "",
     pricePerUnit: s.pricePerUnit ?? null,
     priceSource: s.priceSource || null,
+    notSameAs: s.notSameAs || [],
     // Verbrauch der letzten 30 Tage – daraus rechnet die Laptop-Ansicht die Reichweite. Bewusst der
     // ROHWERT plus die Zahl der Tage mit Verbrauch, nicht ein fertiges Ergebnis: so lässt sich am
     // Laptop zeigen, worauf die Aussage beruht.

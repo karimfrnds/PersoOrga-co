@@ -236,6 +236,8 @@ function renderStock(state, { onChanged }) {
     const paare = [];
     for (let i = 0; i < items.length; i++) {
       for (let j = i + 1; j < items.length; j++) {
+        // Paare, die der Chef schon als verschieden abgehakt hat, gar nicht erst wieder anbieten.
+        if ((items[i].notSameAs || []).includes(items[j].id)) continue;
         const punkte = nameAehnlichkeit(items[i].name, items[j].name);
         if (punkte >= 0.45) paare.push({ a: items[i], b: items[j], punkte });
       }
@@ -280,6 +282,14 @@ function renderStock(state, { onChanged }) {
           btn.onclick = () => aktion(() => stockItemAction({ kind: "merge", itemId: weg.id, targetId: behalten.id }), status);
           akt.appendChild(btn);
         }
+        // Der Ausweg, wenn die Automatik danebenliegt: einmal sagen, dass es zwei verschiedene Dinge
+        // sind – danach taucht das Paar nie wieder als Vorschlag auf.
+        const verschieden = document.createElement("button");
+        verschieden.className = "btn btn-link";
+        verschieden.textContent = "Ist nicht dasselbe";
+        verschieden.title = "Beide bleiben. Dieses Paar wird nicht mehr vorgeschlagen.";
+        verschieden.onclick = () => aktion(() => stockItemAction({ kind: "notsame", itemId: p.a.id, targetId: p.b.id }), status);
+        akt.appendChild(verschieden);
         row.appendChild(akt);
         liste.appendChild(row);
       }

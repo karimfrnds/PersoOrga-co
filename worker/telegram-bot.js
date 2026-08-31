@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-01.1";
+const WORKER_VERSION = "2026-09-01.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2137,8 +2137,8 @@ async function handleAdminStockItem(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
-  if (kind === "merge" && !String(body?.targetId || "").trim()) return jsonResponse({ error: "Ziel-Artikel fehlt." }, 400);
+  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias", "notsame"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if ((kind === "merge" || kind === "notsame") && !String(body?.targetId || "").trim()) return jsonResponse({ error: "Zweiter Artikel fehlt." }, 400);
   if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
   if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
@@ -2182,6 +2182,16 @@ function stockVorschau(stock, e) {
   }
   if (e.kind === "alias") {
     return stock.map((s) => (s.id === e.itemId ? { ...s, aliases: [...(s.aliases || []), e.alias] } : s));
+  }
+  if (e.kind === "notsame") {
+    // Beidseitig, damit die Reihenfolge egal ist.
+    return stock.map((s) =>
+      s.id === e.itemId
+        ? { ...s, notSameAs: [...(s.notSameAs || []), e.targetId] }
+        : s.id === e.targetId
+        ? { ...s, notSameAs: [...(s.notSameAs || []), e.itemId] }
+        : s
+    );
   }
   if (e.kind === "create") {
     const unit = e.unit || "";

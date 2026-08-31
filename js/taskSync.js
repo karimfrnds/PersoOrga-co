@@ -362,18 +362,16 @@ async function performTaskSync() {
   const remoteRestocks = Array.isArray(remote.stockRestocks) ? remote.stockRestocks : [];
   const appliedRestockIds = new Set(cfg.appliedRestockIds || []);
   let newRestockIds = false;
-  let stockItems = store.getStockItems();
   for (const rs of remoteRestocks) {
     if (!rs.id || appliedRestockIds.has(rs.id)) continue;
-    const needle = String(rs.itemName || "").trim().toLowerCase();
-    let match =
-      stockItems.find((s) => s.name.trim().toLowerCase() === needle) ||
-      stockItems.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    // Die gemeinsame Namenserkennung benutzen (Zweitnamen, Umlaute, Mengenangaben, Ähnlichkeit) statt
+    // eines eigenen Vergleichs. Der alte prüfte nur EINE Richtung und fand "Erdbeeren" nicht in
+    // "Erdbeeren 500g Schale" – so entstanden Doppelgänger.
+    let match = store.getStockItemByName(rs.itemName);
     if (!match && rs.itemName) {
-      match = store.addStockItem(rs.itemName);
+      match = store.addStockItem(rs.itemName, { needsReview: true });
       if (match) {
-        stockItems = [...stockItems, match];
-        syncWarnings.push(`Neuer Artikel "${rs.itemName}" automatisch angelegt (per Bot-Nachricht "ist wieder da").`);
+        syncWarnings.push(`Neuer Artikel "${rs.itemName}" angelegt – bitte am Laptop unter Bestand einordnen.`);
       }
     }
     if (match) store.setStockStatus(match.id, "ok", "Chef");
@@ -394,23 +392,23 @@ async function performTaskSync() {
   const remoteDeliveries = Array.isArray(remote.stockDeliveries) ? remote.stockDeliveries : [];
   const appliedDeliveryIds = new Set(cfg.appliedDeliveryIds || []);
   let newDeliveryIds = false;
-  let stockForDelivery = store.getStockItems(); // frisch (evtl. schon durch die restock-Schleife verändert)
   for (const d of remoteDeliveries) {
     if (!d.id || appliedDeliveryIds.has(d.id)) continue;
-    const needle = String(d.itemName || "").trim().toLowerCase();
-    let match =
-      stockForDelivery.find((s) => s.name.trim().toLowerCase() === needle) ||
-      stockForDelivery.find((s) => needle && s.name.trim().toLowerCase().includes(needle));
+    // Ebenfalls über die gemeinsame Namenserkennung – ein Lieferschein nennt den Artikel fast immer
+    // ausführlicher als die eigene Liste ("Erdbeeren 500g Schale" gegen "Erdbeeren").
+    let match = store.getStockItemByName(d.itemName);
     if (!match && d.itemName) {
       const qty = Number(d.quantity);
       match = store.addStockItem(d.itemName, {
         unit: d.unit || "",
         currentAmount: 0,
         lowThreshold: Number.isFinite(qty) ? Math.round(qty * 0.2 * 10) / 10 : 0,
+        // Als "bitte einordnen" markieren: nur so taucht der Artikel in der Zuordnungs-Liste am Laptop
+        // auf und lässt sich mit einem vorhandenen zusammenführen, falls es ihn doch schon gibt.
+        needsReview: true,
       });
       if (match) {
-        stockForDelivery = [...stockForDelivery, match];
-        syncWarnings.push(`Neuer Artikel "${d.itemName}" automatisch angelegt (Warnschwelle testweise geschätzt, bei Bedarf unter Admin → Vorräte anpassen).`);
+        syncWarnings.push(`Neuer Artikel "${d.itemName}" angelegt – bitte am Laptop unter Bestand einordnen (Warnschwelle geschätzt).`);
       }
     }
     if (match) {

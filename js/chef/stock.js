@@ -5,7 +5,7 @@
 // ============================================================================
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 import { markRestocked, recordDelivery, uploadDocument, stockItemAction, recipeAction } from "./api.js";
-import { bewerteKandidaten } from "../nameMatch.js";
+import { bewerteKandidaten, nameAehnlichkeit } from "../nameMatch.js";
 
 const STATUS = {
   leer: { label: "🔴 Leer", rank: 0 },
@@ -51,6 +51,7 @@ function renderStock(state, { onChanged }) {
     const fehlend = items.filter((i) => i.status !== "ok");
     frag.appendChild(buildUpload());
     frag.appendChild(buildPruefliste(items));
+    frag.appendChild(buildDoppelte(items));
     frag.appendChild(buildEinkaufsliste(fehlend));
     frag.appendChild(buildListe(items));
     frag.appendChild(buildLieferung(items));
@@ -212,6 +213,75 @@ function renderStock(state, { onChanged }) {
     }
     box.appendChild(reihe);
     return box;
+  }
+
+  /** Sucht Doppelgänger im gesamten Bestand, nicht nur unter den frisch angelegten.
+   *
+   * Die Zuordnungs-Liste darüber fängt nur ab, was gerade neu entstanden ist. Wer bereits Doppelgänger im
+   * System hat – etwa weil die Erkennung früher zu streng war – fände die dort nie. Deshalb hier ein
+   * Blick über alle Artikel auf auffällig ähnliche Namen.
+   */
+  function buildDoppelte(items) {
+    const card = document.createElement("section");
+    card.className = "card";
+    const status = document.createElement("p");
+    status.className = "muted small";
+
+    // Nur deutlich ähnliche Paare. Frisch angelegte sind schon in der Liste darüber – hier geht es um
+    // die, die bereits als geprüft gelten.
+    const paare = [];
+    const alleArtikel = items.filter((i) => !i.needsReview);
+    for (let i = 0; i < alleArtikel.length; i++) {
+      for (let j = i + 1; j < alleArtikel.length; j++) {
+        const punkte = nameAehnlichkeit(alleArtikel[i].name, alleArtikel[j].name);
+        if (punkte >= 0.55) paare.push({ a: alleArtikel[i], b: alleArtikel[j], punkte });
+      }
+    }
+    paare.sort((x, y) => y.punkte - x.punkte);
+
+    if (paare.length === 0) {
+      card.style.display = "none";
+      return card;
+    }
+
+    card.innerHTML = `<h2>👯 ${paare.length} mögliche Doppelgänger</h2>
+      <p class="muted small">Zwei Artikel mit sehr ähnlichem Namen – meist derselbe, einmal vom Lieferschein
+      und einmal von Hand. Zusammenführen behält den gewählten Namen, merkt sich den anderen als Zweitnamen
+      und überträgt den Bestand, sofern die Einheiten zusammenpassen.</p>`;
+
+    const liste = document.createElement("div");
+    liste.className = "task-list";
+    for (const p of paare.slice(0, 10)) {
+      const row = document.createElement("div");
+      row.className = "task-row";
+      const beschreibe = (x) =>
+        `<b>${escapeHtml(x.name)}</b>${x.unit ? ` <span class="muted small">${x.currentAmount ?? 0} ${escapeHtml(x.unit)}</span>` : ""}`;
+      row.innerHTML = `<div class="task-row-text"><span>${beschreibe(p.a)} <span class="muted">↔</span> ${beschreibe(p.b)}</span>
+        <span class="muted small task-row-meta">${Math.round(p.punkte * 100)} % ähnlich${
+          (p.a.unit || "") !== (p.b.unit || "")
+            ? ` · <span class="res-warn">verschiedene Einheiten (${escapeHtml(p.a.unit || "keine")} / ${escapeHtml(p.b.unit || "keine")}) – der Bestand wird dann nicht übertragen</span>`
+            : ""
+        }</span></div>`;
+
+      const akt = document.createElement("div");
+      akt.className = "employee-actions";
+      // Beide Richtungen anbieten – welcher Name bleiben soll, weiss nur der Mensch.
+      for (const [behalten, weg] of [
+        [p.a, p.b],
+        [p.b, p.a],
+      ]) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-secondary";
+        btn.textContent = `${behalten.name} behalten`;
+        btn.title = `${weg.name} wird zusammengeführt und verschwindet`;
+        btn.onclick = () => aktion(() => stockItemAction({ kind: "merge", itemId: weg.id, targetId: behalten.id }), status);
+        akt.appendChild(btn);
+      }
+      row.appendChild(akt);
+      liste.appendChild(row);
+    }
+    card.append(liste, status);
+    return card;
   }
 
   /** Änderung einreichen und Ansicht neu laden. Fehler landen als Hinweis in der jeweiligen Karte. */

@@ -37,7 +37,99 @@ function renderStockAdmin() {
     frag.appendChild(buildAddCard());
     frag.appendChild(buildListCard());
     frag.appendChild(buildRecipesCard());
+    frag.appendChild(buildAufraeumenCard());
     return frag;
+  }
+
+  /** Sammel-Loeschen. Bewusst ganz unten und bewusst unmissverstaendlich beschriftet: das ist die einzige
+   * Stelle im Bestand, an der mit einem Klick viel verschwindet. Vorgewaehlt ist die harmloseste Variante. */
+  function buildAufraeumenCard() {
+    const card = document.createElement("section");
+    card.className = "card";
+    const artikel = store.getStockItems();
+    const rezepte = store.getRecipes();
+    const ungeprueftA = artikel.filter((s) => s.needsReview).length;
+    const ungeprueftR = rezepte.filter((r) => r.needsReview).length;
+
+    card.innerHTML = `<h2>🧹 Aufräumen</h2>
+      <p class="muted small">Mehrere Einträge auf einmal löschen – etwa nach einem Import, der nicht so
+      geworden ist wie gedacht. <b>Das lässt sich nicht rückgängig machen.</b></p>`;
+
+    const wahl = [
+      { id: "ungeprueft", label: `Nur die zum Einordnen markierten (${ungeprueftA} Artikel, ${ungeprueftR} Rezepte)`,
+        hinweis: "Trifft genau das, was automatisch aus Belegen entstanden ist. Alles, was du selbst gepflegt hast, bleibt." },
+      { id: "rezepte", label: `Alle Rezepte (${rezepte.length})`,
+        hinweis: "Die Artikel und ihr Bestand bleiben. Sinnvoll, wenn du die Rezept-PDFs neu einlesen willst." },
+      { id: "artikel", label: `Alle Artikel (${artikel.length})`,
+        hinweis: "Auch der Bestand. Rezepte bleiben, verlieren aber ihre Zutaten." },
+      { id: "alles", label: `Alles: ${artikel.length} Artikel und ${rezepte.length} Rezepte`,
+        hinweis: "Kompletter Neuanfang beim Bestand." },
+    ];
+
+    let gewaehlt = "ungeprueft";
+    const hinweisZeile = document.createElement("p");
+    hinweisZeile.className = "muted small";
+
+    const liste = document.createElement("div");
+    liste.className = "task-list";
+    for (const w of wahl) {
+      const row = document.createElement("label");
+      row.className = "task-row";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "aufraeumen";
+      radio.checked = w.id === gewaehlt;
+      radio.onchange = () => {
+        gewaehlt = w.id;
+        hinweisZeile.textContent = w.hinweis;
+      };
+      const text = document.createElement("div");
+      text.className = "task-row-text";
+      text.innerHTML = `<span>${escapeHtml(w.label)}</span>`;
+      row.append(radio, text);
+      liste.appendChild(row);
+    }
+    hinweisZeile.textContent = wahl[0].hinweis;
+    card.append(liste, hinweisZeile);
+
+    // Was bleibt – damit niemand glaubt, die Umsatzzahlen wären auch weg.
+    const bleibt = document.createElement("p");
+    bleibt.className = "muted small";
+    bleibt.innerHTML =
+      `<b>Nicht betroffen:</b> Umsätze, Stunden, der bereits gebuchte Wareneinsatz vergangener Tage,
+       frühere Inventuren und die Verkaufshistorie. Das ist Vergangenheit und bleibt, wie sie war.`;
+    card.appendChild(bleibt);
+
+    const status = document.createElement("p");
+    status.className = "muted small";
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-icon-danger";
+    btn.style.cssText = "width:auto;padding:12px 18px;";
+    btn.textContent = "Ausgewähltes löschen";
+    btn.onclick = async () => {
+      const opt = {
+        ungeprueft: { artikel: true, rezepte: true, nurUngeprueft: true },
+        rezepte: { rezepte: true },
+        artikel: { artikel: true },
+        alles: { artikel: true, rezepte: true },
+      }[gewaehlt];
+      const beschreibung = wahl.find((w) => w.id === gewaehlt).label;
+      const gesichert = store.getSettings().githubBackup?.enabled;
+      const frage =
+        `${beschreibung}\n\nDas lässt sich nicht rückgängig machen.` +
+        (gesichert
+          ? `\n\nEuer automatisches Backup läuft – im Notfall lässt sich ein älterer Stand zurückholen.`
+          : `\n\n⚠ Es ist kein automatisches Backup eingerichtet. Ohne das gibt es keinen Weg zurück.`);
+      if (!(await confirmDialog(frage, { title: "Wirklich löschen?", okLabel: "Endgültig löschen", danger: true }))) return;
+
+      const erg = store.clearStockData(opt);
+      status.className = "callout";
+      status.textContent = `Gelöscht: ${erg.geloeschteArtikel} Artikel, ${erg.geloeschteRezepte} Rezepte.`;
+      rerender();
+    };
+    card.append(btn, status);
+    return card;
   }
 
   function buildAddCard() {

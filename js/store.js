@@ -889,6 +889,39 @@ export const store = {
     persist();
     return auf;
   },
+  /** Mehrere Artikel und/oder Rezepte auf einmal loeschen.
+   *
+   * Braucht man nach einem missratenen Import: einzeln waere das bei fünfzig Eintraegen eine Qual.
+   * Wird nur EIN Teil geloescht, werden die Verweise aufgeraeumt – ein Rezept, dessen Zutat es nicht
+   * mehr gibt, wuerde sonst beim naechsten Verkauf still nichts mehr abbuchen, ohne dass man sieht warum.
+   *
+   * Nicht angetastet werden bewusst: die Verkaufshistorie, frühere Inventuren und der bereits auf Tagen
+   * gebuchte Wareneinsatz. Das ist Vergangenheit und darf sich nicht rueckwirkend aendern.
+   */
+  clearStockData({ artikel = false, rezepte = false, nurUngeprueft = false }) {
+    let geloeschteArtikel = 0;
+    let geloeschteRezepte = 0;
+
+    if (rezepte) {
+      const vorher = data.recipes.length;
+      data.recipes = nurUngeprueft ? data.recipes.filter((r) => !r.needsReview) : [];
+      geloeschteRezepte = vorher - data.recipes.length;
+    }
+    if (artikel) {
+      const vorher = data.stock.length;
+      const bleibt = nurUngeprueft ? data.stock.filter((s) => !s.needsReview) : [];
+      const entfernteIds = new Set(data.stock.filter((s) => !bleibt.includes(s)).map((s) => s.id));
+      data.stock = bleibt;
+      geloeschteArtikel = vorher - data.stock.length;
+      // Zutaten, die auf geloeschte Artikel zeigen, aus den Rezepten nehmen.
+      for (const r of data.recipes) {
+        if (!Array.isArray(r.ingredients)) continue;
+        r.ingredients = r.ingredients.filter((z) => !entfernteIds.has(z.stockItemId));
+      }
+    }
+    persist();
+    return { geloeschteArtikel, geloeschteRezepte };
+  },
   removeStockItem(id) {
     data.stock = data.stock.filter((s) => s.id !== id);
     persist();

@@ -414,7 +414,15 @@ async function performTaskSync() {
       }
     }
     if (match) {
-      store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
+      const lieferung = store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
+      // Liess sich die Menge nicht auf die Einheit des Artikels bringen, MUSS das auffallen – sonst
+      // steht die Lieferung im Verlauf, der Bestand bleibt aber stehen und niemand weiss warum.
+      if (lieferung && lieferung.uebernommen === null && Number.isFinite(lieferung.verlangt)) {
+        syncWarnings.push(
+          `Lieferung "${d.itemName}": ${lieferung.verlangt} ${lieferung.einheit || "?"} passt nicht zur Einheit des Artikels ` +
+            `(${match.unit || "keine"}). Bestand nicht verändert – bitte Einheit oder Gebindegröße im Artikel prüfen.`
+        );
+      }
       // Einkaufspreis vom Beleg übernehmen – Grundlage für den Wareneinsatz. Ein von Hand gesetzter
       // Preis bleibt dabei unangetastet (siehe setPriceFromDocument).
       if (d.unitPrice) store.setPriceFromDocument(match.id, d.unitPrice);
@@ -498,8 +506,15 @@ async function performTaskSync() {
     } else if (c.kind === "reviewed") {
       store.markStockItemReviewed(c.itemId);
     } else if (c.kind === "merge") {
-      if (!store.mergeStockItem(c.itemId, c.targetId)) {
+      const zusammen = store.mergeStockItem(c.itemId, c.targetId);
+      if (!zusammen) {
         syncWarnings.push(`Zusammenführen von Artikeln: einer der beiden ist nicht mehr da.`);
+      } else if (!zusammen.mengeUebernommen && zusammen.alteMenge !== 0) {
+        syncWarnings.push(
+          `"${zusammen.artikel.name}": der Name wurde übernommen, der Bestand von ${zusammen.alteMenge} ` +
+            `${zusammen.alteEinheit || "?"} aber nicht – das passt nicht zur Einheit ${zusammen.artikel.unit || "keine"}. ` +
+            `Bitte den Bestand einmal von Hand setzen.`
+        );
       }
     } else if (c.kind === "alias") {
       store.addNameAlias("artikel", c.itemId, c.alias);

@@ -867,16 +867,25 @@ export const store = {
     for (const a of von.aliases || []) this.addNameAlias("artikel", aufId, a);
     // Der Doppelgänger wurde aus einem Verkauf angelegt und steht deshalb meist im Minus. Genau dieser
     // Verbrauch gehört zum richtigen Artikel – deshalb wird er übernommen, nicht verworfen.
+    // Der Doppelgänger steht meist im Minus, weil Verkäufe darauf gebucht wurden – genau dieser Verbrauch
+    // gehört zum richtigen Artikel. Übernommen wird er aber nur, wenn sich die Einheiten ineinander
+    // umrechnen lassen: "12 Flaschen" einfach auf "20000 ml" zu addieren ergäbe 20012 ml und wäre still
+    // falsch. Passt es nicht, bleibt der Bestand unverändert – lieber eine Lücke als eine falsche Zahl.
+    let mengeUebernommen = false;
     if (auf.unit && von.unit && Number.isFinite(Number(von.currentAmount))) {
-      auf.currentAmount = round2((Number(auf.currentAmount) || 0) + (Number(von.currentAmount) || 0));
-      recomputeStockStatus(auf);
+      const umgerechnet = rechneEinheitUm(Number(von.currentAmount) || 0, von.unit, auf.unit);
+      if (umgerechnet !== null) {
+        auf.currentAmount = round2((Number(auf.currentAmount) || 0) + umgerechnet);
+        recomputeStockStatus(auf);
+        mengeUebernommen = true;
+      }
     }
     if (Array.isArray(von.consumptionLog) && von.consumptionLog.length) {
       auf.consumptionLog = [...(auf.consumptionLog || []), ...von.consumptionLog].slice(0, 20);
     }
     data.stock = data.stock.filter((s) => s.id !== vonId);
     persist();
-    return auf;
+    return { artikel: auf, mengeUebernommen, alteMenge: Number(von.currentAmount) || 0, alteEinheit: von.unit };
   },
   /** Dasselbe für ein doppelt angelegtes Rezept. */
   mergeRecipe(vonId, aufId) {
@@ -990,10 +999,19 @@ export const store = {
     const qty = Number(quantity);
     item.deliveries.unshift({ id: uid(), date: date || todayStr(), quantity: Number.isFinite(qty) ? qty : null, unit: unit || "", note: note || "" });
     item.deliveries = item.deliveries.slice(0, 20); // Historie nicht unbegrenzt wachsen lassen
+    // Die gelieferte Menge auf die Einheit des Artikels bringen. Vorher wurde nur addiert, wenn die
+    // Einheit ZEICHENGLEICH war – eine Lieferung "5 kg Mehl" auf einen Artikel in Gramm erhöhte den
+    // Bestand also gar nicht, stillschweigend. Der Lieferschein stand im Verlauf, der Bestand blieb
+    // stehen, und niemand kam darauf, woran es liegt.
+    let uebernommen = null;
     if (Number.isFinite(qty) && unit) {
       if (!item.unit) item.unit = unit; // erste Lieferung mit Einheit -> Mengenführung startet automatisch
-      if (item.unit.toLowerCase() === String(unit).toLowerCase()) {
-        item.currentAmount = round2((Number(item.currentAmount) || 0) + qty);
+      uebernommen = rechneEinheitUm(qty, unit, item.unit);
+      // Klappt die Umrechnung nicht (z.B. "Kasten" gegen "Stück"), hilft die Gebindegröße weiter:
+      // ein Kasten sind laut Artikel packSize Einzelstücke.
+      if (uebernommen === null && item.packSize > 1) uebernommen = round2(qty * item.packSize);
+      if (uebernommen !== null) {
+        item.currentAmount = round2((Number(item.currentAmount) || 0) + uebernommen);
         recomputeStockStatus(item);
       }
     }
@@ -1001,7 +1019,9 @@ export const store = {
     item.updatedAt = new Date().toISOString();
     item.updatedBy = "Lieferschein";
     persist();
-    return item;
+    // uebernommen === null heisst: die Menge liess sich nicht zuordnen. Der Aufrufer soll das melden
+    // koennen, statt dass die Lieferung stillschweigend wirkungslos bleibt.
+    return { item, uebernommen, verlangt: qty, einheit: unit };
   },
 
   // ---- Rezepte (Verkaufsprodukt -> Zutaten-Verbrauch) ----

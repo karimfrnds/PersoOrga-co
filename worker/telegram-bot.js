@@ -620,152 +620,154 @@ async function handleBookingPage(env) {
 <title>${escapeHtmlWorker(name)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Ojuju:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ------------------------------------------------------------------------
-     Bewusst dunkel und eigenständig statt hell und beliebig: die Seite steckt
-     als Block auf der Website und soll wie ein Teil des Ladens wirken, nicht
-     wie ein Formular von der Stange.
-     Farbwelt: fast schwarz mit warmem Grünstich, warmes Off-White, das Grün
-     des Cafés als einzige Signalfarbe. Kantige Geometrie, feine Linien statt
-     Schatten, enge große Typo gegen weit gesperrte Kleinbuchstaben-Labels.
+     Uebernimmt die Gestaltung von frnds.info, damit sich die Buchung wie ein
+     Teil der Website anfuehlt und nicht wie ein fremdes Formular:
+       Grund    #ECE4DA  warmer Sand (bewusst kein Weiss)
+       Text     #36302A  warmes Dunkelbraun
+       Akzent   #B9A590  Taupe
+       Flaeche  #F6F3EC  helles Warmweiss fuer Felder
+       Schrift  Ojuju fuer Ueberschriften, Archivo fuer alles andere
+       Knoepfe  vollrund und in Grossbuchstaben, wie "jetzt reservieren"
+     Der Akzent traegt Flaechen, niemals kleinen Text: auf dem Sandton waere
+     Taupe auf Taupe nicht mehr lesbar.
      ------------------------------------------------------------------------ */
   :root {
-    color-scheme: dark;              /* damit auch der native Datums-Wähler dunkel kommt */
-    --tinte: #101210;                /* Grund */
-    --flaeche: #191c19;              /* Felder und Kacheln */
-    --flaeche-hoch: #21251f;
-    --linie: #2f342e;
-    --text: #f1efe7;                 /* warmes Off-White, kein reines Weiss */
-    --leise: #8d8f85;
-    --akzent: #6fd39f;               /* das Grün, fürs Dunkle aufgehellt */
-    --akzent-tief: #0f2a1e;
+    --sand: #ece4da;
+    --flaeche: #f6f3ec;
+    --tinte: #36302a;
+    /* Auf frnds.info steht hier 0.55. Auf dem Sandton ergibt das aber nur 3.1:1 Kontrast – zu wenig
+       fuer Beschriftungen wie TAG oder PERSONEN, die man wirklich lesen muss (gefordert sind 4.5:1).
+       0.72 wirkt genauso zurueckgenommen und kommt auf 4.8:1. */
+    --leise: rgba(54, 48, 42, 0.72);
+    --linie: rgba(54, 48, 42, 0.18);
+    --akzent: #b9a590;
+    --akzent-tief: #a58f78;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
-    padding: 22px 18px 26px;
-    background: var(--tinte);
-    color: var(--text);
-    font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px 18px 28px;
+    background: var(--sand);
+    color: var(--tinte);
+    font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 16px;
-    line-height: 1.45;
-    /* Ein sehr zurückhaltender Lichtschein oben – gibt dem Block Tiefe, ohne aufzufallen. */
-    background-image: radial-gradient(120% 60% at 50% -10%, rgba(111,211,159,0.10), transparent 60%);
-    background-repeat: no-repeat;
+    line-height: 1.5;
   }
 
   h1 {
-    font-size: 30px;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
-    font-weight: 700;
+    font-family: "Ojuju", "Archivo", sans-serif;
+    font-size: 34px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 600;
     margin: 0 0 6px;
   }
   .hint { color: var(--leise); font-size: 14px; margin: 0 0 22px; }
 
-  /* Kleine, weit gesperrte Marker – gibt dem Ganzen den redaktionellen Ton. */
+  /* Kleine, weit gesperrte Marker – gibt dem Ablauf Struktur, ohne laut zu werden. */
   .schritt {
     display: flex; align-items: center; gap: 10px;
-    font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--leise); margin: 0 0 12px;
   }
   .schritt::after { content: ""; flex: 1; height: 1px; background: var(--linie); }
-  .schritt .nr { color: var(--akzent); }
+  .schritt .nr { color: var(--akzent-tief); }
 
   label { display: block; margin-bottom: 14px; }
-  /* Gilt auch fuer den Uhrzeit-Titel, der ausserhalb eines label steht. */
   .titel {
-    display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.16em;
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--leise); margin-bottom: 6px;
   }
   input, select, textarea {
-    width: 100%; padding: 14px; font-size: 16px; font-family: inherit;
-    border: 1px solid var(--linie); border-radius: 4px;
-    background: var(--flaeche); color: var(--text);
+    width: 100%; padding: 14px 16px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--linie); border-radius: 12px;
+    background: var(--flaeche); color: var(--tinte);
     transition: border-color .15s ease;
   }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--akzent); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--tinte); }
   textarea { resize: vertical; min-height: 62px; }
   select {
     appearance: none;
     background-image: linear-gradient(45deg, transparent 50%, var(--leise) 50%), linear-gradient(135deg, var(--leise) 50%, transparent 50%);
-    background-position: calc(100% - 20px) 22px, calc(100% - 14px) 22px;
+    background-position: calc(100% - 22px) 23px, calc(100% - 16px) 23px;
     background-size: 6px 6px, 6px 6px;
     background-repeat: no-repeat;
   }
 
-  /* Am Handy steht jedes Feld für sich – nebeneinander wurden Datum und Anzahl abgeschnitten. */
+  /* Am Handy steht jedes Feld fuer sich – nebeneinander wurden Datum und Anzahl abgeschnitten. */
   .reihe { display: grid; grid-template-columns: 1fr; gap: 0; }
   @media (min-width: 620px) { .reihe { grid-template-columns: 1fr 1fr 1fr; gap: 14px; } }
 
   .zaehler { display: flex; gap: 8px; }
-  .zaehler input { text-align: center; font-weight: 700; font-size: 18px; }
+  .zaehler input { text-align: center; font-weight: 600; font-size: 18px; }
   .zbtn {
     flex: 0 0 54px; font-size: 22px; font-weight: 500;
-    border: 1px solid var(--linie); border-radius: 4px;
-    background: var(--flaeche); color: var(--text); cursor: pointer;
+    border: 1px solid var(--linie); border-radius: 999px;
+    background: var(--flaeche); color: var(--tinte); cursor: pointer;
   }
-  .zbtn:hover:not(:disabled) { border-color: var(--akzent); color: var(--akzent); }
-  .zbtn:disabled { opacity: .3; cursor: not-allowed; }
+  .zbtn:hover:not(:disabled) { background: var(--akzent); border-color: var(--akzent); }
+  .zbtn:disabled { opacity: .35; cursor: not-allowed; }
 
-  /* Tageszeiten als Reiter statt einer Wand aus fünfzig Knöpfen. */
+  /* Tageszeiten als Reiter statt einer Wand aus fuenfzig Knoepfen. */
   .abschnitte { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--linie); }
   .abschnitt {
     flex: 1 1 0; min-width: 0; padding: 10px 2px 11px; border: none; border-bottom: 2px solid transparent;
     background: none; color: var(--leise); font: inherit; font-size: 13px; cursor: pointer; line-height: 1.25;
     margin-bottom: -1px;
   }
-  .abschnitt b { display: block; font-weight: 500; letter-spacing: 0.01em; }
-  .abschnitt small { font-size: 10.5px; letter-spacing: 0.08em; opacity: .75; }
-  .abschnitt[aria-pressed="true"] { color: var(--text); border-bottom-color: var(--akzent); }
-  .abschnitt[aria-pressed="true"] small { color: var(--akzent); opacity: 1; }
+  .abschnitt b { display: block; font-weight: 600; }
+  .abschnitt small { font-size: 10.5px; letter-spacing: 0.08em; }
+  .abschnitt[aria-pressed="true"] { color: var(--tinte); border-bottom-color: var(--tinte); }
 
   .zeiten { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
   @media (min-width: 620px) { .zeiten { grid-template-columns: repeat(6, 1fr); } }
   .zeit {
-    padding: 13px 2px; border: 1px solid var(--linie); border-radius: 4px;
-    background: var(--flaeche); color: var(--text);
+    padding: 13px 2px; border: 1px solid var(--linie); border-radius: 999px;
+    background: var(--flaeche); color: var(--tinte);
     font-size: 15px; font-family: inherit; font-variant-numeric: tabular-nums;
-    cursor: pointer; transition: border-color .12s ease, background .12s ease;
+    cursor: pointer; transition: background .12s ease, border-color .12s ease;
   }
-  .zeit:hover { border-color: var(--akzent); }
+  .zeit:hover { border-color: var(--akzent); background: var(--akzent); }
   .zeit[aria-pressed="true"] {
-    background: var(--akzent); border-color: var(--akzent); color: var(--akzent-tief); font-weight: 700;
+    background: var(--tinte); border-color: var(--tinte); color: var(--flaeche); font-weight: 600;
   }
 
   button.senden {
-    width: 100%; padding: 17px; font-size: 15px; font-weight: 700;
+    width: 100%; padding: 19px; font-size: 14px; font-weight: 600;
     letter-spacing: 0.14em; text-transform: uppercase;
-    border: none; border-radius: 4px;
-    background: var(--akzent); color: var(--akzent-tief);
-    cursor: pointer; font-family: inherit; margin-top: 6px;
+    border: none; border-radius: 999px;
+    background: var(--akzent); color: var(--tinte);
+    cursor: pointer; font-family: inherit; margin-top: 8px;
   }
-  button.senden:disabled { background: var(--flaeche-hoch); color: var(--leise); cursor: not-allowed; }
+  button.senden:hover:not(:disabled) { background: var(--akzent-tief); }
+  button.senden:disabled { background: var(--flaeche); color: var(--leise); cursor: not-allowed; }
 
-  .melde { padding: 13px 15px; border-radius: 4px; background: var(--flaeche-hoch); margin: 12px 0; font-size: 15px;
-           border-left: 2px solid var(--akzent); }
-  .fehler { border-left-color: #d8a14a; color: #e8c48c; }
+  .melde { padding: 13px 16px; border-radius: 12px; background: var(--flaeche); margin: 12px 0; font-size: 15px;
+           border-left: 3px solid var(--akzent); }
+  .fehler { border-left-color: #a8603a; }
   .datenschutz { color: var(--leise); font-size: 12px; line-height: 1.5; margin-top: 16px; }
 
   .zusammenfassung {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    border: 1px solid var(--akzent); border-radius: 4px; padding: 14px 15px; margin-bottom: 20px;
-    background: linear-gradient(180deg, rgba(111,211,159,0.08), transparent);
-    font-size: 15px; font-weight: 500;
+    border: 1px solid var(--linie); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;
+    background: var(--flaeche); font-size: 15px; font-weight: 500;
   }
   .aendern {
-    flex: 0 0 auto; background: none; border: none; color: var(--akzent); font: inherit;
-    font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
-    cursor: pointer; padding: 4px 0;
+    flex: 0 0 auto; background: none; border: none; color: var(--tinte); font: inherit;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+    cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px;
   }
 
   .erfolg { text-align: center; padding: 34px 6px 26px; }
-  .erfolg h1 { font-size: 34px; }
+  .erfolg h1 { font-size: 38px; }
   .code {
-    font-size: 34px; font-weight: 700; letter-spacing: 0.22em; margin: 14px 0 6px;
-    color: var(--akzent); font-variant-numeric: tabular-nums;
+    font-family: "Ojuju", "Archivo", sans-serif;
+    font-size: 36px; font-weight: 600; letter-spacing: 0.18em; margin: 14px 0 6px;
+    color: var(--tinte); font-variant-numeric: tabular-nums;
   }
   .versteckt { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 </style></head>

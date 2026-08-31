@@ -482,9 +482,11 @@ async function performTaskSync() {
   for (const c of remoteStockChanges) {
     if (!c.id || appliedStockChangeIds.has(c.id)) continue;
     if (c.kind === "create") {
-      store.addStockItem(c.name, { unit: c.unit || "", currentAmount: c.currentAmount ?? 0, lowThreshold: c.lowThreshold ?? 0 });
+      store.addStockItem(c.name, { unit: c.unit || "", currentAmount: c.currentAmount ?? 0, lowThreshold: c.lowThreshold ?? 0,
+        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit });
     } else if (c.kind === "update") {
-      if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold })) {
+      if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold,
+        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit })) {
         syncWarnings.push(`Artikel-Änderung: Artikel nicht gefunden (evtl. schon gelöscht).`);
       }
       // Bearbeiten IST das Prüfen: der Hinweis "bitte einordnen" kann danach weg.

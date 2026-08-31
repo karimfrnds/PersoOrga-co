@@ -2103,6 +2103,10 @@ async function handleAdminStockItem(request, env) {
     currentAmount: body?.currentAmount === undefined ? undefined : Number(body.currentAmount) || 0,
     targetId: String(body?.targetId || "") || null,
     alias: String(body?.alias || "").trim(),
+    bereich: body?.bereich === undefined ? undefined : body.bereich === "bar" ? "bar" : "kueche",
+    packSize: body?.packSize === undefined ? undefined : Math.max(1, Number(body.packSize) || 1),
+    packLabel: body?.packLabel === undefined ? undefined : String(body.packLabel).trim(),
+    pricePerUnit: body?.pricePerUnit === undefined ? undefined : Number(body.pricePerUnit),
   };
   const state = await getState(env);
   // Die Änderung SOFORT auch auf die eigene Kopie anwenden. Ohne das reicht der Laptop nur einen Wunsch
@@ -2141,6 +2145,10 @@ function stockVorschau(stock, e) {
         currentAmount: unit ? Number(e.currentAmount) || 0 : null,
         lowThreshold: unit ? Number(e.lowThreshold) || 0 : null,
         needsReview: false,
+        bereich: e.bereich || "kueche",
+        packSize: e.packSize || 1,
+        packLabel: e.packLabel || "",
+        pricePerUnit: Number.isFinite(e.pricePerUnit) ? e.pricePerUnit : null,
       },
     ];
   }
@@ -2154,6 +2162,10 @@ function stockVorschau(stock, e) {
         name: e.name || s.name,
         unit: e.unit === undefined ? s.unit : e.unit,
         lowThreshold: e.lowThreshold === undefined ? s.lowThreshold : e.lowThreshold,
+        bereich: e.bereich === undefined ? s.bereich : e.bereich,
+        packSize: e.packSize === undefined ? s.packSize : e.packSize,
+        packLabel: e.packLabel === undefined ? s.packLabel : e.packLabel,
+        pricePerUnit: e.pricePerUnit === undefined ? s.pricePerUnit : e.pricePerUnit,
         needsReview: false,
       };
     }

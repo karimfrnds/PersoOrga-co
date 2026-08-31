@@ -317,6 +317,23 @@ function renderStock(state, { onChanged }) {
       card.appendChild(p);
       return card;
     }
+    // Nach Bereich getrennt: eingekauft wird fuer Kueche und Bar getrennt, oft sogar bei verschiedenen
+    // Lieferanten. Eine gemischte Liste muesste man vor jedem Einkauf erst selbst sortieren.
+    for (const bereich of ["kueche", "bar"]) {
+      const imBereich = fehlend.filter((i) => (i.bereich || "kueche") === bereich);
+      if (imBereich.length === 0) continue;
+      const titel = document.createElement("p");
+      titel.className = "muted small res-bereich";
+      titel.innerHTML = `<b>${bereich === "bar" ? "🍸 Bar" : "🍳 Küche"}</b> · ${imBereich.length} ${
+        imBereich.length === 1 ? "Artikel" : "Artikel"
+      }`;
+      card.appendChild(titel);
+      card.appendChild(buildEinkaufsGruppe(imBereich));
+    }
+    return card;
+  }
+
+  function buildEinkaufsGruppe(fehlend) {
     const list = document.createElement("div");
     list.className = "task-list";
     for (const item of fehlend) {
@@ -324,9 +341,13 @@ function renderStock(state, { onChanged }) {
       row.className = "task-row";
       const text = document.createElement("div");
       text.className = "task-row-text";
+      // Bestellform mit anzeigen – beim Bestellen zaehlt der Kasten, nicht die Flasche.
+      const bestellung = item.packSize > 1 ? `${item.packLabel || "Gebinde"} à ${item.packSize}` : item.packLabel || "";
       text.innerHTML = `<span><b>${escapeHtml(item.name)}</b></span><span class="muted small task-row-meta">${
         STATUS[item.status]?.label || item.status
-      }${item.unit ? ` · Bestand: ${item.currentAmount} ${escapeHtml(item.unit)}` : ""}</span>`;
+      }${item.unit ? ` · Bestand: ${item.currentAmount} ${escapeHtml(item.unit)}` : ""}${
+        bestellung ? ` · bestellen als ${escapeHtml(bestellung)}` : ""
+      }</span>`;
       row.appendChild(text);
 
       const actions = document.createElement("div");
@@ -350,8 +371,7 @@ function renderStock(state, { onChanged }) {
       row.appendChild(actions);
       list.appendChild(row);
     }
-    card.appendChild(list);
-    return card;
+    return list;
   }
 
   function buildListe(items) {
@@ -427,6 +447,42 @@ function renderStock(state, { onChanged }) {
   }
 
   /** Artikel anlegen oder bearbeiten. Einheit leer = reine Ampel ohne Mengenführung. */
+  /** Preisfeld mit zwei Eingabewegen.
+   *
+   * Auf einer Rechnung steht meistens der Gebinde-Preis ("Kasten 15,60 €"), gebraucht wird aber der Preis
+   * je Einzelstueck. Deshalb kann man beides eintragen – der andere Wert ergibt sich daraus. Ohne das
+   * muesste man vor jedem Speichern selbst dividieren, und genau da schleichen sich Fehler ein.
+   */
+  function buildPreisFeld(item) {
+    const proStueck = item?.pricePerUnit;
+    const gebinde = item?.packSize > 1 && proStueck != null ? (proStueck * item.packSize).toFixed(2) : "";
+    const herkunft =
+      item?.priceSource === "beleg"
+        ? '<span class="muted small">Vom Lieferschein übernommen. Trägst du hier etwas ein, bleibt dein Wert stehen.</span>'
+        : item?.priceSource === "manuell"
+        ? '<span class="muted small">Von dir eingetragen – Lieferscheine überschreiben ihn nicht.</span>'
+        : '<span class="muted small">Kommt automatisch vom nächsten Lieferschein, wenn du nichts einträgst.</span>';
+    return `
+      <div class="res-form-row">
+        <label class="field"><span>Einkaufspreis je Einheit (€)</span>
+          <input type="number" id="ai-preis" step="0.00001" min="0" value="${proStueck ?? ""}" placeholder="leer = unbekannt" /></label>
+        <label class="field"><span>oder je Gebinde (€)</span>
+          <input type="number" id="ai-preis-gebinde" step="0.01" min="0" value="${gebinde}" placeholder="wird umgerechnet" /></label>
+      </div>
+      ${herkunft}`;
+  }
+
+  /** Liest den Preis aus dem Dialog. Gibt undefined zurueck, wenn nichts eingetragen wurde – dann bleibt
+   * ein vorhandener Preis unangetastet, statt ihn durch eine leere Eingabe zu loeschen. */
+  function lesePreis(overlay) {
+    const proStueck = overlay.querySelector("#ai-preis").value.trim();
+    const proGebinde = overlay.querySelector("#ai-preis-gebinde").value.trim();
+    const groesse = Math.max(1, Number(overlay.querySelector("#ai-packsize").value) || 1);
+    if (proStueck !== "") return Number(proStueck);
+    if (proGebinde !== "") return Number(proGebinde) / groesse;
+    return undefined;
+  }
+
   function openArtikelDialog(item) {
     const neu = !item;
     const overlay = document.createElement("div");
@@ -435,10 +491,25 @@ function renderStock(state, { onChanged }) {
       <div class="dialog">
         <h2>${neu ? "Neuer Artikel" : "Artikel bearbeiten"}</h2>
         <label class="field"><span>Name</span><input type="text" id="ai-name" value="${escapeHtml(item?.name || "")}" placeholder="z.B. Kaffeebohnen" /></label>
-        <label class="field"><span>Einheit (leer lassen für einfache Ampel)</span><input type="text" id="ai-unit" value="${escapeHtml(item?.unit || "")}" placeholder="z.B. kg, l, Stück" /></label>
-        ${neu ? `<label class="field"><span>Aktueller Bestand</span><input type="number" id="ai-amount" step="0.1" value="0" /></label>` : ""}
-        <label class="field"><span>Warnschwelle (ab wann „wird knapp")</span><input type="number" id="ai-low" step="0.1" value="${item?.lowThreshold ?? 0}" /></label>
-        <p class="muted small">Nur mit Einheit wird der Bestand als Menge geführt und automatisch verrechnet.</p>
+        <div class="res-form-row">
+          <label class="field"><span>Bereich</span><select id="ai-bereich">
+            <option value="kueche" ${item?.bereich !== "bar" ? "selected" : ""}>Küche</option>
+            <option value="bar" ${item?.bereich === "bar" ? "selected" : ""}>Bar</option>
+          </select></label>
+          <label class="field"><span>Einheit</span><input type="text" id="ai-unit" value="${escapeHtml(item?.unit || "")}" placeholder="z.B. g, ml, Stück" /></label>
+        </div>
+        <div class="res-form-row">
+          <label class="field"><span>Bestellform</span><input type="text" id="ai-packlabel" value="${escapeHtml(item?.packLabel || "")}" placeholder="z.B. Kasten, 8er-Pack, einzeln" /></label>
+          <label class="field"><span>Stück je Gebinde</span><input type="number" id="ai-packsize" min="1" step="1" value="${item?.packSize ?? 1}" /></label>
+        </div>
+        <div class="res-form-row">
+          ${neu ? `<label class="field"><span>Aktueller Bestand</span><input type="number" id="ai-amount" step="0.1" value="0" /></label>` : ""}
+          <label class="field"><span>Warnschwelle</span><input type="number" id="ai-low" step="0.1" value="${item?.lowThreshold ?? 0}" /></label>
+        </div>
+        ${buildPreisFeld(item)}
+        <p class="muted small">Nur mit Einheit wird der Bestand als Menge geführt und automatisch verrechnet.
+        Die Bestellform hilft beim Einkauf: <b>Stück je Gebinde</b> ist die Zahl, die auf dem Lieferschein
+        in einem Kasten steckt.</p>
         <p class="muted small" id="ai-status"></p>
         <div class="dialog-actions">
           <button class="btn btn-secondary" id="ai-cancel">Abbrechen</button>
@@ -461,7 +532,12 @@ function renderStock(state, { onChanged }) {
         name,
         unit: overlay.querySelector("#ai-unit").value.trim(),
         lowThreshold: overlay.querySelector("#ai-low").value,
+        bereich: overlay.querySelector("#ai-bereich").value,
+        packSize: overlay.querySelector("#ai-packsize").value,
+        packLabel: overlay.querySelector("#ai-packlabel").value.trim(),
       };
+      const preis = lesePreis(overlay);
+      if (preis !== undefined) body.pricePerUnit = preis;
       if (neu) body.currentAmount = overlay.querySelector("#ai-amount").value;
       overlay.querySelectorAll("button").forEach((b) => (b.disabled = true));
       status.className = "muted small";

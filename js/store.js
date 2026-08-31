@@ -1226,6 +1226,54 @@ export const store = {
     persist();
     return r;
   },
+  // ---- Inventur ----
+  /** Was bei einer Inventur zu zaehlen ist: alle mengengefuehrten Artikel eines Bereichs mit ihrem
+   * Soll-Bestand. Artikel ohne Einheit (reine Ampel) tauchen nicht auf – da gibt es nichts zu zaehlen. */
+  getStocktakeSheet(bereich) {
+    return this.getStockItems()
+      .filter((s) => s.unit && (!bereich || (s.bereich || "kueche") === bereich))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((s) => ({ stockItemId: s.id, name: s.name, unit: s.unit, soll: Number(s.currentAmount) || 0,
+                     pricePerUnit: s.pricePerUnit ?? null }));
+  },
+
+  /** Inventur abschliessen: der gezaehlte Bestand wird der neue Stand, die Differenz festgehalten.
+   *
+   * Die Differenz ist die eigentliche Information – sie ist Bruch, Schwund, Fehlbuchung oder ein Rezept,
+   * das nicht stimmt. Ohne sie faellt so etwas nie auf, weil der Bestand einfach ueberschrieben wuerde.
+   * Artikel, bei denen nichts eingetragen wurde, bleiben unangetastet: nicht gezaehlt ist nicht dasselbe
+   * wie null da.
+   */
+  saveStocktake({ date, bereich, counts }) {
+    const tag = date || todayStr();
+    const entries = [];
+    let differenzWert = 0;
+    for (const [stockItemId, istRoh] of Object.entries(counts || {})) {
+      if (istRoh === "" || istRoh === null || istRoh === undefined) continue;
+      const item = data.stock.find((s) => s.id === stockItemId);
+      if (!item || !item.unit) continue;
+      const ist = round2(Number(istRoh));
+      if (!Number.isFinite(ist)) continue;
+      const soll = round2(Number(item.currentAmount) || 0);
+      const differenz = round2(ist - soll);
+      const wert = item.pricePerUnit != null ? round2(differenz * item.pricePerUnit) : null;
+      entries.push({ stockItemId, name: item.name, unit: item.unit, soll, ist, differenz, wert });
+      if (wert !== null) differenzWert = round2(differenzWert + wert);
+      item.currentAmount = ist;
+      recomputeStockStatus(item);
+    }
+    if (entries.length === 0) return null;
+    const inventur = { id: uid(), date: tag, bereich: bereich || null, entries, differenzWert,
+                       createdAt: new Date().toISOString() };
+    data.stocktakes.push(inventur);
+    if (data.stocktakes.length > 60) data.stocktakes = data.stocktakes.slice(-60);
+    persist();
+    return inventur;
+  },
+  getStocktakes(limit = 12) {
+    return [...data.stocktakes].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
+  },
+
   /** Hält einen verkauften Posten aus einem Kassenbericht fest (für "Renner & Penner"). */
   addProductSale({ date, productName, quantity, salePrice }) {
     const menge = Number(quantity) || 0;

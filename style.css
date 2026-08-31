@@ -779,3 +779,9 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   .plan-zeitleiste { gap: 6px; }
   .plan-zeitleiste select { flex: 1 1 120px; }
 }
+
+/* Inventur: Differenzen sollen ohne Lesen auffallen */
+.inv-passt { color: var(--green); }
+.inv-fehlt { color: #b3261e; font-weight: 600; }
+.inv-mehr { color: var(--orange); font-weight: 600; }
+@media (prefers-color-scheme: dark) { .inv-fehlt { color: #f2b8b5; } }

@@ -329,7 +329,7 @@ function renderStockAdmin() {
       newBtn.textContent = "＋ Neues Rezept";
       newBtn.style.marginBottom = "12px";
       newBtn.onclick = () => {
-        draft = { targetId: "new", productName: "", ingredients: [] };
+        draft = { targetId: "new", productName: "", ingredients: [], yieldAmount: 1, yieldUnit: "Portion" };
         rerender();
       };
       card.appendChild(newBtn);
@@ -369,11 +369,24 @@ function renderStockAdmin() {
           ? "Keine Zutaten hinterlegt"
           : recipe.ingredients
               .map((ing) => {
+                // Eine Zutat kann ein Artikel ODER ein anderes Rezept sein (Grundmix, Sauce, Teig).
+                if (ing.recipeId) {
+                  const unter = store.getRecipes().find((r) => r.id === ing.recipeId);
+                  return unter ? `${ing.amount} ${ing.unit || unter.yieldUnit || ""} ${unter.productName}` : null;
+                }
                 const stockItem = trackedItems.find((s) => s.id === ing.stockItemId);
                 return stockItem ? `${ing.amount} ${stockItem.unit} ${stockItem.name}` : null;
               })
               .filter(Boolean)
               .join(" · ");
+      // Ergiebigkeit nur nennen, wenn es NICHT die uebliche eine Portion ist – sonst steht bei jedem
+      // Verkaufsprodukt eine Selbstverstaendlichkeit.
+      if ((recipe.yieldAmount ?? 1) !== 1 || (recipe.yieldUnit && recipe.yieldUnit !== "Portion")) {
+        const ergibt = document.createElement("span");
+        ergibt.className = "muted small task-row-meta";
+        ergibt.textContent = `ergibt ${recipe.yieldAmount ?? 1} ${recipe.yieldUnit || "Portion"}`;
+        textWrap.appendChild(ergibt);
+      }
       textWrap.appendChild(summary);
       row.appendChild(textWrap);
 
@@ -383,7 +396,8 @@ function renderStockAdmin() {
       editBtn.className = "btn btn-secondary";
       editBtn.textContent = "Bearbeiten";
       editBtn.onclick = () => {
-        draft = { targetId: recipe.id, productName: recipe.productName, ingredients: recipe.ingredients.map((i) => ({ ...i })) };
+        draft = { targetId: recipe.id, productName: recipe.productName, ingredients: recipe.ingredients.map((i) => ({ ...i })),
+          yieldAmount: recipe.yieldAmount ?? 1, yieldUnit: recipe.yieldUnit || "Portion" };
         rerender();
       };
       actions.appendChild(editBtn);
@@ -422,25 +436,86 @@ function renderStockAdmin() {
     nameWrap.appendChild(nameInput);
     form.appendChild(nameWrap);
 
+    // Ergiebigkeit: bei einem Verkaufsprodukt 1 Portion, bei einer Vorbereitung das, was ein Ansatz
+    // ergibt. Nur damit laesst sich "200 g Grundmix" in einem anderen Rezept ausrechnen.
+    const ergibtReihe = document.createElement("div");
+    ergibtReihe.className = "res-form-row";
+    const feld = (label, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      return l;
+    };
+    const ertrag = document.createElement("input");
+    ertrag.type = "number";
+    ertrag.step = "0.01";
+    ertrag.min = "0.01";
+    ertrag.value = draft.yieldAmount ?? 1;
+    ertrag.oninput = () => (draft.yieldAmount = ertrag.value);
+    const ertragEinheit = document.createElement("input");
+    ertragEinheit.type = "text";
+    ertragEinheit.placeholder = "Portion, g, ml";
+    ertragEinheit.value = draft.yieldUnit || "Portion";
+    ertragEinheit.oninput = () => (draft.yieldUnit = ertragEinheit.value);
+    ergibtReihe.append(feld("Ergibt", ertrag), feld("Einheit davon", ertragEinheit));
+    form.appendChild(ergibtReihe);
+
+    const ergibtHinweis = document.createElement("p");
+    ergibtHinweis.className = "muted small";
+    ergibtHinweis.innerHTML =
+      `Bei einem Verkaufsprodukt: <b>1 Portion</b>. Bei einer Vorbereitung wie einem Grundmix das, was
+       ein Ansatz ergibt (z.B. <b>2000 g</b>) – nur dann lässt sich „200 g Grundmix" in einem anderen
+       Rezept ausrechnen.`;
+    form.appendChild(ergibtHinweis);
+
     const ingHeading = document.createElement("p");
     ingHeading.className = "muted small";
     ingHeading.style.marginTop = "12px";
-    ingHeading.textContent = "Zutaten (pro verkauftem Stück verbraucht):";
+    ingHeading.textContent = "Zutaten für einen Ansatz – Artikel oder ein anderes Rezept:";
     form.appendChild(ingHeading);
 
     draft.ingredients.forEach((ing, idx) => {
       const ingRow = document.createElement("div");
       ingRow.className = "task-add-row";
       const select = document.createElement("select");
+      const gruppeA = document.createElement("optgroup");
+      gruppeA.label = "Artikel";
       for (const s of trackedItems) {
         const opt = document.createElement("option");
-        opt.value = s.id;
+        opt.value = "a:" + s.id;
         opt.textContent = `${s.name} (${s.unit})`;
         if (s.id === ing.stockItemId) opt.selected = true;
-        select.appendChild(opt);
+        gruppeA.appendChild(opt);
+      }
+      select.appendChild(gruppeA);
+      // Andere Rezepte als Zutat – ein Grundmix ist selbst ein Rezept. Rezepte, die einen Kreis
+      // ergaeben, laesst der Store gar nicht erst zur Auswahl zu.
+      const nutzbar = store.getVerwendbareRezepte(draft.targetId === "new" ? null : draft.targetId);
+      if (nutzbar.length > 0) {
+        const gruppeR = document.createElement("optgroup");
+        gruppeR.label = "Andere Rezepte";
+        for (const r of nutzbar) {
+          const opt = document.createElement("option");
+          opt.value = "r:" + r.id;
+          opt.textContent = `${r.productName} (ergibt ${r.yieldAmount ?? 1} ${r.yieldUnit || "Portion"})`;
+          if (r.id === ing.recipeId) opt.selected = true;
+          gruppeR.appendChild(opt);
+        }
+        select.appendChild(gruppeR);
       }
       select.onchange = () => {
-        ing.stockItemId = select.value;
+        const [art, id] = select.value.split(":");
+        if (art === "r") {
+          ing.recipeId = id;
+          delete ing.stockItemId;
+          ing.unit = nutzbar.find((r) => r.id === id)?.yieldUnit || "Portion";
+        } else {
+          ing.stockItemId = id;
+          delete ing.recipeId;
+          delete ing.unit;
+        }
+        rerender();
       };
       const amountInput = document.createElement("input");
       amountInput.type = "number";
@@ -458,8 +533,14 @@ function renderStockAdmin() {
         draft.ingredients.splice(idx, 1);
         rerender();
       };
+      const einheit = document.createElement("span");
+      einheit.className = "muted small";
+      einheit.textContent = ing.recipeId
+        ? ing.unit || store.getRecipes().find((r) => r.id === ing.recipeId)?.yieldUnit || ""
+        : trackedItems.find((s) => s.id === ing.stockItemId)?.unit || "";
       ingRow.appendChild(select);
       ingRow.appendChild(amountInput);
+      ingRow.appendChild(einheit);
       ingRow.appendChild(removeBtn);
       form.appendChild(ingRow);
     });
@@ -491,12 +572,17 @@ function renderStockAdmin() {
       const name = draft.productName.trim();
       if (!name) return;
       const ingredients = draft.ingredients
-        .filter((i) => i.stockItemId)
-        .map((i) => ({ stockItemId: i.stockItemId, amount: Number(i.amount) || 0 }));
+        .filter((i) => i.stockItemId || i.recipeId)
+        .map((i) =>
+          i.recipeId
+            ? { recipeId: i.recipeId, amount: Number(i.amount) || 0, unit: i.unit || "" }
+            : { stockItemId: i.stockItemId, amount: Number(i.amount) || 0 }
+        );
+      const ertragWerte = { yieldAmount: draft.yieldAmount, yieldUnit: draft.yieldUnit };
       if (draft.targetId === "new") {
-        store.addRecipe(name, ingredients);
+        store.addRecipe(name, ingredients, ertragWerte);
       } else {
-        store.updateRecipe(draft.targetId, { productName: name, ingredients });
+        store.updateRecipe(draft.targetId, { productName: name, ingredients, ...ertragWerte });
       }
       draft = null;
       rerender();

@@ -34,6 +34,11 @@ const AI_MODEL = "claude-sonnet-5";
 const STATE_KEY = "state";
 const MORNING_HOUR = 8; // Europe/Berlin, Ortszeit
 const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
+// Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
+// aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
+// waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
+const WORKER_VERSION = "2026-08-31.6";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -3494,7 +3499,7 @@ export default {
     }
 
     if (request.method === "POST") return handleTelegram(request, env);
-    return new Response("ok", { status: 200 });
+    return new Response("ok · Worker-Version " + WORKER_VERSION, { status: 200 });
   },
 
   async scheduled(event, env, ctx) {

@@ -12,6 +12,13 @@ function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+/** Rundung für EINZELPREISE. Zwei Nachkommastellen reichen dafür nicht: Milch kostet rund 0,001 €/ml
+ * und Mehl 0,0008 €/g – auf Cent gerundet wären beide schlicht null, und der Wareneinsatz fiele
+ * stillschweigend unter den Tisch. */
+function roundPreis(n) {
+  return Math.round((Number(n) || 0) * 100000) / 100000;
+}
+
 function uid() {
   if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
   return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
@@ -147,6 +154,14 @@ function defaultData() {
     // Krankmeldungen (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
     // { id, employeeId, date, note, reportedAt }
     sickDays: [],
+    // Verkaufte Produkte je Tag, aus den Kassenberichten. Grundlage für "was läuft, was nicht" und
+    // (mit dem Verkaufspreis) für den Deckungsbeitrag. Bewusst eine eigene Liste: der Verbrauchsverlauf
+    // am Artikel ist auf 20 Einträge begrenzt und kennt nur Zutaten, nicht die verkauften Produkte.
+    // { id, date, productName, quantity, salePrice, revenue }
+    productSales: [],
+    // Inventuren: was tatsächlich gezählt wurde, gegen den Soll-Bestand.
+    // { id, date, bereich, entries: [{stockItemId, name, soll, ist, differenz, wert}], differenzWert, createdAt }
+    stocktakes: [],
     // Wochen, deren Schichtplan der Chef abgeschlossen hat: [{ weekStart, publishedAt }].
     // Solange eine Woche hier nicht steht, erfahren die Mitarbeiter nichts über Zu- oder Absagen.
     publishedWeeks: [],
@@ -182,6 +197,8 @@ function normalizeDay(d) {
       slotIds: Array.isArray(a.slotIds) ? a.slotIds : [],
     })),
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
+    // Wareneinsatz des Tages (Summe der verbrauchten Waren zum Einkaufspreis).
+    materialkosten: Number(d.materialkosten) || 0,
   };
 }
 
@@ -209,6 +226,8 @@ function load() {
       recipes: parsed.recipes ?? base.recipes,
       sickDays: parsed.sickDays ?? base.sickDays,
       publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
+      productSales: parsed.productSales ?? base.productSales,
+      stocktakes: parsed.stocktakes ?? base.stocktakes,
       tables: parsed.tables ?? base.tables,
       reservations: parsed.reservations ?? base.reservations,
     };
@@ -779,6 +798,17 @@ export const store = {
       // true = automatisch aus einem Beleg angelegt und noch nicht vom Chef bestaetigt. Solange das steht,
       // taucht der Artikel oben in der Bestand-Ansicht zum Einordnen auf.
       needsReview: !!opts.needsReview,
+      // Wo der Artikel gebraucht wird – trennt die Inventur und die Einkaufsliste nach Bereichen.
+      bereich: opts.bereich === "bar" ? "bar" : "kueche",
+      // Wie bestellt/geliefert wird: wie viele Einzelstücke in einem Gebinde stecken und wie das heisst.
+      // Wichtig, weil auf dem Lieferschein Kästen stehen, im Kassenbericht aber einzelne Flaschen.
+      packSize: Math.max(1, Number(opts.packSize) || 1),
+      packLabel: String(opts.packLabel || "").trim(),
+      // Einkaufspreis je EINZELNER Mengeneinheit (netto). Grundlage für den Wareneinsatz.
+      // Kommt meist automatisch vom Lieferschein, lässt sich aber überschreiben.
+      pricePerUnit: Number.isFinite(Number(opts.pricePerUnit)) ? roundPreis(opts.pricePerUnit) : null,
+      priceUpdatedAt: null,
+      priceSource: null, // "beleg" | "manuell"
     };
     if (!item.name) return null;
     if (unit) recomputeStockStatus(item);
@@ -828,6 +858,15 @@ export const store = {
     const item = data.stock.find((s) => s.id === id);
     if (!item) return null;
     if (patch.name !== undefined && String(patch.name).trim()) item.name = String(patch.name).trim();
+    if (patch.bereich !== undefined) item.bereich = patch.bereich === "bar" ? "bar" : "kueche";
+    if (patch.packSize !== undefined) item.packSize = Math.max(1, Number(patch.packSize) || 1);
+    if (patch.packLabel !== undefined) item.packLabel = String(patch.packLabel).trim();
+    if (patch.pricePerUnit !== undefined) {
+      const p = Number(patch.pricePerUnit);
+      item.pricePerUnit = Number.isFinite(p) && p >= 0 ? roundPreis(p) : null;
+      item.priceUpdatedAt = new Date().toISOString();
+      item.priceSource = patch.priceSource || "manuell";
+    }
     if (patch.unit !== undefined) {
       const unit = String(patch.unit).trim();
       item.unit = unit;
@@ -958,6 +997,21 @@ export const store = {
     persist();
     return eintrag;
   },
+  /** Schreibt den Warenwert eines Verbrauchs auf den jeweiligen Tag.
+   *
+   * Bewusst als Tagessumme und nicht nur im Verbrauchsverlauf des Artikels: der ist auf die letzten
+   * 20 Einträge begrenzt und taugt nicht für eine Monatsauswertung. Gerechnet wird mit dem Preis, der
+   * ZUM ZEITPUNKT des Verkaufs hinterlegt war – eine spätere Preiserhöhung soll vergangene Tage nicht
+   * rückwirkend teurer machen.
+   */
+  addMaterialCost(date, betrag) {
+    const wert = round2(betrag);
+    if (!date || !Number.isFinite(wert) || wert === 0) return;
+    const d = this.getOrCreateDayByDate(date);
+    d.materialkosten = round2((Number(d.materialkosten) || 0) + wert);
+    // persist() macht der Aufrufer – so wird bei einem Verkauf mit zehn Zutaten nur einmal geschrieben.
+  },
+
   /** Verkauf eines Produkts, das GENAU SO eingekauft wird (Flaschengetränke, zugekaufte Snacks): 1 verkauft
    * = 1 Stück weniger. Dafür braucht es kein Rezept mit einer einzigen Zutat "sich selbst". */
   applyDirectSale(stockItemId, quantitySold, date, productName) {
@@ -969,6 +1023,7 @@ export const store = {
     if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
     item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: productName || item.name, quantitySold: qty, consumed: qty });
     item.consumptionLog = item.consumptionLog.slice(0, 20);
+    if (Number.isFinite(Number(item.pricePerUnit))) this.addMaterialCost(date || todayStr(), qty * Number(item.pricePerUnit));
     persist();
     return item;
   },
@@ -993,6 +1048,7 @@ export const store = {
     const recipe = data.recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
     const qty = Number(quantitySold) || 0;
+    let kosten = 0;
     for (const ing of recipe.ingredients) {
       const item = data.stock.find((s) => s.id === ing.stockItemId);
       if (!item || !item.unit) continue;
@@ -1002,7 +1058,9 @@ export const store = {
       if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
       item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: recipe.productName, quantitySold: qty, consumed });
       item.consumptionLog = item.consumptionLog.slice(0, 20);
+      if (Number.isFinite(Number(item.pricePerUnit))) kosten += consumed * Number(item.pricePerUnit);
     }
+    if (kosten > 0) this.addMaterialCost(date || todayStr(), kosten);
     persist();
   },
 
@@ -1168,6 +1226,41 @@ export const store = {
     persist();
     return r;
   },
+  /** Hält einen verkauften Posten aus einem Kassenbericht fest (für "Renner & Penner"). */
+  addProductSale({ date, productName, quantity, salePrice }) {
+    const menge = Number(quantity) || 0;
+    const name = String(productName || "").trim();
+    if (!date || !name || menge <= 0) return null;
+    const preis = Number.isFinite(Number(salePrice)) && Number(salePrice) > 0 ? round2(salePrice) : null;
+    const eintrag = { id: uid(), date, productName: name, quantity: menge, salePrice: preis,
+      revenue: preis === null ? null : round2(preis * menge) };
+    data.productSales.push(eintrag);
+    // Gedeckelt, damit der Speicher des iPads nicht unbegrenzt wächst – ein Jahr reicht für jede Auswertung.
+    if (data.productSales.length > 8000) data.productSales = data.productSales.slice(-8000);
+    persist();
+    return eintrag;
+  },
+  getProductSales(from, to) {
+    return data.productSales.filter((s) => (!from || s.date >= from) && (!to || s.date <= to));
+  },
+
+  /** Einkaufspreis aus einem Lieferschein übernehmen.
+   *
+   * Ein von Hand gesetzter Preis wird NICHT überschrieben: wer ihn selbst eingetragen hat, hat sich
+   * dabei etwas gedacht (Sonderkondition, anderer Lieferant), und ein Beleg soll das nicht stillschweigend
+   * wieder plattmachen. */
+  setPriceFromDocument(id, pricePerUnit) {
+    const item = data.stock.find((s) => s.id === id);
+    const p = Number(pricePerUnit);
+    if (!item || !Number.isFinite(p) || p <= 0) return null;
+    if (item.priceSource === "manuell") return item;
+    item.pricePerUnit = roundPreis(p);
+    item.priceUpdatedAt = new Date().toISOString();
+    item.priceSource = "beleg";
+    persist();
+    return item;
+  },
+
   /** Alle Reservierungen (für den Abgleich mit der Cloud). */
   getReservations() {
     return [...data.reservations];
@@ -1567,6 +1660,8 @@ export const store = {
       recipes: parsed.recipes ?? [],
       sickDays: parsed.sickDays ?? [],
       publishedWeeks: parsed.publishedWeeks ?? [],
+      productSales: parsed.productSales ?? [],
+      stocktakes: parsed.stocktakes ?? [],
       tables: parsed.tables ?? [],
       reservations: parsed.reservations ?? [],
     };

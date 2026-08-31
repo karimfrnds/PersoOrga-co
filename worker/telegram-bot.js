@@ -158,8 +158,8 @@ const EMPTY_STATE = {
   staleOpenShifts: [], // [{date, employeeName, from}] – vergessenes Ausstempeln
   stock: [], // [{name, status}] – Vorräte-Ampel
   stockRestocks: [], // [{id, itemName}] – Chef sagt per Bot "X ist wieder da"
-  stockDeliveries: [], // [{id, itemName, quantity, unit, date}] – per Lieferschein-Foto erkannte Lieferungen
-  stockSales: [], // [{id, productName, quantitySold, kind, date}] – per SumUp-Verkaufsbericht erkannte Verkäufe
+  stockDeliveries: [], // [{id, itemName, quantity, unit, unitPrice, date}] – per Lieferschein erkannte Lieferungen
+  stockSales: [], // [{id, productName, quantitySold, kind, salePrice, date}] – per Kassenbericht erkannte Verkäufe
   employeeNotes: [], // [{id, date, employeeName, text}] – gesammelte Mitarbeiter-Notizen, per "nachrichten" abrufbar
   minijobWarned: {}, // "YYYY-MM:Name" -> true, verhindert tägliches Wiederholen derselben Warnung
   staleShiftWarned: {}, // "YYYY-MM-DD:Name" -> true, dito für vergessenes Ausstempeln
@@ -1928,6 +1928,11 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
               },
               productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
               quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
+              unitPrice: {
+                type: "number",
+                description:
+                  "Preis EINER einzelnen Verkaufs-/Verbrauchseinheit in Euro, ohne Waehrungszeichen. Bei documentType=lieferschein der NETTO-Einkaufspreis je Einzelstueck (also Positionspreis geteilt durch die tatsaechliche Stueckzahl aus quantity – steht auf dem Beleg ein Kastenpreis, muss er durch die Gebindegroesse geteilt werden). Bei documentType=verkaufsbericht der Brutto-Verkaufspreis je verkauftem Stueck. Weglassen, wenn kein Preis erkennbar ist – lieber keine Angabe als eine geratene.",
+              },
               kind: {
                 type: "string",
                 enum: ["artikel", "rezept"],
@@ -1968,7 +1973,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
               type: "text",
               text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang) oder ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl).${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht.${
+              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht. Lies ausserdem die PREISE mit: beim Lieferschein den Netto-Einkaufspreis je EINZELSTUECK (Positionspreis geteilt durch die umgerechnete Stueckzahl), beim Kassenbericht den Verkaufspreis je verkauftem Stueck. Ist kein Preis erkennbar, lass das Feld weg statt zu raten.${
                 bekannteProdukte ? `\n\nDiese Produkte kennt das System schon, mit ihrer jeweiligen Einordnung – halte dich bei gleichen oder sehr ähnlichen Namen unbedingt an dieselbe Einordnung:\n${bekannteProdukte}` : ""
               }`,
             },
@@ -2026,6 +2031,8 @@ async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
         // Vorschlag, ob das ein eingekaufter Artikel oder ein zubereitetes Rezept ist. Bewusst nur ein
         // Vorschlag – das iPad legt danach an, markiert aber als "bitte prüfen".
         kind: it.kind === "artikel" ? "artikel" : "rezept",
+        // Verkaufspreis je Stück – Grundlage für den Deckungsbeitrag je Produkt.
+        salePrice: Number.isFinite(Number(it.unitPrice)) && Number(it.unitPrice) > 0 ? Number(it.unitPrice) : null,
         date,
       }))
       .filter((it) => it.productName && it.quantitySold > 0);
@@ -2040,6 +2047,8 @@ async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
       itemName: String(it.itemName || "").trim(),
       quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : null,
       unit: String(it.unit || "").trim(),
+      // Einkaufspreis je Einzelstück – Grundlage für den Wareneinsatz.
+      unitPrice: Number.isFinite(Number(it.unitPrice)) && Number(it.unitPrice) > 0 ? Number(it.unitPrice) : null,
       date,
     }))
     .filter((it) => it.itemName);

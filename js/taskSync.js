@@ -94,6 +94,7 @@ function buildFinancialsPayload() {
       totalLohnnebenkosten: b.totalLohnnebenkosten,
       totalHours: b.totalHours,
       umschlag: b.umschlag,
+      materialkosten: b.materialkosten,
       // tip wird für die eigene Ansicht der Mitarbeiter am Handy gebraucht (GET /me liefert nur die
       // jeweils eigene Zeile zurück, nie die der Kollegen).
       // hours ist bereits die NETTO-Zeit (gesetzliche Pause abgezogen). breakMinutes kommt mit, damit im
@@ -412,7 +413,12 @@ async function performTaskSync() {
         syncWarnings.push(`Neuer Artikel "${d.itemName}" automatisch angelegt (Warnschwelle testweise geschätzt, bei Bedarf unter Admin → Vorräte anpassen).`);
       }
     }
-    if (match) store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
+    if (match) {
+      store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
+      // Einkaufspreis vom Beleg übernehmen – Grundlage für den Wareneinsatz. Ein von Hand gesetzter
+      // Preis bleibt dabei unangetastet (siehe setPriceFromDocument).
+      if (d.unitPrice) store.setPriceFromDocument(match.id, d.unitPrice);
+    }
     else syncWarnings.push(`Lieferung "${d.itemName}": kein passender Vorrats-Artikel gefunden.`);
     appliedDeliveryIds.add(d.id);
     newDeliveryIds = true;
@@ -428,6 +434,9 @@ async function performTaskSync() {
   let newSaleIds = false;
   for (const s of remoteSales) {
     if (!s.id || appliedSaleIds.has(s.id)) continue;
+    // Immer festhalten, was verkauft wurde – unabhängig davon, ob sich der Bestand verrechnen lässt.
+    // Sonst fehlten genau die Produkte in der Auswertung, für die noch kein Rezept hinterlegt ist.
+    store.addProductSale({ date: s.date, productName: s.productName, quantity: s.quantitySold, salePrice: s.salePrice });
     const recipe = store.getRecipeByProductName(s.productName);
     if (recipe) {
       store.applyProductSale(recipe.id, s.quantitySold, s.date);
@@ -732,6 +741,11 @@ async function performTaskSync() {
     lowThreshold: s.unit ? s.lowThreshold : null,
     needsReview: !!s.needsReview,
     aliases: s.aliases || [],
+    bereich: s.bereich || "kueche",
+    packSize: s.packSize || 1,
+    packLabel: s.packLabel || "",
+    pricePerUnit: s.pricePerUnit ?? null,
+    priceSource: s.priceSource || null,
   }));
   const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [] }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer

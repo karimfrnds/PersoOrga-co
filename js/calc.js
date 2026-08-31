@@ -151,6 +151,8 @@ function computeDay(day, employees, settings) {
     totalLohn: round2(Object.values(perEmployee).reduce((s, r) => s + r.lohn, 0)),
     totalLohnnebenkosten: round2(Object.values(perEmployee).reduce((s, r) => s + r.lohnnebenkosten, 0)),
     totalHours: round2(Object.values(perEmployee).reduce((s, r) => s + r.hours, 0)),
+    // Wareneinsatz: was die an diesem Tag verkauften Waren im Einkauf gekostet haben.
+    materialkosten: round2(Number(day.materialkosten) || 0),
   };
 }
 

@@ -631,6 +631,38 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedReservationIds: [...appliedReservationIds].slice(-500) });
   }
 
+  // Anmeldungen zum Bingo-Abend von der Website. Die übernommenen IDs gehen beim Push zurück an den
+  // Worker, damit er sie aus seiner Warteschlange wirft – sonst zählte er sie zusätzlich zu der Zahl,
+  // die von hier kommt, und der Abend wäre voll, obwohl noch Plätze frei sind.
+  const remoteSignups = Array.isArray(remote.eventSignups) ? remote.eventSignups : [];
+  const appliedEventSignupIds = new Set(cfg.appliedEventSignupIds || []);
+  const geradeUebernommen = [];
+  for (const q of remoteSignups) {
+    if (!q.id) continue;
+    if (appliedEventSignupIds.has(q.id)) {
+      geradeUebernommen.push(q.id); // schon drin, aber der Worker weiß es offenbar noch nicht
+      continue;
+    }
+    if (store.getEvent(q.eventId) && String(q.name || "").trim()) {
+      store.addEventSignup({
+        eventId: q.eventId,
+        name: q.name,
+        contact: q.contact,
+        guests: q.guests,
+        note: q.note,
+        code: q.code,
+        source: "web",
+      });
+    } else {
+      syncWarnings.push(`Bingo-Anmeldung "${q.name || "?"}" konnte nicht übernommen werden (Termin unbekannt).`);
+    }
+    appliedEventSignupIds.add(q.id);
+    geradeUebernommen.push(q.id);
+  }
+  if (geradeUebernommen.length > 0) {
+    store.updateTaskInboxConfig({ appliedEventSignupIds: [...appliedEventSignupIds].slice(-500) });
+  }
+
   // Abgeschlossene Schichtpläne: der Chef gibt eine Woche am Laptop frei, das iPad übernimmt das als
   // eigenen Stand. Ohne diesen Schritt würde der nächste Push die Freigabe in der Cloud wieder löschen –
   // die Leute sähen ihren fertigen Plan dann plötzlich nicht mehr.
@@ -812,6 +844,19 @@ async function performTaskSync() {
     terraceClosedDates: (einstellungen.terraceClosedDates || []).filter((d) => d >= todayStr()),
   };
 
+  // Bingo-Abend: nur die kommenden Termine, jeweils mit der Zahl der bereits Angemeldeten. Die
+  // Anmeldeseite braucht beides, um zu wissen, was sie anbieten darf.
+  const events = store.getUpcomingEvents().map((e) => ({
+    id: e.id,
+    date: e.date,
+    time: e.time,
+    price: e.price,
+    capacity: e.capacity,
+    note: e.note,
+    angemeldet: store.getEventBelegung(e.id).angemeldet,
+  }));
+  const eventConfig = store.getEventSettings();
+
   const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
@@ -838,6 +883,9 @@ async function performTaskSync() {
     reservationConfig,
     produktStatistik,
     reservationStats,
+    events,
+    eventConfig,
+    eventSignupsApplied: geradeUebernommen,
   });
 
   store.updateTaskInboxConfig({

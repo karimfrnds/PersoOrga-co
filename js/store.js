@@ -69,6 +69,22 @@ function defaultData() {
         // Terrassentische an dem Tag dann als nicht nutzbar an.
         terraceClosedDates: [],
       },
+      // Bingo-Abend: was auf der Anmeldeseite steht. Die Termine selbst stehen in data.events – hier nur,
+      // was für jeden Termin gleich bleibt, damit man es einmal schreibt und nicht bei jedem Abend neu.
+      event: {
+        title: "Bingo Drink Night",
+        // Der Fließtext auf der Anmeldeseite. Absätze durch Leerzeile getrennt.
+        intro:
+          "Ein Abend, an dem gegessen, getrunken und gespielt wird – und am Ende ruft irgendwer viel zu laut „Bingo“.\n\n" +
+          "Wir starten um 18 Uhr, gegen halb sieben kommen die Tapas auf den Tisch. Gespielt wird, sobald alle satt sind: " +
+          "ganz normales Bingo, und auf jedem Zettel stecken zwei Shot-Felder, die genau das bedeuten, wonach sie klingen. " +
+          "Meistens läuft danach noch eine zweite Runde. Gegen 22, 23 Uhr ist Schluss.",
+        // Was im Preis steckt – eine Zeile pro Punkt.
+        included: ["Eine Runde Bingo", "Welcome Drink", "Kleine Auswahl spanischer Tapas"],
+        // Wein, Bier, zwei Cocktails und Alkoholfreies gibt es an dem Abend – aber extra.
+        hinweis: "Wein, Bier, zwei Cocktails und alkoholfreie Getränke gibt es den ganzen Abend an der Bar.",
+        onlineEnabled: true,
+      },
       // Feste Schicht-Zeitfenster für die Verfügbarkeits-Abfrage im Kiosk. "service" gilt auch für "bar"
       // (teilen sich einen Plan, blockieren sich gegenseitig). allowedWeekdays: 0=Mo..6=So, fehlt = alle Tage.
       // "mittel" braucht IMMER eine explizite Chef-Bestätigung, auch wenn sie automatisch fest wird.
@@ -174,6 +190,13 @@ function defaultData() {
     // { id, code, date, time, name, phone, guests, area, note, tableIds[], status, source, createdAt, arrivedAt }
     // status: "offen" (noch kein Tisch) | "zugewiesen" | "da" | "weg" | "storniert" | "noshow"
     reservations: [],
+    // Veranstaltungen mit Anmeldung (Bingo-Abend). Bewusst NICHT als Reservierung geführt: hier wird pro
+    // Person gezählt und kassiert, der Termin steht fest, und die Tische verteilt man erst am Abend.
+    // { id, date, time, price, capacity, note, active, createdAt }
+    events: [],
+    // Anmeldungen dazu. { id, eventId, name, contact, guests, note, code, source, createdAt,
+    //                     status: "offen"|"da"|"abgesagt", paid }
+    eventSignups: [],
   };
 }
 
@@ -220,6 +243,7 @@ function load() {
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
+        event: { ...base.settings.event, ...(parsed.settings?.event ?? {}) },
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
@@ -232,6 +256,8 @@ function load() {
       stocktakes: parsed.stocktakes ?? base.stocktakes,
       tables: parsed.tables ?? base.tables,
       reservations: parsed.reservations ?? base.reservations,
+      events: parsed.events ?? base.events,
+      eventSignups: parsed.eventSignups ?? base.eventSignups,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -1583,6 +1609,117 @@ export const store = {
     return { rezept: this.addRecipe(name, zutaten, { needsReview: true }), warnungen, neueArtikel, ersetzt: false };
   },
 
+  // ---- Bingo-Abend: Termine und Anmeldungen ----
+  //
+  // Getrennt von den Reservierungen, weil es eine andere Sache ist: nicht ein Tisch zu einer Uhrzeit,
+  // sondern eine feste Anzahl Plätze an einem festen Abend, pro Person bezahlt. Ein Termin ist erst
+  // online anmeldbar, wenn er angelegt UND aktiv ist – so lässt sich der nächste Abend in Ruhe
+  // vorbereiten, ohne dass schon jemand bucht.
+  getEventSettings() {
+    return { ...data.settings.event };
+  },
+  updateEventSettings(patch) {
+    Object.assign(data.settings.event, patch);
+    persist();
+  },
+  getEvents() {
+    return [...data.events].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  },
+  /** Termine, für die man sich heute noch anmelden kann. Der Tag selbst zählt noch dazu – wer mittags
+   * fragt, ob abends noch was frei ist, soll nicht vor einer leeren Seite stehen. */
+  getUpcomingEvents() {
+    const heute = todayStr();
+    return this.getEvents().filter((e) => e.active !== false && e.date >= heute);
+  },
+  getEvent(id) {
+    return data.events.find((e) => e.id === id) || null;
+  },
+  addEvent({ date, time = "18:00", price = 15, capacity = 40, note = "" }) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return null;
+    const eintrag = {
+      id: uid(),
+      date,
+      time,
+      price: Number(price) || 0,
+      capacity: Math.max(0, Number(capacity) || 0),
+      note: String(note || "").trim(),
+      active: true,
+      createdAt: new Date().toISOString(),
+    };
+    data.events.push(eintrag);
+    persist();
+    return eintrag;
+  },
+  updateEvent(id, patch) {
+    const e = data.events.find((x) => x.id === id);
+    if (!e) return null;
+    if (patch.date !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(patch.date)) e.date = patch.date;
+    if (patch.time !== undefined) e.time = String(patch.time);
+    if (patch.price !== undefined) e.price = Number(patch.price) || 0;
+    if (patch.capacity !== undefined) e.capacity = Math.max(0, Number(patch.capacity) || 0);
+    if (patch.note !== undefined) e.note = String(patch.note).trim();
+    if (patch.active !== undefined) e.active = !!patch.active;
+    persist();
+    return e;
+  },
+  /** Termin löschen. Die Anmeldungen verschwinden mit – sie ergeben ohne ihren Abend keinen Sinn. */
+  removeEvent(id) {
+    data.events = data.events.filter((e) => e.id !== id);
+    data.eventSignups = data.eventSignups.filter((s) => s.eventId !== id);
+    persist();
+  },
+  getEventSignups(eventId) {
+    return data.eventSignups
+      .filter((s) => s.eventId === eventId)
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  },
+  /** Wie voll ist der Abend? Abgesagte zählen nicht mit – sonst blockiert eine Absage einen Platz,
+   * den es längst wieder gibt. */
+  getEventBelegung(eventId) {
+    const e = this.getEvent(eventId);
+    const angemeldet = this.getEventSignups(eventId)
+      .filter((s) => s.status !== "abgesagt")
+      .reduce((sum, s) => sum + (Number(s.guests) || 0), 0);
+    const kapazitaet = e ? e.capacity : 0;
+    return { angemeldet, kapazitaet, frei: Math.max(0, kapazitaet - angemeldet), voll: kapazitaet > 0 && angemeldet >= kapazitaet };
+  },
+  addEventSignup({ eventId, name, contact, guests, note = "", source = "manuell", code = null }) {
+    const e = this.getEvent(eventId);
+    if (!e || !String(name || "").trim()) return null;
+    const eintrag = {
+      id: uid(),
+      eventId,
+      name: String(name).trim(),
+      contact: String(contact || "").trim(),
+      guests: Math.max(1, Number(guests) || 1),
+      note: String(note || "").trim(),
+      code: code || String(Math.floor(1000 + Math.random() * 9000)),
+      source,
+      status: "offen",
+      paid: false,
+      createdAt: new Date().toISOString(),
+    };
+    data.eventSignups.push(eintrag);
+    persist();
+    return eintrag;
+  },
+  updateEventSignup(id, patch) {
+    const s = data.eventSignups.find((x) => x.id === id);
+    if (!s) return null;
+    if (patch.name !== undefined) s.name = String(patch.name).trim();
+    if (patch.contact !== undefined) s.contact = String(patch.contact).trim();
+    if (patch.guests !== undefined) s.guests = Math.max(1, Number(patch.guests) || 1);
+    if (patch.note !== undefined) s.note = String(patch.note).trim();
+    if (patch.status !== undefined) s.status = patch.status;
+    if (patch.paid !== undefined) s.paid = !!patch.paid;
+    persist();
+    return s;
+  },
+  removeEventSignup(id) {
+    data.eventSignups = data.eventSignups.filter((s) => s.id !== id);
+    persist();
+  },
+
   // ---- Inventur ----
   /** Was bei einer Inventur zu zaehlen ist: alle mengengefuehrten Artikel eines Bereichs mit ihrem
    * Soll-Bestand. Artikel ohne Einheit (reine Ampel) tauchen nicht auf – da gibt es nichts zu zaehlen. */
@@ -2057,6 +2194,7 @@ export const store = {
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
+        event: { ...base.settings.event, ...(parsed.settings?.event ?? {}) },
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? []).map(normalizeDay),
@@ -2069,6 +2207,8 @@ export const store = {
       stocktakes: parsed.stocktakes ?? [],
       tables: parsed.tables ?? [],
       reservations: parsed.reservations ?? [],
+      events: parsed.events ?? [],
+      eventSignups: parsed.eventSignups ?? [],
     };
     persist();
   },

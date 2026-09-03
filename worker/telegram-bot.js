@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-01.3";
+const WORKER_VERSION = "2026-09-03.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -218,6 +218,13 @@ const EMPTY_STATE = {
   // Warteschlange der Gast-Buchungen, die der iPad abholt.
   // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
   reservationRequests: [],
+  // Bingo-Abend: Termine vom iPad und die Anmeldungen, die der iPad wieder abholt.
+  // events:      [{id, date, time, price, capacity, note, angemeldet}]
+  // eventConfig: {title, intro, included[], hinweis, onlineEnabled}
+  // eventSignups:[{id, eventId, name, contact, guests, note, code, createdAt}]
+  events: [],
+  eventConfig: null,
+  eventSignups: [],
 };
 
 async function getState(env) {
@@ -264,6 +271,9 @@ async function getState(env) {
       recipeImports: Array.isArray(parsed.recipeImports) ? parsed.recipeImports : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
       reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      eventConfig: parsed.eventConfig && typeof parsed.eventConfig === "object" ? parsed.eventConfig : null,
+      eventSignups: Array.isArray(parsed.eventSignups) ? parsed.eventSignups : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -641,6 +651,611 @@ async function handleBookingCreate(request, env) {
     );
   }
   return jsonResponse({ ok: true, code });
+}
+
+/** Einstellungen des Bingo-Abends, wie sie vom iPad kommen – mit Rueckfallwerten, damit die Seite auch
+ * dann etwas Sinnvolles zeigt, wenn das iPad noch nie etwas geschickt hat. */
+function eventConfigWorker(state) {
+  const c = state.eventConfig || {};
+  return {
+    title: String(c.title || "Bingo Drink Night").trim(),
+    intro: String(c.intro || "").trim(),
+    included: Array.isArray(c.included) ? c.included.filter(Boolean).map(String) : [],
+    hinweis: String(c.hinweis || "").trim(),
+    onlineEnabled: c.onlineEnabled !== false,
+  };
+}
+
+/** Die Termine, für die man sich jetzt noch anmelden kann.
+ *
+ * "angemeldet" ist der Stand des iPads. Dazu kommen die Anmeldungen, die noch in der Warteschlange
+ * stehen: sonst könnte sich in der Zeit zwischen zwei Abgleichen ein Abend doppelt fuellen. Sobald der
+ * iPad sie uebernommen hat, meldet er das (eventSignupsApplied) und sie fliegen aus der Warteschlange –
+ * deshalb wird hier nichts doppelt gezaehlt.
+ */
+function offeneTermine(state) {
+  const heute = todayBerlin();
+  const wartend = {};
+  for (const s of state.eventSignups || []) {
+    wartend[s.eventId] = (wartend[s.eventId] || 0) + (Number(s.guests) || 0);
+  }
+  return (state.events || [])
+    .filter((e) => e && e.id && String(e.date || "") >= heute)
+    .map((e) => {
+      const belegt = (Number(e.angemeldet) || 0) + (wartend[e.id] || 0);
+      const capacity = Math.max(0, Number(e.capacity) || 0);
+      return {
+        id: e.id,
+        date: String(e.date),
+        time: String(e.time || "18:00"),
+        price: Number(e.price) || 0,
+        capacity,
+        note: String(e.note || ""),
+        frei: capacity > 0 ? Math.max(0, capacity - belegt) : 999,
+      };
+    })
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+}
+
+/** Anmeldung eines Gastes. Wie bei der Tischbuchung: landet in einer Warteschlange, der iPad holt sie ab.
+ * Hier wird bewusst kein Platz "reserviert" – gezaehlt wird ueber die Personenzahl. */
+async function handleBingoCreate(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+
+  const kennung = "bingo:" + clientKey(request);
+  const bisher = Number((await env.TASKS_KV.get(kennung)) || 0);
+  if (bisher >= BUCHUNG_MAX_PRO_IP) {
+    return jsonResponse({ error: "Von hier wurden gerade sehr viele Anmeldungen gesendet. Bitte meldet euch kurz bei uns." }, 429);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  // Honeypot wie bei der Tischbuchung: unsichtbares Feld, ausgefuellt = Bot. Antwort sieht nach Erfolg
+  // aus, damit der Bot nichts dazulernt.
+  if (String(body?.website || "").trim()) return jsonResponse({ ok: true, code: buchungsCode() });
+
+  const eventId = String(body?.eventId || "").trim();
+  const name = String(body?.name || "").trim().slice(0, 80);
+  const contact = String(body?.contact || "").trim().slice(0, 80);
+  const note = String(body?.note || "").trim().slice(0, 300);
+  const guests = Math.max(1, Math.min(20, Number(body?.guests) || 0));
+
+  if (!name) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
+  if (!contact) return jsonResponse({ error: "Bitte eine Handynummer oder E-Mail angeben, damit wir euch erreichen." }, 400);
+
+  const state = await getState(env);
+  if (!eventConfigWorker(state).onlineEnabled) {
+    return jsonResponse({ error: "Die Anmeldung ist gerade geschlossen. Schreibt uns gerne direkt." }, 503);
+  }
+  const termin = offeneTermine(state).find((t) => t.id === eventId);
+  if (!termin) return jsonResponse({ error: "Dieser Termin ist nicht mehr verfügbar. Bitte ladet die Seite neu." }, 400);
+  if (termin.frei < guests) {
+    return jsonResponse(
+      {
+        error:
+          termin.frei === 0
+            ? "Der Abend ist inzwischen leider ausgebucht."
+            : "So viele Plätze sind an dem Abend nicht mehr frei – es sind noch " + termin.frei + " übrig.",
+      },
+      409
+    );
+  }
+
+  const code = buchungsCode();
+  const eintrag = {
+    id: crypto.randomUUID(),
+    eventId,
+    code,
+    name,
+    contact,
+    guests,
+    note,
+    createdAt: new Date().toISOString(),
+  };
+  // Gästedaten nicht unbegrenzt in der Cloud liegen lassen: alles, was zu einem laengst vergangenen
+  // Termin gehoert, faellt hier raus.
+  const grenze = addDaysISO(todayBerlin(), -REQUEST_AUFBEWAHRUNG_TAGE);
+  const gueltig = new Set((state.events || []).filter((e) => String(e.date || "") >= grenze).map((e) => e.id));
+  const bestand = (state.eventSignups || []).filter((s) => gueltig.has(s.eventId));
+
+  await patchState(env, { eventSignups: [...bestand, eintrag].slice(-500) });
+  await env.TASKS_KV.put(kennung, String(bisher + 1), { expirationTtl: BUCHUNG_LOCK_SECONDS });
+
+  if (ownerChatIds(env).length > 0) {
+    const cfg = eventConfigWorker(state);
+    await sendToOwners(
+      env,
+      "🎱 Neue Anmeldung – " +
+        cfg.title +
+        "\n" +
+        formatDateDe(termin.date) +
+        " um " +
+        termin.time +
+        " Uhr\n" +
+        name +
+        " · " +
+        guests +
+        (guests === 1 ? " Person" : " Personen") +
+        "\n📞 " +
+        contact +
+        (note ? "\n📝 " + note : "") +
+        "\nNoch frei: " +
+        Math.max(0, termin.frei - guests) +
+        "\nNr. " +
+        code
+    );
+  }
+  return jsonResponse({ ok: true, code });
+}
+
+/** Die Anmeldeseite für den Bingo-Abend.
+ *
+ * Aufbau bewusst wie bei den Formularen, die man von Typeform kennt: eine Frage pro Schritt, viel Luft,
+ * grosse Schrift, Felder nur mit einem Strich darunter. Der Grund ist nicht Mode – es ist ein Formular,
+ * das die meisten am Handy ausfuellen, und dort ist eine lange Liste aus Kaestchen die schnellste Art,
+ * jemanden abspringen zu lassen. Farben, Schriften und die runden Knoepfe kommen von frnds.info, damit
+ * es sich wie ein Teil der Website anfuehlt und nicht wie ein fremdes Formular.
+ *
+ * Der Text ueber den Abend kommt vom iPad (Einstellungen), damit sich niemand an den Code setzen muss,
+ * wenn sich am Ablauf etwas ändert.
+ */
+async function handleBingoPage(env) {
+  const state = await getState(env);
+  const cfg = eventConfigWorker(state);
+  const termine = offeneTermine(state)
+    .filter((t) => t.frei > 0)
+    .map((t) => ({
+      id: t.id,
+      time: t.time,
+      price: t.price,
+      frei: t.frei,
+      note: t.note,
+      lang: wochentagLang(t.date) + ", " + formatDateDe(t.date),
+      kurz: wochentagKurz(t.date) + " " + Number(t.date.slice(8, 10)) + "." + Number(t.date.slice(5, 7)) + ".",
+    }));
+
+  // Alles, was die Seite braucht, wird direkt mitgeliefert – ein zweiter Aufruf zum Laden der Termine
+  // waere eine weitere Stelle, an der es haken kann.
+  const daten = {
+    title: cfg.title,
+    intro: cfg.intro,
+    included: cfg.included,
+    hinweis: cfg.hinweis,
+    offen: cfg.onlineEnabled,
+    termine,
+  };
+  // "<" maskieren, damit ein Text aus den Einstellungen die Seite nicht aufbrechen kann.
+  const datenJson = JSON.stringify(daten).split("<").join("\\u003c");
+
+  const html = `<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${escapeHtmlWorker(cfg.title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Ojuju:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ------------------------------------------------------------------------
+     Farbwelt und Schriften von frnds.info:
+       Grund   #ECE4DA  warmer Sand
+       Text    #36302A  warmes Dunkelbraun
+       Akzent  #B9A590  Taupe – traegt Flaechen, niemals kleinen Text
+       Schrift Ojuju für die Fragen, Archivo für alles andere
+     ------------------------------------------------------------------------ */
+  :root {
+    --sand: #ece4da;
+    --flaeche: #f6f3ec;
+    --tinte: #36302a;
+    --leise: rgba(54, 48, 42, 0.55);
+    --linie: rgba(54, 48, 42, 0.18);
+    --akzent: #b9a590;
+    --akzent-tief: #a58f78;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--sand);
+    color: var(--tinte);
+    font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  /* Duenner Balken ganz oben statt "Frage 3 von 6" – zeigt, dass es nicht mehr weit ist, ohne zu zaehlen. */
+  .fortschritt { position: sticky; top: 0; height: 2px; background: var(--linie); z-index: 5; }
+  .fortschritt span { display: block; height: 100%; width: 0; background: var(--akzent-tief); transition: width .35s ease; }
+
+  main {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 40px 22px 56px;
+    /* Genug Luft, dass eine Frage allein auf dem Schirm steht – darum geht es bei diesem Aufbau. */
+    min-height: calc(100vh - 2px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  @media (min-width: 700px) { main { padding: 64px 22px; } }
+
+  .marke {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--akzent-tief); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "Ojuju", "Archivo", sans-serif;
+    font-size: 30px; line-height: 1.15; letter-spacing: -0.015em; font-weight: 600;
+    margin: 0 0 10px;
+  }
+  @media (min-width: 700px) { h1 { font-size: 38px; } }
+  .frage {
+    font-family: "Ojuju", "Archivo", sans-serif;
+    font-size: 26px; line-height: 1.25; font-weight: 500; margin: 0 0 6px;
+  }
+  @media (min-width: 700px) { .frage { font-size: 32px; } }
+  .dazu { color: var(--leise); font-size: 15px; margin: 0 0 26px; }
+  .fliess { font-size: 16px; margin: 0 0 18px; white-space: pre-line; }
+
+  /* Was drin ist – als Liste mit feinen Trennlinien, nicht als Aufzaehlung mit Punkten. */
+  .drin { border-top: 1px solid var(--linie); margin: 22px 0; }
+  .drin div {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--linie); font-size: 15px;
+  }
+  .drin div::before { content: "—"; color: var(--akzent-tief); }
+  .preis { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px; }
+  .preis b { font-family: "Ojuju", "Archivo", sans-serif; font-size: 30px; font-weight: 600; }
+  .preis span { color: var(--leise); font-size: 14px; }
+
+  /* Felder ohne Kasten: nur ein Strich darunter. Ruhiger, und am Handy sofort als Eingabe erkennbar. */
+  input, textarea {
+    width: 100%; font-family: inherit; color: var(--tinte);
+    background: transparent; border: none; border-bottom: 1px solid var(--linie);
+    border-radius: 0; padding: 10px 0; font-size: 22px;
+    transition: border-color .15s ease;
+  }
+  input::placeholder, textarea::placeholder { color: rgba(54, 48, 42, 0.3); }
+  input:focus, textarea:focus { outline: none; border-bottom-color: var(--tinte); }
+  textarea { resize: vertical; min-height: 74px; font-size: 18px; line-height: 1.5; }
+
+  .knoepfe { display: flex; align-items: center; gap: 14px; margin-top: 30px; flex-wrap: wrap; }
+  button.weiter {
+    padding: 15px 34px; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    border: none; border-radius: 999px;
+    background: var(--akzent); color: var(--tinte);
+    cursor: pointer; font-family: inherit;
+  }
+  button.weiter:hover:not(:disabled) { background: var(--akzent-tief); }
+  button.weiter:disabled { background: var(--flaeche); color: var(--leise); cursor: not-allowed; }
+  button.leise {
+    background: none; border: none; color: var(--leise); font: inherit; font-size: 14px;
+    cursor: pointer; padding: 6px 0; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .enter { color: var(--leise); font-size: 12px; letter-spacing: 0.04em; }
+  @media (max-width: 560px) { .enter { display: none; } }
+
+  /* Termine und andere Auswahlen: grosse Flaechen, am Handy mit dem Daumen zu treffen. */
+  .wahl { display: grid; gap: 10px; margin-top: 4px; }
+  .wahl button {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    width: 100%; text-align: left; font-family: inherit; font-size: 17px;
+    padding: 17px 20px; border: 1px solid var(--linie); border-radius: 14px;
+    background: var(--flaeche); color: var(--tinte); cursor: pointer;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .wahl button:hover { border-color: var(--akzent); }
+  .wahl button[aria-pressed="true"] { border-color: var(--tinte); background: var(--sand); }
+  .wahl small { color: var(--leise); font-size: 13px; white-space: nowrap; }
+
+  .zaehler { display: flex; align-items: center; gap: 16px; }
+  .zaehler .zahl {
+    font-family: "Ojuju", "Archivo", sans-serif; font-size: 46px; font-weight: 600;
+    min-width: 72px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .zbtn {
+    width: 58px; height: 58px; flex: 0 0 58px; font-size: 26px; line-height: 1;
+    border: 1px solid var(--linie); border-radius: 999px;
+    background: var(--flaeche); color: var(--tinte); cursor: pointer;
+  }
+  .zbtn:hover:not(:disabled) { background: var(--akzent); border-color: var(--akzent); }
+  .zbtn:disabled { opacity: .35; cursor: not-allowed; }
+
+  .melde { padding: 12px 16px; border-radius: 12px; background: var(--flaeche);
+           border-left: 3px solid #a8603a; margin-top: 18px; font-size: 15px; }
+
+  /* Zusammenfassung vor dem Absenden: lieber einmal lesen als hinterher anrufen. */
+  .zusammen { border-top: 1px solid var(--linie); margin: 4px 0 8px; }
+  .zusammen div { display: flex; justify-content: space-between; gap: 16px;
+                  padding: 12px 0; border-bottom: 1px solid var(--linie); font-size: 15px; }
+  .zusammen span:first-child { color: var(--leise); }
+  .zusammen span:last-child { text-align: right; font-weight: 500; }
+
+  .code {
+    font-family: "Ojuju", "Archivo", sans-serif;
+    font-size: 34px; font-weight: 600; letter-spacing: 0.16em;
+    margin: 8px 0 4px; font-variant-numeric: tabular-nums;
+  }
+  .versteckt { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+</style></head>
+<body>
+<div class="fortschritt"><span id="balken"></span></div>
+<main id="app"></main>
+<script>
+var D = ${datenJson};
+var BASIS = location.pathname.endsWith("/") ? location.pathname.slice(0, -1) : location.pathname;
+
+var antwort = { eventId: "", name: "", guests: 2, contact: "", note: "" };
+if (D.termine.length > 0) antwort.eventId = D.termine[0].id;
+
+// Ein Schritt pro Frage. Der Termin faellt weg, wenn es nur einen gibt - eine Auswahl ohne Auswahl
+// ist ein Klick, den niemand braucht.
+var SCHRITTE = ["intro"];
+if (D.termine.length > 1) SCHRITTE.push("termin");
+SCHRITTE.push("name", "personen", "kontakt", "notiz", "check");
+var i = 0;
+var fehler = "";
+var laeuft = false;
+var code = "";
+
+var app = document.getElementById("app");
+var balken = document.getElementById("balken");
+
+function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; }
+function sicher(s) {
+  return String(s == null ? "" : s)
+    .split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;");
+}
+function termin() {
+  for (var k = 0; k < D.termine.length; k++) if (D.termine[k].id === antwort.eventId) return D.termine[k];
+  return D.termine[0] || null;
+}
+function personenWort(n) { return n === 1 ? "Person" : "Personen"; }
+
+function vor() { fehler = ""; i++; zeichne(); }
+function zurueck() { fehler = ""; if (i > 0) i--; zeichne(); }
+
+function zeichne() {
+  var schritt = code ? "fertig" : SCHRITTE[i];
+  balken.style.width = code ? "100%" : Math.round((i / SCHRITTE.length) * 100) + "%";
+  app.innerHTML = "";
+  if (!D.offen || D.termine.length === 0) return zeichneKeinTermin();
+  if (schritt === "intro") zeichneIntro();
+  else if (schritt === "termin") zeichneTermin();
+  else if (schritt === "name") zeichneName();
+  else if (schritt === "personen") zeichnePersonen();
+  else if (schritt === "kontakt") zeichneKontakt();
+  else if (schritt === "notiz") zeichneNotiz();
+  else if (schritt === "check") zeichneCheck();
+  else zeichneFertig();
+  if (fehler) app.appendChild(el('<div class="melde">' + sicher(fehler) + '</div>'));
+  var ersteEingabe = app.querySelector("input, textarea");
+  if (ersteEingabe && window.innerWidth > 700) ersteEingabe.focus();
+}
+
+function zeichneKeinTermin() {
+  app.appendChild(el('<p class="marke">' + sicher(D.title) + '</p>'));
+  app.appendChild(el("<h1>Gerade steht kein Termin an</h1>"));
+  app.appendChild(el('<p class="dazu">Der nächste Abend ist noch nicht festgelegt – oder er ist ausgebucht. ' +
+    'Schreibt uns gerne, dann sagen wir Bescheid, sobald es weitergeht.</p>'));
+}
+
+function zeichneIntro() {
+  var t = termin();
+  app.appendChild(el('<p class="marke">' + sicher(D.title) + '</p>'));
+  app.appendChild(el("<h1>Ein Abend, an dem gespielt wird</h1>"));
+  if (D.intro) app.appendChild(el('<p class="fliess">' + sicher(D.intro) + '</p>'));
+
+  if (t) {
+    app.appendChild(el('<div class="preis"><b>' + t.price + ' €</b><span>pro Person</span></div>'));
+  }
+  if (D.included.length > 0) {
+    var box = el('<div class="drin"></div>');
+    for (var k = 0; k < D.included.length; k++) box.appendChild(el("<div>" + sicher(D.included[k]) + "</div>"));
+    app.appendChild(box);
+  }
+  if (D.hinweis) app.appendChild(el('<p class="dazu">' + sicher(D.hinweis) + '</p>'));
+  if (t && D.termine.length === 1) {
+    app.appendChild(el('<p class="dazu">Nächster Termin: <b>' + sicher(t.lang) + '</b>, ab ' + sicher(t.time) + ' Uhr.' +
+      (t.note ? " " + sicher(t.note) : "") + '</p>'));
+  }
+
+  var knoepfe = el('<div class="knoepfe"></div>');
+  var los = el('<button class="weiter">Anmelden</button>');
+  los.onclick = vor;
+  knoepfe.appendChild(los);
+  knoepfe.appendChild(el('<span class="enter">Dauert keine Minute</span>'));
+  app.appendChild(knoepfe);
+}
+
+function zeichneTermin() {
+  kopf(nr(), "An welchem Abend seid ihr dabei?", "");
+  var box = el('<div class="wahl"></div>');
+  for (var k = 0; k < D.termine.length; k++) {
+    (function (t) {
+      var b = el('<button aria-pressed="' + (t.id === antwort.eventId) + '">' +
+        "<span>" + sicher(t.lang) + "</span>" +
+        "<small>ab " + sicher(t.time) + " Uhr · " + (t.frei < 12 ? "noch " + t.frei + " Plätze" : t.price + " €") + "</small>" +
+        "</button>");
+      b.onclick = function () { antwort.eventId = t.id; vor(); };
+      box.appendChild(b);
+    })(D.termine[k]);
+  }
+  app.appendChild(box);
+  fuss(null);
+}
+
+function zeichneName() {
+  kopf(nr(), "Auf welchen Namen?", "Damit wir euch am Eingang finden.");
+  var feld = el('<input type="text" autocomplete="name" placeholder="Vor- und Nachname" value="' + sicher(antwort.name) + '"/>');
+  feld.oninput = function () { antwort.name = feld.value; };
+  feld.onkeydown = function (e) { if (e.key === "Enter") weiterVonName(); };
+  app.appendChild(feld);
+  fuss(weiterVonName);
+  function weiterVonName() {
+    if (!antwort.name.trim()) { fehler = "Bitte tragt einen Namen ein."; zeichne(); return; }
+    vor();
+  }
+}
+
+function zeichnePersonen() {
+  var t = termin();
+  var max = Math.min(20, t ? t.frei : 20);
+  kopf(nr(), "Wie viele seid ihr?", max < 12 ? "An dem Abend sind noch " + max + " Plätze frei." : "");
+  var box = el('<div class="zaehler"></div>');
+  var minus = el('<button class="zbtn">−</button>');
+  var zahl = el('<div class="zahl">' + antwort.guests + "</div>");
+  var plus = el('<button class="zbtn">+</button>');
+  function setze(n) {
+    antwort.guests = Math.max(1, Math.min(max, n));
+    zahl.textContent = antwort.guests;
+    minus.disabled = antwort.guests <= 1;
+    plus.disabled = antwort.guests >= max;
+  }
+  minus.onclick = function () { setze(antwort.guests - 1); };
+  plus.onclick = function () { setze(antwort.guests + 1); };
+  box.appendChild(minus); box.appendChild(zahl); box.appendChild(plus);
+  app.appendChild(box);
+  setze(antwort.guests);
+  fuss(vor);
+}
+
+function zeichneKontakt() {
+  kopf(nr(), "Wie erreichen wir euch?", "Nur, falls doch mal etwas dazwischenkommt.");
+  var feld = el('<input type="text" inputmode="tel" autocomplete="tel" placeholder="Handynummer oder E-Mail" value="' + sicher(antwort.contact) + '"/>');
+  feld.oninput = function () { antwort.contact = feld.value; };
+  feld.onkeydown = function (e) { if (e.key === "Enter") weiterVonKontakt(); };
+  app.appendChild(feld);
+  fuss(weiterVonKontakt);
+  function weiterVonKontakt() {
+    if (!antwort.contact.trim()) { fehler = "Ohne Nummer oder E-Mail können wir euch nicht erreichen."; zeichne(); return; }
+    vor();
+  }
+}
+
+function zeichneNotiz() {
+  kopf(nr(), "Sollen wir noch etwas wissen?", "Allergien, was ihr nicht esst, ein Geburtstag – alles, was hilft.");
+  // Einfache Anfuehrungszeichen aussen, doppelte innen: ein maskiertes Zeichen wuerde der Worker beim
+  // Zusammenbauen dieser Seite schlucken, und das Formular waere kaputt.
+  var feld = el('<textarea placeholder="Zum Beispiel: einmal vegetarisch">' + sicher(antwort.note) + "</textarea>");
+  feld.oninput = function () { antwort.note = feld.value; };
+  app.appendChild(feld);
+  fuss(vor, antwort.note.trim() ? "Weiter" : "Überspringen");
+}
+
+function zeichneCheck() {
+  var t = termin();
+  kopf(nr(), "Passt das so?", "");
+  var box = el('<div class="zusammen"></div>');
+  function zeile(a, b) { box.appendChild(el("<div><span>" + sicher(a) + "</span><span>" + sicher(b) + "</span></div>")); }
+  if (t) zeile("Abend", t.lang + ", ab " + t.time + " Uhr");
+  zeile("Name", antwort.name);
+  zeile("Personen", antwort.guests + " " + personenWort(antwort.guests));
+  zeile("Kontakt", antwort.contact);
+  if (antwort.note.trim()) zeile("Notiz", antwort.note.trim());
+  if (t) zeile("Zu zahlen vor Ort", (t.price * antwort.guests) + " € (" + t.price + " € pro Person)");
+  app.appendChild(box);
+  app.appendChild(el('<p class="dazu">Bezahlt wird am Abend bei uns – bar oder mit Karte.</p>'));
+
+  var versteckt = el('<input class="versteckt" tabindex="-1" autocomplete="off" placeholder="Bitte leer lassen"/>');
+  app.appendChild(versteckt);
+
+  var knoepfe = el('<div class="knoepfe"></div>');
+  var senden = el('<button class="weiter">' + (laeuft ? "Wird gesendet …" : "Verbindlich anmelden") + "</button>");
+  senden.disabled = laeuft;
+  senden.onclick = function () { schicke(versteckt.value); };
+  var zur = el('<button class="leise">Zurück</button>');
+  zur.onclick = zurueck;
+  knoepfe.appendChild(senden); knoepfe.appendChild(zur);
+  app.appendChild(knoepfe);
+}
+
+function zeichneFertig() {
+  var t = termin();
+  app.appendChild(el('<p class="marke">' + sicher(D.title) + '</p>'));
+  app.appendChild(el("<h1>Ihr seid dabei.</h1>"));
+  app.appendChild(el('<p class="dazu">Wir haben euch notiert' + (t ? " für " + sicher(t.lang) + ", ab " + sicher(t.time) + " Uhr" : "") +
+    '. Eine Bestätigung schicken wir nicht automatisch – wir melden uns nur, wenn etwas unklar ist.</p>'));
+  app.appendChild(el('<div class="code">' + sicher(code) + "</div>"));
+  app.appendChild(el('<p class="dazu">Eure Nummer, falls ihr etwas ändern wollt.</p>'));
+}
+
+// Die Schritte durchzaehlen. Der Einstieg ist Schritt 0 und bekommt keine Nummer, die erste Frage ist
+// also die 01 - egal ob das die Terminwahl ist oder gleich der Name.
+function nr() {
+  return i < 10 ? "0" + i : String(i);
+}
+function kopf(nummer, frage, dazu) {
+  app.appendChild(el('<p class="marke">' + sicher(nummer) + " — " + sicher(D.title) + "</p>"));
+  app.appendChild(el('<p class="frage">' + sicher(frage) + "</p>"));
+  // Nur, wenn es wirklich etwas dazu zu sagen gibt - ein leerer Absatz reisst sonst ein Loch.
+  if (dazu) app.appendChild(el('<p class="dazu">' + sicher(dazu) + "</p>"));
+  else app.appendChild(el('<div style="height:18px"></div>'));
+}
+function fuss(weiterFn, beschriftung) {
+  var knoepfe = el('<div class="knoepfe"></div>');
+  if (weiterFn) {
+    var w = el('<button class="weiter">' + sicher(beschriftung || "Weiter") + "</button>");
+    w.onclick = weiterFn;
+    knoepfe.appendChild(w);
+  }
+  var zur = el('<button class="leise">Zurück</button>');
+  zur.onclick = zurueck;
+  knoepfe.appendChild(zur);
+  if (weiterFn) knoepfe.appendChild(el('<span class="enter">oder Enter drücken</span>'));
+  app.appendChild(knoepfe);
+}
+
+function schicke(honigtopf) {
+  if (laeuft) return;
+  laeuft = true; fehler = ""; zeichne();
+  fetch(BASIS, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      eventId: antwort.eventId,
+      name: antwort.name.trim(),
+      contact: antwort.contact.trim(),
+      guests: antwort.guests,
+      note: antwort.note.trim(),
+      website: honigtopf || ""
+    })
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (res) {
+      laeuft = false;
+      if (res.ok && res.d && res.d.ok) { code = res.d.code || "—"; zeichne(); return; }
+      fehler = (res.d && res.d.error) || "Das hat nicht geklappt. Bitte versucht es noch einmal.";
+      zeichne();
+    })
+    .catch(function () {
+      laeuft = false;
+      fehler = "Keine Verbindung. Bitte prüfe kurz das Internet und versuch es noch einmal.";
+      zeichne();
+    });
+}
+
+zeichne();
+</script>
+</body></html>`;
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS } });
+}
+
+/** Wochentage ausgeschrieben – die Anmeldeseite nennt den Tag beim Namen, das liest sich schneller als
+ * ein Datum allein ("Freitag, 12.09.2026"). */
+function wochentagLang(iso) {
+  const NAMEN = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const [y, m, d] = iso.split("-").map(Number);
+  return NAMEN[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+}
+function wochentagKurz(iso) {
+  return wochentagLang(iso).slice(0, 2);
 }
 
 /** Die Buchungsseite selbst. Wird auf der Website in einen Rahmen eingebettet, läuft aber komplett
@@ -3179,6 +3794,17 @@ async function handleState(request, env) {
     if (body.reservationConfig && typeof body.reservationConfig === "object") patch.reservationConfig = body.reservationConfig;
     if (Array.isArray(body.produktStatistik)) patch.produktStatistik = body.produktStatistik;
     if (Array.isArray(body.reservationStats)) patch.reservationStats = body.reservationStats;
+    // Bingo-Termine samt Anmeldezahl. Ohne sie zeigt die Anmeldeseite keinen Termin an.
+    if (Array.isArray(body.events)) patch.events = body.events;
+    if (body.eventConfig && typeof body.eventConfig === "object") patch.eventConfig = body.eventConfig;
+    // Der iPad meldet, welche Anmeldungen er übernommen hat. Sie fliegen aus der Warteschlange, denn ab
+    // jetzt stecken sie in seiner Zahl – ließe man sie liegen, wären sie doppelt gezählt und der Abend
+    // wäre auf dem Papier voll, obwohl noch Plätze frei sind.
+    if (Array.isArray(body.eventSignupsApplied) && body.eventSignupsApplied.length > 0) {
+      const erledigt = new Set(body.eventSignupsApplied.map(String));
+      const aktuell = await getState(env);
+      patch.eventSignups = (aktuell.eventSignups || []).filter((s) => !erledigt.has(String(s.id)));
+    }
     const au = body.availabilityUpdate;
     if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
       const current = await getState(env);
@@ -3473,6 +4099,12 @@ export default {
     if (url.pathname === "/booking/slots") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleBookingSlots(request, env);
+    }
+    // Anmeldung zum Bingo-Abend – ebenfalls oeffentlich und ebenfalls vor dem Anmelde-Block.
+    if (url.pathname === "/bingo" || url.pathname === "/bingo/") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      if (request.method === "POST") return handleBingoCreate(request, env);
+      return handleBingoPage(env);
     }
 
     // Handy/Laptop – eigene Anmeldung, getrennt vom WEBHOOK_SECRET (siehe Kommentar bei requireSession).

@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-03.1";
+const WORKER_VERSION = "2026-09-03.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -1097,7 +1097,7 @@ function zeichneName() {
   feld.oninput = function () { antwort.name = feld.value; };
   feld.onkeydown = function (e) { if (e.key === "Enter") weiterVonName(); };
   app.appendChild(feld);
-  fuss(weiterVonName);
+  fuss(weiterVonName, null, true);
   function weiterVonName() {
     if (!antwort.name.trim()) { fehler = "Bitte tragt einen Namen ein."; zeichne(); return; }
     vor();
@@ -1132,7 +1132,7 @@ function zeichneKontakt() {
   feld.oninput = function () { antwort.contact = feld.value; };
   feld.onkeydown = function (e) { if (e.key === "Enter") weiterVonKontakt(); };
   app.appendChild(feld);
-  fuss(weiterVonKontakt);
+  fuss(weiterVonKontakt, null, true);
   function weiterVonKontakt() {
     if (!antwort.contact.trim()) { fehler = "Ohne Nummer oder E-Mail können wir euch nicht erreichen."; zeichne(); return; }
     vor();
@@ -1144,9 +1144,15 @@ function zeichneNotiz() {
   // Einfache Anfuehrungszeichen aussen, doppelte innen: ein maskiertes Zeichen wuerde der Worker beim
   // Zusammenbauen dieser Seite schlucken, und das Formular waere kaputt.
   var feld = el('<textarea placeholder="Zum Beispiel: einmal vegetarisch">' + sicher(antwort.note) + "</textarea>");
-  feld.oninput = function () { antwort.note = feld.value; };
   app.appendChild(feld);
   fuss(vor, antwort.note.trim() ? "Weiter" : "Überspringen");
+  // Die Beschriftung muss beim Tippen mitgehen. Sie einmal beim Zeichnen zu setzen reicht nicht: wer
+  // etwas eintraegt, liest dann weiter "Überspringen" und traut sich nicht zu druecken.
+  var knopf = app.querySelector("button.weiter");
+  feld.oninput = function () {
+    antwort.note = feld.value;
+    knopf.textContent = antwort.note.trim() ? "Weiter" : "Überspringen";
+  };
 }
 
 function zeichneCheck() {
@@ -1198,7 +1204,9 @@ function kopf(nummer, frage, dazu) {
   if (dazu) app.appendChild(el('<p class="dazu">' + sicher(dazu) + "</p>"));
   else app.appendChild(el('<div style="height:18px"></div>'));
 }
-function fuss(weiterFn, beschriftung) {
+// mitEnter nur dort, wo Enter wirklich weiterschaltet: im Notizfeld macht Enter einen Absatz, beim
+// Personenzaehler passiert gar nichts. Ein Hinweis, der nicht stimmt, ist schlimmer als keiner.
+function fuss(weiterFn, beschriftung, mitEnter) {
   var knoepfe = el('<div class="knoepfe"></div>');
   if (weiterFn) {
     var w = el('<button class="weiter">' + sicher(beschriftung || "Weiter") + "</button>");
@@ -1208,7 +1216,7 @@ function fuss(weiterFn, beschriftung) {
   var zur = el('<button class="leise">Zurück</button>');
   zur.onclick = zurueck;
   knoepfe.appendChild(zur);
-  if (weiterFn) knoepfe.appendChild(el('<span class="enter">oder Enter drücken</span>'));
+  if (weiterFn && mitEnter) knoepfe.appendChild(el('<span class="enter">oder Enter drücken</span>'));
   app.appendChild(knoepfe);
 }
 

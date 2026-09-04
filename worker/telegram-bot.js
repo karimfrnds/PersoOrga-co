@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-04.1";
+const WORKER_VERSION = "2026-09-04.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -817,8 +817,14 @@ async function handleBingoPage(env) {
       time: t.time,
       price: t.price,
       frei: t.frei,
+      // Wie voll es schon ist, sehen die Gaeste auch: "14 angemeldet" sagt mehr ueber den Abend als
+      // eine blosse Restzahl - und es macht klar, dass da wirklich etwas stattfindet.
+      belegt: Math.max(0, (Number(t.capacity) || 0) - t.frei),
+      plaetze: Number(t.capacity) || 0,
       note: t.note,
-      lang: wochentagLang(t.date) + ", " + formatDateDe(t.date),
+      // Ausgeschriebener Monat fuer die grosse Anzeige oben: "Samstag, 12. September" liest sich schneller
+      // als eine Zahlenkette.
+      gross: wochentagLang(t.date) + ", " + Number(t.date.slice(8, 10)) + ". " + MONATE[Number(t.date.slice(5, 7)) - 1],
       kurz: wochentagKurz(t.date) + " " + Number(t.date.slice(8, 10)) + "." + Number(t.date.slice(5, 7)) + ".",
     }));
 
@@ -913,6 +919,20 @@ async function handleBingoPage(env) {
     padding: 11px 0; border-bottom: 1px solid var(--linie); font-size: 15px;
   }
   .drin div::before { content: "—"; color: var(--akzent-tief); }
+  /* Wann es stattfindet, steht ganz oben und in eigener Flaeche - danach fragt jeder zuerst. */
+  .termine { margin: 22px 0 26px; }
+  .termin {
+    border: 1px solid var(--linie); border-radius: 14px; background: var(--flaeche);
+    padding: 16px 18px; margin-bottom: 10px;
+  }
+  .termin-tag {
+    font-family: "Ojuju", "Archivo", sans-serif; font-size: 22px; font-weight: 600; line-height: 1.2;
+  }
+  @media (min-width: 700px) { .termin-tag { font-size: 26px; } }
+  .termin-zeit { font-size: 16px; margin-top: 2px; }
+  .termin-plaetze { font-size: 13px; color: var(--leise); margin-top: 8px; }
+  .termin-plaetze b { color: var(--tinte); font-weight: 600; }
+
   .preis { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px; }
   .preis b { font-family: "Ojuju", "Archivo", sans-serif; font-size: 30px; font-weight: 600; }
   .preis span { color: var(--leise); font-size: 14px; }
@@ -947,16 +967,21 @@ async function handleBingoPage(env) {
 
   /* Termine und andere Auswahlen: grosse Flaechen, am Handy mit dem Daumen zu treffen. */
   .wahl { display: grid; gap: 10px; margin-top: 4px; }
+  /* Untereinander statt nebeneinander: nebeneinander bricht "Sonntag, 13. September" am Handy mitten
+     im Datum um. Gestapelt liest es sich wie die Termin-Kacheln oben. */
   .wahl button {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     width: 100%; text-align: left; font-family: inherit; font-size: 17px;
-    padding: 17px 20px; border: 1px solid var(--linie); border-radius: 14px;
+    padding: 16px 20px; border: 1px solid var(--linie); border-radius: 14px;
     background: var(--flaeche); color: var(--tinte); cursor: pointer;
     transition: border-color .12s ease, background .12s ease;
   }
   .wahl button:hover { border-color: var(--akzent); }
   .wahl button[aria-pressed="true"] { border-color: var(--tinte); background: var(--sand); }
-  .wahl small { color: var(--leise); font-size: 13px; white-space: nowrap; }
+  .wahl small { color: var(--leise); font-size: 13px; }
+  .wahl button > span { font-family: "Ojuju", "Archivo", sans-serif; font-size: 19px; font-weight: 500; line-height: 1.25; }
+  .wahl button > span small { font-family: "Archivo", sans-serif; font-size: 13px; font-weight: 400; }
+  .wahl button > small { margin-top: 6px; }
 
   .zaehler { display: flex; align-items: center; gap: 16px; }
   .zaehler .zahl {
@@ -1052,8 +1077,25 @@ function zeichneKeinTermin() {
 
 function zeichneIntro() {
   var t = termin();
-  app.appendChild(el('<p class="marke">' + sicher(D.title) + '</p>'));
-  app.appendChild(el("<h1>Ein Abend, an dem gespielt wird</h1>"));
+  // Die Ueberschrift IST der Name des Abends - eine erfundene Zeile darueber sagt nichts und schiebt das
+  // Wesentliche nach unten.
+  app.appendChild(el("<h1>" + sicher(D.title) + "</h1>"));
+
+  // Wann es stattfindet, kommt vor den Fliesstext: das ist die erste Frage, die jeder hat. Gibt es
+  // mehrere Abende, stehen sie alle da - sonst denkt jemand, es gaebe nur den einen.
+  if (D.termine.length > 0) {
+    var kasten = el('<div class="termine"></div>');
+    for (var j = 0; j < D.termine.length; j++) {
+      var x = D.termine[j];
+      var zeile = el('<div class="termin"></div>');
+      zeile.appendChild(el('<div class="termin-tag">' + sicher(x.gross) + "</div>"));
+      zeile.appendChild(el('<div class="termin-zeit">ab ' + sicher(x.time) + " Uhr" + (x.note ? " · " + sicher(x.note) : "") + "</div>"));
+      zeile.appendChild(el('<div class="termin-plaetze">' + platzText(x) + "</div>"));
+      kasten.appendChild(zeile);
+    }
+    app.appendChild(kasten);
+  }
+
   if (D.intro) app.appendChild(el('<p class="fliess">' + sicher(D.intro) + '</p>'));
 
   if (t) {
@@ -1065,10 +1107,6 @@ function zeichneIntro() {
     app.appendChild(box);
   }
   if (D.hinweis) app.appendChild(el('<p class="dazu">' + sicher(D.hinweis) + '</p>'));
-  if (t && D.termine.length === 1) {
-    app.appendChild(el('<p class="dazu">Nächster Termin: <b>' + sicher(t.lang) + '</b>, ab ' + sicher(t.time) + ' Uhr.' +
-      (t.note ? " " + sicher(t.note) : "") + '</p>'));
-  }
 
   var knoepfe = el('<div class="knoepfe"></div>');
   var los = el('<button class="weiter">Anmelden</button>');
@@ -1078,14 +1116,22 @@ function zeichneIntro() {
   app.appendChild(knoepfe);
 }
 
+/** Wie voll der Abend ist, in einem Satz. Ohne hinterlegte Platzzahl gibt es nichts Ehrliches zu sagen -
+ * dann steht dort lieber gar nichts als eine erfundene Zahl. */
+function platzText(x) {
+  if (!x.plaetze) return x.belegt > 0 ? x.belegt + " angemeldet" : "";
+  var frei = x.frei === 1 ? "noch 1 Platz frei" : "noch " + x.frei + " Plätze frei";
+  return x.belegt + " von " + x.plaetze + " angemeldet · <b>" + frei + "</b>";
+}
+
 function zeichneTermin() {
   kopf(nr(), "An welchem Abend seid ihr dabei?", "");
   var box = el('<div class="wahl"></div>');
   for (var k = 0; k < D.termine.length; k++) {
     (function (t) {
       var b = el('<button aria-pressed="' + (t.id === antwort.eventId) + '">' +
-        "<span>" + sicher(t.lang) + "</span>" +
-        "<small>ab " + sicher(t.time) + " Uhr · " + (t.frei < 12 ? "noch " + t.frei + " Plätze" : t.price + " €") + "</small>" +
+        "<span>" + sicher(t.gross) + "<br><small>ab " + sicher(t.time) + " Uhr</small></span>" +
+        "<small>" + platzText(t) + "</small>" +
         "</button>");
       b.onclick = function () { antwort.eventId = t.id; vor(); };
       box.appendChild(b);
@@ -1164,7 +1210,7 @@ function zeichneCheck() {
   kopf(nr(), "Passt das so?", "");
   var box = el('<div class="zusammen"></div>');
   function zeile(a, b) { box.appendChild(el("<div><span>" + sicher(a) + "</span><span>" + sicher(b) + "</span></div>")); }
-  if (t) zeile("Abend", t.lang + ", ab " + t.time + " Uhr");
+  if (t) zeile("Abend", t.gross + ", ab " + t.time + " Uhr");
   zeile("Name", antwort.name);
   zeile("Personen", antwort.guests + " " + personenWort(antwort.guests));
   zeile("Kontakt", antwort.contact);
@@ -1190,7 +1236,7 @@ function zeichneFertig() {
   var t = termin();
   app.appendChild(el('<p class="marke">' + sicher(D.title) + '</p>'));
   app.appendChild(el("<h1>Ihr seid dabei.</h1>"));
-  app.appendChild(el('<p class="dazu">Wir haben euch notiert' + (t ? " für " + sicher(t.lang) + ", ab " + sicher(t.time) + " Uhr" : "") +
+  app.appendChild(el('<p class="dazu">Wir haben euch notiert' + (t ? " für " + sicher(t.gross) + ", ab " + sicher(t.time) + " Uhr" : "") +
     '. Eine Bestätigung schicken wir nicht automatisch – wir melden uns nur, wenn etwas unklar ist.</p>'));
   app.appendChild(el('<div class="code">' + sicher(code) + "</div>"));
   app.appendChild(el('<p class="dazu">Eure Nummer, falls ihr etwas ändern wollt.</p>'));
@@ -1269,6 +1315,7 @@ function wochentagLang(iso) {
 function wochentagKurz(iso) {
   return wochentagLang(iso).slice(0, 2);
 }
+const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 /** Die Buchungsseite selbst. Wird auf der Website in einen Rahmen eingebettet, läuft aber komplett
  * hier – so muss im Website-Baukasten nichts weiter eingerichtet werden als ein HTML-Element. */

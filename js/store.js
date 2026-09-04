@@ -72,7 +72,7 @@ function defaultData() {
       // Bingo-Abend: was auf der Anmeldeseite steht. Die Termine selbst stehen in data.events – hier nur,
       // was für jeden Termin gleich bleibt, damit man es einmal schreibt und nicht bei jedem Abend neu.
       event: {
-        title: "Bingo Drink Night",
+        title: "frnds. Bingo Night",
         // Der Fließtext auf der Anmeldeseite. Absätze durch Leerzeile getrennt.
         intro:
           "Ein Abend, an dem gegessen, getrunken und gespielt wird – und am Ende ruft irgendwer viel zu laut „Bingo“.\n\n" +
@@ -80,7 +80,7 @@ function defaultData() {
           "ganz normales Bingo, und auf jedem Zettel stecken zwei Shot-Felder, die genau das bedeuten, wonach sie klingen. " +
           "Meistens läuft danach noch eine zweite Runde. Gegen 22, 23 Uhr ist Schluss.",
         // Was im Preis steckt – eine Zeile pro Punkt.
-        included: ["Eine Runde Bingo", "Welcome Drink", "Kleine Auswahl spanischer Tapas"],
+        included: ["Eine Runde Bingo", "Welcome Drink", "Kleine Auswahl spanischer Tapas", "10 € Gutschein"],
         // Wein, Bier, zwei Cocktails und Alkoholfreies gibt es an dem Abend – aber extra.
         hinweis: "Wein, Bier, zwei Cocktails und alkoholfreie Getränke gibt es den ganzen Abend an der Bar.",
         onlineEnabled: true,
@@ -200,6 +200,23 @@ function defaultData() {
   };
 }
 
+/** Migration der Bingo-Texte.
+ *
+ * Titel und die Liste "im Preis enthalten" kann der Chef selbst bearbeiten. Steht dort aber noch WORTGLEICH
+ * der alte Vorgabewert, hat er sie nie angefasst – dann soll die neue Vorgabe greifen, statt dass er
+ * dieselbe Änderung von Hand nachtragen muss. Ein selbst geschriebener Text bleibt unangetastet.
+ */
+const ALTE_EVENT_VORGABEN = {
+  title: "Bingo Drink Night",
+  included: ["Eine Runde Bingo", "Welcome Drink", "Kleine Auswahl spanischer Tapas"],
+};
+function migrateEventSettings(gemischt, vorgabe) {
+  const e = { ...gemischt };
+  if (e.title === ALTE_EVENT_VORGABEN.title) e.title = vorgabe.title;
+  if (JSON.stringify(e.included) === JSON.stringify(ALTE_EVENT_VORGABEN.included)) e.included = [...vorgabe.included];
+  return e;
+}
+
 /** Migration: alte Beta-Checklisten-Vorlagen (fruh/mittel/spaet) in die neue flache taskTemplates-Liste überführen. */
 function migrateTaskTemplates(oldSettings) {
   const legacy = oldSettings?.checklistTemplates;
@@ -243,7 +260,7 @@ function load() {
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
-        event: { ...base.settings.event, ...(parsed.settings?.event ?? {}) },
+        event: migrateEventSettings({ ...base.settings.event, ...(parsed.settings?.event ?? {}) }, base.settings.event),
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
@@ -2194,7 +2211,7 @@ export const store = {
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
-        event: { ...base.settings.event, ...(parsed.settings?.event ?? {}) },
+        event: migrateEventSettings({ ...base.settings.event, ...(parsed.settings?.event ?? {}) }, base.settings.event),
         shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
       },
       days: (parsed.days ?? []).map(normalizeDay),

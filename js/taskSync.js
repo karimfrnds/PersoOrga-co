@@ -153,6 +153,40 @@ function buildReservationSlotsPayload() {
     ?.map((r) => ({ date: r.date, time: r.time, guests: r.guests, tableIds: r.tableIds || [] })) || [];
 }
 
+/** Reservierungen mit Namen fuer die Bot-Abfrage.
+ *
+ * buildReservationSlotsPayload() daneben bleibt bewusst anonym – die Buchungsseite braucht nur zu wissen,
+ * WANN etwas belegt ist, und Gastdaten haben dort nichts verloren. Fuer die Frage "welche Reservierungen
+ * haben wir heute" braucht der Bot dagegen Namen, Personenzahl und Telefonnummer.
+ *
+ * Deshalb bewusst eng begrenzt: zwei Wochen zurueck (fuer "wie war das gestern") bis zum Ende des
+ * Buchungsfensters, hoechstens 400 Eintraege. Die gesamte Historie in der Cloud zu spiegeln waere fuer
+ * diesen Zweck nicht noetig.
+ */
+function buildReservationDetailsPayload() {
+  const heute = todayStr();
+  const tage = Number(store.getSettings().reservation?.maxDaysAhead) || 60;
+  const von = addDaysISO(heute, -14);
+  const bis = addDaysISO(heute, tage);
+  return (store.getReservations?.() || [])
+    .filter((r) => r.date >= von && r.date <= bis)
+    .map((r) => ({
+      id: r.id,
+      code: r.code || "",
+      date: r.date,
+      time: r.time,
+      name: r.name,
+      phone: r.phone || "",
+      guests: r.guests,
+      area: r.area || "egal",
+      note: r.note || "",
+      status: r.status || "offen",
+      source: r.source || "manuell",
+      tische: (r.tableIds || []).map((id) => store.getTable?.(id)?.name).filter(Boolean),
+    }))
+    .slice(-400);
+}
+
 async function fetchRemoteState(cfg) {
   const res = await fetch(workerUrl(cfg, "/state"), {
     headers: { Authorization: `Bearer ${cfg.workerSecret}` },
@@ -616,7 +650,9 @@ async function performTaskSync() {
         guests: q.guests,
         area: q.area,
         note: q.note,
-        source: "web",
+        // Der Chef kann eine Reservierung auch per Telegram anlegen – dann soll in der Liste stehen,
+        // woher sie kam, sonst sieht es aus, als haette sie ein Gast selbst gebucht.
+        source: q.source === "bot" ? "telegram" : "web",
       });
       // Die Nummer, die der Gast auf dem Bildschirm gesehen hat, muss dieselbe bleiben – sonst kann
       // er sie am Telefon nennen und niemand findet die Reservierung.
@@ -832,6 +868,7 @@ async function performTaskSync() {
     combinesWith: t.combinesWith || [],
   }));
   const reservationSlots = buildReservationSlotsPayload();
+  const reservationDetails = buildReservationDetailsPayload();
   const einstellungen = store.getSettings().reservation || {};
   const reservationConfig = {
     durationMinutes: einstellungen.durationMinutes,
@@ -880,6 +917,7 @@ async function performTaskSync() {
     publishedWeeks: store.getPublishedWeeks(),
     tables,
     reservationSlots,
+    reservationDetails,
     reservationConfig,
     produktStatistik,
     reservationStats,

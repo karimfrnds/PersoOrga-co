@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-03.2";
+const WORKER_VERSION = "2026-09-04.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -218,6 +218,9 @@ const EMPTY_STATE = {
   // Warteschlange der Gast-Buchungen, die der iPad abholt.
   // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
   reservationRequests: [],
+  // Reservierungen MIT Namen fuer die Bot-Abfrage (der iPad schickt ein begrenztes Fenster).
+  // [{id, code, date, time, name, phone, guests, area, note, status, source, tische[]}]
+  reservationDetails: [],
   // Bingo-Abend: Termine vom iPad und die Anmeldungen, die der iPad wieder abholt.
   // events:      [{id, date, time, price, capacity, note, angemeldet}]
   // eventConfig: {title, intro, included[], hinweis, onlineEnabled}
@@ -268,6 +271,7 @@ async function getState(env) {
       reservationSlots: Array.isArray(parsed.reservationSlots) ? parsed.reservationSlots : [],
       reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
       reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
+      reservationDetails: Array.isArray(parsed.reservationDetails) ? parsed.reservationDetails : [],
       recipeImports: Array.isArray(parsed.recipeImports) ? parsed.recipeImports : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
       reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
@@ -2233,7 +2237,7 @@ async function interpretMessage(env, text, today, state) {
       properties: {
         action: {
           type: "string",
-          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "notes", "ask_anything", "other"],
+          enum: ["add", "delete", "complete", "list", "who", "stats", "availability", "plan_shifts", "reject_shift", "notify", "stock_list", "notes", "reservations", "add_reservation", "ask_anything", "other"],
         },
         stats_period: {
           type: "string",
@@ -2311,6 +2315,33 @@ async function interpretMessage(env, text, today, state) {
             required: ["employeeName", "text"],
           },
         },
+        reservations_from: {
+          type: "string",
+          description:
+            "Nur bei action=reservations: Beginn des gefragten Zeitraums als YYYY-MM-DD. Wochentage und Angaben wie 'heute', 'morgen', 'am Wochenende' relativ zum heutigen Datum aufloesen. Ohne jede Zeitangabe: heute.",
+        },
+        reservations_to: {
+          type: "string",
+          description:
+            "Nur bei action=reservations: Ende des Zeitraums als YYYY-MM-DD. Bei einem einzelnen Tag gleich reservations_from setzen.",
+        },
+        reservations_to_add: {
+          type: "array",
+          description: "Nur bei action=add_reservation. Jede Reservierung als eigener Eintrag, niemals mehrere zusammenfassen.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Name des Gastes, auf den reserviert wird." },
+              date: { type: "string", description: "Datum YYYY-MM-DD, relative Angaben ('heute', 'morgen', 'Freitag') aufloesen." },
+              time: { type: "string", description: "Uhrzeit HH:MM im 24-Stunden-Format." },
+              guests: { type: "number", description: "Anzahl Personen. Ohne Angabe 2." },
+              phone: { type: "string", description: "Telefonnummer, falls genannt. Sonst leerer String." },
+              area: { type: "string", enum: ["innen", "draussen", "egal"], description: "Wo gesessen werden soll, falls genannt. Sonst 'egal'." },
+              note: { type: "string", description: "Alles Weitere, was genannt wurde (Kinderstuhl, Geburtstag, Allergie). Sonst leerer String." },
+            },
+            required: ["name", "date", "time"],
+          },
+        },
         shifts_to_reject: {
           type: "array",
           description: "Nur bei action=reject_shift. Jede abgelehnte Schicht als eigener Eintrag.",
@@ -2361,6 +2392,8 @@ Bestimme die Absicht der Nachricht:
 - "availability": der Chef will die gesammelten Verfügbarkeiten der Mitarbeiter für die kommende Woche sehen, z.B. "wer kann wann", "verfügbarkeiten", "wie sieht die Verfügbarkeit für nächste Woche aus".
 - "reject_shift": der Chef lehnt eine gemeldete oder bereits gehaltene Schicht einer Person ab, z.B. "lehn Annas Mittel-Schicht am Montag ab", "Anna kann die Spät2 am Mittwoch nicht bekommen", "Timms Früh1 am Montag geht nicht". Person bekommt die Schicht entzogen (bei anderen wieder frei) und eine Nachricht, dass sie sich neu entscheiden muss.
 - "notify": der Chef will einer oder mehreren Personen eine freie Nachricht schicken, die im Kiosk als Pop-up erscheint, z.B. "Sag Anna, sie soll morgen 30 Min früher kommen", "Schreib Timm: Danke für die Vertretung gestern!", "Richte allen aus, dass am Montag Inventur ist" (dann für JEDE bekannte aktive Person einen eigenen Eintrag in messages_to_send anlegen). IMMER jede Nachricht als eigenen Eintrag, auch bei mehreren Empfängern.
+- "reservations": der Chef will wissen, welche Reservierungen anstehen, z.B. "welche reservierungen haben wir heute", "wer hat morgen reserviert", "reservierungen am Freitag", "wie viele Gäste erwarten wir am Wochenende". Zeitraum in reservations_from/reservations_to aufloesen; ohne jede Zeitangabe beide auf heute setzen. Geht es um eine BESTIMMTE Reservierung ("hat Müller reserviert?") oder um einen Vergleich, stattdessen "ask_anything" nehmen – dort gibt es dasselbe als Werkzeug mit Namensfilter.
+- "add_reservation": der Chef will eine Reservierung ANLEGEN, z.B. "reservier morgen 19 Uhr einen Tisch für 4 auf Schmidt", "Freitag 18:30 Tisch für 2, Frau Klein, 0176 123456", "trag bitte eine Reservierung ein: Sonntag 12 Uhr, 6 Personen, draußen, Geburtstag". Jede Reservierung als eigener Eintrag in reservations_to_add. Fehlt die Personenzahl, 2 annehmen. Fehlt Datum oder Uhrzeit, NICHT raten – dann "other" nehmen, damit nachgefragt wird.
 - "ask_anything": eine Frage, Bitte um Einschätzung/Vergleich/Erklärung oder etwas Analytisches, das sich mit den vorhandenen Daten beantworten lässt, aber zu keiner der obigen festen Aktionen passt (z.B. "wieso war der Umschlag diese Woche schlechter", "vergleich diesen Monat mit letztem", "was denkst du, sollten wir mehr Personal am Wochenende einplanen", offene Rückfragen zu einer vorherigen Antwort). Auch nutzen, wenn eine der festen Aktionen zwar thematisch passen würde, die Frage aber offensichtlich mehr Kontext/Begründung will als die feste Antwort liefert.
 - "other": wirklich nichts davon, z.B. Small Talk, Test-Nachricht, oder komplett unverständlich.
 Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
@@ -3285,6 +3318,20 @@ const ASK_TOOLS = [
     },
   },
   {
+    name: "get_reservations",
+    description:
+      "Reservierungen eines Zeitraums mit Namen, Personenzahl, Telefonnummer, Tisch, Notiz und Status. Enthaelt auch Buchungen, die noch in der Warteschlange stehen und denen der Chef noch keinen Tisch gegeben hat.",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "YYYY-MM-DD, Start. Ohne Angabe: heute." },
+        to: { type: "string", description: "YYYY-MM-DD, Ende. Ohne Angabe: gleich from, also nur dieser eine Tag." },
+        name: { type: "string", description: "Optional: nur Reservierungen, deren Name das enthaelt." },
+        includeCancelled: { type: "boolean", description: "Stornierte und Nicht-Erschienene mitzaehlen. Default false." },
+      },
+    },
+  },
+  {
     name: "get_stock_movements",
     description:
       "Warenbewegungen: per Lieferschein/Bestellung erfasste Lieferungen (Wareneingang) und per Verkaufsbericht erfasste Verkäufe (Warenausgang), jeweils mit Datum und Menge.",
@@ -3459,6 +3506,71 @@ function toolGetStockMovements(state, input) {
   return result;
 }
 
+/** Reservierungen eines Zeitraums – mit Namen, Personenzahl und Tisch.
+ *
+ * Zwei Quellen, die zusammengehoeren: was der iPad kennt (reservationDetails) und was noch in der
+ * Warteschlange liegt (reservationRequests) – Buchungen von der Website und die, die der Chef gerade
+ * per Chat angelegt hat. Ohne den zweiten Teil wuerde eine eben angelegte Reservierung erst nach dem
+ * naechsten Abgleich auftauchen, und der Chef haette den Eindruck, sie sei verlorengegangen.
+ */
+function toolGetReservations(state, input) {
+  const heute = todayBerlin();
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : heute;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : from;
+  const needle = String(input?.name || "").trim().toLowerCase();
+  const ohneAbgesagte = input?.includeCancelled !== true;
+
+  const uebernommen = (Array.isArray(state.reservationDetails) ? state.reservationDetails : [])
+    .filter((r) => inRange(r.date || "", from, to))
+    .filter((r) => !ohneAbgesagte || !["storniert", "noshow"].includes(r.status))
+    .filter((r) => !needle || String(r.name || "").toLowerCase().includes(needle))
+    .map((r) => ({
+      date: r.date,
+      time: r.time,
+      name: r.name,
+      personen: r.guests,
+      telefon: r.phone || null,
+      bereich: r.area === "innen" ? "drinnen" : r.area === "draussen" ? "draußen" : "egal",
+      tische: (r.tische || []).join(", ") || null,
+      notiz: r.note || null,
+      status: r.status,
+      herkunft: r.source,
+      nummer: r.code || null,
+    }));
+
+  // Was der iPad noch nicht abgeholt hat. Bewusst als eigener Block, damit klar ist, dass dort noch kein
+  // Tisch vergeben wurde.
+  const inWarteschlange = new Set(uebernommen.map((r) => r.date + r.time + String(r.name).toLowerCase()));
+  const wartend = (Array.isArray(state.reservationRequests) ? state.reservationRequests : [])
+    .filter((r) => inRange(r.date || "", from, to))
+    .filter((r) => !needle || String(r.name || "").toLowerCase().includes(needle))
+    .filter((r) => !inWarteschlange.has(r.date + r.time + String(r.name).toLowerCase()))
+    .map((r) => ({
+      date: r.date,
+      time: r.time,
+      name: r.name,
+      personen: r.guests,
+      telefon: r.phone || null,
+      bereich: r.area === "innen" ? "drinnen" : r.area === "draussen" ? "draußen" : "egal",
+      notiz: r.note || null,
+      status: "noch kein Tisch vergeben",
+      herkunft: r.source === "bot" ? "per Chat angelegt" : "Website",
+      nummer: r.code || null,
+    }));
+
+  const alle = [...uebernommen, ...wartend].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if (alle.length === 0) {
+    return { from, to, anzahl: 0, hinweis: "Für diesen Zeitraum sind keine Reservierungen bekannt." };
+  }
+  return {
+    from,
+    to,
+    anzahl: alle.length,
+    gaesteGesamt: alle.reduce((sum, r) => sum + (Number(r.personen) || 0), 0),
+    reservierungen: alle.slice(0, 120),
+  };
+}
+
 /** Begrenzt ein Werkzeug-Ergebnis auf eine sinnvolle Größe. Wichtig: bei Überlänge NICHT stillschweigend
  * mitten im JSON abschneiden (Claude würde die unvollständigen Daten für vollständig halten), sondern
  * explizit sagen, dass gekürzt wurde und der Zeitraum enger gefasst werden muss. */
@@ -3481,6 +3593,7 @@ function executeAskTool(state, name, input) {
   if (name === "get_employees") return toolGetEmployees(state);
   if (name === "get_employee_notes") return toolGetEmployeeNotes(state, input);
   if (name === "get_stock_movements") return toolGetStockMovements(state, input);
+  if (name === "get_reservations") return toolGetReservations(state, input);
   return { error: "Unbekanntes Werkzeug." };
 }
 
@@ -3490,7 +3603,8 @@ Bekannte aktive Mitarbeiter: ${state.employees.join(", ") || "(keine hinterlegt)
 
 Du hast über Werkzeuge Zugriff auf ALLE Daten des Systems: Kennzahlen und Stunden/Lohn pro Person, Aufgaben,
 Vorräte und Warenbewegungen (Lieferungen/Verkäufe), Schichtplanung und Verfügbarkeiten, die Mitarbeiterliste
-(inkl. Minijob-Grenzen, wer eingestempelt ist, vergessenes Ausstempeln) sowie Notizen der Mitarbeiter.
+(inkl. Minijob-Grenzen, wer eingestempelt ist, vergessenes Ausstempeln), Notizen der Mitarbeiter sowie die
+Reservierungen mit Namen, Personenzahl und Tisch.
 
 Rufe GENAU die Daten ab, die du für die Antwort brauchst – nutze die Werkzeuge, statt zu raten, auch mehrfach
 nacheinander (z.B. zwei Zeiträume zum Vergleichen, oder erst Kennzahlen dann Schichtplan). Antworte erst mit
@@ -3533,6 +3647,119 @@ Antworte auf Deutsch, kurz und konkret, ohne Einleitung direkt zur Sache.`;
     ];
   }
   return "Konnte die Frage nach mehreren Rückfragen an die eigenen Daten nicht abschließend beantworten – bitte enger fassen oder anders formulieren.";
+}
+
+/** Reservierungs-Uebersicht fuer den Chat. Bewusst ohne KI-Runde: die Frage "was steht heute an" wird
+ * mehrmals am Tag gestellt, da soll sofort eine Antwort kommen und immer dieselbe Form haben. */
+function buildReservationsReply(state, from, to) {
+  const ergebnis = toolGetReservations(state, { from, to });
+  const zeitraum =
+    from === to ? formatDateDe(from) : `${formatDateDe(from)} bis ${formatDateDe(to)}`;
+  if (!ergebnis.reservierungen || ergebnis.anzahl === 0) {
+    return `🍽 ${zeitraum}: keine Reservierungen.`;
+  }
+
+  const proTag = {};
+  for (const r of ergebnis.reservierungen) (proTag[r.date] ||= []).push(r);
+
+  const zeilen = [];
+  for (const tag of Object.keys(proTag).sort()) {
+    const desTages = proTag[tag];
+    const gaeste = desTages.reduce((sum, r) => sum + (Number(r.personen) || 0), 0);
+    if (from !== to || Object.keys(proTag).length > 1) {
+      zeilen.push(`\n📅 ${formatDateDe(tag)} · ${desTages.length} ${desTages.length === 1 ? "Reservierung" : "Reservierungen"}, ${gaeste} ${gaeste === 1 ? "Gast" : "Gäste"}`);
+    }
+    for (const r of desTages) {
+      const teile = [`${r.personen} ${r.personen === 1 ? "Person" : "Personen"}`];
+      if (r.tische) teile.push(`Tisch ${r.tische}`);
+      else teile.push("kein Tisch");
+      if (r.bereich !== "egal") teile.push(r.bereich);
+      if (r.status === "da") teile.push("✅ da");
+      else if (r.status === "storniert") teile.push("storniert");
+      else if (r.status === "noch kein Tisch vergeben") teile.push("neu");
+      zeilen.push(`${r.time} · ${r.name} · ${teile.join(" · ")}`);
+      const zusatz = [];
+      if (r.telefon) zusatz.push(`📞 ${r.telefon}`);
+      if (r.notiz) zusatz.push(`📝 ${r.notiz}`);
+      if (zusatz.length > 0) zeilen.push(`   ${zusatz.join("  ")}`);
+    }
+  }
+
+  const kopf =
+    from === to
+      ? `🍽 ${zeitraum}: ${ergebnis.anzahl} ${ergebnis.anzahl === 1 ? "Reservierung" : "Reservierungen"}, ${ergebnis.gaesteGesamt} ${ergebnis.gaesteGesamt === 1 ? "Gast" : "Gäste"}`
+      : `🍽 ${zeitraum}: ${ergebnis.anzahl} Reservierungen, ${ergebnis.gaesteGesamt} Gäste`;
+  return [kopf, ...zeilen].join("\n");
+}
+
+/** Reservierung per Chat anlegen.
+ *
+ * Geht denselben Weg wie eine Buchung von der Website: in die Warteschlange, der iPad macht daraus eine
+ * echte Reservierung und vergibt den Tisch. Ein Tisch wird hier bewusst NICHT vergeben – das entscheidet
+ * der Chef am Tischplan, wo er sieht, was daneben passiert.
+ *
+ * Ist rechnerisch nichts mehr frei, wird die Reservierung trotzdem angelegt und nur darauf hingewiesen:
+ * wer sie per Chat eintraegt, hat den Gast meist am Telefon und weiss besser als das System, ob es passt.
+ */
+async function handleAddReservationsFromChat(env, state, liste) {
+  const cfg = buchungsConfig(state);
+  const jetztISO = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Berlin" }).replace(" ", "T");
+  const neue = [];
+  const zeilen = [];
+  const warnungen = [];
+
+  for (const r of liste) {
+    const name = String(r?.name || "").trim().slice(0, 80);
+    const date = String(r?.date || "");
+    const time = String(r?.time || "");
+    const guests = Math.max(1, Math.min(99, Number(r?.guests) || 2));
+    const area = ["innen", "draussen", "egal"].includes(r?.area) ? r.area : "egal";
+    if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+      warnungen.push(`„${name || "ohne Namen"}" konnte ich nicht anlegen – Datum oder Uhrzeit fehlt.`);
+      continue;
+    }
+    const eintrag = {
+      id: crypto.randomUUID(),
+      code: buchungsCode(),
+      date,
+      time,
+      name,
+      phone: String(r?.phone || "").trim().slice(0, 40),
+      guests,
+      area,
+      note: String(r?.note || "").trim().slice(0, 300),
+      source: "bot",
+      createdAt: new Date().toISOString(),
+    };
+    neue.push(eintrag);
+
+    const bereich = area === "innen" ? "drinnen" : area === "draussen" ? "draußen" : "";
+    zeilen.push(
+      `✅ ${formatDateDe(date)} um ${time} · ${name} · ${guests} ${guests === 1 ? "Person" : "Personen"}` +
+        (bereich ? ` · ${bereich}` : "") +
+        (eintrag.phone ? ` · 📞 ${eintrag.phone}` : "") +
+        (eintrag.note ? `\n   📝 ${eintrag.note}` : "")
+    );
+
+    // Passt das ueberhaupt noch? Nur ein Hinweis, kein Veto.
+    const zustandMitNeuen = { ...state, reservationRequests: [...(state.reservationRequests || []), ...neue.slice(0, -1)] };
+    if ((state.tables || []).length > 0 && !istFrei(zustandMitNeuen, cfg, date, time, guests, area)) {
+      warnungen.push(`${formatDateDe(date)} um ${time} ist rechnerisch nichts mehr frei – bitte am Tischplan prüfen.`);
+    }
+  }
+
+  if (neue.length > 0) {
+    const grenze = addDaysISO(todayBerlin(), -REQUEST_AUFBEWAHRUNG_TAGE);
+    const bestand = (state.reservationRequests || []).filter((r) => (r.date || "") >= grenze);
+    await patchState(env, { reservationRequests: [...bestand, ...neue].slice(-500) });
+  }
+  if (zeilen.length === 0) {
+    return "Konnte keine Reservierung anlegen. Ich brauche mindestens Name, Tag und Uhrzeit – z.B. „reservier morgen 19 Uhr für 4 auf Schmidt“.";
+  }
+  let text = zeilen.join("\n");
+  text += "\n\nSteht in der Liste. Den Tisch vergibst du am iPad – dort siehst du, was drumherum liegt.";
+  if (warnungen.length > 0) text += `\n\n⚠ ${warnungen.join("\n⚠ ")}`;
+  return text;
 }
 
 async function handleTelegram(request, env) {
@@ -3738,10 +3965,16 @@ async function handleTelegram(request, env) {
       replyText = buildStockListReply(state);
     } else if (result.action === "notes") {
       replyText = buildNotesDigestReply(state);
+    } else if (result.action === "reservations") {
+      const von = /^\d{4}-\d{2}-\d{2}$/.test(result.reservations_from) ? result.reservations_from : today;
+      const bis = /^\d{4}-\d{2}-\d{2}$/.test(result.reservations_to) ? result.reservations_to : von;
+      replyText = buildReservationsReply(state, von, bis > von ? bis : von);
+    } else if (result.action === "add_reservation") {
+      replyText = await handleAddReservationsFromChat(env, state, result.reservations_to_add || []);
     } else if (result.action === "ask_anything") {
       replyText = await buildAskAnythingReply(env, state, text);
     } else {
-      replyText = `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt"\n„nachrichten"\nOder frag mich einfach direkt etwas, z.B. „wieso war der Umschlag diese Woche schlechter".`;
+      replyText = `Das habe ich nicht eindeutig verstanden. Du kannst mir z.B. schreiben:\n„Anna soll die Kasse zählen"\n„liste"\n„wer ist da"\n„Kasse zählen ist erledigt"\n„lösch die Aufgabe Kasse zählen bei Anna"\n„kennzahlen" / „wie war der Umsatz heute"\n„wie viele Stunden hat Anna diese Woche gemacht"\n„Wochenplan: Montag Anna 10-18, Dienstag Timm 9-17"\n„wer kann wann"\n„Sag Anna, sie soll morgen früher kommen"\n„Annas Mittel-Schicht am Montag ablehnen"\n„was fehlt"\n„nachrichten"\n„welche reservierungen haben wir heute"\n„reservier morgen 19 Uhr für 4 auf Schmidt"\nOder frag mich einfach direkt etwas, z.B. „wieso war der Umschlag diese Woche schlechter".`;
     }
 
     await sendTelegramMessage(env, chatId, replyText);
@@ -3799,6 +4032,7 @@ async function handleState(request, env) {
     // diese Felder würde sonst die Buchungsseite lahmlegen.
     if (Array.isArray(body.tables)) patch.tables = body.tables;
     if (Array.isArray(body.reservationSlots)) patch.reservationSlots = body.reservationSlots;
+    if (Array.isArray(body.reservationDetails)) patch.reservationDetails = body.reservationDetails;
     if (body.reservationConfig && typeof body.reservationConfig === "object") patch.reservationConfig = body.reservationConfig;
     if (Array.isArray(body.produktStatistik)) patch.produktStatistik = body.produktStatistik;
     if (Array.isArray(body.reservationStats)) patch.reservationStats = body.reservationStats;

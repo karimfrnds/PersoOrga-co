@@ -413,6 +413,25 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   font-size: 16px; padding: 3px 0;
 }
 .kiosk-faellig-zeile span { font-size: 13px; color: var(--gray); white-space: nowrap; }
+
+/* "Was fehlt?" – grosse Flaechen, weil das im Vorbeigehen mit dem Daumen bedient wird, und die Farbe
+   traegt die Aussage: man soll die leeren Sachen sehen, ohne zu lesen. */
+.bestand-liste { display: grid; gap: 8px; margin: 14px 0; }
+.bestand-zeile {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; text-align: left; font: inherit; font-size: 17px;
+  padding: 16px 18px; border-radius: 12px; border: 1px solid var(--border);
+  background: #fff; color: var(--text); cursor: pointer;
+}
+.bestand-name { font-weight: 600; }
+.bestand-status { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.bestand-ok .bestand-status { color: var(--gray); font-weight: 400; }
+.bestand-knapp { border-color: var(--orange); background: var(--orange-light); }
+.bestand-knapp .bestand-status { color: var(--orange); }
+.bestand-leer { border-color: var(--red); background: var(--red-light); }
+.bestand-leer .bestand-status { color: var(--red); }
+.bestand-bestellt { border-color: var(--green); background: var(--green-light); }
+.bestand-bestellt .bestand-status { color: var(--green-dark); }
 .task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }

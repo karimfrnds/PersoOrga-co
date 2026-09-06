@@ -498,7 +498,8 @@ async function performTaskSync() {
         bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit });
     } else if (c.kind === "update") {
       if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold,
-        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit })) {
+        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit,
+        lieferant: c.lieferant, bestellmenge: c.bestellmenge })) {
         syncWarnings.push(`Artikel-Änderung: Artikel nicht gefunden (evtl. schon gelöscht).`);
       }
       // Bearbeiten IST das Prüfen: der Hinweis "bitte einordnen" kann danach weg.
@@ -527,6 +528,12 @@ async function performTaskSync() {
       store.addNameAlias("artikel", c.itemId, c.alias);
     } else if (c.kind === "notsame") {
       store.markNotSame(c.itemId, c.targetId);
+    } else if (c.kind === "status") {
+      store.setStockStatus(c.itemId, c.status, "Chef (Laptop)");
+    } else if (c.kind === "bestellt") {
+      store.markiereBestellt(c.itemIds || [], "Chef (Laptop)");
+    } else if (c.kind === "geliefert") {
+      store.markiereGeliefert(c.itemIds || [], "Chef (Laptop)");
     }
     appliedStockChangeIds.add(c.id);
     newStockChangeIds = true;
@@ -871,6 +878,11 @@ async function performTaskSync() {
     // ROHWERT plus die Zahl der Tage mit Verbrauch, nicht ein fertiges Ergebnis: so lässt sich am
     // Laptop zeigen, worauf die Aussage beruht.
     verbrauch30: store.getConsumptionSince(s.id, 30),
+    // Grundlage der Bestellliste am Laptop.
+    lieferant: s.lieferant || "",
+    bestellmenge: s.bestellmenge || "",
+    lastOrderedAt: s.lastOrderedAt || null,
+    lastDeliveredAt: s.lastDeliveredAt || null,
   }));
   // Was sich mit welchem Produkt verdienen lässt (90 Tage). Auf dem iPad gerechnet, weil nur er die
   // Rezepte und Einkaufspreise vollständig kennt.

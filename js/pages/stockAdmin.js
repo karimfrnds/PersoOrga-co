@@ -11,7 +11,7 @@ import { escapeHtml, dateDe } from "../format.js";
 import { confirmDialog, promptDialog } from "../dialog.js";
 import { nameAehnlichkeit, bewerteKandidaten } from "../nameMatch.js";
 
-const STATUS_LABEL = { ok: "✅ Ok", knapp: "🟠 Wird knapp", leer: "🔴 Leer" };
+const STATUS_LABEL = { ok: "✅ Genug da", knapp: "🟠 Wird knapp", leer: "🔴 Leer", bestellt: "📦 Bestellt" };
 
 const zahl = (n) => String(Math.round(n * 100) / 100).replace(".", ",");
 
@@ -106,10 +106,9 @@ function renderStockAdmin() {
     const frag = document.createElement("div");
     frag.innerHTML = `
       <h1>📦 Vorräte</h1>
-      <p class="muted">Artikel-Liste, die Mitarbeiter im Kiosk als „Ok/Wird knapp/Leer" markieren können.
-      Artikel mit Einheit werden zusätzlich mengengeführt: Lieferschein-Fotos füllen den Bestand auf, hinterlegte
-      Rezepte ziehen bei einem SumUp-Verkaufsbericht automatisch die verkauften Zutaten ab.
-      Der Chef bekommt außerdem eine Warnung per Telegram-Bot, sobald etwas knapp/leer ist.</p>
+      <p class="muted">Die Artikel, die das Team unter „Bestand“ als knapp oder leer melden kann. Hier
+      werden sie angelegt, Lieferant und Bestellmenge gepflegt und Doppelgänger zusammengeführt –
+      bestellt wird am Laptop.</p>
     `;
     frag.appendChild(buildAddCard());
     frag.appendChild(buildEinordnen());
@@ -477,55 +476,54 @@ function renderStockAdmin() {
     const optHint = document.createElement("p");
     optHint.className = "muted small";
     optHint.style.marginTop = "8px";
-    optHint.textContent = "Optional: Einheit angeben, wenn der Artikel mit genauer Menge geführt werden soll (z.B. für Rezepte).";
+    optHint.textContent =
+      "Lieferant und Bestellmenge kannst du gleich mit eintragen – daraus entsteht die Bestellliste. Beides lässt sich auch später am Laptop nachtragen.";
 
     const optGrid = document.createElement("div");
     optGrid.className = "kb-grid";
     optGrid.style.marginTop = "4px";
-    const unitWrap = document.createElement("label");
-    unitWrap.className = "field";
-    unitWrap.innerHTML = `<span>Einheit (optional)</span>`;
-    const unitInput = document.createElement("input");
-    unitInput.type = "text";
-    unitInput.placeholder = "z.B. kg, l, Stück";
-    unitWrap.appendChild(unitInput);
 
-    const amountWrap = document.createElement("label");
-    amountWrap.className = "field";
-    amountWrap.innerHTML = `<span>Aktueller Bestand</span>`;
-    const amountInput = document.createElement("input");
-    amountInput.type = "number";
-    amountInput.min = "0";
-    amountInput.step = "0.1";
-    amountInput.placeholder = "0";
-    amountWrap.appendChild(amountInput);
+    const feld = (label, el) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      return l;
+    };
+    const lieferantInput = document.createElement("input");
+    lieferantInput.type = "text";
+    lieferantInput.placeholder = "z.B. METRO";
+    lieferantInput.setAttribute("list", "lieferanten-vorschlaege");
+    const datalist = document.createElement("datalist");
+    datalist.id = "lieferanten-vorschlaege";
+    for (const l of store.getLieferanten()) {
+      const o = document.createElement("option");
+      o.value = l;
+      datalist.appendChild(o);
+    }
+    const mengeInput = document.createElement("input");
+    mengeInput.type = "text";
+    mengeInput.placeholder = "z.B. 1 Kasten";
+    const bereichSelect = document.createElement("select");
+    for (const [wert, label] of [["kueche", "🍳 Küche"], ["bar", "🍸 Bar"]]) {
+      const o = document.createElement("option");
+      o.value = wert;
+      o.textContent = label;
+      bereichSelect.appendChild(o);
+    }
 
-    const thresholdWrap = document.createElement("label");
-    thresholdWrap.className = "field";
-    thresholdWrap.innerHTML = `<span>Warnschwelle („wird knapp" ab)</span>`;
-    const thresholdInput = document.createElement("input");
-    thresholdInput.type = "number";
-    thresholdInput.min = "0";
-    thresholdInput.step = "0.1";
-    thresholdInput.placeholder = "0";
-    thresholdWrap.appendChild(thresholdInput);
-
-    optGrid.appendChild(unitWrap);
-    optGrid.appendChild(amountWrap);
-    optGrid.appendChild(thresholdWrap);
+    optGrid.append(feld("Lieferant", lieferantInput), feld("Bestellmenge", mengeInput), feld("Bereich", bereichSelect));
 
     const add = () => {
       const name = input.value.trim();
       if (!name) return;
       store.addStockItem(name, {
-        unit: unitInput.value.trim(),
-        currentAmount: amountInput.value,
-        lowThreshold: thresholdInput.value,
+        lieferant: lieferantInput.value,
+        bestellmenge: mengeInput.value,
+        bereich: bereichSelect.value,
       });
       input.value = "";
-      unitInput.value = "";
-      amountInput.value = "";
-      thresholdInput.value = "";
+      mengeInput.value = "";
       rerender();
     };
     addBtn.onclick = add;
@@ -536,6 +534,7 @@ function renderStockAdmin() {
     row.appendChild(addBtn);
     card.appendChild(row);
     card.appendChild(optHint);
+    card.appendChild(datalist);
     card.appendChild(optGrid);
     return card;
   }
@@ -566,14 +565,15 @@ function renderStockAdmin() {
 
       const statusSpan = document.createElement("span");
       statusSpan.className = "muted small task-row-meta";
-      if (item.unit) {
-        statusSpan.textContent =
-          `${STATUS_LABEL[item.status]} · Bestand: ${item.currentAmount} ${item.unit} (Warnschwelle: ${item.lowThreshold} ${item.unit})` +
-          (item.updatedBy ? ` · zuletzt geändert von ${item.updatedBy}` : "");
-      } else {
-        statusSpan.textContent =
-          STATUS_LABEL[item.status] + (item.updatedBy ? ` · zuletzt geändert von ${item.updatedBy}` : "");
-      }
+      statusSpan.textContent = [
+        STATUS_LABEL[item.status] || item.status,
+        item.lieferant || "ohne Lieferant",
+        item.bestellmenge || null,
+        item.bereich === "bar" ? "Bar" : "Küche",
+        item.updatedBy ? "zuletzt geändert von " + item.updatedBy : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       textWrap.appendChild(statusSpan);
 
       const lastDelivery = item.deliveries?.[0];
@@ -589,22 +589,7 @@ function renderStockAdmin() {
       const actions = document.createElement("div");
       actions.className = "employee-actions";
 
-      if (item.unit) {
-        const correctInput = document.createElement("input");
-        correctInput.type = "number";
-        correctInput.step = "0.1";
-        correctInput.value = item.currentAmount;
-        correctInput.style.width = "80px";
-        const correctBtn = document.createElement("button");
-        correctBtn.className = "btn btn-secondary";
-        correctBtn.textContent = "Menge korrigieren";
-        correctBtn.onclick = () => {
-          store.setStockAmount(item.id, correctInput.value, "Admin");
-          rerender();
-        };
-        actions.appendChild(correctInput);
-        actions.appendChild(correctBtn);
-      } else if (item.status !== "ok") {
+      if (item.status !== "ok") {
         const resetBtn = document.createElement("button");
         resetBtn.className = "btn btn-secondary";
         resetBtn.textContent = `Auf „Ok" zurücksetzen`;

@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-04.2";
+const WORKER_VERSION = "2026-09-06.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2845,10 +2845,13 @@ async function handleAdminStockItem(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias", "notsame"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias", "notsame", "status", "bestellt", "geliefert"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if ((kind === "merge" || kind === "notsame") && !String(body?.targetId || "").trim()) return jsonResponse({ error: "Zweiter Artikel fehlt." }, 400);
   if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
-  if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
+  // "bestellt"/"geliefert" gehen ueber mehrere Artikel auf einmal – eine Bestellung ist nun mal eine Liste.
+  if (["bestellt", "geliefert"].includes(kind)) {
+    if (!Array.isArray(body?.itemIds) || body.itemIds.length === 0) return jsonResponse({ error: "Keine Artikel ausgewählt." }, 400);
+  } else if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
 
   const eintrag = {
@@ -2868,6 +2871,11 @@ async function handleAdminStockItem(request, env) {
     // Umrechnung beim Zusammenführen ("1 Flasche = 500 ml"). Fehlt sie, rechnet der iPad selbst um,
     // soweit die Einheiten das hergeben.
     faktor: Number(body?.faktor) > 0 ? Number(body.faktor) : undefined,
+    // Bestellliste: bei wem und in welcher Einheit bestellt wird, und der Zustand des Artikels.
+    lieferant: body?.lieferant === undefined ? undefined : String(body.lieferant).trim(),
+    bestellmenge: body?.bestellmenge === undefined ? undefined : String(body.bestellmenge).trim(),
+    status: ["ok", "knapp", "leer", "bestellt"].includes(body?.status) ? body.status : undefined,
+    itemIds: Array.isArray(body?.itemIds) ? body.itemIds.map(String) : undefined,
     bestandUebernehmen: body?.bestandUebernehmen === false ? false : undefined,
   };
   const state = await getState(env);
@@ -2885,6 +2893,21 @@ async function handleAdminStockItem(request, env) {
 /** Bildet eine Artikel-Änderung auf der Worker-Kopie nach, damit sie am Laptop sofort sichtbar ist. */
 function stockVorschau(stock, e) {
   if (e.kind === "delete") return stock.filter((s) => s.id !== e.itemId);
+  // Bestellliste: ein Zustand fuer einen Artikel, oder eine ganze Bestellung auf einmal.
+  if (e.kind === "status") {
+    return stock.map((s) => (s.id === e.itemId ? { ...s, status: e.status || s.status } : s));
+  }
+  if (e.kind === "bestellt" || e.kind === "geliefert") {
+    const ids = new Set(e.itemIds || []);
+    const jetzt = new Date().toISOString();
+    return stock.map((s) =>
+      ids.has(s.id)
+        ? e.kind === "bestellt"
+          ? { ...s, status: "bestellt", lastOrderedAt: jetzt }
+          : { ...s, status: "ok", lastDeliveredAt: jetzt }
+        : s
+    );
+  }
   if (e.kind === "merge") {
     // Der Doppelgänger verschwindet, sein Name bleibt als Zweitname am richtigen Artikel.
     const von = stock.find((s) => s.id === e.itemId);
@@ -2937,6 +2960,8 @@ function stockVorschau(stock, e) {
         packSize: e.packSize || 1,
         packLabel: e.packLabel || "",
         pricePerUnit: Number.isFinite(e.pricePerUnit) ? e.pricePerUnit : null,
+        lieferant: e.lieferant || "",
+        bestellmenge: e.bestellmenge || "",
       },
     ];
   }
@@ -2954,6 +2979,8 @@ function stockVorschau(stock, e) {
         packSize: e.packSize === undefined ? s.packSize : e.packSize,
         packLabel: e.packLabel === undefined ? s.packLabel : e.packLabel,
         pricePerUnit: e.pricePerUnit === undefined ? s.pricePerUnit : e.pricePerUnit,
+        lieferant: e.lieferant === undefined ? s.lieferant : e.lieferant,
+        bestellmenge: e.bestellmenge === undefined ? s.bestellmenge : e.bestellmenge,
         needsReview: false,
       };
     }

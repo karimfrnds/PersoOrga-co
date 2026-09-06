@@ -310,7 +310,13 @@ function load() {
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
       notifications: parsed.notifications ?? base.notifications,
-      stock: parsed.stock ?? base.stock,
+      stock: (parsed.stock ?? base.stock).map((s) => ({
+        lieferant: "",
+        bestellmenge: "",
+        lastOrderedAt: null,
+        lastDeliveredAt: null,
+        ...s,
+      })),
       recipes: parsed.recipes ?? base.recipes,
       sickDays: parsed.sickDays ?? base.sickDays,
       publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
@@ -924,6 +930,13 @@ export const store = {
       notSameAs: [],
       priceUpdatedAt: null,
       priceSource: null, // "beleg" | "manuell"
+      // --- Bestellliste ---
+      // Bei wem der Artikel bestellt wird und in welcher Einheit ("1 Kasten", "6er-Pack", "2 kg").
+      // Das ist der Kern der neuen Bestand-Logik: nicht wie VIEL da ist, sondern was BESTELLT werden muss.
+      lieferant: String(opts.lieferant || "").trim(),
+      bestellmenge: String(opts.bestellmenge || "").trim(),
+      lastOrderedAt: null,
+      lastDeliveredAt: null,
     };
     if (!item.name) return null;
     if (unit) recomputeStockStatus(item);
@@ -1063,6 +1076,8 @@ export const store = {
     if (patch.bereich !== undefined) item.bereich = patch.bereich === "bar" ? "bar" : "kueche";
     if (patch.packSize !== undefined) item.packSize = Math.max(1, Number(patch.packSize) || 1);
     if (patch.packLabel !== undefined) item.packLabel = String(patch.packLabel).trim();
+    if (patch.lieferant !== undefined) item.lieferant = String(patch.lieferant).trim();
+    if (patch.bestellmenge !== undefined) item.bestellmenge = String(patch.bestellmenge).trim();
     if (patch.pricePerUnit !== undefined) {
       const p = Number(patch.pricePerUnit);
       item.pricePerUnit = Number.isFinite(p) && p >= 0 ? roundPreis(p) : null;
@@ -1087,6 +1102,103 @@ export const store = {
     return item;
   },
   /** Mitarbeiter (im Kiosk) oder Chef (per Bot) ändern den Status eines Artikels. */
+  // ---- Bestellliste ----
+  //
+  // Der Bestand wird NICHT mehr in Mengen gefuehrt. Der Grund ist Erfahrung: eine Mengenfuehrung stimmt
+  // nur, solange jede Lieferung und jeder Verbrauch eingetragen wird, und das passiert im Betrieb nie
+  // vollstaendig. Danach ist die Zahl falsch, man traut ihr nicht mehr, und die Pflege war umsonst.
+  //
+  // Was wirklich gebraucht wird, ist die Bestellung. Dafuer reichen vier Zustaende, die jeder im
+  // Vorbeigehen tippen kann, und pro Artikel die Angabe, bei WEM und in welcher Einheit bestellt wird.
+  //
+  //   ok        – genug da
+  //   knapp     – reicht noch, muss aber auf die naechste Bestellung
+  //   leer      – ist aus, dringend
+  //   bestellt  – ist raus, wartet auf Lieferung (damit es nicht weiter als "leer" schreit)
+  //
+  /** Alles, was auf die naechste Bestellung muss – nach Lieferant gruppiert.
+   * "bestellt" ist standardmaessig dabei, aber getrennt: man will sehen, was schon unterwegs ist. */
+  getBestellliste({ bereich = "", mitBestellten = true } = {}) {
+    const offen = data.stock.filter(
+      (s) => ["knapp", "leer"].includes(s.status) || (mitBestellten && s.status === "bestellt")
+    );
+    const gefiltert = bereich ? offen.filter((s) => (s.bereich || "kueche") === bereich) : offen;
+    const gruppen = new Map();
+    for (const s of gefiltert) {
+      const key = s.lieferant || "";
+      if (!gruppen.has(key)) gruppen.set(key, []);
+      gruppen.get(key).push(s);
+    }
+    const RANG = { leer: 0, knapp: 1, bestellt: 2 };
+    return [...gruppen.entries()]
+      .map(([lieferant, artikel]) => ({
+        lieferant,
+        artikel: artikel.sort((a, b) => (RANG[a.status] - RANG[b.status]) || a.name.localeCompare(b.name)),
+        dringend: artikel.filter((a) => a.status === "leer").length,
+        offen: artikel.filter((a) => a.status !== "bestellt").length,
+      }))
+      // Artikel ohne Lieferant IMMER ganz nach unten – auch wenn dort etwas dringend ist: die kann man
+      // gar nicht bestellen, die muss man erst zuordnen. Darunter dann die Lieferanten mit dringenden
+      // Sachen zuerst.
+      .sort(
+        (a, b) =>
+          (a.lieferant === "" ? 1 : 0) - (b.lieferant === "" ? 1 : 0) ||
+          b.dringend - a.dringend ||
+          a.lieferant.localeCompare(b.lieferant)
+      );
+  },
+  /** Alle bekannten Lieferanten, fuer die Auswahl beim Anlegen eines Artikels. */
+  getLieferanten() {
+    return [...new Set(data.stock.map((s) => s.lieferant).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  },
+  /** Bestellung raus: die Artikel gelten als bestellt, bis die Lieferung kommt. */
+  markiereBestellt(ids, changedBy) {
+    const zeit = new Date().toISOString();
+    let anzahl = 0;
+    for (const id of ids) {
+      const item = data.stock.find((s) => s.id === id);
+      if (!item) continue;
+      item.status = "bestellt";
+      item.lastOrderedAt = zeit;
+      item.updatedAt = zeit;
+      item.updatedBy = changedBy || null;
+      anzahl++;
+    }
+    if (anzahl > 0) persist();
+    return anzahl;
+  },
+  /** Lieferung angekommen: wieder genug da. */
+  markiereGeliefert(ids, changedBy) {
+    const zeit = new Date().toISOString();
+    let anzahl = 0;
+    for (const id of ids) {
+      const item = data.stock.find((s) => s.id === id);
+      if (!item) continue;
+      item.status = "ok";
+      item.lastDeliveredAt = zeit;
+      item.updatedAt = zeit;
+      item.updatedBy = changedBy || null;
+      anzahl++;
+    }
+    if (anzahl > 0) persist();
+    return anzahl;
+  },
+  /** Naechster Zustand beim Antippen: ok -> knapp -> leer -> ok.
+   * "bestellt" ist in diesem Kreis NICHT dabei – das setzt man beim Bestellen, nicht im Vorbeigehen.
+   * Wer einen bestellten Artikel antippt, meint meistens "ist jetzt da". */
+  naechsterStockStatus(status) {
+    if (status === "bestellt") return "ok";
+    if (status === "ok") return "knapp";
+    if (status === "knapp") return "leer";
+    return "ok";
+  },
+  /** Artikel nach Bereich, fuer die Melde-Ansicht. Was fehlt, steht oben. */
+  getStockNachBereich(bereich) {
+    const RANG = { leer: 0, knapp: 1, bestellt: 2, ok: 3 };
+    return data.stock
+      .filter((s) => (s.bereich || "kueche") === bereich)
+      .sort((a, b) => (RANG[a.status] ?? 3) - (RANG[b.status] ?? 3) || a.name.localeCompare(b.name));
+  },
   setStockStatus(id, status, changedBy) {
     const item = data.stock.find((s) => s.id === id);
     if (!item) return;

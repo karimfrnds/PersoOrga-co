@@ -8,6 +8,8 @@ import { todayStr, dateDe, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 
 const PRIORITY_LABEL = { niedrig: "🔵 Niedrig", normal: "Normal", hoch: "🔴 Hoch" };
+const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+const SCHICHT_LABEL = { frueh: "Frühschicht", mittel: "Mittelschicht", spaet: "Spätschicht" };
 const PRIORITY_ORDER = { hoch: 0, normal: 1, niedrig: 2 };
 
 function renderTasksAdmin() {
@@ -31,33 +33,217 @@ function renderTasksAdmin() {
   }
 
   // ---------------------------------------------------------------------
-  // Tägliche Aufgaben-Vorlage
+  // Standard-Aufgaben (Vorlagen)
+  //
+  // Eine Vorlage kann an einen Wochentag, eine Schicht und eine Uhrzeit gebunden sein. Das ist der
+  // Unterschied zu vorher: eine Liste, die jedem Tag gleich mitgegeben wird, kann "donnerstags nimmt die
+  // Mittelschicht die Lieferung an" nicht abbilden – und wer jeden Tag dieselben zehn Punkte sieht, von
+  // denen sieben ihn nichts angehen, hakt irgendwann alles blind ab.
   // ---------------------------------------------------------------------
   function buildTemplateCard() {
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `
-      <h2>Tägliche Aufgaben-Vorlage</h2>
+      <h2>Standard-Aufgaben</h2>
       <p class="muted small">
-        Ein Punkt pro Zeile – wird jedem neuen Tag automatisch mitgegeben, unabhängig von den zugeordneten
-        Einzelaufgaben unten.
+        Werden jedem neuen Tag automatisch mitgegeben – aber nur an den Tagen und in den Schichten, für die
+        sie gelten. Ohne Angabe heißt: jeden Tag, jede Schicht, den ganzen Tag.
       </p>
     `;
-    const textarea = document.createElement("textarea");
-    textarea.rows = 6;
-    textarea.style.fontFamily = "inherit";
-    textarea.style.fontSize = "15px";
-    textarea.style.padding = "10px 12px";
-    textarea.style.borderRadius = "10px";
-    textarea.style.border = "1px solid var(--border)";
-    textarea.placeholder = "z.B.\nKaffeemaschine reinigen\nVitrine auffüllen\nKasse zählen";
-    textarea.value = store.getTaskTemplates().join("\n");
-    textarea.onchange = () => {
-      const items = textarea.value.split("\n").map((s) => s.trim()).filter(Boolean);
-      store.setTaskTemplates(items);
-    };
-    card.appendChild(textarea);
+
+    const vorlagen = store.getTaskTemplates();
+    if (vorlagen.length === 0) {
+      card.innerHTML += `<p class="muted small">Noch keine Standard-Aufgabe angelegt.</p>`;
+    } else {
+      const liste = document.createElement("div");
+      liste.className = "task-list";
+      for (const v of vorlagen) {
+        const row = document.createElement("div");
+        row.className = "task-row";
+        row.innerHTML = `<div class="task-row-text">
+          <span>${v.priority === "hoch" ? "🔴 " : v.priority === "niedrig" ? "🔵 " : ""}<b>${escapeHtml(v.text)}</b></span>
+          <span class="muted small task-row-meta">${escapeHtml(beschreibeVorlage(v))}</span></div>`;
+        const akt = document.createElement("div");
+        akt.className = "employee-actions";
+        const bearbeiten = document.createElement("button");
+        bearbeiten.className = "btn btn-secondary";
+        bearbeiten.textContent = "Ändern";
+        bearbeiten.onclick = () => openTemplateForm(v);
+        const weg = document.createElement("button");
+        weg.className = "btn btn-link";
+        weg.textContent = "✕";
+        weg.onclick = async () => {
+          if (!(await confirmDialog(`Standard-Aufgabe „${v.text}" löschen?`, { danger: true, okLabel: "Löschen" }))) return;
+          store.removeTaskTemplate(v.id);
+          rerender();
+        };
+        akt.append(bearbeiten, weg);
+        row.appendChild(akt);
+        liste.appendChild(row);
+      }
+      card.appendChild(liste);
+    }
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary";
+    addBtn.textContent = "＋ Neue Standard-Aufgabe";
+    addBtn.onclick = () => openTemplateForm(null);
+    card.appendChild(addBtn);
+
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    hinweis.textContent =
+      "Gilt ab dem nächsten Tag, der angelegt wird – der heutige Tag ändert sich dadurch nicht mehr.";
+    card.appendChild(hinweis);
     return card;
+  }
+
+  /** Eine Vorlage in einem Satz: an welchen Tagen, in welcher Schicht, ab wann. */
+  function beschreibeVorlage(v) {
+    const teile = [];
+    teile.push(v.weekdays && v.weekdays.length > 0 ? v.weekdays.map((w) => WOCHENTAGE_KURZ[w]).join(", ") : "jeden Tag");
+    if (v.schicht) teile.push(SCHICHT_LABEL[v.schicht]);
+    if (v.bereich) teile.push(v.bereich === "kueche" ? "Küche" : "Service");
+    if (v.time) teile.push("ab " + v.time + " Uhr");
+    return teile.join(" · ");
+  }
+
+  /** Formular für eine Standard-Aufgabe. Bewusst mit Knöpfen statt Mehrfachauswahl-Liste: das läuft am
+   * iPad mit dem Finger, eine <select multiple> ist dort kaum zu treffen. */
+  function openTemplateForm(vorhanden) {
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const box = document.createElement("div");
+    box.className = "dialog";
+    box.innerHTML = `<h2>${vorhanden ? "Standard-Aufgabe ändern" : "Neue Standard-Aufgabe"}</h2>`;
+
+    const entwurf = {
+      text: vorhanden?.text || "",
+      weekdays: [...(vorhanden?.weekdays || [])],
+      schicht: vorhanden?.schicht || "",
+      bereich: vorhanden?.bereich || "",
+      time: vorhanden?.time || "",
+      priority: vorhanden?.priority || "normal",
+    };
+
+    const feld = (label, el, hinweis) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(el);
+      if (hinweis) {
+        const h = document.createElement("p");
+        h.className = "muted small";
+        h.textContent = hinweis;
+        l.appendChild(h);
+      }
+      return l;
+    };
+
+    const textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.placeholder = "z.B. Lieferung entgegennehmen";
+    textInput.value = entwurf.text;
+    textInput.oninput = () => (entwurf.text = textInput.value);
+    box.appendChild(feld("Aufgabe", textInput));
+
+    // Wochentage als Umschalter
+    const tage = document.createElement("div");
+    tage.className = "handoff-days";
+    for (let i = 0; i < 7; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      const setze = () => {
+        btn.className = "btn " + (entwurf.weekdays.includes(i) ? "btn-primary" : "btn-secondary");
+      };
+      btn.textContent = WOCHENTAGE_KURZ[i];
+      btn.onclick = () => {
+        entwurf.weekdays = entwurf.weekdays.includes(i) ? entwurf.weekdays.filter((x) => x !== i) : [...entwurf.weekdays, i].sort();
+        setze();
+        tageHinweis.textContent = entwurf.weekdays.length === 0 ? "Keiner ausgewählt = jeden Tag." : "";
+      };
+      setze();
+      tage.appendChild(btn);
+    }
+    const tageWrap = feld("An welchen Tagen?", tage);
+    const tageHinweis = document.createElement("p");
+    tageHinweis.className = "muted small";
+    tageHinweis.textContent = entwurf.weekdays.length === 0 ? "Keiner ausgewählt = jeden Tag." : "";
+    tageWrap.appendChild(tageHinweis);
+    box.appendChild(tageWrap);
+
+    const schicht = document.createElement("select");
+    for (const [wert, label] of [["", "Alle Schichten"], ["frueh", "Frühschicht"], ["mittel", "Mittelschicht"], ["spaet", "Spätschicht"]]) {
+      const o = document.createElement("option");
+      o.value = wert;
+      o.textContent = label;
+      schicht.appendChild(o);
+    }
+    schicht.value = entwurf.schicht;
+    schicht.onchange = () => (entwurf.schicht = schicht.value);
+
+    const bereich = document.createElement("select");
+    for (const [wert, label] of [["", "Service und Küche"], ["service", "Nur Service"], ["kueche", "Nur Küche"]]) {
+      const o = document.createElement("option");
+      o.value = wert;
+      o.textContent = label;
+      bereich.appendChild(o);
+    }
+    bereich.value = entwurf.bereich;
+    bereich.onchange = () => (entwurf.bereich = bereich.value);
+
+    const zeit = document.createElement("input");
+    zeit.type = "time";
+    zeit.step = 300;
+    zeit.value = entwurf.time;
+    zeit.oninput = () => (entwurf.time = zeit.value);
+
+    const prio = document.createElement("select");
+    for (const [wert, label] of [["normal", "Normal"], ["hoch", "🔴 Hoch"], ["niedrig", "🔵 Niedrig"]]) {
+      const o = document.createElement("option");
+      o.value = wert;
+      o.textContent = label;
+      prio.appendChild(o);
+    }
+    prio.value = entwurf.priority;
+    prio.onchange = () => (entwurf.priority = prio.value);
+
+    const reihe = document.createElement("div");
+    reihe.className = "res-form-row";
+    reihe.append(feld("Welche Schicht?", schicht), feld("Bereich", bereich));
+    box.appendChild(reihe);
+    box.appendChild(feld("Ab wann fällig?", zeit, "Leer lassen, wenn es den ganzen Tag über erledigt werden kann. Mit Uhrzeit erscheint sie ab dann auf dem iPad-Bildschirm."));
+    box.appendChild(feld("Priorität", prio));
+
+    const fehler = document.createElement("p");
+    fehler.className = "muted small";
+    box.appendChild(fehler);
+
+    const akt = document.createElement("div");
+    akt.className = "dialog-actions";
+    const abbrechen = document.createElement("button");
+    abbrechen.className = "btn btn-secondary";
+    abbrechen.textContent = "Abbrechen";
+    abbrechen.onclick = () => overlay.remove();
+    const speichern = document.createElement("button");
+    speichern.className = "btn btn-primary";
+    speichern.textContent = "Speichern";
+    speichern.onclick = () => {
+      if (!entwurf.text.trim()) {
+        fehler.className = "res-warn small";
+        fehler.textContent = "Bitte eine Aufgabe eintragen.";
+        return;
+      }
+      if (vorhanden) store.updateTaskTemplate(vorhanden.id, entwurf);
+      else store.addTaskTemplate(entwurf);
+      overlay.remove();
+      rerender();
+    };
+    akt.append(abbrechen, speichern);
+    box.appendChild(akt);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    textInput.focus();
   }
 
   // ---------------------------------------------------------------------

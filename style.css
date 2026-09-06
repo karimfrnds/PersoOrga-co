@@ -387,6 +387,32 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .task-row-text { display: flex; flex-direction: column; gap: 2px; }
 .task-row.done .task-row-text > span:first-child { text-decoration: line-through; color: var(--gray); }
 .task-row-meta { font-size: 13px; }
+
+/* Aufgaben mit Uhrzeit. Zwei Stufen und nicht mehr: "jetzt dran" faellt auf, "ueberfaellig" faellt mehr
+   auf. Drei Stufen wuerde niemand mehr auseinanderhalten, und alles rot einfaerben heisst, dass nichts
+   mehr auffaellt. */
+.task-jetzt { color: var(--green); font-weight: 600; }
+.task-spaet { color: var(--red); font-weight: 600; }
+.task-faellig-kopf { color: var(--red) !important; }
+
+/* Der Kasten auf dem Leerlauf-Bildschirm. Gruen, solange es im Rahmen ist, rot ab einer halben Stunde -
+   die Farbe traegt die Information, damit man im Vorbeigehen nicht lesen muss. */
+.kiosk-faellig {
+  width: 100%; max-width: 460px; margin: 0 auto 18px;
+  border: 1px solid var(--green); border-left: 5px solid var(--green);
+  background: var(--green-light); border-radius: 12px; padding: 12px 16px;
+}
+.kiosk-faellig-spaet { border-color: var(--red); border-left-color: var(--red); background: var(--red-light); }
+.kiosk-faellig-kopf {
+  font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--green-dark); margin-bottom: 6px;
+}
+.kiosk-faellig-spaet .kiosk-faellig-kopf { color: var(--red); }
+.kiosk-faellig-zeile {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  font-size: 16px; padding: 3px 0;
+}
+.kiosk-faellig-zeile span { font-size: 13px; color: var(--gray); white-space: nowrap; }
 .task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }

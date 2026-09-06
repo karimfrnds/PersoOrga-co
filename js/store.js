@@ -42,7 +42,13 @@ function defaultData() {
       lohnnebenkostenProzent: { minijob: 30, festangestellt: 21 },
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
-      taskTemplates: [], // Aufgaben-Vorlagen, werden beim Anlegen eines Tages in day.tasks kopiert
+      // Aufgaben-Vorlagen, werden beim Anlegen eines Tages nach day.tasks kopiert – aber nur die, die an
+      // diesem Wochentag gelten. { id, text, weekdays[], schicht, bereich, time, priority }
+      //   weekdays: [] = jeden Tag, sonst 0=Mo..6=So
+      //   schicht:  "" = alle, sonst "frueh" | "mittel" | "spaet"
+      //   bereich:  "" = alle, sonst "service" | "kueche"
+      //   time:     "" = den ganzen Tag, sonst "HH:MM" – ab dann wird die Aufgabe als fällig angezeigt
+      taskTemplates: [],
       // Reservierungen: wie lange ein Tisch pro Reservierung als belegt gilt. Ohne so einen Wert liesse
       // sich gar nicht sagen, ob 18:00 und 19:00 am selben Tisch ein Konflikt sind.
       reservation: {
@@ -92,8 +98,8 @@ function defaultData() {
       // weekdayOverrides: abweichende Zeiten an einzelnen Wochentagen (0=Mo).
       shiftSlots: {
         service: [
-          { id: "frueh1", label: "Service 1", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" } } }, // Mo/Di bis 17:00
-          { id: "frueh2", label: "Service 2", from: "09:30", to: "17:00", allowedWeekdays: [5, 6] }, // nur Sa/So
+          { id: "frueh1", label: "Service 1", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
+          { id: "frueh2", label: "Service 2", from: "09:00", to: "17:00", allowedWeekdays: [5, 6], weekdayOverrides: { 6: { to: "17:30" } } }, // nur Sa/So, So bis 17:30
           { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00" },
           { id: "spaet1", label: "Service Abend 1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
           { id: "spaet2", label: "Service Abend 2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
@@ -217,12 +223,49 @@ function migrateEventSettings(gemischt, vorgabe) {
   return e;
 }
 
+const PRIORITIES = ["niedrig", "normal", "hoch"];
+
+function uhrzeitJetzt() {
+  return new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+function minutenAusUhrzeit(hhmm) {
+  const [h, m] = String(hhmm || "0:0").split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+/** Migration: Vorlagen waren frueher blosse Textzeilen. Sie werden zu Objekten, die zusaetzlich wissen,
+ * an welchem Wochentag, in welcher Schicht und ab welcher Uhrzeit sie gelten. Ohne Angabe heisst das:
+ * jeden Tag, jede Schicht, den ganzen Tag – also genau das Verhalten von vorher. */
+function normalizeTaskTemplate(v) {
+  if (typeof v === "string") {
+    return { id: uid(), text: v.trim(), weekdays: [], schicht: "", bereich: "", time: "", priority: "normal" };
+  }
+  return {
+    id: v?.id || uid(),
+    text: String(v?.text || "").trim(),
+    weekdays: Array.isArray(v?.weekdays) ? v.weekdays.map(Number).filter((n) => n >= 0 && n <= 6) : [],
+    schicht: ["frueh", "mittel", "spaet"].includes(v?.schicht) ? v.schicht : "",
+    bereich: ["service", "kueche"].includes(v?.bereich) ? v.bereich : "",
+    time: /^\d{2}:\d{2}$/.test(v?.time || "") ? v.time : "",
+    priority: PRIORITIES.includes(v?.priority) ? v.priority : "normal",
+  };
+}
+function normalizeTaskTemplates(list) {
+  return (Array.isArray(list) ? list : []).map(normalizeTaskTemplate).filter((t) => t.text);
+}
+
 /** Migration: alte Beta-Checklisten-Vorlagen (fruh/mittel/spaet) in die neue flache taskTemplates-Liste überführen. */
 function migrateTaskTemplates(oldSettings) {
   const legacy = oldSettings?.checklistTemplates;
   if (!legacy) return null;
   const merged = [...(legacy.fruh || []), ...(legacy.mittel || []), ...(legacy.spaet || [])];
   return [...new Set(merged.map((s) => s.trim()).filter(Boolean))];
+}
+
+/** Die Vorlagen, die an diesem Datum gelten. Leere Wochentagsliste heisst: jeden Tag. */
+function templatesForWeekday(dateStr) {
+  const wd = weekdayIndexOfDate(dateStr);
+  return data.settings.taskTemplates.filter((v) => !v.weekdays || v.weekdays.length === 0 || v.weekdays.includes(wd));
 }
 
 function normalizeDay(d) {
@@ -238,7 +281,9 @@ function normalizeDay(d) {
       ...a,
       slotIds: Array.isArray(a.slotIds) ? a.slotIds : [],
     })),
-    tasks: (d.tasks || []).map((t) => ({ priority: "normal", ...t })),
+    // Aufgaben aus der Zeit vor Schicht/Uhrzeit: die Felder ergaenzen, damit nirgends auf undefined
+    // geprueft werden muss. Leer heisst ueberall "gilt fuer alle / den ganzen Tag".
+    tasks: (d.tasks || []).map((t) => ({ priority: "normal", schicht: "", bereich: "", time: "", ...t })),
     // Wareneinsatz des Tages (Summe der verbrauchten Waren zum Einkaufspreis).
     materialkosten: Number(d.materialkosten) || 0,
   };
@@ -256,7 +301,7 @@ function load() {
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
-        taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
+        taskTemplates: normalizeTaskTemplates(parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates),
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
@@ -508,7 +553,21 @@ export const store = {
       shifts: [],
       plannedShifts: [],
       availability: [],
-      tasks: data.settings.taskTemplates.map((text) => ({ id: uid(), text, done: false, doneBy: null, doneAt: null, source: "template", assignedTo: null, priority: "normal" })),
+      // Nur die Vorlagen, die an DIESEM Wochentag gelten. Schicht und Uhrzeit wandern mit an die Aufgabe:
+      // ohne sie waere spaeter nicht mehr erkennbar, wer sie machen soll und ab wann sie ansteht.
+      tasks: templatesForWeekday(dateStr).map((v) => ({
+        id: uid(),
+        text: v.text,
+        done: false,
+        doneBy: null,
+        doneAt: null,
+        source: "template",
+        assignedTo: null,
+        priority: v.priority || "normal",
+        schicht: v.schicht || "",
+        bereich: v.bereich || "",
+        time: v.time || "",
+      })),
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
@@ -2072,9 +2131,94 @@ export const store = {
   getTaskTemplates() {
     return data.settings.taskTemplates;
   },
+  /** Ersetzt die ganze Liste. Nimmt auch blosse Textzeilen an – der Bot und aeltere Aufrufer schicken
+   * teils noch Strings, und daran soll nichts zerbrechen. */
   setTaskTemplates(items) {
-    data.settings.taskTemplates = items;
+    data.settings.taskTemplates = normalizeTaskTemplates(items);
     persist();
+  },
+  addTaskTemplate(v) {
+    const t = normalizeTaskTemplate(v);
+    if (!t.text) return null;
+    data.settings.taskTemplates.push(t);
+    persist();
+    return t;
+  },
+  updateTaskTemplate(id, patch) {
+    const i = data.settings.taskTemplates.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    data.settings.taskTemplates[i] = normalizeTaskTemplate({ ...data.settings.taskTemplates[i], ...patch, id });
+    persist();
+    return data.settings.taskTemplates[i];
+  },
+  removeTaskTemplate(id) {
+    data.settings.taskTemplates = data.settings.taskTemplates.filter((t) => t.id !== id);
+    persist();
+  },
+  /** Welche Vorlagen gelten an diesem Datum? Fuer die Vorschau in der Verwaltung. */
+  getTaskTemplatesForDate(dateStr) {
+    return templatesForWeekday(dateStr);
+  },
+
+  /** Zu welcher Schicht-Gruppe gehoert eine Schicht-ID?
+   *
+   * Die Schichten heissen je nach Bereich anders (frueh1/frueh2 im Service, frueh1/frueh2 in der Kueche),
+   * aber fuer Aufgaben zaehlt nur: Frueh, Mitte oder Spaet. Genau so denkt man im Betrieb auch darueber.
+   */
+  schichtGruppe(slotId) {
+    const id = String(slotId || "");
+    if (id.startsWith("frueh")) return "frueh";
+    if (id.startsWith("mittel")) return "mittel";
+    if (id.startsWith("spaet")) return "spaet";
+    return "";
+  },
+  /** Die Schicht-Gruppe, in der jemand an diesem Tag steckt.
+   *
+   * Zwei Wege, weil der erste oft fehlt: die bestaetigte Schicht aus der Verfuegbarkeit ist die saubere
+   * Antwort, aber nicht jeder Tag wird geplant. Deshalb sonst ueber die Anfangszeit – wer um 8:35
+   * einstempelt, ist in der Frueh, egal ob das jemand eingetragen hat. Lieber aus der Uhrzeit erschlossen
+   * als gar keine Zuordnung: sonst saehe niemand seine Schicht-Aufgaben.
+   */
+  getSchichtGruppeFuer(employeeId, dateStr = todayStr()) {
+    const d = this.getDayByDate(dateStr);
+    if (!d) return "";
+    const verf = (d.availability || []).find((a) => a.employeeId === employeeId);
+    if (verf?.confirmedSlotId) return this.schichtGruppe(verf.confirmedSlotId);
+
+    // Die GEPLANTE Schicht zuerst: sie ist das, was der Chef zugeteilt hat. Die Einstempelzeit ist nur
+    // der Ersatz fuer den Fall, dass niemand geplant hat – wer eine halbe Stunde zu spaet kommt, waere
+    // sonst ploetzlich in einer anderen Schicht.
+    const geplant = (d.plannedShifts || []).find((s) => s.employeeId === employeeId);
+    const laufend = (d.shifts || []).find((s) => s.employeeId === employeeId);
+    const beginn = geplant?.from || laufend?.from || "";
+    if (!beginn) return "";
+    const slots = this.getShiftSlotsForRole(this.getEmployee(employeeId)?.role, dateStr);
+    if (slots.length === 0) return "";
+    // Die Schicht, die zu dieser Zeit LAEUFT: die letzte, die schon begonnen hat. Nicht die zeitlich
+    // naechste – wer um 18:05 kommt, ist in der Spaetschicht, auch wenn die um 15:30 angefangen hat.
+    const sortiert = [...slots].sort((x, y) => minutenAusUhrzeit(x.from) - minutenAusUhrzeit(y.from));
+    let treffer = sortiert[0];
+    for (const slot of sortiert) {
+      if (minutenAusUhrzeit(slot.from) <= minutenAusUhrzeit(beginn)) treffer = slot;
+    }
+    return this.schichtGruppe(treffer.id);
+  },
+  /** Gehoert diese Aufgabe zu dieser Person? Ohne Schicht/Bereich gilt sie fuer alle. */
+  aufgabeGehoertZu(task, { schichtGruppe, rolle }) {
+    if (task.schicht && task.schicht !== schichtGruppe) return false;
+    if (task.bereich && task.bereich !== (rolle === "kueche" ? "kueche" : "service")) return false;
+    return true;
+  },
+  /** Ist eine Aufgabe mit Uhrzeit jetzt dran? Ohne Uhrzeit: immer.
+   * jetzt = "HH:MM", damit sich das ohne Systemuhr testen laesst. */
+  istFaellig(task, jetzt = uhrzeitJetzt()) {
+    if (!task.time) return true;
+    return jetzt >= task.time;
+  },
+  /** Wie lange ist sie ueberfaellig, in Minuten? 0, wenn sie noch nicht dran ist oder keine Zeit hat. */
+  ueberfaelligSeit(task, jetzt = uhrzeitJetzt()) {
+    if (!task.time || jetzt < task.time) return 0;
+    return minutenAusUhrzeit(jetzt) - minutenAusUhrzeit(task.time);
   },
   /** Alle Aufgaben eines Tages erledigt? (leere Liste zählt als erledigt.) */
   allTasksDone(dayId) {
@@ -2207,7 +2351,7 @@ export const store = {
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
-        taskTemplates: parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates,
+        taskTemplates: normalizeTaskTemplates(parsed.settings?.taskTemplates ?? migratedTemplates ?? base.settings.taskTemplates),
         githubBackup: { ...base.settings.githubBackup, ...(parsed.settings?.githubBackup ?? {}) },
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },

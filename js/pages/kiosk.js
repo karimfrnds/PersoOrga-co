@@ -21,6 +21,10 @@ import { alertDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
+
+// Wie die Schicht-Abschnitte in der Aufgabenliste heissen. "Deine Schicht" waere zwar richtig, aber der
+// Name macht klarer, warum eine Aufgabe gerade bei einem selbst auftaucht.
+const SCHICHT_TITEL = { frueh: "Frühschicht", mittel: "Mittelschicht", spaet: "Spätschicht" };
 let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
 
 const WEEKDAY_LABELS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
@@ -78,6 +82,41 @@ function renderKiosk(navigate) {
   // ---------------------------------------------------------------------
   // Leerlauf-Bildschirm: PIN-Feld + wer im Dienst ist
   // ---------------------------------------------------------------------
+  /** Was heute eine Uhrzeit hat, jetzt dran und noch offen ist. null, wenn es nichts gibt – dann soll
+   * dort auch kein leerer Kasten stehen. */
+  function buildFaelligBanner() {
+    const day = store.getDayByDate(todayStr());
+    if (!day) return null;
+    const offen = day.tasks
+      .filter((t) => !t.done && t.time && store.istFaellig(t))
+      .sort((a, b) => a.time.localeCompare(b.time));
+    if (offen.length === 0) return null;
+
+    const spaet = offen.some((t) => store.ueberfaelligSeit(t) >= 30);
+    const box = document.createElement("div");
+    box.className = "kiosk-faellig" + (spaet ? " kiosk-faellig-spaet" : "");
+    const kopf = document.createElement("div");
+    kopf.className = "kiosk-faellig-kopf";
+    kopf.textContent = offen.length === 1 ? "⏰ Jetzt dran" : `⏰ Jetzt dran (${offen.length})`;
+    box.appendChild(kopf);
+    for (const t of offen.slice(0, 4)) {
+      const zeile = document.createElement("div");
+      zeile.className = "kiosk-faellig-zeile";
+      const minuten = store.ueberfaelligSeit(t);
+      zeile.innerHTML =
+        `<b>${escapeHtml(t.text)}</b>` +
+        `<span>${escapeHtml(t.time)} Uhr${minuten >= 30 ? ` · seit ${minuten >= 60 ? Math.floor(minuten / 60) + " Std " : ""}${minuten % 60} Min offen` : ""}</span>`;
+      box.appendChild(zeile);
+    }
+    if (offen.length > 4) {
+      const rest = document.createElement("div");
+      rest.className = "kiosk-faellig-zeile";
+      rest.innerHTML = `<span>und ${offen.length - 4} weitere</span>`;
+      box.appendChild(rest);
+    }
+    return box;
+  }
+
   function buildIdle() {
     if (greetEmployee) return buildGreet();
 
@@ -93,6 +132,12 @@ function renderKiosk(navigate) {
         <h1>PIN eingeben zum Ein-/Ausstempeln</h1>
       </div>
     `;
+
+    // Der Leerlauf-Bildschirm ist der einzige, den den ganzen Tag jeder sieht. Deshalb steht hier, was
+    // gerade dran ist – ganz oben, ohne dass sich jemand einloggen muss. Das ist der billigste Weg,
+    // Teelichter, Pflanzen und die Lieferung nicht zu vergessen.
+    const banner = buildFaelligBanner();
+    if (banner) wrap.appendChild(banner);
 
     wrap.appendChild(buildPinDots(pin));
 
@@ -347,33 +392,54 @@ function renderKiosk(navigate) {
     wrap.appendChild(overviewCard);
 
     // ---- Aufgaben ----
+    //
+    // Sortiert nach dem, was gerade zaehlt: was JETZT dran ist, steht oben und faellt auf. Danach die
+    // eigenen, dann die der eigenen Schicht, dann alles Allgemeine. Aufgaben anderer Schichten stehen
+    // ganz unten und nur zur Kenntnis – sie blockieren das Ausstempeln nicht.
+    const meineGruppe = store.getSchichtGruppeFuer(emp.id);
+    const passt = (t) => store.aufgabeGehoertZu(t, { schichtGruppe: meineGruppe, rolle: emp.role });
+
     const mine = day.tasks.filter((t) => t.assignedTo === emp.id);
-    const general = day.tasks.filter((t) => !t.assignedTo);
+    const offeneFremde = day.tasks.filter((t) => t.assignedTo && t.assignedTo !== emp.id);
+    const allgemein = day.tasks.filter((t) => !t.assignedTo);
+    // Faellig heisst: hat eine Uhrzeit, die erreicht ist, und ist noch offen. Ohne Uhrzeit ist nichts
+    // "faellig" – sonst stuende den ganzen Tag alles im Alarm-Kasten und niemand schaut mehr hin.
+    const faellig = [...mine, ...allgemein.filter(passt)].filter((t) => !t.done && t.time && store.istFaellig(t));
+    const faelligIds = new Set(faellig.map((t) => t.id));
+
+    const meineRest = mine.filter((t) => !faelligIds.has(t.id));
+    const meineSchicht = allgemein.filter((t) => t.schicht && passt(t) && !faelligIds.has(t.id));
+    const fuerAlle = allgemein.filter((t) => !t.schicht && passt(t) && !faelligIds.has(t.id));
+    const andereSchichten = allgemein.filter((t) => !passt(t));
 
     const tasksCard = document.createElement("section");
     tasksCard.className = "card";
     tasksCard.innerHTML = `<h2>📋 Aufgaben heute</h2>`;
-    if (mine.length === 0 && general.length === 0) {
+    if (day.tasks.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
       empty.textContent = "Keine Aufgaben für heute.";
       tasksCard.appendChild(empty);
     } else {
-      if (mine.length > 0) {
+      const abschnitt = (titel, liste, handoff, klasse) => {
+        if (liste.length === 0) return;
         const subHead = document.createElement("p");
-        subHead.className = "muted small";
+        subHead.className = "muted small" + (klasse ? " " + klasse : "");
         subHead.style.margin = "0";
-        subHead.innerHTML = "<b>Deine Aufgaben</b>";
+        subHead.innerHTML = `<b>${titel}</b>`;
         tasksCard.appendChild(subHead);
-        tasksCard.appendChild(buildTaskList(day, mine, emp, true));
-      }
-      if (general.length > 0) {
-        const subHead = document.createElement("p");
-        subHead.className = "muted small";
-        subHead.style.margin = "0";
-        subHead.innerHTML = "<b>Allgemeine Aufgaben</b>";
-        tasksCard.appendChild(subHead);
-        tasksCard.appendChild(buildTaskList(day, general, emp, false));
+        tasksCard.appendChild(buildTaskList(day, liste, emp, handoff));
+      };
+      abschnitt("⏰ Jetzt dran", faellig, true, "task-faellig-kopf");
+      abschnitt("Deine Aufgaben", meineRest, true);
+      abschnitt(SCHICHT_TITEL[meineGruppe] || "Deine Schicht", meineSchicht, false);
+      abschnitt("Für alle", fuerAlle, false);
+      abschnitt("Andere Schichten", andereSchichten, false);
+      if (offeneFremde.some((t) => !t.done)) {
+        const rest = document.createElement("p");
+        rest.className = "muted small";
+        rest.textContent = `${offeneFremde.filter((t) => !t.done).length} weitere Aufgaben sind anderen zugeordnet.`;
+        tasksCard.appendChild(rest);
       }
     }
     wrap.appendChild(tasksCard);
@@ -431,7 +497,9 @@ function renderKiosk(navigate) {
     }
 
     // ---- Ausstempeln ----
-    const openMine = mine.filter((t) => !t.done);
+    // Blockieren duerfen nur die eigenen und die der eigenen Schicht – eine Aufgabe der Spaetschicht
+    // darf die Frueh nicht festhalten.
+    const openMine = [...mine, ...meineSchicht, ...faellig.filter((t) => !t.assignedTo)].filter((t) => !t.done);
     const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
     const wouldBeLast = otherOpenShifts.length === 0;
     const allDone = store.allTasksDone(day.id);
@@ -726,6 +794,20 @@ function renderKiosk(navigate) {
       const span = document.createElement("span");
       span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
       textWrap.appendChild(span);
+      // Bei einer Aufgabe mit Uhrzeit muss man auf einen Blick sehen, ob sie noch wartet, gerade dran ist
+      // oder schon laenger liegen geblieben ist. Ohne das waere die Uhrzeit nur Zierde.
+      if (task.time && !task.done) {
+        const zeit = document.createElement("span");
+        const minuten = store.ueberfaelligSeit(task);
+        const spaet = minuten >= 30;
+        zeit.className = "task-row-meta small " + (store.istFaellig(task) ? (spaet ? "task-spaet" : "task-jetzt") : "muted");
+        zeit.textContent = !store.istFaellig(task)
+          ? `⏰ ab ${task.time} Uhr`
+          : spaet
+            ? `⏰ seit ${minuten >= 60 ? Math.floor(minuten / 60) + " Std " : ""}${minuten % 60} Min überfällig`
+            : `⏰ jetzt dran (${task.time} Uhr)`;
+        textWrap.appendChild(zeit);
+      }
       if (task.handoffFrom) {
         const tag = document.createElement("span");
         tag.className = "muted small task-row-meta";

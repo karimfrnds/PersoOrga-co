@@ -667,6 +667,34 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedReservationIds: [...appliedReservationIds].slice(-500) });
   }
 
+  // Standard-Aufgaben, die am Laptop geaendert wurden. Der iPad ist massgeblich: er wendet sie an und
+  // schickt weiter unten seinen eigenen Stand zurueck, der die Vorschau des Workers ersetzt.
+  const remoteTemplateChanges = Array.isArray(remote.taskTemplateChanges) ? remote.taskTemplateChanges : [];
+  const appliedTemplateIds = new Set(cfg.appliedTemplateChangeIds || []);
+  let newTemplateIds = false;
+  for (const c of remoteTemplateChanges) {
+    if (!c.id || appliedTemplateIds.has(c.id)) continue;
+    const felder = {
+      text: c.text,
+      weekdays: c.weekdays,
+      schicht: c.schicht,
+      bereich: c.bereich,
+      time: c.time,
+      priority: c.priority,
+    };
+    if (c.kind === "create") store.addTaskTemplate(felder);
+    else if (c.kind === "update") {
+      if (!store.updateTaskTemplate(c.templateId, felder)) {
+        syncWarnings.push(`Standard-Aufgabe "${c.text}": gibt es hier nicht mehr, Änderung verworfen.`);
+      }
+    } else if (c.kind === "delete") store.removeTaskTemplate(c.templateId);
+    appliedTemplateIds.add(c.id);
+    newTemplateIds = true;
+  }
+  if (newTemplateIds) {
+    store.updateTaskInboxConfig({ appliedTemplateChangeIds: [...appliedTemplateIds].slice(-300) });
+  }
+
   // Anmeldungen zum Bingo-Abend von der Website. Die übernommenen IDs gehen beim Push zurück an den
   // Worker, damit er sie aus seiner Warteschlange wirft – sonst zählte er sie zusätzlich zu der Zahl,
   // die von hier kommt, und der Abend wäre voll, obwohl noch Plätze frei sind.
@@ -771,6 +799,9 @@ async function performTaskSync() {
       text: rt.text,
       assignedTo: match ? match.id : null,
       priority: ["niedrig", "normal", "hoch"].includes(rt.priority) ? rt.priority : "normal",
+      schicht: rt.schicht || "",
+      bereich: rt.bereich || "",
+      time: rt.time || "",
     });
     if (rt.done && t) store.setDayTaskDone(day.id, t.id, true, "Telegram");
     applied++;
@@ -804,6 +835,9 @@ async function performTaskSync() {
     assignedToName: r.assignedTo ? store.getEmployee(r.assignedTo)?.name || null : null,
     priority: r.priority,
     done: r.done,
+    schicht: r.schicht || "",
+    bereich: r.bereich || "",
+    time: r.time || "",
   }));
   const shiftsInService = store.getOpenShiftsToday().map((s) => ({
     name: store.getEmployee(s.employeeId)?.name || "?",
@@ -924,6 +958,7 @@ async function performTaskSync() {
     events,
     eventConfig,
     eventSignupsApplied: geradeUebernommen,
+    taskTemplates: store.getTaskTemplates(),
   });
 
   store.updateTaskInboxConfig({

@@ -112,6 +112,8 @@ const stockItemAction = (body) => request("/admin/stock-item", { method: "POST",
 const employeeAction = (body) => request("/admin/employee", { method: "POST", body });
 const sendMessage = (body) => request("/admin/message", { method: "POST", body });
 const recipeAction = (body) => request("/admin/recipe", { method: "POST", body });
+const taskAction = (body) => request("/admin/task", { method: "POST", body });
+const taskTemplateAction = (body) => request("/admin/task-template", { method: "POST", body });
 
 export {
   getSession,
@@ -126,6 +128,8 @@ export {
   uploadDocument,
   stockItemAction,
   recipeAction,
+  taskAction,
+  taskTemplateAction,
   employeeAction,
   sendMessage,
 };

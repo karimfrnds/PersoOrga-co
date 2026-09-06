@@ -2250,10 +2250,10 @@ export const store = {
   /** Zentrale Aufgaben-Erstellung – alle anderen addXDayTask-Methoden sind dünne Wrapper darum.
    * Optionales `id` (z.B. vom Cloud-Abgleich vorgegeben), damit beide Seiten dieselbe ID für dieselbe
    * Aufgabe verwenden. */
-  addTask(dayId, { id, text, assignedTo = null, priority = "normal", source = "adhoc", addedBy = null }) {
+  addTask(dayId, { id, text, assignedTo = null, priority = "normal", source = "adhoc", addedBy = null, schicht = "", bereich = "", time = "" }) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const t = { id: id || uid(), text, done: false, doneBy: null, doneAt: null, source, addedBy, assignedTo, priority };
+    const t = { id: id || uid(), text, done: false, doneBy: null, doneAt: null, source, addedBy, assignedTo, priority, schicht, bereich, time };
     d.tasks.push(t);
     persist();
     return t;
@@ -2262,12 +2262,12 @@ export const store = {
     return this.addTask(dayId, { text, addedBy: employeeName || null, source: "adhoc" });
   },
   /** Aufgabe aus dem Cloud-Abgleich (taskSync.js) – optional einem Mitarbeiter/einer Priorität zugeordnet. */
-  addRemoteDayTask(dayId, { id, text, assignedTo = null, priority = "normal", addedBy = "Telegram" }) {
-    return this.addTask(dayId, { id, text, assignedTo, priority, addedBy, source: "remote" });
+  addRemoteDayTask(dayId, { id, text, assignedTo = null, priority = "normal", addedBy = "Telegram", schicht = "", bereich = "", time = "" }) {
+    return this.addTask(dayId, { id, text, assignedTo, priority, addedBy, source: "remote", schicht, bereich, time });
   },
   /** Vom Admin manuell angelegte Aufgabe (Admin → Aufgaben). */
-  addAdminTask(dayId, { text, assignedTo = null, priority = "normal" }) {
-    return this.addTask(dayId, { text, assignedTo, priority, addedBy: "Admin", source: "admin" });
+  addAdminTask(dayId, { text, assignedTo = null, priority = "normal", schicht = "", bereich = "", time = "" }) {
+    return this.addTask(dayId, { text, assignedTo, priority, addedBy: "Admin", source: "admin", schicht, bereich, time });
   },
   /** Bearbeiten (Text/Zuordnung/Priorität) einer bestehenden Aufgabe, unabhängig von der Quelle. */
   updateTaskFields(dayId, taskId, patch) {

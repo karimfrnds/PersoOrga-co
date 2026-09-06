@@ -221,6 +221,9 @@ const EMPTY_STATE = {
   // Reservierungen MIT Namen fuer die Bot-Abfrage (der iPad schickt ein begrenztes Fenster).
   // [{id, code, date, time, name, phone, guests, area, note, status, source, tische[]}]
   reservationDetails: [],
+  // Standard-Aufgaben vom iPad und die Aenderungswuensche vom Laptop.
+  taskTemplates: [],
+  taskTemplateChanges: [],
   // Bingo-Abend: Termine vom iPad und die Anmeldungen, die der iPad wieder abholt.
   // events:      [{id, date, time, price, capacity, note, angemeldet}]
   // eventConfig: {title, intro, included[], hinweis, onlineEnabled}
@@ -272,6 +275,8 @@ async function getState(env) {
       reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
       reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
       reservationDetails: Array.isArray(parsed.reservationDetails) ? parsed.reservationDetails : [],
+      taskTemplates: Array.isArray(parsed.taskTemplates) ? parsed.taskTemplates : [],
+      taskTemplateChanges: Array.isArray(parsed.taskTemplateChanges) ? parsed.taskTemplateChanges : [],
       recipeImports: Array.isArray(parsed.recipeImports) ? parsed.recipeImports : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
       reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
@@ -3029,6 +3034,126 @@ function rezeptVorschau(recipes, e) {
 
 /** Mitarbeiter anlegen/bearbeiten/deaktivieren – vom Laptop aus. Der PIN ist bewusst NICHT dabei: der wird
  * weiterhin nur am iPad vergeben, damit kein PIN im Klartext über das Netz geht oder hier zwischenliegt. */
+/** Aufgaben vom Laptop: anlegen, abhaken, aendern, loeschen.
+ *
+ * Schreibt direkt in state.tasks – dieselbe Liste, die auch der Bot fuellt und die der iPad beim naechsten
+ * Abgleich uebernimmt. Deshalb braucht es hier keine eigene Warteschlange: die Aufgabenliste IST schon
+ * beidseitig abgeglichen, anders als Vorraete oder Rezepte.
+ */
+async function handleAdminTask(request, env) {
+  const { session, error } = await requireSession(request, env, "boss");
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete", "toggle"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !String(body?.taskId || "").trim()) return jsonResponse({ error: "Aufgabe fehlt." }, 400);
+
+  const state = await getState(env);
+  const heute = todayBerlin();
+  let tasks = Array.isArray(state.tasks) ? [...state.tasks] : [];
+
+  if (kind === "create") {
+    const text = String(body?.text || "").trim();
+    if (!text) return jsonResponse({ error: "Bitte einen Aufgabentext angeben." }, 400);
+    tasks.push({
+      id: crypto.randomUUID(),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : heute,
+      text,
+      assignedToName: String(body?.assignedToName || "").trim() || null,
+      priority: PRIORITIES.includes(body?.priority) ? body.priority : "normal",
+      done: false,
+      schicht: ["frueh", "mittel", "spaet"].includes(body?.schicht) ? body.schicht : "",
+      bereich: ["service", "kueche"].includes(body?.bereich) ? body.bereich : "",
+      time: /^\d{2}:\d{2}$/.test(body?.time || "") ? body.time : "",
+    });
+  } else if (kind === "delete") {
+    tasks = tasks.filter((t) => t.id !== body.taskId);
+  } else {
+    tasks = tasks.map((t) => {
+      if (t.id !== body.taskId) return t;
+      if (kind === "toggle") return { ...t, done: body?.done !== undefined ? !!body.done : !t.done };
+      const neu = { ...t };
+      if (body.text !== undefined) neu.text = String(body.text).trim() || neu.text;
+      if (body.date !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) neu.date = body.date;
+      if (body.assignedToName !== undefined) neu.assignedToName = String(body.assignedToName).trim() || null;
+      if (body.priority !== undefined && PRIORITIES.includes(body.priority)) neu.priority = body.priority;
+      if (body.schicht !== undefined) neu.schicht = ["frueh", "mittel", "spaet"].includes(body.schicht) ? body.schicht : "";
+      if (body.bereich !== undefined) neu.bereich = ["service", "kueche"].includes(body.bereich) ? body.bereich : "";
+      if (body.time !== undefined) neu.time = /^\d{2}:\d{2}$/.test(body.time) ? body.time : "";
+      return neu;
+    });
+  }
+
+  await patchState(env, { tasks });
+  return jsonResponse({ ok: true, count: tasks.length, by: session.employeeName || "Chef" });
+}
+
+/** Standard-Aufgaben (Vorlagen) vom Laptop.
+ *
+ * Die Vorlagen gehoeren dem iPad – er legt daraus die Tage an. Deshalb hier das bewaehrte Muster:
+ * der Laptop reicht einen Wunsch in eine Warteschlange ein, der iPad arbeitet sie ab und schickt seinen
+ * massgeblichen Stand zurueck. Damit die Liste am Laptop nicht bis zum naechsten Abgleich unveraendert
+ * dasteht, wird die Aenderung zusaetzlich sofort auf der Worker-Kopie nachgebildet.
+ */
+async function handleAdminTaskTemplate(request, env) {
+  const { error } = await requireSession(request, env, "boss");
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !String(body?.templateId || "").trim()) return jsonResponse({ error: "Vorlage fehlt." }, 400);
+  if (kind !== "delete" && !String(body?.text || "").trim()) return jsonResponse({ error: "Bitte einen Aufgabentext angeben." }, 400);
+
+  const eintrag = {
+    id: crypto.randomUUID(),
+    kind,
+    templateId: String(body?.templateId || "") || null,
+    text: String(body?.text || "").trim(),
+    weekdays: Array.isArray(body?.weekdays) ? body.weekdays.map(Number).filter((n) => n >= 0 && n <= 6) : [],
+    schicht: ["frueh", "mittel", "spaet"].includes(body?.schicht) ? body.schicht : "",
+    bereich: ["service", "kueche"].includes(body?.bereich) ? body.bereich : "",
+    time: /^\d{2}:\d{2}$/.test(body?.time || "") ? body.time : "",
+    priority: PRIORITIES.includes(body?.priority) ? body.priority : "normal",
+  };
+  const state = await getState(env);
+  await patchState(env, {
+    taskTemplateChanges: [...(state.taskTemplateChanges || []), eintrag].slice(-100),
+    taskTemplates: vorlagenVorschau(state.taskTemplates || [], eintrag),
+  });
+  return jsonResponse({ ok: true });
+}
+
+/** Bildet eine Vorlagen-Aenderung auf der Worker-Kopie nach, damit sie am Laptop sofort sichtbar ist. */
+function vorlagenVorschau(vorlagen, e) {
+  if (e.kind === "delete") return vorlagen.filter((v) => v.id !== e.templateId);
+  const felder = {
+    text: e.text,
+    weekdays: e.weekdays,
+    schicht: e.schicht,
+    bereich: e.bereich,
+    time: e.time,
+    priority: e.priority,
+  };
+  if (e.kind === "update") return vorlagen.map((v) => (v.id === e.templateId ? { ...v, ...felder } : v));
+  // Vorlaeufige ID: der iPad vergibt beim Uebernehmen eine eigene und schickt sie mit dem naechsten
+  // Abgleich zurueck. Bis dahin steht die Vorlage schon in der Liste.
+  return [...vorlagen, { id: "vorlaeufig-" + e.id, ...felder }];
+}
+
 async function handleAdminEmployee(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
   const guard = await requireSession(request, env, "boss");
@@ -4080,6 +4205,8 @@ async function handleState(request, env) {
     if (Array.isArray(body.tables)) patch.tables = body.tables;
     if (Array.isArray(body.reservationSlots)) patch.reservationSlots = body.reservationSlots;
     if (Array.isArray(body.reservationDetails)) patch.reservationDetails = body.reservationDetails;
+    // Standard-Aufgaben: der iPad ist massgeblich und schickt nach dem Abarbeiten seinen Stand zurueck.
+    if (Array.isArray(body.taskTemplates)) patch.taskTemplates = body.taskTemplates;
     if (body.reservationConfig && typeof body.reservationConfig === "object") patch.reservationConfig = body.reservationConfig;
     if (Array.isArray(body.produktStatistik)) patch.produktStatistik = body.produktStatistik;
     if (Array.isArray(body.reservationStats)) patch.reservationStats = body.reservationStats;
@@ -4410,6 +4537,8 @@ export default {
       if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);
+      if (url.pathname === "/admin/task") return handleAdminTask(request, env);
+      if (url.pathname === "/admin/task-template") return handleAdminTaskTemplate(request, env);
       if (url.pathname === "/admin/recipe") return handleAdminRecipe(request, env);
       if (url.pathname === "/admin/employee") return handleAdminEmployee(request, env);
       if (url.pathname === "/admin/message") return handleAdminMessage(request, env);

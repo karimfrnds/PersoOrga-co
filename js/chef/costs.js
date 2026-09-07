@@ -230,31 +230,29 @@ function renderCosts(state) {
     return card;
   }
 
-  /** Wareneinsatz und Prime Cost.
+  /** Wareneinsatz und Prime Cost – nur noch fuer Tage, an denen er frueher gebucht wurde.
    *
-   * Prime Cost ist Wareneinsatz plus Personal – in der Gastronomie die eine Zahl, auf die geschaut wird,
-   * weil das die beiden Kostenbloecke sind, die man taeglich beeinflussen kann. Miete und Versicherung
-   * stehen ohnehin fest.
-   *
-   * Gerechnet wird nur ueber Tage, an denen der Wareneinsatz auch wirklich erfasst ist: ein Tag ohne
-   * hochgeladenen Kassenbericht haette 0 EUR Wareneinsatz und wuerde die Quote schoenrechnen.
+   * Prime Cost ist Wareneinsatz plus Personal, in der Gastronomie die eine Zahl, auf die geschaut wird.
+   * Die Grundlage dafuer war die Rechnung "verkauftes Rezept mal Einkaufspreis". Die gibt es nicht mehr:
+   * sie stimmte nur bei lueckenloser Pflege, und ohne die stand dort eine zu niedrige Zahl – die
+   * gefaehrlichste Art von Fehler in dieser Ansicht. Alte Tage behalten ihren Wert, neue bekommen keinen.
    */
   function buildWareneinsatz(rows, umsatz, lohnGesamt) {
     const box = document.createElement("div");
     const mitWaren = rows.filter((r) => Number(r.materialkosten) > 0);
-    const waren = round2(mitWaren.reduce((s, r) => s + Number(r.materialkosten), 0));
-
     if (mitWaren.length === 0) {
       const hinweis = document.createElement("p");
       hinweis.className = "muted small";
       hinweis.innerHTML =
-        `<b>Wareneinsatz: noch keine Daten.</b> Er entsteht automatisch, sobald Kassenberichte hochgeladen
-         sind, bei den Artikeln Einkaufspreise stehen und die verkauften Produkte einem Rezept oder Artikel
-         zugeordnet sind.`;
+        `<b>Wareneinsatz wird nicht mehr berechnet.</b> Er kam aus den hinterlegten Rezepten und
+         Einkaufspreisen – eine Rechnung, die nur bei lückenloser Pflege gestimmt hat. Der Bestand ist
+         jetzt eine reine Bestellliste. Wenn du den Wareneinsatz weiter sehen willst, wäre der ehrliche
+         Weg, die Rechnungsbeträge der Lieferanten einzutragen.`;
       box.appendChild(hinweis);
       return box;
     }
 
+    const waren = round2(mitWaren.reduce((s, r) => s + Number(r.materialkosten), 0));
     // Fuer die Quote nur die Tage nehmen, die auch Wareneinsatz haben – sonst vergleicht man den
     // Wareneinsatz von 12 Tagen mit dem Umsatz von 30.
     const umsatzMitWaren = round2(mitWaren.reduce((s, r) => s + (Number(r.umsatzGesamt) || 0), 0));
@@ -271,22 +269,12 @@ function renderCosts(state) {
       <div class="summary-line"><span>Rohertrag</span><span>${euro(round2(umsatzMitWaren - waren))}</span></div>
       <div class="summary-line"><span><b>Prime Cost</b> (Ware + Personal)</span><span><b>${euro(primeCost)}</b> (${prozent(primeQuote)})</span></div>`;
 
-    const einordnung = document.createElement("p");
-    einordnung.className = primeQuote > 70 ? "callout callout-warn" : "callout";
-    einordnung.innerHTML =
-      primeQuote > 70
-        ? `<b>Prime Cost bei ${prozent(primeQuote)}.</b> Über etwa 70 % bleibt wenig für Miete, Energie und alles andere. Die beiden Stellschrauben sind Einkauf und Personaleinsatz.`
-        : `<b>Prime Cost bei ${prozent(primeQuote)}.</b> Ware und Personal zusammen – die beiden Blöcke, die sich täglich beeinflussen lassen. Unter etwa 70 % gilt als gesund.`;
-    box.appendChild(einordnung);
-
-    if (mitWaren.length < rows.length) {
-      const hinweis = document.createElement("p");
-      hinweis.className = "muted small";
-      hinweis.textContent =
-        `Wareneinsatz und die beiden Quoten beruhen auf ${mitWaren.length} von ${rows.length} Tagen – nur auf denen ` +
-        `ist er erfasst. Die anderen sind bewusst nicht mitgerechnet, sonst sähe die Quote besser aus, als sie ist.`;
-      box.appendChild(hinweis);
-    }
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    hinweis.textContent =
+      `Beruht auf ${mitWaren.length} von ${rows.length} Tagen aus der Zeit, als der Wareneinsatz noch aus ` +
+      `Rezepten gerechnet wurde. Für neue Tage entsteht kein Wert mehr.`;
+    box.appendChild(hinweis);
     return box;
   }
 

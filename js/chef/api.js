@@ -96,8 +96,7 @@ const publishWeek = (weekStart, action) => request("/admin/publish-week", { meth
 const recordDelivery = (itemName, quantity, unit, date) =>
   request("/admin/stock", { method: "POST", body: { kind: "delivery", itemName, quantity, unit, date } });
 
-/** Beleg (PDF/Foto) auswerten lassen. Die Datei wird als Base64 geschickt – der Worker gibt sie an die
- * Bilderkennung weiter und schreibt das Erkannte in dieselbe Warteschlange wie beim Telegram-Upload. */
+/** Beleg (PDF/Foto) auswerten lassen – heute nur noch der SumUp-Verkaufsbericht für die Statistik. */
 async function uploadDocument(file) {
   const dataBase64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -111,7 +110,6 @@ async function uploadDocument(file) {
 const stockItemAction = (body) => request("/admin/stock-item", { method: "POST", body });
 const employeeAction = (body) => request("/admin/employee", { method: "POST", body });
 const sendMessage = (body) => request("/admin/message", { method: "POST", body });
-const recipeAction = (body) => request("/admin/recipe", { method: "POST", body });
 const taskAction = (body) => request("/admin/task", { method: "POST", body });
 const taskTemplateAction = (body) => request("/admin/task-template", { method: "POST", body });
 
@@ -127,7 +125,6 @@ export {
   recordDelivery,
   uploadDocument,
   stockItemAction,
-  recipeAction,
   taskAction,
   taskTemplateAction,
   employeeAction,

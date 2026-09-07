@@ -43,28 +43,35 @@ function renderBestellung(state, { onChanged }) {
     const frag = document.createElement("div");
     frag.innerHTML = `
       <h1>📦 Bestellung</h1>
-      <p class="muted">Was das Team am iPad als knapp oder leer gemeldet hat – sortiert nach Lieferant.
-      Keine Mengen, keine Inventur: nur, was raus muss.</p>`;
+      <p class="muted">Die Standardbestellung nach Lieferant – was jede Woche ohnehin rausgeht, steht
+      schon da. Was das Team am iPad als knapp oder leer gemeldet hat, steht oben und ist farbig.</p>`;
     frag.appendChild(buildListe());
     frag.appendChild(buildArtikelverwaltung());
     return frag;
   }
 
-  /** Dieselbe Gruppierung wie im Store (getBestellliste), hier auf den Daten, die der Worker liefert. */
+  /** Dieselbe Gruppierung wie im Store (getBestellliste), hier auf den Daten, die der Worker liefert.
+   *
+   * Auf der Liste steht zweierlei: die STANDARDBESTELLUNG (alles mit einer Wochenmenge – das, was
+   * ohnehin jede Woche rausgeht) und die MELDUNGEN aus dem Betrieb (knapp/leer). Das erste ist die
+   * Regel und steht schon fertig da, das zweite die Abweichung und faellt auf. */
   function bestellliste() {
-    const offen = alleArtikel().filter((s) => ["knapp", "leer", "bestellt"].includes(s.status));
+    const offen = alleArtikel().filter(
+      (s) => ["knapp", "leer", "bestellt"].includes(s.status) || Number(s.wochenmenge) > 0
+    );
     const gruppen = new Map();
     for (const s of offen) {
       const key = s.lieferant || "";
       if (!gruppen.has(key)) gruppen.set(key, []);
       gruppen.get(key).push(s);
     }
-    const RANG = { leer: 0, knapp: 1, bestellt: 2 };
+    const RANG = { leer: 0, knapp: 1, ok: 2, bestellt: 3 };
     return [...gruppen.entries()]
       .map(([lieferant, artikel]) => ({
         lieferant,
-        artikel: artikel.sort((a, b) => RANG[a.status] - RANG[b.status] || a.name.localeCompare(b.name)),
+        artikel: artikel.sort((a, b) => (RANG[a.status] ?? 2) - (RANG[b.status] ?? 2) || a.name.localeCompare(b.name)),
         dringend: artikel.filter((a) => a.status === "leer").length,
+        gemeldet: artikel.filter((a) => ["knapp", "leer"].includes(a.status)).length,
         offen: artikel.filter((a) => a.status !== "bestellt").length,
       }))
       // Ohne Lieferant immer ganz nach unten – das ist keine Bestellung, sondern eine Zuordnung, die
@@ -91,11 +98,12 @@ function renderBestellung(state, { onChanged }) {
       card.appendChild(status);
       return card;
     }
+    const gemeldet = gruppen.reduce((n, g) => n + g.gemeldet, 0);
     const kopf = document.createElement("p");
     kopf.className = "muted small";
-    kopf.textContent = `${gesamtOffen} ${gesamtOffen === 1 ? "Artikel" : "Artikel"} offen bei ${gruppen.length} ${
-      gruppen.length === 1 ? "Lieferant" : "Lieferanten"
-    }.`;
+    kopf.textContent =
+      `${gesamtOffen} Artikel offen bei ${gruppen.length} ${gruppen.length === 1 ? "Lieferant" : "Lieferanten"}` +
+      (gemeldet > 0 ? ` · davon ${gemeldet} vom Team gemeldet` : " · alles Standardbestellung");
     card.appendChild(kopf);
 
     for (const g of gruppen) {
@@ -112,13 +120,25 @@ function renderBestellung(state, { onChanged }) {
         const row = document.createElement("div");
         row.className = "task-row";
         const zustand = STATUS[s.status] || STATUS.ok;
+        // Die vorgeschlagene Menge: so viel geht in einer normalen Woche weg. Ist der Artikel als leer
+        // gemeldet, war die Woche offenbar staerker – dann eine Bestellmenge mehr.
+        const woche = Number(s.wochenmenge) || 0;
+        const vorschlag = woche > 0 ? (s.status === "leer" ? woche + 1 : woche) : null;
+        const mengeText = vorschlag
+          ? `${String(vorschlag).replace(".", ",")} × ${s.bestellmenge || "Bestellmenge fehlt"}`
+          : s.bestellmenge || null;
         const meta = [
-          s.bestellmenge || null,
           s.bereich === "bar" ? "Bar" : "Küche",
+          woche > 0 ? `normal ${String(woche).replace(".", ",")}/Woche` : "keine Standardmenge",
           s.lastOrderedAt ? "zuletzt bestellt " + seit(s.lastOrderedAt) : null,
         ].filter(Boolean);
         row.innerHTML = `<div class="task-row-text">
-          <span><b>${escapeHtml(s.name)}</b> <span class="${zustand.klasse}">· ${escapeHtml(zustand.label)}</span></span>
+          <span><b>${escapeHtml(s.name)}</b>${
+            ["knapp", "leer", "bestellt"].includes(s.status)
+              ? ` <span class="${zustand.klasse}">· ${escapeHtml(zustand.label)}</span>`
+              : ""
+          }</span>
+          <span><b>${escapeHtml(mengeText || "–")}</b></span>
           <span class="muted small task-row-meta">${escapeHtml(meta.join(" · "))}</span></div>`;
 
         const akt = document.createElement("div");
@@ -185,13 +205,14 @@ function renderBestellung(state, { onChanged }) {
       scroll.style.overflowX = "auto";
       const tabelle = document.createElement("table");
       tabelle.className = "calc-table";
-      tabelle.innerHTML = `<thead><tr><th>Artikel</th><th>Lieferant</th><th>Bestellmenge</th><th>Bereich</th><th>Zustand</th><th></th></tr></thead>`;
+      tabelle.innerHTML = `<thead><tr><th>Artikel</th><th>Lieferant</th><th>Bestellmenge</th><th>Pro Woche</th><th>Bereich</th><th>Zustand</th><th></th></tr></thead>`;
       const tbody = document.createElement("tbody");
       for (const s of artikel) {
         const tr = document.createElement("tr");
         tr.innerHTML = `<td><b>${escapeHtml(s.name)}</b></td>
           <td>${s.lieferant ? escapeHtml(s.lieferant) : "<span class='muted'>–</span>"}</td>
           <td>${s.bestellmenge ? escapeHtml(s.bestellmenge) : "<span class='muted'>–</span>"}</td>
+          <td>${Number(s.wochenmenge) > 0 ? escapeHtml(String(s.wochenmenge).replace(".", ",")) : "<span class='muted'>–</span>"}</td>
           <td>${s.bereich === "bar" ? "Bar" : "Küche"}</td>
           <td>${escapeHtml((STATUS[s.status] || STATUS.ok).label)}</td>`;
         const td = document.createElement("td");
@@ -215,7 +236,7 @@ function renderBestellung(state, { onChanged }) {
         if (bearbeite === s.id) {
           const formZeile = document.createElement("tr");
           const zelle = document.createElement("td");
-          zelle.colSpan = 6;
+          zelle.colSpan = 7;
           zelle.appendChild(buildArtikelForm(s, status));
           formZeile.appendChild(zelle);
           tbody.appendChild(formZeile);
@@ -278,6 +299,12 @@ function renderBestellung(state, { onChanged }) {
     menge.placeholder = "z.B. 1 Kasten";
     menge.value = vorhanden?.bestellmenge || "";
 
+    const woche = document.createElement("input");
+    woche.type = "number";
+    woche.min = "0";
+    woche.step = "0.5";
+    woche.value = vorhanden ? String(vorhanden.wochenmenge || 0) : "0";
+
     const bereich = document.createElement("select");
     for (const [v, label] of [["kueche", "Küche"], ["bar", "Bar"]]) {
       const o = document.createElement("option");
@@ -289,8 +316,19 @@ function renderBestellung(state, { onChanged }) {
 
     const reihe = document.createElement("div");
     reihe.className = "res-form-row";
-    reihe.append(feld("Artikel", name), feld("Lieferant", lieferant), feld("Bestellmenge", menge), feld("Bereich", bereich));
+    reihe.append(
+      feld("Artikel", name),
+      feld("Lieferant", lieferant),
+      feld("Bestellmenge", menge),
+      feld("Pro Woche", woche),
+      feld("Bereich", bereich)
+    );
     box.appendChild(reihe);
+    const wocheHinweis = document.createElement("p");
+    wocheHinweis.className = "muted small";
+    wocheHinweis.textContent =
+      "Pro Woche = wie viele Bestellmengen in einer normalen Woche weggehen. Daraus entsteht die Standardbestellung. 0 heißt: kommt nur auf die Liste, wenn jemand meldet.";
+    box.appendChild(wocheHinweis);
 
     const akt = document.createElement("div");
     akt.className = "employee-actions";
@@ -307,6 +345,7 @@ function renderBestellung(state, { onChanged }) {
         name: name.value,
         lieferant: lieferant.value,
         bestellmenge: menge.value,
+        wochenmenge: woche.value,
         bereich: bereich.value,
       };
       bearbeite = null;

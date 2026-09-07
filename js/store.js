@@ -4,8 +4,6 @@
 
 import { todayStr, dateDe } from "./format.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
-// Einheiten liegen in einem eigenen Modul, weil der Laptop dieselbe Umrechnung braucht (js/einheiten.js).
-import { normalisiereEinheit, rechneEinheitUm, umrechnungFuer } from "./einheiten.js";
 
 const STORAGE_KEY = "cafeapp_v1";
 
@@ -17,9 +15,6 @@ function round2(n) {
 /** Rundung für EINZELPREISE. Zwei Nachkommastellen reichen dafür nicht: Milch kostet rund 0,001 €/ml
  * und Mehl 0,0008 €/g – auf Cent gerundet wären beide schlicht null, und der Wareneinsatz fiele
  * stillschweigend unter den Tisch. */
-function roundPreis(n) {
-  return Math.round((Number(n) || 0) * 100000) / 100000;
-}
 
 function uid() {
   if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -144,22 +139,19 @@ function defaultData() {
         appliedRejectionIds: [],
         // IDs von per Lieferschein-Foto erkannten Lieferungen, die schon als Verlauf übernommen wurden.
         appliedDeliveryIds: [],
-        // IDs von per SumUp-Verkaufsbericht-Foto erkannten Verkäufen, die schon gegen Rezepte verrechnet wurden.
+        // IDs der per SumUp-Verkaufsbericht erkannten Verkäufe, die schon in die Statistik eingegangen sind.
         appliedSaleIds: [],
         // IDs von Krankmeldungen (vom Handy), die schon als Krank-Tage übernommen wurden.
         appliedSickIds: [],
         // "Woche|Name|Zeitstempel" der Verfügbarkeits-Einreichungen vom Handy, die schon übernommen wurden.
         appliedAvailabilityKeys: [],
-        // IDs der vom Laptop eingereichten Artikel- bzw. Rezept-Änderungen, die schon übernommen wurden.
+        // IDs der vom Laptop eingereichten Artikel-Änderungen, die schon übernommen wurden.
         appliedStockChangeIds: [],
-        appliedRecipeChangeIds: [],
         appliedEmployeeChangeIds: [],
         // IDs der am Laptop abgeschlossenen (bzw. wieder geöffneten) Wochenpläne, die schon übernommen wurden.
         appliedPublicationIds: [],
         // IDs der Online-Reservierungen von der Website, die schon übernommen wurden.
         appliedReservationIds: [],
-        // IDs der aus Rezept-PDFs erkannten Rezepturen, die schon angelegt wurden.
-        appliedRecipeImportIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -167,14 +159,9 @@ function defaultData() {
     // Kurze System-Nachrichten an einzelne Mitarbeiter (z.B. "Schicht vom Chef bestätigt"), erscheinen als
     // Pop-up beim nächsten Öffnen ihres Kiosk-Fensters. { id, employeeId, text, createdAt, readAt }
     notifications: [],
-    // Vorräte – Ampel (ok/knapp/leer) für alle Artikel; optional mit echter Mengenführung (unit gesetzt),
-    // dann wird die Ampel automatisch aus currentAmount berechnet. Admin verwaltet die Artikel-Liste.
-    // { id, name, status, updatedAt, updatedBy, deliveries[], consumptionLog[], unit, currentAmount, lowThreshold }
+    // Vorräte – reine Bestell-Liste, keine Mengen.
+    // { id, name, status, bereich, lieferant, bestellmenge, wochenmenge, lastOrderedAt, lastDeliveredAt }
     stock: [],
-    // Rezepte: verknüpfen ein Verkaufsprodukt (wie es im SumUp-Bericht heißt) mit den Zutaten-Artikeln aus
-    // "stock" und deren Verbrauch pro verkauftem Stück – Basis für die automatische Bestandsrechnung.
-    // { id, productName, ingredients: [{ stockItemId, amount }] }
-    recipes: [],
     // Krankmeldungen (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
     // { id, employeeId, date, note, reportedAt }
     sickDays: [],
@@ -310,14 +297,25 @@ function load() {
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
       notifications: parsed.notifications ?? base.notifications,
+      // Artikel aus der Zeit der Mengenfuehrung: die alten Felder (unit, currentAmount, Preise,
+      // Verbrauchslog) werden nicht uebernommen – sie werden nirgends mehr gelesen und wuerden nur
+      // vortaeuschen, dass es die Rechnung noch gibt.
       stock: (parsed.stock ?? base.stock).map((s) => ({
-        lieferant: "",
-        bestellmenge: "",
-        lastOrderedAt: null,
-        lastDeliveredAt: null,
-        ...s,
+        id: s.id,
+        name: s.name,
+        status: ["ok", "knapp", "leer", "bestellt"].includes(s.status) ? s.status : "ok",
+        updatedAt: s.updatedAt ?? null,
+        updatedBy: s.updatedBy ?? null,
+        needsReview: !!s.needsReview,
+        bereich: s.bereich === "bar" ? "bar" : "kueche",
+        aliases: s.aliases ?? [],
+        notSameAs: s.notSameAs ?? [],
+        lieferant: s.lieferant ?? "",
+        bestellmenge: s.bestellmenge ?? "",
+        wochenmenge: Math.max(0, Number(s.wochenmenge) || 0),
+        lastOrderedAt: s.lastOrderedAt ?? null,
+        lastDeliveredAt: s.lastDeliveredAt ?? null,
       })),
-      recipes: parsed.recipes ?? base.recipes,
       sickDays: parsed.sickDays ?? base.sickDays,
       publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
       productSales: parsed.productSales ?? base.productSales,
@@ -381,16 +379,6 @@ function autoConfirmsWithoutBoss(slotId) {
 function roleOf(employeeId) {
   const role = data.employees.find((e) => e.id === employeeId)?.role || null;
   return role === "kueche" ? "kueche" : role === null ? null : "service";
-}
-
-/** Berechnet bei mengengeführten Vorräten (item.unit gesetzt) die Ampel automatisch aus currentAmount –
- * reine Ampel-Artikel (kein unit) bleiben unangetastet, deren Status wird weiter manuell gesetzt. */
-function recomputeStockStatus(item) {
-  if (!item.unit) return;
-  const amount = Number(item.currentAmount) || 0;
-  if (amount <= 0) item.status = "leer";
-  else if (amount <= (Number(item.lowThreshold) || 0)) item.status = "knapp";
-  else item.status = "ok";
 }
 
 /**
@@ -894,106 +882,64 @@ export const store = {
     persist();
   },
 
-  // ---- Vorräte (Ampel: ok/knapp/leer, kein Mengen-Tracking) ----
+  // ---- Vorräte: nur noch Bestellung, keine Mengen ----
+  //
+  // Frueher wurde hier mitgezaehlt: Einheit, aktueller Bestand, Warnschwelle, Verbrauch aus Rezepten,
+  // Preise vom Lieferschein, Inventur. Das ist alles raus. Der Grund ist nicht, dass es falsch gerechnet
+  // haette, sondern dass es nur stimmt, solange jede Lieferung und jeder Verbrauch erfasst wird – und
+  // das passiert im Betrieb nie vollstaendig. Eine Zahl, der man nicht trauen kann, ist schlechter als
+  // gar keine: man schaut trotzdem hin und entscheidet falsch.
+  //
+  // Geblieben ist, was fuer eine Bestellung wirklich gebraucht wird:
+  //   status        – genug / wird knapp / leer / bestellt, vom Team im Vorbeigehen getippt
+  //   lieferant     – bei wem bestellt wird
+  //   bestellmenge  – in welcher Einheit ("1 Kasten")
+  //   wochenmenge   – wie viele davon in einer normalen Woche gebraucht werden
+  //
+  // Aus wochenmenge entsteht die Standard-Bestellliste: was jede Woche ohnehin geordert wird, steht
+  // schon fertig da und muss nur noch angepasst werden.
   getStockItems() {
     return [...data.stock].sort((a, b) => a.name.localeCompare(b.name));
   },
-  /** Admin legt einen neuen Artikel an (Status startet bei "ok"). */
-  /** opts optional: { unit, currentAmount, lowThreshold } – nur mit "unit" wird der Artikel mengengeführt
-   * (Status dann automatisch aus currentAmount berechnet), sonst bleibt es bei der reinen Ampel wie bisher. */
   addStockItem(name, opts = {}) {
-    const unit = String(opts.unit || "").trim();
     const item = {
       id: uid(),
       name: String(name || "").trim(),
       status: "ok",
       updatedAt: null,
       updatedBy: null,
-      deliveries: [],
-      unit,
-      currentAmount: unit ? Number(opts.currentAmount) || 0 : null,
-      lowThreshold: unit ? Number(opts.lowThreshold) || 0 : null,
-      consumptionLog: [],
-      // true = automatisch aus einem Beleg angelegt und noch nicht vom Chef bestaetigt. Solange das steht,
-      // taucht der Artikel oben in der Bestand-Ansicht zum Einordnen auf.
+      // true = automatisch aus einem Beleg angelegt und noch nicht bestaetigt.
       needsReview: !!opts.needsReview,
-      // Wo der Artikel gebraucht wird – trennt die Inventur und die Einkaufsliste nach Bereichen.
       bereich: opts.bereich === "bar" ? "bar" : "kueche",
-      // Wie bestellt/geliefert wird: wie viele Einzelstücke in einem Gebinde stecken und wie das heisst.
-      // Wichtig, weil auf dem Lieferschein Kästen stehen, im Kassenbericht aber einzelne Flaschen.
-      packSize: Math.max(1, Number(opts.packSize) || 1),
-      packLabel: String(opts.packLabel || "").trim(),
-      // Einkaufspreis je EINZELNER Mengeneinheit (netto). Grundlage für den Wareneinsatz.
-      // Kommt meist automatisch vom Lieferschein, lässt sich aber überschreiben.
-      pricePerUnit: Number.isFinite(Number(opts.pricePerUnit)) ? roundPreis(opts.pricePerUnit) : null,
       // Artikel, von denen der Chef ausdruecklich gesagt hat, dass sie etwas anderes sind.
       notSameAs: [],
-      priceUpdatedAt: null,
-      priceSource: null, // "beleg" | "manuell"
-      // --- Bestellliste ---
-      // Bei wem der Artikel bestellt wird und in welcher Einheit ("1 Kasten", "6er-Pack", "2 kg").
-      // Das ist der Kern der neuen Bestand-Logik: nicht wie VIEL da ist, sondern was BESTELLT werden muss.
       lieferant: String(opts.lieferant || "").trim(),
       bestellmenge: String(opts.bestellmenge || "").trim(),
+      // Wie viele "bestellmenge" pro Woche. 0 = keine Standardbestellung, kommt nur auf die Liste,
+      // wenn es jemand als knapp oder leer meldet.
+      wochenmenge: Math.max(0, Number(opts.wochenmenge) || 0),
       lastOrderedAt: null,
       lastDeliveredAt: null,
     };
     if (!item.name) return null;
-    if (unit) recomputeStockStatus(item);
     data.stock.push(item);
     persist();
     return item;
   },
-  /** Führt ein irrtümlich doppelt angelegtes Produkt mit dem richtigen zusammen: der alte Name wird als
-   * Zweitname gemerkt, ein etwaiger Bestand übernommen, der Doppelgänger verschwindet. */
-  /** Wie viel von der Einheit des Zielartikels steckt in EINER Einheit des verschwindenden Artikels?
-   * Beantwortet die Frage, die beim Zusammenführen von "20 Flaschen" und "10000 ml" offen bleibt.
-   * Die Logik selbst steht in einheiten.js, weil der Laptop dieselbe Antwort braucht. */
-  umrechnungsVorschlag(vonId, aufId) {
-    if (vonId === aufId) return null;
-    return umrechnungFuer(
-      data.stock.find((s) => s.id === vonId),
-      data.stock.find((s) => s.id === aufId)
-    );
-  },
-  /** Zwei Artikel zusammenführen.
-   *
-   * opts.faktor  – selbst gewählte Umrechnung ("1 Flasche = 500 ml"). Schlägt die automatische, denn wer
-   *                sie einträgt, weiß mehr über die Ware als der Einheiten-Rechner.
-   * opts.bestandUebernehmen === false – Bestand bewusst weglassen, etwa weil der Doppelgänger Unsinn enthält.
-   */
-  mergeStockItem(vonId, aufId, opts = {}) {
+  /** Zwei Artikel zusammenfuehren: der alte Name wird als Zweitname gemerkt, der Doppelgaenger
+   * verschwindet. Ohne Mengen ist das jetzt eine reine Namenssache – nichts zu verrechnen. */
+  mergeStockItem(vonId, aufId) {
     const von = data.stock.find((s) => s.id === vonId);
     const auf = data.stock.find((s) => s.id === aufId);
     if (!von || !auf || vonId === aufId) return null;
     this.addNameAlias("artikel", aufId, von.name);
     for (const a of von.aliases || []) this.addNameAlias("artikel", aufId, a);
-    // Der Doppelgänger wurde aus einem Verkauf angelegt und steht deshalb meist im Minus. Genau dieser
-    // Verbrauch gehört zum richtigen Artikel – deshalb wird er übernommen, nicht verworfen.
-    // Der Doppelgänger steht meist im Minus, weil Verkäufe darauf gebucht wurden – genau dieser Verbrauch
-    // gehört zum richtigen Artikel und soll mitwandern.
-    //
-    // Ungefragt addiert wird aber nur, was sich exakt umrechnen lässt: "12 Flaschen" einfach auf "20000 ml"
-    // zu legen ergäbe 20012 ml und wäre still falsch. Für alles andere gibt es opts.faktor – die Umrechnung,
-    // die in der Oberfläche eingetragen oder aus der Gebindegröße vorgeschlagen wird.
-    let mengeUebernommen = false;
-    let uebernommeneMenge = 0;
-    let faktor = null;
-    const eigener = Number(opts.faktor);
-    if (Number.isFinite(eigener) && eigener > 0) faktor = eigener;
-    else if (auf.unit && von.unit) faktor = rechneEinheitUm(1, von.unit, auf.unit);
-    if (opts.bestandUebernehmen === false) faktor = null;
-    if (faktor !== null && Number.isFinite(Number(von.currentAmount))) {
-      uebernommeneMenge = round2((Number(von.currentAmount) || 0) * faktor);
-      auf.currentAmount = round2((Number(auf.currentAmount) || 0) + uebernommeneMenge);
-      recomputeStockStatus(auf);
-      mengeUebernommen = true;
-    }
-    if (Array.isArray(von.consumptionLog) && von.consumptionLog.length) {
-      auf.consumptionLog = [...(auf.consumptionLog || []), ...von.consumptionLog].slice(0, 20);
-    }
-    // "Ist nicht dasselbe wie ..." vom verschwindenden Artikel uebernehmen und ihn selbst ueberall
-    // austragen – sonst bliebe ein Verweis auf einen Artikel, den es nicht mehr gibt.
+    // Was am Doppelgaenger gepflegt war und beim Ziel fehlt, wandert mit – sonst geht die Zuordnung
+    // zum Lieferanten beim Zusammenfuehren verloren.
+    if (!auf.lieferant && von.lieferant) auf.lieferant = von.lieferant;
+    if (!auf.bestellmenge && von.bestellmenge) auf.bestellmenge = von.bestellmenge;
+    if (!auf.wochenmenge && von.wochenmenge) auf.wochenmenge = von.wochenmenge;
+    // "Ist nicht dasselbe wie ..." uebernehmen und den Verschwundenen ueberall austragen.
     for (const id of von.notSameAs || []) {
       if (id === aufId) continue;
       if (!Array.isArray(auf.notSameAs)) auf.notSameAs = [];
@@ -1004,104 +950,101 @@ export const store = {
       if (Array.isArray(s.notSameAs)) s.notSameAs = s.notSameAs.map((id) => (id === vonId ? aufId : id)).filter((id) => id !== s.id);
     }
     persist();
-    return {
-      artikel: auf,
-      mengeUebernommen,
-      uebernommeneMenge,
-      faktor,
-      alteMenge: Number(von.currentAmount) || 0,
-      alteEinheit: von.unit,
-    };
+    return { artikel: auf };
   },
-  /** Dasselbe für ein doppelt angelegtes Rezept. */
-  mergeRecipe(vonId, aufId) {
-    const von = data.recipes.find((r) => r.id === vonId);
-    const auf = data.recipes.find((r) => r.id === aufId);
-    if (!von || !auf || vonId === aufId) return null;
-    this.addNameAlias("rezept", aufId, von.productName);
-    for (const a of von.aliases || []) this.addNameAlias("rezept", aufId, a);
-    data.recipes = data.recipes.filter((r) => r.id !== vonId);
-    persist();
-    return auf;
-  },
-  /** Mehrere Artikel und/oder Rezepte auf einmal loeschen.
+  /** Mehrere Artikel auf einmal loeschen.
    *
-   * Braucht man nach einem missratenen Import: einzeln waere das bei fünfzig Eintraegen eine Qual.
-   * Wird nur EIN Teil geloescht, werden die Verweise aufgeraeumt – ein Rezept, dessen Zutat es nicht
-   * mehr gibt, wuerde sonst beim naechsten Verkauf still nichts mehr abbuchen, ohne dass man sieht warum.
-   *
-   * Nicht angetastet werden bewusst: die Verkaufshistorie, frühere Inventuren und der bereits auf Tagen
-   * gebuchte Wareneinsatz. Das ist Vergangenheit und darf sich nicht rueckwirkend aendern.
+   * Braucht man nach einem missratenen Import: einzeln waere das bei fuenfzig Eintraegen eine Qual.
+   * Die Verkaufshistorie bleibt unangetastet – das ist Vergangenheit und darf sich nicht rueckwirkend
+   * aendern.
    */
-  clearStockData({ artikel = false, rezepte = false, nurUngeprueft = false }) {
-    let geloeschteArtikel = 0;
-    let geloeschteRezepte = 0;
-
-    if (rezepte) {
-      const vorher = data.recipes.length;
-      const bleibtR = nurUngeprueft ? data.recipes.filter((r) => !r.needsReview) : [];
-      const entfernteRezepte = new Set(data.recipes.filter((r) => !bleibtR.includes(r)).map((r) => r.id));
-      data.recipes = bleibtR;
-      geloeschteRezepte = vorher - data.recipes.length;
-      // Zutaten, die auf ein geloeschtes Rezept zeigen, entfernen – sonst zeigt ein Rezept ins Leere.
-      for (const r of data.recipes) {
-        if (Array.isArray(r.ingredients)) r.ingredients = r.ingredients.filter((z) => !z.recipeId || !entfernteRezepte.has(z.recipeId));
-      }
-    }
-    if (artikel) {
-      const vorher = data.stock.length;
-      const bleibt = nurUngeprueft ? data.stock.filter((s) => !s.needsReview) : [];
-      const entfernteIds = new Set(data.stock.filter((s) => !bleibt.includes(s)).map((s) => s.id));
-      data.stock = bleibt;
-      geloeschteArtikel = vorher - data.stock.length;
-      // Zutaten, die auf geloeschte Artikel zeigen, aus den Rezepten nehmen.
-      for (const r of data.recipes) {
-        if (!Array.isArray(r.ingredients)) continue;
-        r.ingredients = r.ingredients.filter((z) => !entfernteIds.has(z.stockItemId));
-      }
-    }
+  clearStockData({ artikel = false, nurUngeprueft = false } = {}) {
+    if (!artikel) return { geloeschteArtikel: 0 };
+    const vorher = data.stock.length;
+    data.stock = nurUngeprueft ? data.stock.filter((s) => !s.needsReview) : [];
     persist();
-    return { geloeschteArtikel, geloeschteRezepte };
+    return { geloeschteArtikel: vorher - data.stock.length };
   },
   removeStockItem(id) {
     data.stock = data.stock.filter((s) => s.id !== id);
     persist();
   },
-  /** Artikel bearbeiten (Name, Einheit, Warnschwelle). Wird eine Einheit ergänzt, startet damit die
-   * Mengenführung; wird sie entfernt, fällt der Artikel auf die reine Ampel zurück. */
+  /** Artikel bearbeiten: Name, Bereich, Lieferant, Bestellmenge, Wochenbedarf. */
   updateStockItem(id, patch) {
     const item = data.stock.find((s) => s.id === id);
     if (!item) return null;
     if (patch.name !== undefined && String(patch.name).trim()) item.name = String(patch.name).trim();
     if (patch.bereich !== undefined) item.bereich = patch.bereich === "bar" ? "bar" : "kueche";
-    if (patch.packSize !== undefined) item.packSize = Math.max(1, Number(patch.packSize) || 1);
-    if (patch.packLabel !== undefined) item.packLabel = String(patch.packLabel).trim();
     if (patch.lieferant !== undefined) item.lieferant = String(patch.lieferant).trim();
     if (patch.bestellmenge !== undefined) item.bestellmenge = String(patch.bestellmenge).trim();
-    if (patch.pricePerUnit !== undefined) {
-      const p = Number(patch.pricePerUnit);
-      item.pricePerUnit = Number.isFinite(p) && p >= 0 ? roundPreis(p) : null;
-      item.priceUpdatedAt = new Date().toISOString();
-      item.priceSource = patch.priceSource || "manuell";
-    }
-    if (patch.unit !== undefined) {
-      const unit = String(patch.unit).trim();
-      item.unit = unit;
-      if (unit) {
-        if (item.currentAmount === null || item.currentAmount === undefined) item.currentAmount = 0;
-        if (item.lowThreshold === null || item.lowThreshold === undefined) item.lowThreshold = 0;
-      } else {
-        item.currentAmount = null;
-        item.lowThreshold = null;
-      }
-    }
-    if (patch.lowThreshold !== undefined && item.unit) item.lowThreshold = Number(patch.lowThreshold) || 0;
-    if (item.unit) recomputeStockStatus(item);
+    if (patch.wochenmenge !== undefined) item.wochenmenge = Math.max(0, Number(patch.wochenmenge) || 0);
     item.updatedAt = new Date().toISOString();
     persist();
     return item;
   },
-  /** Mitarbeiter (im Kiosk) oder Chef (per Bot) ändern den Status eines Artikels. */
+  /** Vorrats-Artikel per Name. Sucht zuerst exakt, dann über gemerkte Zweitnamen, dann über Ähnlichkeit. */
+  getStockItemByName(name) {
+    return findeNachName(data.stock, "name", name);
+  },
+  /** Kandidaten für einen Namen, der keinem Artikel sicher zuzuordnen war – beste zuerst. */
+  getNameVorschlaege(name, limit = 4) {
+    return bewerteKandidaten(data.stock, "name", name)
+      .map((k) => ({ ...k, art: "artikel" }))
+      .slice(0, limit);
+  },
+  /** Hält fest, dass zwei Artikel AUSDRÜCKLICH NICHT dasselbe sind.
+   *
+   * Ohne das schlägt die Ähnlichkeitssuche dieselbe falsche Paarung bei jedem Aufruf wieder vor –
+   * "Erdbeeren" und "Erdbeermarmelade" ähneln sich nun mal. Die Entscheidung des Menschen muss das
+   * System sich merken können, sonst nervt es genau die Person, die es besser weiß.
+   * Wird beidseitig gespeichert, damit die Reihenfolge egal ist.
+   */
+  markNotSame(idA, idB) {
+    const a = data.stock.find((s) => s.id === idA);
+    const b = data.stock.find((s) => s.id === idB);
+    if (!a || !b || idA === idB) return null;
+    for (const [x, y] of [[a, idB], [b, idA]]) {
+      if (!Array.isArray(x.notSameAs)) x.notSameAs = [];
+      if (!x.notSameAs.includes(y)) x.notSameAs.push(y);
+    }
+    persist();
+    return true;
+  },
+  /** Gilt dieses Paar als "geklärt: verschieden"? */
+  istAlsVerschiedenMarkiert(idA, idB) {
+    const a = data.stock.find((s) => s.id === idA);
+    return !!a && Array.isArray(a.notSameAs) && a.notSameAs.includes(idB);
+  },
+  /** Merkt sich, dass ein Name zu einem Artikel gehört. Ab dann trifft er sofort.
+   * Das ist der eigentliche Lernschritt: Ähnlichkeit allein wird bei Namen wie "Paulaner Hefe-Weissbier
+   * 0,5l" und "Paulaner Hefeweizen" nie zuverlässig sein. */
+  addNameAlias(art, id, alias) {
+    const eintrag = data.stock.find((x) => x.id === id);
+    const sauber = String(alias || "").trim();
+    if (!eintrag || !sauber) return null;
+    if (!Array.isArray(eintrag.aliases)) eintrag.aliases = [];
+    const norm = normalisiereProduktname(sauber);
+    if (!eintrag.aliases.some((a) => normalisiereProduktname(a) === norm)) eintrag.aliases.push(sauber);
+    persist();
+    return eintrag;
+  },
+  removeNameAlias(art, id, alias) {
+    const eintrag = data.stock.find((x) => x.id === id);
+    if (!eintrag || !Array.isArray(eintrag.aliases)) return null;
+    const norm = normalisiereProduktname(alias);
+    eintrag.aliases = eintrag.aliases.filter((a) => normalisiereProduktname(a) !== norm);
+    persist();
+    return eintrag;
+  },
+  /** Der Chef hat einen automatisch angelegten Artikel angeschaut – Hinweis verschwindet. */
+  markStockItemReviewed(id) {
+    const item = data.stock.find((s) => s.id === id);
+    if (!item) return null;
+    item.needsReview = false;
+    persist();
+    return item;
+  },
+
   // ---- Bestellliste ----
   //
   // Der Bestand wird NICHT mehr in Mengen gefuehrt. Der Grund ist Erfahrung: eine Mengenfuehrung stimmt
@@ -1116,11 +1059,22 @@ export const store = {
   //   leer      – ist aus, dringend
   //   bestellt  – ist raus, wartet auf Lieferung (damit es nicht weiter als "leer" schreit)
   //
-  /** Alles, was auf die naechste Bestellung muss – nach Lieferant gruppiert.
-   * "bestellt" ist standardmaessig dabei, aber getrennt: man will sehen, was schon unterwegs ist. */
-  getBestellliste({ bereich = "", mitBestellten = true } = {}) {
+  /** Die Bestellliste, nach Lieferant gruppiert.
+   *
+   * Zwei Quellen, und beide gehoeren dazu:
+   *   die STANDARDBESTELLUNG – alles mit einer Wochenmenge, also das, was ohnehin jede Woche geordert
+   *   wird. Das ist die eigentliche Liste: sie steht schon fertig da, man muss sie nur durchgehen.
+   *   die MELDUNGEN – was jemand als knapp oder leer getippt hat. Das ist die Abweichung von der Regel
+   *   und faellt in der Liste auf.
+   *
+   * standard=false blendet die reine Standardbestellung aus, wenn man nur wissen will, was gemeldet wurde.
+   */
+  getBestellliste({ bereich = "", mitBestellten = true, standard = true } = {}) {
     const offen = data.stock.filter(
-      (s) => ["knapp", "leer"].includes(s.status) || (mitBestellten && s.status === "bestellt")
+      (s) =>
+        ["knapp", "leer"].includes(s.status) ||
+        (mitBestellten && s.status === "bestellt") ||
+        (standard && Number(s.wochenmenge) > 0)
     );
     const gefiltert = bereich ? offen.filter((s) => (s.bereich || "kueche") === bereich) : offen;
     const gruppen = new Map();
@@ -1129,12 +1083,13 @@ export const store = {
       if (!gruppen.has(key)) gruppen.set(key, []);
       gruppen.get(key).push(s);
     }
-    const RANG = { leer: 0, knapp: 1, bestellt: 2 };
+    const RANG = { leer: 0, knapp: 1, ok: 2, bestellt: 3 };
     return [...gruppen.entries()]
       .map(([lieferant, artikel]) => ({
         lieferant,
-        artikel: artikel.sort((a, b) => (RANG[a.status] - RANG[b.status]) || a.name.localeCompare(b.name)),
+        artikel: artikel.sort((a, b) => (RANG[a.status] ?? 2) - (RANG[b.status] ?? 2) || a.name.localeCompare(b.name)),
         dringend: artikel.filter((a) => a.status === "leer").length,
+        gemeldet: artikel.filter((a) => ["knapp", "leer"].includes(a.status)).length,
         offen: artikel.filter((a) => a.status !== "bestellt").length,
       }))
       // Artikel ohne Lieferant IMMER ganz nach unten – auch wenn dort etwas dringend ist: die kann man
@@ -1199,6 +1154,7 @@ export const store = {
       .filter((s) => (s.bereich || "kueche") === bereich)
       .sort((a, b) => (RANG[a.status] ?? 3) - (RANG[b.status] ?? 3) || a.name.localeCompare(b.name));
   },
+  /** Team (unter "Bestand") oder Chef (per Laptop) aendern den Zustand eines Artikels. */
   setStockStatus(id, status, changedBy) {
     const item = data.stock.find((s) => s.id === id);
     if (!item) return;
@@ -1208,277 +1164,6 @@ export const store = {
     persist();
     return item;
   },
-  /** Manuelle Mengen-Korrektur (z.B. nach einer echten Nachzählung) für mengengeführte Artikel. */
-  setStockAmount(id, amount, changedBy) {
-    const item = data.stock.find((s) => s.id === id);
-    if (!item || !item.unit) return;
-    item.currentAmount = Number(amount) || 0;
-    recomputeStockStatus(item);
-    item.updatedAt = new Date().toISOString();
-    item.updatedBy = changedBy || null;
-    persist();
-    return item;
-  },
-  /** Loggt eine Lieferung (z.B. aus einem per Bot hochgeladenen Lieferschein-Foto) – Historie ("wann wurde
-   * wie viel geliefert") UND, falls der Artikel mengengeführt ist (unit gesetzt), Erhöhung von
-   * currentAmount + automatische Status-Neuberechnung. Ist noch keine Einheit hinterlegt, aber die
-   * Lieferung nennt eine, wird die Mengenführung damit automatisch "gebootstrapped". */
-  addStockDelivery(id, { date, quantity, unit, note }) {
-    const item = data.stock.find((s) => s.id === id);
-    if (!item) return;
-    if (!Array.isArray(item.deliveries)) item.deliveries = [];
-    const qty = Number(quantity);
-    item.deliveries.unshift({ id: uid(), date: date || todayStr(), quantity: Number.isFinite(qty) ? qty : null, unit: unit || "", note: note || "" });
-    item.deliveries = item.deliveries.slice(0, 20); // Historie nicht unbegrenzt wachsen lassen
-    // Die gelieferte Menge auf die Einheit des Artikels bringen. Vorher wurde nur addiert, wenn die
-    // Einheit ZEICHENGLEICH war – eine Lieferung "5 kg Mehl" auf einen Artikel in Gramm erhöhte den
-    // Bestand also gar nicht, stillschweigend. Der Lieferschein stand im Verlauf, der Bestand blieb
-    // stehen, und niemand kam darauf, woran es liegt.
-    let uebernommen = null;
-    if (Number.isFinite(qty) && unit) {
-      if (!item.unit) item.unit = unit; // erste Lieferung mit Einheit -> Mengenführung startet automatisch
-      uebernommen = rechneEinheitUm(qty, unit, item.unit);
-      // Klappt die Umrechnung nicht (z.B. "Kasten" gegen "Stück"), hilft die Gebindegröße weiter:
-      // ein Kasten sind laut Artikel packSize Einzelstücke.
-      if (uebernommen === null && item.packSize > 1) uebernommen = round2(qty * item.packSize);
-      if (uebernommen !== null) {
-        item.currentAmount = round2((Number(item.currentAmount) || 0) + uebernommen);
-        recomputeStockStatus(item);
-      }
-    }
-    if (!item.unit) item.status = "ok"; // reine Ampel-Artikel: Lieferung angekommen -> nicht mehr knapp/leer
-    item.updatedAt = new Date().toISOString();
-    item.updatedBy = "Lieferschein";
-    persist();
-    // uebernommen === null heisst: die Menge liess sich nicht zuordnen. Der Aufrufer soll das melden
-    // koennen, statt dass die Lieferung stillschweigend wirkungslos bleibt.
-    return { item, uebernommen, verlangt: qty, einheit: unit };
-  },
-
-  // ---- Rezepte (Verkaufsprodukt -> Zutaten-Verbrauch) ----
-  getRecipes() {
-    return [...data.recipes].sort((a, b) => a.productName.localeCompare(b.productName));
-  },
-  addRecipe(productName, ingredients = [], opts = {}) {
-    const recipe = {
-      id: uid(),
-      productName: String(productName || "").trim(),
-      ingredients: [...ingredients],
-      // wie bei Artikeln: automatisch angelegt und noch ohne Zutaten -> muss einmal angeschaut werden
-      needsReview: !!opts.needsReview,
-      // Wie viel ein Durchlauf ergibt. Bei einem Verkaufsprodukt ist das 1 Portion – bei einer
-      // Vorbereitung wie einem Grundmix aber z.B. 2000 g. Ohne diese Angabe waere "200 g Grundmix"
-      // in einem anderen Rezept nicht ausrechenbar: mal ist ein Grundmix eine Portion, mal ein Eimer.
-      yieldAmount: Number(opts.yieldAmount) > 0 ? round2(opts.yieldAmount) : 1,
-      yieldUnit: String(opts.yieldUnit || "Portion").trim() || "Portion",
-    };
-    if (!recipe.productName) return null;
-    data.recipes.push(recipe);
-    persist();
-    return recipe;
-  },
-  updateRecipe(id, patch) {
-    const r = data.recipes.find((x) => x.id === id);
-    if (!r) return;
-    // Zutaten, die auf ein Rezept zeigen, duerfen keinen Kreis bilden: ein Grundmix, der sich selbst
-    // (auch ueber Umwege) enthaelt, wuerde beim Verrechnen endlos laufen.
-    if (Array.isArray(patch.ingredients)) {
-      patch = { ...patch, ingredients: patch.ingredients.filter((z) => !z.recipeId || !this.wuerdeKreisBilden(id, z.recipeId)) };
-    }
-    Object.assign(r, patch);
-    if (patch.yieldAmount !== undefined) r.yieldAmount = Number(patch.yieldAmount) > 0 ? round2(patch.yieldAmount) : 1;
-    if (patch.yieldUnit !== undefined) r.yieldUnit = String(patch.yieldUnit).trim() || "Portion";
-    persist();
-    return r;
-  },
-
-  /** Wuerde es einen Kreis geben, wenn "rezeptId" die Zutat "zutatRezeptId" bekaeme? */
-  wuerdeKreisBilden(rezeptId, zutatRezeptId) {
-    if (rezeptId === zutatRezeptId) return true;
-    const gesehen = new Set();
-    const pruefe = (id) => {
-      if (id === rezeptId) return true;
-      if (gesehen.has(id)) return false;
-      gesehen.add(id);
-      const r = data.recipes.find((x) => x.id === id);
-      return (r?.ingredients || []).some((z) => z.recipeId && pruefe(z.recipeId));
-    };
-    return pruefe(zutatRezeptId);
-  },
-
-  /** Rezepte, die als Zutat in "rezeptId" verwendet werden duerfen (ohne Kreis zu bilden). */
-  getVerwendbareRezepte(rezeptId) {
-    return data.recipes.filter((r) => r.id !== rezeptId && !this.wuerdeKreisBilden(rezeptId, r.id));
-  },
-  removeRecipe(id) {
-    data.recipes = data.recipes.filter((r) => r.id !== id);
-    persist();
-  },
-  /** Nachsichtiger Vergleich, damit ein per SumUp-Bericht erkannter Produktname (z.B. "Cappuccino Grande")
-   * zum hinterlegten Rezept (z.B. "Cappuccino") passt. */
-  /** Vorrats-Artikel per Name. Sucht zuerst exakt, dann über gemerkte Zweitnamen, dann über Ähnlichkeit. */
-  getStockItemByName(name) {
-    return findeNachName(data.stock, "name", name);
-  },
-  getRecipeByProductName(name) {
-    return findeNachName(data.recipes, "productName", name);
-  },
-  /** Kandidaten für ein Produkt, das keinem Eintrag sicher zuzuordnen war – beste zuerst.
-   * Grundlage für die Rückfrage "Gehört das zu …?" in der Bestand-Ansicht. */
-  getNameVorschlaege(name, limit = 4) {
-    const artikel = bewerteKandidaten(data.stock, "name", name).map((k) => ({ ...k, art: "artikel" }));
-    const rezepte = bewerteKandidaten(data.recipes, "productName", name).map((k) => ({ ...k, art: "rezept" }));
-    return [...artikel, ...rezepte].sort((a, b) => b.punkte - a.punkte).slice(0, limit);
-  },
-  /** Hält fest, dass zwei Artikel AUSDRÜCKLICH NICHT dasselbe sind.
-   *
-   * Ohne das schlägt die Ähnlichkeitssuche dieselbe falsche Paarung bei jedem Aufruf wieder vor –
-   * "Erdbeeren" und "Erdbeermarmelade" ähneln sich nun mal. Die Entscheidung des Menschen muss das
-   * System sich merken können, sonst nervt es genau die Person, die es besser weiß.
-   * Wird beidseitig gespeichert, damit die Reihenfolge egal ist.
-   */
-  markNotSame(idA, idB) {
-    const a = data.stock.find((s) => s.id === idA);
-    const b = data.stock.find((s) => s.id === idB);
-    if (!a || !b || idA === idB) return null;
-    for (const [x, y] of [[a, idB], [b, idA]]) {
-      if (!Array.isArray(x.notSameAs)) x.notSameAs = [];
-      if (!x.notSameAs.includes(y)) x.notSameAs.push(y);
-    }
-    persist();
-    return true;
-  },
-  /** Gilt dieses Paar als "geklärt: verschieden"? */
-  istAlsVerschiedenMarkiert(idA, idB) {
-    const a = data.stock.find((s) => s.id === idA);
-    return !!a && Array.isArray(a.notSameAs) && a.notSameAs.includes(idB);
-  },
-
-  /** Merkt sich, dass ein Produktname zu einem Artikel bzw. Rezept gehört. Ab dann trifft er sofort.
-   * Das ist der eigentliche Lernschritt: Ähnlichkeit allein wird bei Namen wie "Paulaner Hefe-Weissbier
-   * 0,5l" (Lieferschein) und "Paulaner Hefeweizen" (Kassenbericht) nie zuverlässig sein. */
-  addNameAlias(art, id, alias) {
-    const liste = art === "rezept" ? data.recipes : data.stock;
-    const eintrag = liste.find((x) => x.id === id);
-    const sauber = String(alias || "").trim();
-    if (!eintrag || !sauber) return null;
-    if (!Array.isArray(eintrag.aliases)) eintrag.aliases = [];
-    const norm = normalisiereProduktname(sauber);
-    if (!eintrag.aliases.some((a) => normalisiereProduktname(a) === norm)) eintrag.aliases.push(sauber);
-    persist();
-    return eintrag;
-  },
-  removeNameAlias(art, id, alias) {
-    const liste = art === "rezept" ? data.recipes : data.stock;
-    const eintrag = liste.find((x) => x.id === id);
-    if (!eintrag || !Array.isArray(eintrag.aliases)) return null;
-    const norm = normalisiereProduktname(alias);
-    eintrag.aliases = eintrag.aliases.filter((a) => normalisiereProduktname(a) !== norm);
-    persist();
-    return eintrag;
-  },
-  /** Schreibt den Warenwert eines Verbrauchs auf den jeweiligen Tag.
-   *
-   * Bewusst als Tagessumme und nicht nur im Verbrauchsverlauf des Artikels: der ist auf die letzten
-   * 20 Einträge begrenzt und taugt nicht für eine Monatsauswertung. Gerechnet wird mit dem Preis, der
-   * ZUM ZEITPUNKT des Verkaufs hinterlegt war – eine spätere Preiserhöhung soll vergangene Tage nicht
-   * rückwirkend teurer machen.
-   */
-  addMaterialCost(date, betrag) {
-    const wert = round2(betrag);
-    if (!date || !Number.isFinite(wert) || wert === 0) return;
-    const d = this.getOrCreateDayByDate(date);
-    d.materialkosten = round2((Number(d.materialkosten) || 0) + wert);
-    // persist() macht der Aufrufer – so wird bei einem Verkauf mit zehn Zutaten nur einmal geschrieben.
-  },
-
-  /** Verkauf eines Produkts, das GENAU SO eingekauft wird (Flaschengetränke, zugekaufte Snacks): 1 verkauft
-   * = 1 Stück weniger. Dafür braucht es kein Rezept mit einer einzigen Zutat "sich selbst". */
-  applyDirectSale(stockItemId, quantitySold, date, productName) {
-    const item = data.stock.find((s) => s.id === stockItemId);
-    if (!item || !item.unit) return null;
-    const qty = Number(quantitySold) || 0;
-    item.currentAmount = round2((Number(item.currentAmount) || 0) - qty);
-    recomputeStockStatus(item);
-    if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
-    item.consumptionLog.unshift({ id: uid(), date: date || todayStr(), productName: productName || item.name, quantitySold: qty, consumed: qty });
-    item.consumptionLog = item.consumptionLog.slice(0, 120);
-    if (Number.isFinite(Number(item.pricePerUnit))) this.addMaterialCost(date || todayStr(), qty * Number(item.pricePerUnit));
-    persist();
-    return item;
-  },
-  /** Der Chef hat einen automatisch angelegten Artikel bzw. ein Rezept angeschaut – Hinweis verschwindet. */
-  markStockItemReviewed(id) {
-    const item = data.stock.find((s) => s.id === id);
-    if (!item) return null;
-    item.needsReview = false;
-    persist();
-    return item;
-  },
-  markRecipeReviewed(id) {
-    const r = data.recipes.find((x) => x.id === id);
-    if (!r) return null;
-    r.needsReview = false;
-    persist();
-    return r;
-  },
-  /** Verrechnet einen Verkauf (aus einem SumUp-Verkaufsbericht) gegen die Zutaten des Rezepts: zieht die
-   * jeweilige Menge × Verkaufsanzahl von jedem Zutat-Artikel ab und berechnet dessen Ampel neu. */
-  applyProductSale(recipeId, quantitySold, date) {
-    const recipe = data.recipes.find((r) => r.id === recipeId);
-    if (!recipe) return;
-    const qty = Number(quantitySold) || 0;
-    const kosten = this.verrechneRezept(recipeId, qty, date || todayStr(), recipe.productName, new Set());
-    if (kosten > 0) this.addMaterialCost(date || todayStr(), kosten);
-    persist();
-  },
-
-  /** Zieht die Zutaten eines Rezepts ab – und geht dabei durch Unter-Rezepte hindurch.
-   *
-   * Ein Grundmix ist selbst ein Rezept: verkauft man 10 Pancakes mit je 200 g Grundmix, und der Grundmix
-   * ergibt laut Rezept 2000 g, dann sind das 10 x 200 / 2000 = 1 Durchlauf Grundmix, dessen Zutaten
-   * abgezogen werden. Ohne diese Umrechnung ueber die Ergiebigkeit waere "200 g Grundmix" bedeutungslos.
-   *
-   * Verbucht wird immer nur auf echten Artikeln – ein Rezept hat keinen Bestand. Der Verbrauchsverlauf
-   * nennt das VERKAUFTE Produkt (also "Pancakes"), nicht den Grundmix: sonst wuesste man spaeter nicht
-   * mehr, wofuer das Mehl draufging.
-   */
-  verrechneRezept(recipeId, faktor, date, herkunftName, besucht) {
-    if (besucht.has(recipeId)) return 0; // Sicherheitsnetz gegen Kreise
-    besucht.add(recipeId);
-    const recipe = data.recipes.find((r) => r.id === recipeId);
-    if (!recipe) return 0;
-    let kosten = 0;
-
-    for (const ing of recipe.ingredients) {
-      const menge = (Number(ing.amount) || 0) * faktor;
-      if (menge <= 0) continue;
-
-      if (ing.recipeId) {
-        const unter = data.recipes.find((r) => r.id === ing.recipeId);
-        if (!unter) continue;
-        // Wie viele Durchlaeufe des Unter-Rezepts sind das? Menge geteilt durch seine Ergiebigkeit,
-        // die Einheiten vorher angeglichen (Rezept ergibt 2 kg, gebraucht werden 200 g).
-        const ergibt = Number(unter.yieldAmount) > 0 ? Number(unter.yieldAmount) : 1;
-        const angeglichen = rechneEinheitUm(menge, ing.unit || unter.yieldUnit, unter.yieldUnit);
-        const durchlaeufe = (angeglichen === null ? menge : angeglichen) / ergibt;
-        kosten += this.verrechneRezept(ing.recipeId, durchlaeufe, date, herkunftName, new Set(besucht));
-        continue;
-      }
-
-      const item = data.stock.find((s) => s.id === ing.stockItemId);
-      if (!item || !item.unit) continue;
-      const consumed = round2(menge);
-      item.currentAmount = round2((Number(item.currentAmount) || 0) - consumed);
-      recomputeStockStatus(item);
-      if (!Array.isArray(item.consumptionLog)) item.consumptionLog = [];
-      item.consumptionLog.unshift({ id: uid(), date, productName: herkunftName, quantitySold: faktor, consumed });
-      item.consumptionLog = item.consumptionLog.slice(0, 120);
-      if (Number.isFinite(Number(item.pricePerUnit))) kosten += consumed * Number(item.pricePerUnit);
-    }
-    return kosten;
-  },
-
   // ---- Krankmeldungen (kommen vom Handy der Mitarbeiter herein) ----
   /** Legt einen Krank-Tag an. Doppelte (gleiche Person, gleicher Tag) werden ignoriert, damit ein erneuter
    * Abgleich oder eine zweite Meldung für denselben Tag nichts verdoppelt. */
@@ -1641,21 +1326,9 @@ export const store = {
     persist();
     return r;
   },
-  /** Verbrauch eines Artikels in den letzten N Tagen – Grundlage für Reichweite und Bestellvorschlag. */
-  getConsumptionSince(stockItemId, tage) {
-    const item = data.stock.find((s) => s.id === stockItemId);
-    if (!item) return { menge: 0, tage: 0 };
-    const grenze = addDaysISOStore(todayStr(), -Math.abs(tage));
-    const relevant = (item.consumptionLog || []).filter((e) => e.date >= grenze);
-    const menge = round2(relevant.reduce((sum, e) => sum + (Number(e.consumed) || 0), 0));
-    // Nur Tage zählen, an denen wirklich etwas verbucht wurde – sonst drückt jeder Ruhetag den
-    // Schnitt und die Reichweite sähe grösser aus, als sie ist.
-    const tageMitVerbrauch = new Set(relevant.map((e) => e.date)).size;
-    return { menge, tage: tageMitVerbrauch };
-  },
-
-  /** Was sich mit einem Produkt verdienen lässt: verkaufte Menge, Umsatz und Materialkosten.
-   * Grundlage für "was läuft" und für den Deckungsbeitrag je Produkt. */
+  /** Was sich mit einem Produkt verkauft: Menge, Umsatz und an wie vielen Tagen. Grundlage fuer
+   * "was laeuft". Ohne Rezepte gibt es dazu keine Materialkosten mehr – die Zahl kam aus einer
+   * Rechnung, die nur stimmte, solange jedes Rezept und jeder Einkaufspreis gepflegt war. */
   getProductStats(from, to) {
     const nachProdukt = new Map();
     for (const v of data.productSales) {
@@ -1670,51 +1343,8 @@ export const store = {
       e.tage.add(v.date);
       nachProdukt.set(key, e);
     }
-    // Materialkosten je Stück aus dem Rezept bzw. dem Artikel selbst.
-    for (const e of nachProdukt.values()) {
-      e.kostenJeStueck = this.getProductUnitCost(e.productName);
-      e.materialkosten = e.kostenJeStueck === null ? null : round2(e.kostenJeStueck * e.menge);
-      e.tage = e.tage.size;
-    }
+    for (const e of nachProdukt.values()) e.tage = e.tage.size;
     return [...nachProdukt.values()].sort((a, b) => b.menge - a.menge);
-  },
-
-  /** Was ein einzelnes Stück dieses Produkts im Einkauf kostet. null, wenn es sich nicht bestimmen
-   * lässt – etwa weil kein Rezept hinterlegt ist oder einer Zutat der Preis fehlt. Bewusst null statt
-   * einer Teilsumme: ein zu niedriger Wareneinsatz wäre schlimmer als gar keiner. */
-  getProductUnitCost(productName) {
-    const rezept = this.getRecipeByProductName(productName);
-    if (rezept) return this.rezeptKosten(rezept.id, new Set());
-    const artikel = this.getStockItemByName(productName);
-    if (artikel && artikel.pricePerUnit != null) return roundPreis(artikel.pricePerUnit);
-    return null;
-  },
-
-  /** Was ein Durchlauf eines Rezepts im Einkauf kostet – durch Unter-Rezepte hindurch.
-   * null, sobald einer Zutat der Preis fehlt: eine Teilsumme waere zu niedrig und damit irrefuehrender
-   * als gar keine Zahl. */
-  rezeptKosten(recipeId, besucht) {
-    if (besucht.has(recipeId)) return null;
-    besucht.add(recipeId);
-    const rezept = data.recipes.find((r) => r.id === recipeId);
-    if (!rezept || !rezept.ingredients || rezept.ingredients.length === 0) return null;
-    let summe = 0;
-    for (const z of rezept.ingredients) {
-      if (z.recipeId) {
-        const unter = data.recipes.find((r) => r.id === z.recipeId);
-        if (!unter) return null;
-        const proDurchlauf = this.rezeptKosten(z.recipeId, new Set(besucht));
-        if (proDurchlauf === null) return null;
-        const ergibt = Number(unter.yieldAmount) > 0 ? Number(unter.yieldAmount) : 1;
-        const angeglichen = rechneEinheitUm(Number(z.amount) || 0, z.unit || unter.yieldUnit, unter.yieldUnit);
-        summe += ((angeglichen === null ? Number(z.amount) || 0 : angeglichen) / ergibt) * proDurchlauf;
-        continue;
-      }
-      const artikel = data.stock.find((s) => s.id === z.stockItemId);
-      if (!artikel || artikel.pricePerUnit == null) return null;
-      summe += (Number(z.amount) || 0) * artikel.pricePerUnit;
-    }
-    return roundPreis(summe);
   },
 
   /** Reservierungen zu Tageszahlen verdichtet – ohne Namen und Telefonnummern. */
@@ -1738,63 +1368,6 @@ export const store = {
       nachTag.set(r.date, e);
     }
     return [...nachTag.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
-  },
-
-  /** Legt ein aus einem PDF erkanntes Rezept an bzw. aktualisiert es.
-   *
-   * Der heikle Teil sind die EINHEITEN. Auf dem Rezept steht "0,15 l Milch", der Artikel wird aber in ml
-   * geführt. Ohne Umrechnung würden 0,15 ml abgebucht statt 150 – der Bestand stimmte nie, und niemand
-   * käme darauf, woran es liegt. Passt eine Einheit gar nicht zur anderen (z.B. Stück gegen Gramm), wird
-   * die Zutat NICHT übernommen und gemeldet: eine geratene Umrechnung wäre schlimmer als eine Lücke.
-   *
-   * Zutaten, die es noch nicht gibt, werden als Artikel angelegt und als "bitte prüfen" markiert – dort
-   * fängt sie die Zuordnungs-Liste am Laptop ab, falls es sie unter anderem Namen schon gibt.
-   */
-  importRecipe({ productName, ingredients }) {
-    const name = String(productName || "").trim();
-    if (!name || !Array.isArray(ingredients) || ingredients.length === 0) return null;
-    const zutaten = [];
-    const warnungen = [];
-    let neueArtikel = 0;
-
-    for (const z of ingredients) {
-      const zName = String(z.name || "").trim();
-      const menge = Number(z.amount) || 0;
-      if (!zName || menge <= 0) continue;
-
-      // Erst schauen, ob es dafuer schon ein REZEPT gibt: "200 g Grundmix" meint die Vorbereitung,
-      // nicht einen eingekauften Artikel. Sonst entstuende ein zweiter Eintrag gleichen Namens.
-      const unterRezept = this.getRecipeByProductName(zName);
-      if (unterRezept) {
-        zutaten.push({ recipeId: unterRezept.id, amount: menge, unit: normalisiereEinheit(z.unit) });
-        continue;
-      }
-
-      let artikel = this.getStockItemByName(zName);
-      if (!artikel) {
-        // Die Einheit des Rezepts wird zur Einheit des Artikels – dann passt beides von Anfang an
-        // zusammen und es muss gar nicht umgerechnet werden.
-        artikel = this.addStockItem(zName, { unit: normalisiereEinheit(z.unit), currentAmount: 0, lowThreshold: 0, needsReview: true });
-        if (!artikel) continue;
-        neueArtikel++;
-      }
-      const umgerechnet = rechneEinheitUm(menge, z.unit, artikel.unit);
-      if (umgerechnet === null) {
-        warnungen.push(`${zName}: ${menge} ${z.unit || "?"} passt nicht zur Einheit des Artikels (${artikel.unit || "keine"})`);
-        continue;
-      }
-      zutaten.push({ stockItemId: artikel.id, amount: umgerechnet });
-    }
-    if (zutaten.length === 0) return { rezept: null, warnungen, neueArtikel };
-
-    const vorhanden = this.getRecipeByProductName(name);
-    if (vorhanden) {
-      const ohneKreis = zutaten.filter((z) => !z.recipeId || !this.wuerdeKreisBilden(vorhanden.id, z.recipeId));
-      if (ohneKreis.length < zutaten.length) warnungen.push("eine Zutat hätte einen Kreis gebildet und wurde ausgelassen");
-      return { rezept: this.updateRecipe(vorhanden.id, { productName: vorhanden.productName, ingredients: ohneKreis }),
-               warnungen, neueArtikel, ersetzt: true };
-    }
-    return { rezept: this.addRecipe(name, zutaten, { needsReview: true }), warnungen, neueArtikel, ersetzt: false };
   },
 
   // ---- Bingo-Abend: Termine und Anmeldungen ----
@@ -1908,54 +1481,6 @@ export const store = {
     persist();
   },
 
-  // ---- Inventur ----
-  /** Was bei einer Inventur zu zaehlen ist: alle mengengefuehrten Artikel eines Bereichs mit ihrem
-   * Soll-Bestand. Artikel ohne Einheit (reine Ampel) tauchen nicht auf – da gibt es nichts zu zaehlen. */
-  getStocktakeSheet(bereich) {
-    return this.getStockItems()
-      .filter((s) => s.unit && (!bereich || (s.bereich || "kueche") === bereich))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((s) => ({ stockItemId: s.id, name: s.name, unit: s.unit, soll: Number(s.currentAmount) || 0,
-                     pricePerUnit: s.pricePerUnit ?? null }));
-  },
-
-  /** Inventur abschliessen: der gezaehlte Bestand wird der neue Stand, die Differenz festgehalten.
-   *
-   * Die Differenz ist die eigentliche Information – sie ist Bruch, Schwund, Fehlbuchung oder ein Rezept,
-   * das nicht stimmt. Ohne sie faellt so etwas nie auf, weil der Bestand einfach ueberschrieben wuerde.
-   * Artikel, bei denen nichts eingetragen wurde, bleiben unangetastet: nicht gezaehlt ist nicht dasselbe
-   * wie null da.
-   */
-  saveStocktake({ date, bereich, counts }) {
-    const tag = date || todayStr();
-    const entries = [];
-    let differenzWert = 0;
-    for (const [stockItemId, istRoh] of Object.entries(counts || {})) {
-      if (istRoh === "" || istRoh === null || istRoh === undefined) continue;
-      const item = data.stock.find((s) => s.id === stockItemId);
-      if (!item || !item.unit) continue;
-      const ist = round2(Number(istRoh));
-      if (!Number.isFinite(ist)) continue;
-      const soll = round2(Number(item.currentAmount) || 0);
-      const differenz = round2(ist - soll);
-      const wert = item.pricePerUnit != null ? round2(differenz * item.pricePerUnit) : null;
-      entries.push({ stockItemId, name: item.name, unit: item.unit, soll, ist, differenz, wert });
-      if (wert !== null) differenzWert = round2(differenzWert + wert);
-      item.currentAmount = ist;
-      recomputeStockStatus(item);
-    }
-    if (entries.length === 0) return null;
-    const inventur = { id: uid(), date: tag, bereich: bereich || null, entries, differenzWert,
-                       createdAt: new Date().toISOString() };
-    data.stocktakes.push(inventur);
-    if (data.stocktakes.length > 60) data.stocktakes = data.stocktakes.slice(-60);
-    persist();
-    return inventur;
-  },
-  getStocktakes(limit = 12) {
-    return [...data.stocktakes].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
-  },
-
   /** Hält einen verkauften Posten aus einem Kassenbericht fest (für "Renner & Penner"). */
   addProductSale({ date, productName, quantity, salePrice }) {
     const menge = Number(quantity) || 0;
@@ -1972,23 +1497,6 @@ export const store = {
   },
   getProductSales(from, to) {
     return data.productSales.filter((s) => (!from || s.date >= from) && (!to || s.date <= to));
-  },
-
-  /** Einkaufspreis aus einem Lieferschein übernehmen.
-   *
-   * Ein von Hand gesetzter Preis wird NICHT überschrieben: wer ihn selbst eingetragen hat, hat sich
-   * dabei etwas gedacht (Sonderkondition, anderer Lieferant), und ein Beleg soll das nicht stillschweigend
-   * wieder plattmachen. */
-  setPriceFromDocument(id, pricePerUnit) {
-    const item = data.stock.find((s) => s.id === id);
-    const p = Number(pricePerUnit);
-    if (!item || !Number.isFinite(p) || p <= 0) return null;
-    if (item.priceSource === "manuell") return item;
-    item.pricePerUnit = roundPreis(p);
-    item.priceUpdatedAt = new Date().toISOString();
-    item.priceSource = "beleg";
-    persist();
-    return item;
   },
 
   /** Alle Reservierungen (für den Abgleich mit der Cloud). */
@@ -2473,7 +1981,6 @@ export const store = {
       days: (parsed.days ?? []).map(normalizeDay),
       notifications: parsed.notifications ?? [],
       stock: parsed.stock ?? [],
-      recipes: parsed.recipes ?? [],
       sickDays: parsed.sickDays ?? [],
       publishedWeeks: parsed.publishedWeeks ?? [],
       productSales: parsed.productSales ?? [],

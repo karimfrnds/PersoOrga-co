@@ -389,96 +389,17 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedRejectionIds: [...appliedRejectionIds].slice(-300) });
   }
 
-  // Vom Bot per Lieferschein-Foto/PDF erkannte Lieferungen -> als Verlauf beim jeweiligen Artikel anlegen
-  // (setzt den Status automatisch auf "ok"). Kennt
-  // die Vorräte-Liste den Artikel noch nicht, wird er automatisch neu angelegt (mit der auf dem Beleg
-  // erkannten Einheit, Start-Bestand 0 - die Menge kommt gleich im nächsten Schritt über addStockDelivery
-  // dazu) statt die Lieferung nur als Warnung zu verwerfen. Warnschwelle testweise auf 20% der ersten
-  // gelieferten Menge, bei Bedarf unter Admin -> Vorräte anpassen.
-  const remoteDeliveries = Array.isArray(remote.stockDeliveries) ? remote.stockDeliveries : [];
-  const appliedDeliveryIds = new Set(cfg.appliedDeliveryIds || []);
-  let newDeliveryIds = false;
-  for (const d of remoteDeliveries) {
-    if (!d.id || appliedDeliveryIds.has(d.id)) continue;
-    // Ebenfalls über die gemeinsame Namenserkennung – ein Lieferschein nennt den Artikel fast immer
-    // ausführlicher als die eigene Liste ("Erdbeeren 500g Schale" gegen "Erdbeeren").
-    let match = store.getStockItemByName(d.itemName);
-    if (!match && d.itemName) {
-      const qty = Number(d.quantity);
-      match = store.addStockItem(d.itemName, {
-        unit: d.unit || "",
-        currentAmount: 0,
-        lowThreshold: Number.isFinite(qty) ? Math.round(qty * 0.2 * 10) / 10 : 0,
-        // Als "bitte einordnen" markieren: nur so taucht der Artikel in der Zuordnungs-Liste am Laptop
-        // auf und lässt sich mit einem vorhandenen zusammenführen, falls es ihn doch schon gibt.
-        needsReview: true,
-      });
-      if (match) {
-        syncWarnings.push(`Neuer Artikel "${d.itemName}" angelegt – bitte am Laptop unter Bestand einordnen (Warnschwelle geschätzt).`);
-      }
-    }
-    if (match) {
-      const lieferung = store.addStockDelivery(match.id, { date: d.date, quantity: d.quantity, unit: d.unit });
-      // Liess sich die Menge nicht auf die Einheit des Artikels bringen, MUSS das auffallen – sonst
-      // steht die Lieferung im Verlauf, der Bestand bleibt aber stehen und niemand weiss warum.
-      if (lieferung && lieferung.uebernommen === null && Number.isFinite(lieferung.verlangt)) {
-        syncWarnings.push(
-          `Lieferung "${d.itemName}": ${lieferung.verlangt} ${lieferung.einheit || "?"} passt nicht zur Einheit des Artikels ` +
-            `(${match.unit || "keine"}). Bestand nicht verändert – bitte Einheit oder Gebindegröße im Artikel prüfen.`
-        );
-      }
-      // Einkaufspreis vom Beleg übernehmen – Grundlage für den Wareneinsatz. Ein von Hand gesetzter
-      // Preis bleibt dabei unangetastet (siehe setPriceFromDocument).
-      if (d.unitPrice) store.setPriceFromDocument(match.id, d.unitPrice);
-    }
-    else syncWarnings.push(`Lieferung "${d.itemName}": kein passender Vorrats-Artikel gefunden.`);
-    appliedDeliveryIds.add(d.id);
-    newDeliveryIds = true;
-  }
-  if (newDeliveryIds) {
-    store.updateTaskInboxConfig({ appliedDeliveryIds: [...appliedDeliveryIds].slice(-300) });
-  }
-
-  // Vom Bot per SumUp-Verkaufsbericht-Foto erkannte Verkäufe -> gegen die Rezept-Zutaten verrechnen
-  // (zieht die jeweilige Menge automatisch vom Bestand der Zutat-Artikel ab, neue Ampel inklusive).
+  // Vom Bot per SumUp-Verkaufsbericht erkannte Verkäufe -> in die Verkaufsstatistik.
+  //
+  // Frueher wurde damit auch der Bestand fortgeschrieben (Rezept-Zutaten abziehen, Artikel anlegen).
+  // Das ist raus: die Rechnung stimmte nur bei lueckenloser Pflege und hat vor allem Karteileichen
+  // erzeugt. Was verkauft wurde, bleibt trotzdem festgehalten – dafuer braucht es keine Rezepte.
   const remoteSales = Array.isArray(remote.stockSales) ? remote.stockSales : [];
   const appliedSaleIds = new Set(cfg.appliedSaleIds || []);
   let newSaleIds = false;
   for (const s of remoteSales) {
     if (!s.id || appliedSaleIds.has(s.id)) continue;
-    // Immer festhalten, was verkauft wurde – unabhängig davon, ob sich der Bestand verrechnen lässt.
-    // Sonst fehlten genau die Produkte in der Auswertung, für die noch kein Rezept hinterlegt ist.
     store.addProductSale({ date: s.date, productName: s.productName, quantity: s.quantitySold, salePrice: s.salePrice });
-    const recipe = store.getRecipeByProductName(s.productName);
-    if (recipe) {
-      store.applyProductSale(recipe.id, s.quantitySold, s.date);
-    } else {
-      const artikel = store.getStockItemByName(s.productName);
-      if (artikel && artikel.unit) {
-        // Wird genau so eingekauft, wie es verkauft wird: 1 verkauft = 1 Stück weniger.
-        store.applyDirectSale(artikel.id, s.quantitySold, s.date, s.productName);
-      } else if (artikel) {
-        // Artikel ohne Mengenführung (nur Ampel) – da gibt es nichts abzuziehen.
-        syncWarnings.push(`Verkauf "${s.productName}": Artikel wird ohne Menge geführt, nichts abgezogen.`);
-      } else if (s.kind === "artikel") {
-        // Unbekannt und laut Beleg-Erkennung ein eingekauftes Produkt: als Artikel mit Stück-Führung
-        // anlegen und den Verkauf sofort abziehen. Der Bestand startet bei 0 und wird dadurch negativ –
-        // das ist gewollt und sichtbar: es zeigt genau, wie viel seit dem Anlegen rausgegangen ist.
-        const neu = store.addStockItem(s.productName, { unit: "Stück", currentAmount: 0, lowThreshold: 0, needsReview: true });
-        if (neu) {
-          store.applyDirectSale(neu.id, s.quantitySold, s.date, s.productName);
-          syncWarnings.push(`Neuer Artikel "${s.productName}" aus dem Verkaufsbericht angelegt – bitte am Laptop unter Bestand prüfen.`);
-        }
-      } else {
-        // Alles andere wird als Rezept angelegt, absichtlich OHNE Zutaten. Ein leeres Rezept zieht nichts
-        // ab – lieber vorerst nichts verrechnen, als von einem falschen Artikel abzubuchen. Sobald der Chef
-        // die Zutaten einträgt, greift die Verrechnung ab dem nächsten Bericht.
-        const neu = store.addRecipe(s.productName, [], { needsReview: true });
-        if (neu) {
-          syncWarnings.push(`Neues Rezept "${s.productName}" angelegt – bitte am Laptop unter Bestand die Zutaten eintragen.`);
-        }
-      }
-    }
     appliedSaleIds.add(s.id);
     newSaleIds = true;
   }
@@ -486,43 +407,34 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedSaleIds: [...appliedSaleIds].slice(-300) });
   }
 
-  // Artikel- und Rezept-Änderungen aus der Laptop-Ansicht übernehmen. Der iPad hält die maßgebliche
-  // Vorräte-/Rezept-Liste, der Laptop reicht nur Änderungswünsche ein (gleiches Muster wie überall).
+  // Artikel-Änderungen aus der Laptop-Ansicht übernehmen. Der iPad hält die maßgebliche Artikel-Liste,
+  // der Laptop reicht nur Änderungswünsche ein (gleiches Muster wie überall).
   const remoteStockChanges = Array.isArray(remote.stockChanges) ? remote.stockChanges : [];
   const appliedStockChangeIds = new Set(cfg.appliedStockChangeIds || []);
   let newStockChangeIds = false;
   for (const c of remoteStockChanges) {
     if (!c.id || appliedStockChangeIds.has(c.id)) continue;
     if (c.kind === "create") {
-      store.addStockItem(c.name, { unit: c.unit || "", currentAmount: c.currentAmount ?? 0, lowThreshold: c.lowThreshold ?? 0,
-        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit });
+      store.addStockItem(c.name, {
+        bereich: c.bereich,
+        lieferant: c.lieferant,
+        bestellmenge: c.bestellmenge,
+        wochenmenge: c.wochenmenge,
+      });
     } else if (c.kind === "update") {
-      if (!store.updateStockItem(c.itemId, { name: c.name, unit: c.unit, lowThreshold: c.lowThreshold,
-        bereich: c.bereich, packSize: c.packSize, packLabel: c.packLabel, pricePerUnit: c.pricePerUnit,
-        lieferant: c.lieferant, bestellmenge: c.bestellmenge })) {
+      if (!store.updateStockItem(c.itemId, { name: c.name, bereich: c.bereich, lieferant: c.lieferant,
+        bestellmenge: c.bestellmenge, wochenmenge: c.wochenmenge })) {
         syncWarnings.push(`Artikel-Änderung: Artikel nicht gefunden (evtl. schon gelöscht).`);
       }
       // Bearbeiten IST das Prüfen: der Hinweis "bitte einordnen" kann danach weg.
       store.markStockItemReviewed(c.itemId);
     } else if (c.kind === "delete") {
       store.removeStockItem(c.itemId);
-    } else if (c.kind === "setAmount") {
-      store.setStockAmount(c.itemId, c.currentAmount, "Chef (Laptop)");
     } else if (c.kind === "reviewed") {
       store.markStockItemReviewed(c.itemId);
     } else if (c.kind === "merge") {
-      const zusammen = store.mergeStockItem(c.itemId, c.targetId, {
-        faktor: c.faktor,
-        bestandUebernehmen: c.bestandUebernehmen,
-      });
-      if (!zusammen) {
+      if (!store.mergeStockItem(c.itemId, c.targetId)) {
         syncWarnings.push(`Zusammenführen von Artikeln: einer der beiden ist nicht mehr da.`);
-      } else if (!zusammen.mengeUebernommen && zusammen.alteMenge !== 0 && c.bestandUebernehmen !== false) {
-        syncWarnings.push(
-          `"${zusammen.artikel.name}": der Name wurde übernommen, der Bestand von ${zusammen.alteMenge} ` +
-            `${zusammen.alteEinheit || "?"} aber nicht – ohne Umrechnung nach ${zusammen.artikel.unit || "keine"} ` +
-            `wäre die Zahl geraten. Beim Zusammenführen lässt sich die Umrechnung angeben.`
-        );
       }
     } else if (c.kind === "alias") {
       store.addNameAlias("artikel", c.itemId, c.alias);
@@ -540,55 +452,6 @@ async function performTaskSync() {
   }
   if (newStockChangeIds) {
     store.updateTaskInboxConfig({ appliedStockChangeIds: [...appliedStockChangeIds].slice(-300) });
-  }
-
-  const remoteRecipeChanges = Array.isArray(remote.recipeChanges) ? remote.recipeChanges : [];
-  const appliedRecipeChangeIds = new Set(cfg.appliedRecipeChangeIds || []);
-  let newRecipeChangeIds = false;
-  for (const c of remoteRecipeChanges) {
-    if (!c.id || appliedRecipeChangeIds.has(c.id)) continue;
-    if (c.kind === "create") store.addRecipe(c.productName, c.ingredients || [], { yieldAmount: c.yieldAmount, yieldUnit: c.yieldUnit });
-    else if (c.kind === "update") {
-      store.updateRecipe(c.recipeId, { productName: c.productName, ingredients: c.ingredients || [],
-        yieldAmount: c.yieldAmount, yieldUnit: c.yieldUnit });
-      store.markRecipeReviewed(c.recipeId); // Zutaten eingetragen = eingeordnet
-    } else if (c.kind === "delete") store.removeRecipe(c.recipeId);
-    else if (c.kind === "reviewed") store.markRecipeReviewed(c.recipeId);
-    else if (c.kind === "merge") {
-      if (!store.mergeRecipe(c.recipeId, c.targetId)) {
-        syncWarnings.push(`Zusammenführen von Rezepten: eines der beiden ist nicht mehr da.`);
-      }
-    } else if (c.kind === "alias") store.addNameAlias("rezept", c.recipeId, c.alias);
-    appliedRecipeChangeIds.add(c.id);
-    newRecipeChangeIds = true;
-  }
-  if (newRecipeChangeIds) {
-    store.updateTaskInboxConfig({ appliedRecipeChangeIds: [...appliedRecipeChangeIds].slice(-300) });
-  }
-
-  // Mitarbeiter-Änderungen aus der Laptop-Ansicht übernehmen. Der PIN wird dabei nie angefasst – der bleibt
-  // ausschließlich am iPad und geht nie über das Netz.
-  const remoteEmployeeChanges = Array.isArray(remote.employeeChanges) ? remote.employeeChanges : [];
-  const appliedEmployeeChangeIds = new Set(cfg.appliedEmployeeChangeIds || []);
-  let newEmployeeChangeIds = false;
-  for (const c of remoteEmployeeChanges) {
-    if (!c.id || appliedEmployeeChangeIds.has(c.id)) continue;
-    const daten = { name: c.name, role: c.role, hourlyWage: c.hourlyWage, isMinijob: !!c.isMinijob, minijobLimit: c.minijobLimit };
-    if (c.kind === "create") {
-      store.addEmployee({ ...daten, pin: null }); // PIN vergibt der Chef am iPad
-    } else if (c.kind === "update") {
-      if (store.getEmployee(c.employeeId)) store.updateEmployee(c.employeeId, daten);
-      else syncWarnings.push(`Mitarbeiter-Änderung: Person nicht gefunden (evtl. schon gelöscht).`);
-    } else if (c.kind === "deactivate") {
-      store.updateEmployee(c.employeeId, { active: false });
-    } else if (c.kind === "activate") {
-      store.updateEmployee(c.employeeId, { active: true });
-    }
-    appliedEmployeeChangeIds.add(c.id);
-    newEmployeeChangeIds = true;
-  }
-  if (newEmployeeChangeIds) {
-    store.updateTaskInboxConfig({ appliedEmployeeChangeIds: [...appliedEmployeeChangeIds].slice(-300) });
   }
 
   // Krankmeldungen vom Handy -> als Krank-Tage übernehmen. Ein Eintrag kann mehrere Tage umfassen
@@ -614,31 +477,6 @@ async function performTaskSync() {
   }
   if (newSickIds) {
     store.updateTaskInboxConfig({ appliedSickIds: [...appliedSickIds].slice(-300) });
-  }
-
-  // Aus Rezept-PDFs erkannte Rezepturen -> als Rezepte anlegen. Fehlende Zutaten entstehen dabei als
-  // Artikel und landen in der Prüfliste am Laptop – falls es sie unter anderem Namen schon gibt, fängt
-  // die Zuordnung sie dort ab.
-  const remoteRecipeImports = Array.isArray(remote.recipeImports) ? remote.recipeImports : [];
-  const appliedRecipeImportIds = new Set(cfg.appliedRecipeImportIds || []);
-  let newRecipeImportIds = false;
-  for (const r of remoteRecipeImports) {
-    if (!r.id || appliedRecipeImportIds.has(r.id)) continue;
-    const ergebnis = store.importRecipe({ productName: r.productName, ingredients: r.ingredients });
-    if (!ergebnis || !ergebnis.rezept) {
-      syncWarnings.push(`Rezept "${r.productName || "?"}" konnte nicht angelegt werden (keine verwertbare Zutat).`);
-    } else {
-      const teile = [];
-      if (ergebnis.ersetzt) teile.push("bestehendes Rezept aktualisiert");
-      if (ergebnis.neueArtikel > 0) teile.push(`${ergebnis.neueArtikel} neue Zutat(en) als Artikel angelegt – bitte am Laptop einordnen`);
-      for (const w of ergebnis.warnungen) teile.push(w);
-      if (teile.length > 0) syncWarnings.push(`Rezept "${r.productName}": ${teile.join(" · ")}`);
-    }
-    appliedRecipeImportIds.add(r.id);
-    newRecipeImportIds = true;
-  }
-  if (newRecipeImportIds) {
-    store.updateTaskInboxConfig({ appliedRecipeImportIds: [...appliedRecipeImportIds].slice(-300) });
   }
 
   // Online-Reservierungen von der Website -> als echte Reservierung anlegen. Bewusst OHNE Tisch:
@@ -863,33 +701,21 @@ async function performTaskSync() {
     id: s.id,
     name: s.name,
     status: s.status,
-    unit: s.unit || "",
-    currentAmount: s.unit ? s.currentAmount : null,
-    lowThreshold: s.unit ? s.lowThreshold : null,
     needsReview: !!s.needsReview,
     aliases: s.aliases || [],
     bereich: s.bereich || "kueche",
-    packSize: s.packSize || 1,
-    packLabel: s.packLabel || "",
-    pricePerUnit: s.pricePerUnit ?? null,
-    priceSource: s.priceSource || null,
     notSameAs: s.notSameAs || [],
-    // Verbrauch der letzten 30 Tage – daraus rechnet die Laptop-Ansicht die Reichweite. Bewusst der
-    // ROHWERT plus die Zahl der Tage mit Verbrauch, nicht ein fertiges Ergebnis: so lässt sich am
-    // Laptop zeigen, worauf die Aussage beruht.
-    verbrauch30: store.getConsumptionSince(s.id, 30),
     // Grundlage der Bestellliste am Laptop.
     lieferant: s.lieferant || "",
     bestellmenge: s.bestellmenge || "",
+    wochenmenge: s.wochenmenge || 0,
     lastOrderedAt: s.lastOrderedAt || null,
     lastDeliveredAt: s.lastDeliveredAt || null,
   }));
-  // Was sich mit welchem Produkt verdienen lässt (90 Tage). Auf dem iPad gerechnet, weil nur er die
-  // Rezepte und Einkaufspreise vollständig kennt.
+  // Was sich mit welchem Produkt verkauft (90 Tage).
   const produktStatistik = store.getProductStats(isoDaysAgo(90), todayStr());
   // Reservierungen als Tageszahlen – ausdrücklich ohne Namen und Telefonnummern.
   const reservationStats = store.getReservationStats(isoDaysAgo(90), todayStr());
-  const recipes = store.getRecipes().map((r) => ({ id: r.id, productName: r.productName, ingredients: r.ingredients, needsReview: !!r.needsReview, aliases: r.aliases || [], yieldAmount: r.yieldAmount ?? 1, yieldUnit: r.yieldUnit || "Portion" }));
   // Stammdaten für die Laptop-Verwaltung – ohne PIN. Statt des PINs nur die Info, ob überhaupt einer
   // gesetzt ist, damit am Laptop sichtbar ist, wer sich noch nicht einstempeln kann.
   const employeeDetails = store.getEmployees(true).map((e) => ({
@@ -956,7 +782,6 @@ async function performTaskSync() {
     employeeMeta,
     staleOpenShifts,
     stock,
-    recipes,
     employeeDetails,
     authPins,
     adminPinHash,

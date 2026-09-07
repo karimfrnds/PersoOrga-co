@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-06.1";
+const WORKER_VERSION = "2026-09-07.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -184,11 +184,9 @@ const EMPTY_STATE = {
   // Bewusst getrennt von den Kiosk-Benachrichtigungen: die entstehen lokal auf dem iPad und kämen hier
   // sonst nie an. [{id, employeeName, text, createdAt, readAt}]
   employeeNotifications: [],
-  // Rezepte vom iPad (nur zum Anzeigen/Bearbeiten am Laptop) + Warteschlangen für Änderungen, die der
-  // Laptop anstößt. Wie überall gilt: der iPad arbeitet sie ab und bleibt die maßgebliche Instanz.
-  recipes: [], // [{id, productName, ingredients:[{stockItemId, amount}]}]
-  stockChanges: [], // [{id, kind:"create"|"update"|"delete"|"setAmount", ...}]
-  recipeChanges: [], // [{id, kind:"create"|"update"|"delete", ...}]
+  // Warteschlange für Artikel-Änderungen, die der Laptop anstößt. Wie überall gilt: der iPad arbeitet
+  // sie ab und bleibt die maßgebliche Instanz.
+  stockChanges: [], // [{id, kind:"create"|"update"|"delete"|"status"|"bestellt"|"geliefert", ...}]
   // Mitarbeiter-Stammdaten vom iPad für die Laptop-Verwaltung. Bewusst OHNE PIN – der wird weiterhin nur
   // am iPad vergeben, damit kein PIN im Klartext das Gerät verlässt.
   employeeDetails: [], // [{id, name, role, hourlyWage, isMinijob, minijobLimit, active, hasPin}]
@@ -209,12 +207,9 @@ const EMPTY_STATE = {
   reservationSlots: [],
   // Öffnungszeiten + Regeln für die Online-Buchung, ebenfalls vom iPad.
   reservationConfig: null,
-  // Verdichtete Auswertungs-Daten vom iPad (er kennt Rezepte und Preise vollstaendig).
+  // Verdichtete Auswertungs-Daten vom iPad.
   produktStatistik: [], // [{productName, menge, umsatz, materialkosten, kostenJeStueck, tage}]
   reservationStats: [], // [{date, anzahl, gaeste, walkins, storniert, erschienen, ...}] – ohne Namen
-  // Aus Rezept-PDFs erkannte Rezepturen, die der iPad anlegt.
-  // [{id, productName, ingredients:[{name, amount, unit}], date}]
-  recipeImports: [],
   // Warteschlange der Gast-Buchungen, die der iPad abholt.
   // [{id, date, time, name, phone, guests, area, note, code, createdAt}]
   reservationRequests: [],
@@ -263,9 +258,7 @@ async function getState(env) {
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
       shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
       employeeNotifications: Array.isArray(parsed.employeeNotifications) ? parsed.employeeNotifications : [],
-      recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [],
       stockChanges: Array.isArray(parsed.stockChanges) ? parsed.stockChanges : [],
-      recipeChanges: Array.isArray(parsed.recipeChanges) ? parsed.recipeChanges : [],
       employeeDetails: Array.isArray(parsed.employeeDetails) ? parsed.employeeDetails : [],
       employeeChanges: Array.isArray(parsed.employeeChanges) ? parsed.employeeChanges : [],
       publishedWeeks: Array.isArray(parsed.publishedWeeks) ? parsed.publishedWeeks : [],
@@ -277,7 +270,6 @@ async function getState(env) {
       reservationDetails: Array.isArray(parsed.reservationDetails) ? parsed.reservationDetails : [],
       taskTemplates: Array.isArray(parsed.taskTemplates) ? parsed.taskTemplates : [],
       taskTemplateChanges: Array.isArray(parsed.taskTemplateChanges) ? parsed.taskTemplateChanges : [],
-      recipeImports: Array.isArray(parsed.recipeImports) ? parsed.recipeImports : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
       reservationStats: Array.isArray(parsed.reservationStats) ? parsed.reservationStats : [],
       events: Array.isArray(parsed.events) ? parsed.events : [],
@@ -2231,30 +2223,6 @@ async function handleAdminPublishWeek(request, env) {
   return jsonResponse({ ok: true, weekStart: montag, abgeschlossen: true, benachrichtigt: empfaenger.size });
 }
 
-/** Vorräte vom Laptop: "wieder da" bzw. eine Lieferung erfassen – beides über die bestehenden
- * Warteschlangen, die der iPad schon abarbeitet. */
-async function handleAdminStock(request, env) {
-  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
-  if (guard.error) return guard.error;
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse({ error: "bad request" }, 400);
-  }
-  const itemName = String(body?.itemName || "").trim();
-  if (!itemName) return jsonResponse({ error: "Artikelname fehlt." }, 400);
-  const state = await getState(env);
-
-  const quantity = Number(body?.quantity);
-  if (!Number.isFinite(quantity) || quantity <= 0) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(body?.date) ? body.date : todayBerlin();
-  const delivery = { id: crypto.randomUUID(), itemName, quantity, unit: String(body?.unit || "").trim(), date };
-  await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), delivery].slice(-500) });
-  return jsonResponse({ ok: true });
-}
-
 async function sendTelegramMessage(env, chatId, text) {
   await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -2559,132 +2527,42 @@ function buildStockListReply(state) {
 }
 
 
-function buildDeliveryReply(items) {
-  const lines = items.map((it, i) => `${i + 1}. ${it.itemName} – ${it.quantity != null ? `${it.quantity} ${it.unit || ""}`.trim() : "(Menge unklar)"}`);
-  const heading = items.length === 1 ? "📦 Lieferung erkannt und geloggt:" : `📦 ${items.length} Artikel erkannt und geloggt:`;
-  return [heading, ...lines].join("\n");
-}
-
-function buildRezeptReply(rezepte) {
-  const zeilen = rezepte.map(
-    (r) => `• ${r.productName}: ${r.ingredients.map((z) => `${z.amount} ${z.unit} ${z.name}`).join(", ")}`
-  );
-  return [
-    rezepte.length === 1 ? "📖 Rezept erkannt:" : `📖 ${rezepte.length} Rezepte erkannt:`,
-    ...zeilen,
-    "",
-    "Wird beim nächsten Abgleich angelegt. Zutaten, die es noch nicht gibt, lege ich als Artikel an – die stehen dann am Laptop unter Bestand zum Einordnen.",
-  ].join("\n");
-}
-
 function buildSalesReply(items) {
   const lines = items.map((it, i) => `${i + 1}. ${it.productName} – ${it.quantitySold}x`);
   const heading = items.length === 1 ? "🧾 Verkauf erkannt:" : `🧾 ${items.length} Produkte erkannt:`;
-  // Bewusst kein "ist verrechnet": das passiert erst beim nächsten iPad-Abgleich, und für ein neu
-  // angelegtes Rezept ohne Zutaten passiert es gar nicht, bis der Chef die Zutaten eingetragen hat.
-  return [
-    heading,
-    ...lines,
-    "",
-    "Wird beim nächsten Abgleich mit dem Bestand verrechnet. Unbekannte Produkte lege ich automatisch an – die stehen dann am Laptop unter Bestand zum Einordnen.",
-  ].join("\n");
+  return [heading, ...lines, "", "Geht beim nächsten Abgleich in die Verkaufsstatistik."].join("\n");
 }
 
-/** Liest ein Foto per Claude Vision aus und erkennt dabei selbst, ob es ein Lieferschein/eine Rechnung
- * (gelieferte Artikel + Menge) oder ein SumUp-Verkaufsbericht (verkaufte Produkte + Anzahl) ist. Wirft bei
- * echten Fehlern (Anthropic nicht erreichbar o.ä.). */
-async function extractStockDocument(env, imageBase64, mimeType, caption, today, state) {
-  // Was das System schon kennt, wird mitgegeben: so bekommt "Capp. gross" dieselbe Einordnung wie das
-  // bereits vorhandene "Cappuccino", statt beim naechsten Bericht anders zu landen.
-  const bekannteProdukte = [
-    ...(state?.recipes || []).map((r) => `- ${r.productName} = rezept`),
-    ...(state?.stock || []).map((s) => `- ${s.name} = artikel`),
-  ]
-    .slice(0, 120)
-    .join("\n");
+/** Liest einen SumUp-Verkaufsbericht (Foto oder PDF) per Claude Vision aus: welche Produkte in welcher
+ * Anzahl verkauft wurden. Wirft bei echten Fehlern (Anthropic nicht erreichbar o.ä.). */
+async function extractStockDocument(env, imageBase64, mimeType, caption, today) {
   const tool = {
     name: "extract_stock_document",
-    description:
-      "Erkennt die Art eines Beleg-Fotos/PDFs (Lieferschein/Rechnung/Bestellung ODER SumUp-Verkaufsbericht) und extrahiert die jeweils relevanten Positionen.",
+    description: "Liest die verkauften Produkte aus einem SumUp-Verkaufs-/Kassenbericht.",
     input_schema: {
       type: "object",
       properties: {
-        documentType: {
-          type: "string",
-          enum: ["lieferschein", "verkaufsbericht", "rezept"],
-          description:
-            "'lieferschein' für Lieferschein/Rechnung/Bestellung/Auftragsbestätigung (Wareneingang, auch mehrseitig mit vielen Positionen), 'verkaufsbericht' für einen SumUp-Verkaufs-/Kassenbericht (Warenausgang), 'rezept' für eine Rezeptur/Zubereitungsanleitung, die auflistet welche Zutaten in welcher Menge in ein Produkt gehen (z.B. eine Karte oder Liste mit 'Cappuccino: 8g Bohnen, 150ml Milch').",
-        },
         items: {
           type: "array",
-          description: "Nur bei documentType=lieferschein oder verkaufsbericht. Bei einem Rezept leer lassen.",
           description:
-            "Nur tatsächlich auf dem Beleg erkennbare Positionen, nichts erfinden. Bei langen Bestellungen/Lieferscheinen mit vielen Zeilen ALLE Positionen auflisten, keine auslassen oder zusammenfassen. Reine Pfand-/Leergut-Zeilen (z.B. 'MW LEERGUT') NICHT mit aufnehmen, das ist kein Vorrats-Artikel.",
+            "Nur tatsaechlich im Bericht erkennbare Positionen, nichts erfinden. Bei langen Berichten ALLE Zeilen auflisten, keine auslassen oder zusammenfassen.",
           items: {
             type: "object",
             properties: {
-              itemName: {
-                type: "string",
-                description:
-                  "Nur bei documentType=lieferschein: Artikelname wie auf dem Beleg, inkl. Packungsgröße falls angegeben (z.B. '500g Alpensalz', '1l Milch') – ohne die Bestellmenge selbst.",
-              },
-              quantity: {
-                type: "number",
-                description:
-                  "Nur bei documentType=lieferschein: die TATSÄCHLICH gelieferte Stückzahl der einzelnen Verkaufs-/Verbrauchseinheit (z.B. einzelne Flaschen, Beutel, Packungen) – NICHT einfach die rohe Bestell-Menge kopieren. Gibt der Beleg zusätzlich zur Menge ein Gebinde/eine Packungsgröße an (z.B. Spalte 'Gebinde' mit '20er', '12er', '6er' = Stück pro Kasten/Karton), dann Menge MAL Gebinde-Größe rechnen (z.B. Menge 4, Gebinde '20er' → quantity 80). Ohne erkennbares Gebinde (oder Gebinde '1er') einfach die Menge-Spalte direkt übernehmen. Das ist wichtig, damit die Zahl später 1:1 mit einzeln verkauften Stück (z.B. aus einem Kassenbericht) vergleichbar ist.",
-              },
-              unit: {
-                type: "string",
-                description:
-                  "Nur bei documentType=lieferschein: die Einheit des EINZELNEN Stücks aus 'quantity' (z.B. 'Flasche', 'Stück', 'Packung', 'Beutel'), nicht die Bestell-/Liefer-Verpackung (also nicht 'Kasten'/'Karton'/'Kiste'). Nur 'kg'/'l'/'g'/'ml' verwenden, wenn der Beleg die Menge selbst direkt in dieser Einheit angibt (z.B. '50 kg Kaffeebohnen lose'), nicht wenn nur die Packungsgröße im Artikelnamen steht.",
-              },
-              productName: { type: "string", description: "Nur bei documentType=verkaufsbericht: Produktname, wie im Bericht (z.B. 'Cappuccino')." },
-              quantitySold: { type: "number", description: "Nur bei documentType=verkaufsbericht: verkaufte Anzahl als Zahl." },
+              productName: { type: "string", description: "Produktname, wie im Bericht (z.B. 'Cappuccino')." },
+              quantitySold: { type: "number", description: "Verkaufte Anzahl als Zahl." },
               unitPrice: {
                 type: "number",
                 description:
-                  "Preis EINER einzelnen Verkaufs-/Verbrauchseinheit in Euro, ohne Waehrungszeichen. Bei documentType=lieferschein der NETTO-Einkaufspreis je Einzelstueck (also Positionspreis geteilt durch die tatsaechliche Stueckzahl aus quantity – steht auf dem Beleg ein Kastenpreis, muss er durch die Gebindegroesse geteilt werden). Bei documentType=verkaufsbericht der Brutto-Verkaufspreis je verkauftem Stueck. Weglassen, wenn kein Preis erkennbar ist – lieber keine Angabe als eine geratene.",
-              },
-              kind: {
-                type: "string",
-                enum: ["artikel", "rezept"],
-                description:
-                  "Nur bei documentType=verkaufsbericht: Wird dieses Produkt so, wie es verkauft wird, auch EINGEKAUFT ('artikel', 1 Verkauf = 1 Stück weniger im Lager, z.B. Flaschengetränke, Dosen, zugekaufte Snacks), oder wird es im Café aus mehreren Zutaten ZUBEREITET ('rezept', z.B. Cappuccino aus Bohnen und Milch, Bowls, Cocktails)? Im Zweifel IMMER 'rezept' wählen: ein Rezept ohne Zutaten zieht nichts ab und richtet keinen Schaden an, ein falscher Artikel zieht dagegen von einem Lagerbestand ab, den es gar nicht gibt.",
+                  "Brutto-Verkaufspreis EINES Stuecks in Euro, ohne Waehrungszeichen. Weglassen, wenn kein Preis erkennbar ist – lieber keine Angabe als eine geratene.",
               },
             },
+            required: ["productName", "quantitySold"],
           },
         },
-        recipes: {
-          type: "array",
-          description:
-            "Nur bei documentType=rezept: alle Rezepte, die auf dem Dokument stehen. Enthaelt das Dokument mehrere Rezepte, ALLE erfassen.",
-          items: {
-            type: "object",
-            properties: {
-              productName: {
-                type: "string",
-                description: "Name des fertigen Produkts, moeglichst genau so, wie es auf der Karte bzw. im Kassensystem heisst (z.B. 'Cappuccino').",
-              },
-              ingredients: {
-                type: "array",
-                description: "Die Zutaten fuer EINE Portion bzw. ein verkauftes Stueck.",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string", description: "Name der Zutat, so wie sie eingekauft wird (z.B. 'Kaffeebohnen', 'Vollmilch')." },
-                    amount: { type: "number", description: "Menge dieser Zutat fuer EINE Portion, als Zahl." },
-                    unit: { type: "string", description: "Einheit der Menge, genau wie angegeben: g, kg, ml, cl, l oder Stueck." },
-                  },
-                  required: ["name", "amount", "unit"],
-                },
-              },
-            },
-            required: ["productName", "ingredients"],
-          },
-        },
-        date: { type: "string", description: "Datum auf dem Beleg als YYYY-MM-DD, falls erkennbar, sonst leerer String." },
+        date: { type: "string", description: "Datum auf dem Bericht als YYYY-MM-DD, falls erkennbar, sonst leerer String." },
       },
-      required: ["documentType"],
+      required: ["items"],
     },
   };
   // PDFs gehen als "document"-Content-Block rein, Fotos als "image" – beides von Claude direkt unterstützt
@@ -2711,11 +2589,9 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
             fileBlock,
             {
               type: "text",
-              text: `Heute ist ${today} (Europe/Berlin). Das ist ein Beleg für ein Café (Foto oder PDF, ggf. auch mehrseitig): entweder ein Lieferschein/eine Rechnung/Bestellung/Auftragsbestätigung eines Großhändlers (Wareneingang), ein SumUp-Verkaufs-/Kassenbericht (Warenausgang, zeigt verkaufte Produkte mit Stückzahl) ODER eine Rezeptur (welche Zutaten in welcher Menge in ein Produkt gehen).${
+              text: `Heute ist ${today} (Europe/Berlin). Das ist ein SumUp-Verkaufs-/Kassenbericht eines Cafés (Foto oder PDF, ggf. mehrseitig): er zeigt die verkauften Produkte mit Stückzahl.${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Bestimme zuerst documentType, extrahiere dann ALLE passenden Positionen von JEDER Seite, auch bei langen Listen. Achte bei Lieferungen besonders auf eine Gebinde-/Verpackungsspalte (z.B. "20er", "12er", "6er") und rechne sie in die tatsächliche Stückzahl der Verkaufseinheit (Flasche/Stück/Packung) um, NICHT die rohe Bestellmenge übernehmen – sonst passt der Bestand später nicht mehr zu einzeln verkauften Stück aus einem Kassenbericht. Lies ausserdem die PREISE mit: beim Lieferschein den Netto-Einkaufspreis je EINZELSTUECK (Positionspreis geteilt durch die umgerechnete Stueckzahl), beim Kassenbericht den Verkaufspreis je verkauftem Stueck. Ist kein Preis erkennbar, lass das Feld weg statt zu raten.${
-                bekannteProdukte ? `\n\nDiese Produkte kennt das System schon, mit ihrer jeweiligen Einordnung – halte dich bei gleichen oder sehr ähnlichen Namen unbedingt an dieselbe Einordnung:\n${bekannteProdukte}` : ""
-              }`,
+              } Extrahiere ALLE Positionen von JEDER Seite, auch bei langen Listen. Lies den Verkaufspreis je Stück mit; ist keiner erkennbar, lass das Feld weg statt zu raten.`,
             },
           ],
         },
@@ -2732,10 +2608,9 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today, 
   return toolUse.input;
 }
 
-/** Lädt eine Foto- oder PDF-Datei einer Telegram-Nachricht (per file_id) herunter, lässt sie per Vision
- * auswerten und verarbeitet sie je nach erkanntem Dokument-Typ als Lieferung (Bestand rauf) oder
- * Verkaufsbericht (Bestand über die Rezept-Zutaten runter). knownMimeType kommt bei Dokumenten direkt von
- * Telegram mit; bei Fotos gibt es das nicht, dort wird die Endung der heruntergeladenen Datei geraten. */
+/** Lädt eine Foto- oder PDF-Datei einer Telegram-Nachricht (per file_id) herunter und wertet sie als
+ * SumUp-Verkaufsbericht aus. knownMimeType kommt bei Dokumenten direkt von Telegram mit; bei Fotos gibt
+ * es das nicht, dort wird die Endung der heruntergeladenen Datei geraten. */
 async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, today, state) {
   try {
     const fileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`);
@@ -2759,77 +2634,31 @@ async function handleStockDocument(env, chatId, fileId, knownMimeType, caption, 
  * Laptop-Upload genutzt, damit beide Wege exakt gleich funktionieren (und nicht mit der Zeit auseinanderlaufen).
  * Gibt den Antworttext plus die erkannten Positionen zurück, damit der Laptop sie anzeigen kann. */
 async function verarbeiteBeleg(env, base64, mimeType, caption, today, state) {
-  const extracted = await extractStockDocument(env, base64, mimeType, caption, today, state);
+  const extracted = await extractStockDocument(env, base64, mimeType, caption, today);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
 
-  if (extracted.documentType === "rezept") {
-    const rezepte = (Array.isArray(extracted.recipes) ? extracted.recipes : [])
-      .map((r) => ({
-        id: crypto.randomUUID(),
-        productName: String(r.productName || "").trim(),
-        ingredients: (Array.isArray(r.ingredients) ? r.ingredients : [])
-          .map((z) => ({ name: String(z.name || "").trim(), amount: Number(z.amount) || 0, unit: String(z.unit || "").trim() }))
-          .filter((z) => z.name && z.amount > 0),
-        date,
-      }))
-      .filter((r) => r.productName && r.ingredients.length > 0);
-    if (rezepte.length === 0) {
-      return { art: "rezept", items: [], text: "Konnte darin keine Rezeptur erkennen. Steht auf dem Dokument, welche Zutaten in welcher Menge in ein Produkt gehen?" };
-    }
-    await patchState(env, { recipeImports: [...(state.recipeImports || []), ...rezepte].slice(-200) });
-    return { art: "rezept", items: rezepte, text: buildRezeptReply(rezepte) };
-  }
-
-  if (extracted.documentType === "verkaufsbericht") {
-    const items = (Array.isArray(extracted.items) ? extracted.items : [])
-      .map((it) => ({
-        id: crypto.randomUUID(),
-        productName: String(it.productName || "").trim(),
-        quantitySold: Number(it.quantitySold) || 0,
-        // Vorschlag, ob das ein eingekaufter Artikel oder ein zubereitetes Rezept ist. Bewusst nur ein
-        // Vorschlag – das iPad legt danach an, markiert aber als "bitte prüfen".
-        kind: it.kind === "artikel" ? "artikel" : "rezept",
-        // Verkaufspreis je Stück – Grundlage für den Deckungsbeitrag je Produkt.
-        salePrice: Number.isFinite(Number(it.unitPrice)) && Number(it.unitPrice) > 0 ? Number(it.unitPrice) : null,
-        date,
-      }))
-      .filter((it) => it.productName && it.quantitySold > 0);
-    if (items.length === 0) return { art: "verkaufsbericht", items: [], text: "Konnte im Verkaufsbericht keine Produkte erkennen." };
-    await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
-    return { art: "verkaufsbericht", items, text: buildSalesReply(items) };
-  }
-
+  // Nur noch der Verkaufsbericht. Lieferscheine und Rezepturen wurden frueher hier ausgewertet, um den
+  // Bestand fortzuschreiben – diese Rechnung gibt es nicht mehr, und ein Beleg, aus dem nichts folgt,
+  // ist nur ein Versprechen, das die Software nicht haelt.
   const items = (Array.isArray(extracted.items) ? extracted.items : [])
     .map((it) => ({
       id: crypto.randomUUID(),
-      itemName: String(it.itemName || "").trim(),
-      quantity: Number.isFinite(Number(it.quantity)) ? Number(it.quantity) : null,
-      unit: String(it.unit || "").trim(),
-      // Einkaufspreis je Einzelstück – Grundlage für den Wareneinsatz.
-      unitPrice: Number.isFinite(Number(it.unitPrice)) && Number(it.unitPrice) > 0 ? Number(it.unitPrice) : null,
+      productName: String(it.productName || "").trim(),
+      quantitySold: Number(it.quantitySold) || 0,
+      // Verkaufspreis je Stueck – Grundlage fuer den Umsatz je Produkt.
+      salePrice: Number.isFinite(Number(it.unitPrice)) && Number(it.unitPrice) > 0 ? Number(it.unitPrice) : null,
       date,
     }))
-    .filter((it) => it.itemName);
+    .filter((it) => it.productName && it.quantitySold > 0);
   if (items.length === 0) {
-    return { art: "lieferschein", items: [], text: "Konnte darauf keine Artikel erkennen. Ist es ein Lieferschein/eine Rechnung/Bestellung?" };
+    return {
+      art: "verkaufsbericht",
+      items: [],
+      text: "Konnte darauf keine verkauften Produkte erkennen. Ich kann nur SumUp-Verkaufsberichte auswerten – Lieferscheine brauche ich nicht mehr, der Bestand läuft jetzt über die Bestellliste.",
+    };
   }
-
-  await patchState(env, { stockDeliveries: [...(state.stockDeliveries || []), ...items] });
-
-  const stock = state.stock || [];
-  const unresolved = items.filter((it) => {
-    const needle = it.itemName.toLowerCase();
-    return !stock.some((s) => s.name.trim().toLowerCase() === needle || s.name.trim().toLowerCase().includes(needle));
-  });
-  let text = buildDeliveryReply(items);
-  if (unresolved.length > 0) {
-    // Diese Artikel legt der iPad beim nächsten Abgleich selbst an – kein manueller Schritt nötig,
-    // aber ein Blick lohnt sich (Schreibweise, Warnschwelle).
-    text += `\n\nℹ Neu in der Vorräte-Liste, wird automatisch angelegt: ${unresolved
-      .map((it) => it.itemName)
-      .join(", ")}. Schau bei Gelegenheit unter Vorräte, ob Schreibweise und Warnschwelle passen.`;
-  }
-  return { art: "lieferschein", items, unresolved: unresolved.map((it) => it.itemName), text };
+  await patchState(env, { stockSales: [...(state.stockSales || []), ...items] });
+  return { art: "verkaufsbericht", items, text: buildSalesReply(items) };
 }
 
 /** Artikel anlegen/bearbeiten/löschen bzw. Menge korrigieren – vom Laptop aus. Geht als Warteschlangen-
@@ -2845,38 +2674,28 @@ async function handleAdminStockItem(request, env) {
     return jsonResponse({ error: "bad request" }, 400);
   }
   const kind = body?.kind;
-  if (!["create", "update", "delete", "setAmount", "reviewed", "merge", "alias", "notsame", "status", "bestellt", "geliefert"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (!["create", "update", "delete", "reviewed", "merge", "alias", "notsame", "status", "bestellt", "geliefert"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if ((kind === "merge" || kind === "notsame") && !String(body?.targetId || "").trim()) return jsonResponse({ error: "Zweiter Artikel fehlt." }, 400);
   if (kind === "create" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Artikelnamen angeben." }, 400);
   // "bestellt"/"geliefert" gehen ueber mehrere Artikel auf einmal – eine Bestellung ist nun mal eine Liste.
   if (["bestellt", "geliefert"].includes(kind)) {
     if (!Array.isArray(body?.itemIds) || body.itemIds.length === 0) return jsonResponse({ error: "Keine Artikel ausgewählt." }, 400);
   } else if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
-  if (kind === "setAmount" && !Number.isFinite(Number(body?.currentAmount))) return jsonResponse({ error: "Bitte eine gültige Menge angeben." }, 400);
 
   const eintrag = {
     id: crypto.randomUUID(),
     kind,
     itemId: String(body?.itemId || "") || null,
     name: String(body?.name || "").trim(),
-    unit: body?.unit === undefined ? undefined : String(body.unit).trim(),
-    lowThreshold: body?.lowThreshold === undefined ? undefined : Number(body.lowThreshold) || 0,
-    currentAmount: body?.currentAmount === undefined ? undefined : Number(body.currentAmount) || 0,
     targetId: String(body?.targetId || "") || null,
     alias: String(body?.alias || "").trim(),
     bereich: body?.bereich === undefined ? undefined : body.bereich === "bar" ? "bar" : "kueche",
-    packSize: body?.packSize === undefined ? undefined : Math.max(1, Number(body.packSize) || 1),
-    packLabel: body?.packLabel === undefined ? undefined : String(body.packLabel).trim(),
-    pricePerUnit: body?.pricePerUnit === undefined ? undefined : Number(body.pricePerUnit),
-    // Umrechnung beim Zusammenführen ("1 Flasche = 500 ml"). Fehlt sie, rechnet der iPad selbst um,
-    // soweit die Einheiten das hergeben.
-    faktor: Number(body?.faktor) > 0 ? Number(body.faktor) : undefined,
+    wochenmenge: body?.wochenmenge === undefined ? undefined : Math.max(0, Number(body.wochenmenge) || 0),
     // Bestellliste: bei wem und in welcher Einheit bestellt wird, und der Zustand des Artikels.
     lieferant: body?.lieferant === undefined ? undefined : String(body.lieferant).trim(),
     bestellmenge: body?.bestellmenge === undefined ? undefined : String(body.bestellmenge).trim(),
     status: ["ok", "knapp", "leer", "bestellt"].includes(body?.status) ? body.status : undefined,
     itemIds: Array.isArray(body?.itemIds) ? body.itemIds.map(String) : undefined,
-    bestandUebernehmen: body?.bestandUebernehmen === false ? false : undefined,
   };
   const state = await getState(env);
   // Die Änderung SOFORT auch auf die eigene Kopie anwenden. Ohne das reicht der Laptop nur einen Wunsch
@@ -2909,27 +2728,12 @@ function stockVorschau(stock, e) {
     );
   }
   if (e.kind === "merge") {
-    // Der Doppelgänger verschwindet, sein Name bleibt als Zweitname am richtigen Artikel.
+    // Der Doppelgänger verschwindet, sein Name bleibt als Zweitname am richtigen Artikel. Ohne Mengen
+    // ist das eine reine Namenssache – es gibt nichts mehr zu verrechnen.
     const von = stock.find((s) => s.id === e.itemId);
-    // Der Bestand wandert mit. Der Worker kennt keine Einheiten-Tabelle – er rechnet deshalb nur mit dem
-    // Faktor, den die Oberfläche mitschickt, oder bei identischer Einheit mit 1. Sonst bleibt die Zahl hier
-    // stehen und der iPad setzt sie beim nächsten Abgleich richtig: eine geratene Zahl wäre schlimmer.
-    let faktor = null;
-    if (e.bestandUebernehmen !== false) {
-      if (Number(e.faktor) > 0) faktor = Number(e.faktor);
-      else if (von && String(von.unit || "").toLowerCase() === String(stock.find((s) => s.id === e.targetId)?.unit || "").toLowerCase()) faktor = 1;
-    }
     return stock
       .filter((s) => s.id !== e.itemId)
-      .map((s) => {
-        if (s.id !== e.targetId || !von) return s;
-        const zusammen = { ...s, aliases: [...(s.aliases || []), von.name] };
-        if (faktor !== null) {
-          zusammen.currentAmount =
-            Math.round(((Number(s.currentAmount) || 0) + (Number(von.currentAmount) || 0) * faktor) * 100) / 100;
-        }
-        return zusammen;
-      });
+      .map((s) => (s.id === e.targetId && von ? { ...s, aliases: [...(s.aliases || []), von.name] } : s));
   }
   if (e.kind === "alias") {
     return stock.map((s) => (s.id === e.itemId ? { ...s, aliases: [...(s.aliases || []), e.alias] } : s));
@@ -2945,117 +2749,35 @@ function stockVorschau(stock, e) {
     );
   }
   if (e.kind === "create") {
-    const unit = e.unit || "";
     return [
       ...stock,
       {
         id: "vorlaeufig-" + e.id,
         name: e.name,
         status: "ok",
-        unit,
-        currentAmount: unit ? Number(e.currentAmount) || 0 : null,
-        lowThreshold: unit ? Number(e.lowThreshold) || 0 : null,
         needsReview: false,
         bereich: e.bereich || "kueche",
-        packSize: e.packSize || 1,
-        packLabel: e.packLabel || "",
-        pricePerUnit: Number.isFinite(e.pricePerUnit) ? e.pricePerUnit : null,
         lieferant: e.lieferant || "",
         bestellmenge: e.bestellmenge || "",
+        wochenmenge: Number(e.wochenmenge) || 0,
       },
     ];
   }
   return stock.map((s) => {
     if (s.id !== e.itemId) return s;
-    if (e.kind === "setAmount") return { ...s, currentAmount: Number(e.currentAmount) || 0 };
     if (e.kind === "reviewed") return { ...s, needsReview: false };
     if (e.kind === "update") {
       return {
         ...s,
         name: e.name || s.name,
-        unit: e.unit === undefined ? s.unit : e.unit,
-        lowThreshold: e.lowThreshold === undefined ? s.lowThreshold : e.lowThreshold,
         bereich: e.bereich === undefined ? s.bereich : e.bereich,
-        packSize: e.packSize === undefined ? s.packSize : e.packSize,
-        packLabel: e.packLabel === undefined ? s.packLabel : e.packLabel,
-        pricePerUnit: e.pricePerUnit === undefined ? s.pricePerUnit : e.pricePerUnit,
         lieferant: e.lieferant === undefined ? s.lieferant : e.lieferant,
         bestellmenge: e.bestellmenge === undefined ? s.bestellmenge : e.bestellmenge,
+        wochenmenge: e.wochenmenge === undefined ? s.wochenmenge : e.wochenmenge,
         needsReview: false,
       };
     }
     return s;
-  });
-}
-
-/** Rezepte anlegen/bearbeiten/löschen – vom Laptop aus, ebenfalls über eine Warteschlange. */
-async function handleAdminRecipe(request, env) {
-  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
-  if (guard.error) return guard.error;
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse({ error: "bad request" }, 400);
-  }
-  const kind = body?.kind;
-  if (!["create", "update", "delete", "reviewed", "merge", "alias"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
-  if (kind !== "create" && !String(body?.recipeId || "").trim()) return jsonResponse({ error: "Rezept fehlt." }, 400);
-  if (!["delete", "reviewed", "merge", "alias"].includes(kind) && !String(body?.productName || "").trim()) return jsonResponse({ error: "Bitte einen Produktnamen angeben." }, 400);
-
-  // Eine Zutat ist entweder ein Artikel ODER ein anderes Rezept (z.B. ein Grundmix).
-  const zutaten = (Array.isArray(body?.ingredients) ? body.ingredients : [])
-    .map((z) =>
-      z?.recipeId
-        ? { recipeId: String(z.recipeId), amount: Number(z?.amount) || 0, unit: String(z?.unit || "").trim() }
-        : { stockItemId: String(z?.stockItemId || ""), amount: Number(z?.amount) || 0 }
-    )
-    .filter((z) => (z.recipeId || z.stockItemId) && z.amount > 0);
-
-  const eintrag = {
-    id: crypto.randomUUID(),
-    kind,
-    recipeId: String(body?.recipeId || "") || null,
-    productName: String(body?.productName || "").trim(),
-    ingredients: zutaten,
-    yieldAmount: body?.yieldAmount === undefined ? undefined : Number(body.yieldAmount),
-    yieldUnit: body?.yieldUnit === undefined ? undefined : String(body.yieldUnit).trim(),
-    targetId: String(body?.targetId || "") || null,
-    alias: String(body?.alias || "").trim(),
-  };
-  const state = await getState(env);
-  // Wie bei den Artikeln: sofort auf die eigene Kopie anwenden, sonst wirkt die Änderung folgenlos.
-  await patchState(env, {
-    recipeChanges: [...(state.recipeChanges || []), eintrag].slice(-200),
-    recipes: rezeptVorschau(state.recipes || [], eintrag),
-  });
-  return jsonResponse({ ok: true });
-}
-
-/** Bildet eine Rezept-Änderung auf der Worker-Kopie nach (siehe stockVorschau). */
-function rezeptVorschau(recipes, e) {
-  if (e.kind === "delete") return recipes.filter((r) => r.id !== e.recipeId);
-  if (e.kind === "merge") {
-    const von = recipes.find((r) => r.id === e.recipeId);
-    return recipes
-      .filter((r) => r.id !== e.recipeId)
-      .map((r) => (r.id === e.targetId && von ? { ...r, aliases: [...(r.aliases || []), von.productName] } : r));
-  }
-  if (e.kind === "alias") {
-    return recipes.map((r) => (r.id === e.recipeId ? { ...r, aliases: [...(r.aliases || []), e.alias] } : r));
-  }
-  if (e.kind === "create") {
-    return [...recipes, { id: "vorlaeufig-" + e.id, productName: e.productName, ingredients: e.ingredients || [], needsReview: false, yieldAmount: e.yieldAmount || 1, yieldUnit: e.yieldUnit || "Portion" }];
-  }
-  return recipes.map((r) => {
-    if (r.id !== e.recipeId) return r;
-    if (e.kind === "reviewed") return { ...r, needsReview: false };
-    if (e.kind === "update")
-      return { ...r, productName: e.productName || r.productName, ingredients: e.ingredients || [], needsReview: false,
-               yieldAmount: e.yieldAmount === undefined ? r.yieldAmount : e.yieldAmount,
-               yieldUnit: e.yieldUnit === undefined ? r.yieldUnit : e.yieldUnit };
-    return r;
   });
 }
 
@@ -3483,7 +3205,8 @@ const ASK_TOOLS = [
   },
   {
     name: "get_stock",
-    description: "Listet den aktuellen Vorräte-Stand (Ampel-Status, bei mengengeführten Artikeln auch Bestand/Einheit).",
+    description:
+      "Listet die Artikel mit ihrem gemeldeten Zustand (genug da / wird knapp / leer / bestellt), dem Lieferanten, der Bestellmenge und dem normalen Wochenbedarf. Mengen werden nicht gefuehrt.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -3532,12 +3255,10 @@ const ASK_TOOLS = [
   },
   {
     name: "get_stock_movements",
-    description:
-      "Warenbewegungen: per Lieferschein/Bestellung erfasste Lieferungen (Wareneingang) und per Verkaufsbericht erfasste Verkäufe (Warenausgang), jeweils mit Datum und Menge.",
+    description: "Per SumUp-Verkaufsbericht erfasste Verkäufe, mit Datum, Produkt und Anzahl.",
     input_schema: {
       type: "object",
       properties: {
-        kind: { type: "string", enum: ["deliveries", "sales", "all"], description: "Default: 'all'." },
         from: { type: "string", description: "YYYY-MM-DD, Start. Ohne Angabe: alles Bekannte." },
         to: { type: "string", description: "YYYY-MM-DD, Ende. Ohne Angabe: alles Bekannte." },
       },
@@ -3600,7 +3321,20 @@ function toolGetTasks(state, input) {
 
 function toolGetStock(state) {
   const stock = Array.isArray(state.stock) ? state.stock : [];
-  return { count: stock.length, items: stock.map((s) => ({ name: s.name, status: s.status, unit: s.unit || null, currentAmount: s.unit ? s.currentAmount : null })) };
+  const ZUSTAND = { ok: "genug da", knapp: "wird knapp", leer: "leer", bestellt: "bestellt" };
+  return {
+    count: stock.length,
+    hinweis: "Es gibt keine Mengen mehr – nur den gemeldeten Zustand und die Standard-Bestellmenge pro Woche.",
+    items: stock.map((s) => ({
+      name: s.name,
+      zustand: ZUSTAND[s.status] || s.status,
+      lieferant: s.lieferant || null,
+      bestellmenge: s.bestellmenge || null,
+      proWoche: Number(s.wochenmenge) > 0 ? s.wochenmenge : null,
+      bereich: s.bereich === "bar" ? "Bar" : "Küche",
+      zuletztBestellt: s.lastOrderedAt || null,
+    })),
+  };
 }
 
 /** Kleiner Helfer für die Zeitraum-Filter der folgenden Werkzeuge (leere Grenze = unbegrenzt). */
@@ -3684,25 +3418,14 @@ function toolGetEmployeeNotes(state, input) {
 }
 
 function toolGetStockMovements(state, input) {
-  const kind = ["deliveries", "sales", "all"].includes(input?.kind) ? input.kind : "all";
   const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : "";
   const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : "";
-  const result = {};
-  if (kind === "deliveries" || kind === "all") {
-    result.lieferungen = (Array.isArray(state.stockDeliveries) ? state.stockDeliveries : [])
-      .filter((d) => inRange(d.date || "", from, to))
-      .slice(-200)
-      .map((d) => ({ date: d.date, artikel: d.itemName, menge: d.quantity, einheit: d.unit || null }));
-  }
-  if (kind === "sales" || kind === "all") {
-    result.verkaeufe = (Array.isArray(state.stockSales) ? state.stockSales : [])
-      .filter((s) => inRange(s.date || "", from, to))
-      .slice(-200)
-      .map((s) => ({ date: s.date, produkt: s.productName, anzahl: s.quantitySold }));
-  }
-  const empty = (result.lieferungen?.length ?? 0) === 0 && (result.verkaeufe?.length ?? 0) === 0;
-  if (empty) return { error: "Für diesen Zeitraum sind keine Warenbewegungen erfasst." };
-  return result;
+  const verkaeufe = (Array.isArray(state.stockSales) ? state.stockSales : [])
+    .filter((s) => inRange(s.date || "", from, to))
+    .slice(-200)
+    .map((s) => ({ date: s.date, produkt: s.productName, anzahl: s.quantitySold }));
+  if (verkaeufe.length === 0) return { error: "Für diesen Zeitraum sind keine Verkäufe erfasst." };
+  return { verkaeufe };
 }
 
 /** Reservierungen eines Zeitraums – mit Namen, Personenzahl und Tisch.
@@ -4221,7 +3944,6 @@ async function handleState(request, env) {
     if (typeof body.adminPinHash === "string") patch.adminPinHash = body.adminPinHash;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
-    if (Array.isArray(body.recipes)) patch.recipes = body.recipes;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
     // Abgeschlossene Wochen: das iPad hat die Freigaben aus der Warteschlange übernommen und schickt hier
     // seinen maßgeblichen Stand zurück. Nur setzen, wenn wirklich mitgeschickt – sonst würde ein älteres
@@ -4561,12 +4283,10 @@ export default {
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/publish-week") return handleAdminPublishWeek(request, env);
-      if (url.pathname === "/admin/stock") return handleAdminStock(request, env);
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);
       if (url.pathname === "/admin/task") return handleAdminTask(request, env);
       if (url.pathname === "/admin/task-template") return handleAdminTaskTemplate(request, env);
-      if (url.pathname === "/admin/recipe") return handleAdminRecipe(request, env);
       if (url.pathname === "/admin/employee") return handleAdminEmployee(request, env);
       if (url.pathname === "/admin/message") return handleAdminMessage(request, env);
       return jsonResponse({ error: "unbekannter Endpunkt" }, 404);

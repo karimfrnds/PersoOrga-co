@@ -37,7 +37,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-07.1";
+const WORKER_VERSION = "2026-09-08.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -3242,7 +3242,7 @@ const ASK_TOOLS = [
   {
     name: "get_reservations",
     description:
-      "Reservierungen eines Zeitraums mit Namen, Personenzahl, Telefonnummer, Tisch, Notiz und Status. Enthaelt auch Buchungen, die noch in der Warteschlange stehen und denen der Chef noch keinen Tisch gegeben hat.",
+      "Reservierungen eines Zeitraums mit Namen, Personenzahl, Telefonnummer, Tisch, Notiz und Status. Bei abgesagten steht der Grund dabei und ob der Gast Bescheid bekommen hat. Enthaelt auch Buchungen, die noch in der Warteschlange stehen und denen der Chef noch keinen Tisch gegeben hat.",
     input_schema: {
       type: "object",
       properties: {
@@ -3456,6 +3456,8 @@ function toolGetReservations(state, input) {
       tische: (r.tische || []).join(", ") || null,
       notiz: r.note || null,
       status: r.status,
+      absageGrund: r.status === "storniert" ? r.cancelNote || r.cancelReason || null : null,
+      gastBenachrichtigt: r.status === "storniert" ? !!r.cancelNotified : null,
       herkunft: r.source,
       nummer: r.code || null,
     }));

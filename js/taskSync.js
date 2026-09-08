@@ -182,6 +182,11 @@ function buildReservationDetailsPayload() {
       note: r.note || "",
       status: r.status || "offen",
       source: r.source || "manuell",
+      // Bei einer Absage gehoert der Grund dazu – sonst steht im Chat nur "storniert" und niemand weiss,
+      // ob wir absagen mussten oder der Gast von sich aus.
+      cancelReason: r.cancelReason || null,
+      cancelNote: r.cancelNote || "",
+      cancelNotified: !!r.cancelNotified,
       tische: (r.tableIds || []).map((id) => store.getTable?.(id)?.name).filter(Boolean),
     }))
     .slice(-400);

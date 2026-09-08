@@ -1285,12 +1285,77 @@ export const store = {
       source,
       createdAt: new Date().toISOString(),
       arrivedAt: null,
+      // Absage: Grund, Freitext, wann und ob der Gast Bescheid weiss.
+      cancelReason: null,
+      cancelNote: "",
+      cancelledAt: null,
+      cancelledBy: "",
+      cancelNotified: false,
     };
     if (!r.date || !r.time || !r.name) return null;
     data.reservations.push(r);
     persist();
     return r;
   },
+  // ---- Absagen ----
+  //
+  // Eine Absage ist mehr als ein Status. Man will spaeter wissen, WARUM abgesagt wurde – ob wir selbst
+  // absagen mussten (ueberbucht, geschlossen) oder der Gast von sich aus. Das ist ein Unterschied, der
+  // ueber Monate etwas ueber den Laden sagt, und er geht verloren, wenn nur "storniert" dasteht.
+  //
+  // Ausserdem gehoert dazu, ob der Gast Bescheid weiss. Eine Absage, von der niemand erfahren hat, ist
+  // keine Absage, sondern ein Tisch, vor dem gleich jemand steht.
+  ABSAGE_GRUENDE: [
+    { id: "geschlossen", label: "Wir haben an dem Tag geschlossen", wirSagenAb: true },
+    { id: "ausgebucht", label: "Kein Tisch mehr frei", wirSagenAb: true },
+    { id: "privat", label: "Privatveranstaltung im Laden", wirSagenAb: true },
+    { id: "krank", label: "Personalausfall", wirSagenAb: true },
+    { id: "gast", label: "Der Gast hat selbst abgesagt", wirSagenAb: false },
+    { id: "sonstiges", label: "Anderer Grund", wirSagenAb: true },
+  ],
+  getAbsageGrund(id) {
+    return this.ABSAGE_GRUENDE.find((g) => g.id === id) || null;
+  },
+  /** Reservierung absagen. Der Tisch wird frei, der Grund bleibt.
+   *
+   * benachrichtigt: ob dem Gast eine Nachricht geschickt wurde. Bewusst ein eigenes Feld und nicht aus
+   * dem Grund abgeleitet – eine Nummer kann fehlen, oder man erreicht jemanden nicht.
+   */
+  cancelReservation(id, { grund = "sonstiges", freitext = "", benachrichtigt = false, by = "" } = {}) {
+    const r = data.reservations.find((x) => x.id === id);
+    if (!r) return null;
+    r.status = "storniert";
+    r.tableIds = [];
+    r.arrivedAt = null;
+    r.cancelReason = String(grund || "sonstiges");
+    r.cancelNote = String(freitext || "").trim();
+    r.cancelledAt = new Date().toISOString();
+    r.cancelledBy = String(by || "").trim();
+    r.cancelNotified = !!benachrichtigt;
+    persist();
+    return r;
+  },
+  /** Nachtragen, dass der Gast doch noch Bescheid bekommen hat. */
+  markReservationNotified(id) {
+    const r = data.reservations.find((x) => x.id === id);
+    if (!r) return null;
+    r.cancelNotified = true;
+    persist();
+    return r;
+  },
+  /** Eine Absage zuruecknehmen – der Gast kommt doch. Ohne Tisch, den vergibt man neu. */
+  undoCancelReservation(id) {
+    const r = data.reservations.find((x) => x.id === id);
+    if (!r || r.status !== "storniert") return null;
+    r.status = "offen";
+    r.cancelReason = null;
+    r.cancelNote = "";
+    r.cancelledAt = null;
+    r.cancelNotified = false;
+    persist();
+    return r;
+  },
+
   /** Laufkundschaft: jemand steht da und wird gesetzt. Kein Name, keine Telefonnummer, keine Rückfrage –
    * es zählt nur, dass der Tisch ab jetzt besetzt ist. Gilt sofort als angekommen, denn die Gäste sind ja da. */
   addWalkIn({ date, time, guests, tableIds = [] }) {

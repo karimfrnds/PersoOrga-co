@@ -13,6 +13,7 @@ import { store } from "../store.js";
 import { escapeHtml, todayStr, dateDe } from "../format.js";
 import { confirmDialog } from "../dialog.js";
 import { buildTischplan } from "./tableplan.js";
+import { whatsappLink, smsLink, absageText } from "../nachricht.js";
 
 function addDaysISO(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -621,6 +622,25 @@ function renderReservations() {
       }${r.phone ? ` · ${escapeHtml(r.phone)}` : ""} · Nr. ${escapeHtml(r.code)}</div>` +
       (r.note ? `<div class="muted small">📝 ${escapeHtml(r.note)}</div>` : "");
 
+    // Bei einer Absage ist der Grund die eigentliche Information – und ob der Gast Bescheid weiss.
+    // Eine Absage, von der niemand erfahren hat, ist keine Absage, sondern jemand, der gleich vor der
+    // Tuer steht: deshalb steht das hier und nicht versteckt im Bearbeiten-Dialog.
+    if (r.status === "storniert") {
+      const grund = store.getAbsageGrund(r.cancelReason);
+      const zeile = document.createElement("div");
+      zeile.className = "muted small";
+      zeile.textContent =
+        "🚫 Abgesagt" +
+        (grund ? ": " + (r.cancelReason === "sonstiges" && r.cancelNote ? r.cancelNote : grund.label) : "");
+      mitte.appendChild(zeile);
+      if (grund?.wirSagenAb && !r.cancelNotified) {
+        const warn = document.createElement("div");
+        warn.className = "res-warn";
+        warn.textContent = "Gast hat noch keine Nachricht bekommen";
+        mitte.appendChild(warn);
+      }
+    }
+
     // Terrasse zugemacht, aber hier sitzt noch jemand draußen: das muss auffallen, sonst steht der Gast
     // im Regen. Die Zuweisung wird bewusst NICHT automatisch gelöscht – umsetzen ist eine Entscheidung.
     const draussenTrotzRegen =
@@ -643,11 +663,23 @@ function renderReservations() {
       const zurueck = document.createElement("button");
       zurueck.className = "btn btn-secondary";
       zurueck.textContent = "↩ Zurückholen";
+      zurueck.title = "Der Gast kommt doch – Grund und Absage werden gelöscht, den Tisch vergibst du neu";
       zurueck.onclick = () => {
-        store.updateReservation(r.id, { status: (r.tableIds || []).length ? "zugewiesen" : "offen" });
+        store.undoCancelReservation(r.id);
         rerender();
       };
       aktionen.appendChild(zurueck);
+      // Wer noch nichts vom Gast gehört hat, will nachtragen können, dass er ihn doch erreicht hat.
+      if (store.getAbsageGrund(r.cancelReason)?.wirSagenAb && !r.cancelNotified) {
+        const gesagt = document.createElement("button");
+        gesagt.className = "btn btn-link";
+        gesagt.textContent = "Bescheid gesagt";
+        gesagt.onclick = () => {
+          store.markReservationNotified(r.id);
+          rerender();
+        };
+        aktionen.appendChild(gesagt);
+      }
     } else if (r.status === "da") {
       const weg = document.createElement("button");
       weg.className = "btn btn-secondary";
@@ -669,14 +701,17 @@ function renderReservations() {
       aktionen.appendChild(da);
     }
 
-    const tischBtn = document.createElement("button");
-    tischBtn.className = "btn btn-secondary";
-    tischBtn.textContent = tische.length ? "Tisch ändern" : "＋ Tisch";
-    tischBtn.onclick = () => {
-      zuweisenFuer = zuweisenFuer === r.id ? null : r.id;
-      rerender();
-    };
-    aktionen.appendChild(tischBtn);
+    // Einer abgesagten Reservierung einen Tisch zu geben, ergibt keinen Sinn – erst zurueckholen.
+    if (r.status !== "storniert") {
+      const tischBtn = document.createElement("button");
+      tischBtn.className = "btn btn-secondary";
+      tischBtn.textContent = tische.length ? "Tisch ändern" : "＋ Tisch";
+      tischBtn.onclick = () => {
+        zuweisenFuer = zuweisenFuer === r.id ? null : r.id;
+        rerender();
+      };
+      aktionen.appendChild(tischBtn);
+    }
 
     const mehr = document.createElement("button");
     mehr.className = "btn btn-secondary";
@@ -892,9 +927,8 @@ function renderReservations() {
     };
 
     overlay.querySelector("#rd-absagen")?.addEventListener("click", () => {
-      store.updateReservation(r.id, { status: "storniert", tableIds: [] });
       overlay.remove();
-      rerender();
+      openAbsageDialog(r, rerender);
     });
 
     overlay.querySelector("#rd-delete").onclick = async () => {
@@ -978,6 +1012,195 @@ function renderReservations() {
     };
     card.append(btn, status);
     return card;
+  }
+
+  /** Absage-Dialog: Grund wählen, Nachricht prüfen, abschicken.
+   *
+   * Drei Dinge in einem Ablauf, weil sie zusammengehören: ohne Grund weiß später niemand mehr, warum der
+   * Tisch frei wurde. Ohne Nachricht steht der Gast trotzdem vor der Tür. Und beides von Hand in zwei
+   * verschiedenen Apps zu machen, vergisst man im Betrieb.
+   *
+   * Verschickt wird NICHT automatisch: das iPad öffnet WhatsApp bzw. die SMS-App mit fertigem Text an
+   * genau diese Nummer. Bei einer Absage will man den Ton meistens noch anpassen, und man sieht, was
+   * rausgeht.
+   */
+  function openAbsageDialog(r, beimAbsagen) {
+    let grundId = "ausgebucht";
+    let freitext = "";
+    let geschrieben = false;
+
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const box = document.createElement("div");
+    box.className = "dialog";
+    box.innerHTML = `<h2>Reservierung absagen</h2>
+      <p class="muted small">${escapeHtml(r.name)} · ${escapeHtml(dateDe(r.date))} um ${escapeHtml(r.time)} Uhr ·
+      ${r.guests} ${r.guests === 1 ? "Person" : "Personen"}</p>`;
+
+    // --- Grund ---
+    const grundTitel = document.createElement("p");
+    grundTitel.className = "muted small";
+    grundTitel.innerHTML = "<b>Warum?</b>";
+    box.appendChild(grundTitel);
+    const gruende = document.createElement("div");
+    gruende.className = "res-gruende";
+    box.appendChild(gruende);
+
+    const freitextFeld = document.createElement("input");
+    freitextFeld.type = "text";
+    freitextFeld.placeholder = "Grund in eigenen Worten";
+    const freitextWrap = document.createElement("label");
+    freitextWrap.className = "field";
+    freitextWrap.innerHTML = "<span>Was genau?</span>";
+    freitextWrap.appendChild(freitextFeld);
+    box.appendChild(freitextWrap);
+
+    // --- Nachricht ---
+    const nachrichtWrap = document.createElement("label");
+    nachrichtWrap.className = "field";
+    nachrichtWrap.innerHTML = "<span>Nachricht an den Gast</span>";
+    const textFeld = document.createElement("textarea");
+    textFeld.rows = 8;
+    nachrichtWrap.appendChild(textFeld);
+    box.appendChild(nachrichtWrap);
+
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    box.appendChild(hinweis);
+
+    // --- Knöpfe ---
+    const akt = document.createElement("div");
+    akt.className = "employee-actions";
+    const waLink = document.createElement("a");
+    waLink.className = "btn btn-primary";
+    waLink.target = "_blank";
+    waLink.rel = "noopener";
+    waLink.textContent = "WhatsApp öffnen";
+    const smsA = document.createElement("a");
+    smsA.className = "btn btn-secondary";
+    smsA.textContent = "SMS öffnen";
+    const ohne = document.createElement("button");
+    ohne.className = "btn btn-link";
+    ohne.textContent = "Ohne Nachricht absagen";
+    akt.append(waLink, smsA, ohne);
+    box.appendChild(akt);
+
+    const abbrechen = document.createElement("div");
+    abbrechen.className = "dialog-actions";
+    const zurueck = document.createElement("button");
+    zurueck.className = "btn btn-secondary";
+    zurueck.textContent = "Doch nicht absagen";
+    zurueck.onclick = () => overlay.remove();
+    abbrechen.appendChild(zurueck);
+    box.appendChild(abbrechen);
+
+    const cafeName = store.getSettings().reservation?.cafeName || "";
+
+    function grundText() {
+      const g = store.getAbsageGrund(grundId);
+      if (grundId === "sonstiges") return freitext.trim() || "es geht an dem Tag leider nicht";
+      const texte = {
+        geschlossen: "wir haben an dem Tag geschlossen",
+        ausgebucht: "wir sind an dem Abend leider voll",
+        privat: "der Laden ist an dem Tag privat gebucht",
+        krank: "wir haben kurzfristig einen Personalausfall",
+        gast: "",
+      };
+      return texte[grundId] ?? (g ? g.label.toLowerCase() : "");
+    }
+
+    function zeichneGruende() {
+      gruende.innerHTML = "";
+      for (const g of store.ABSAGE_GRUENDE) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn " + (grundId === g.id ? "btn-primary" : "btn-secondary");
+        btn.textContent = g.label;
+        btn.onclick = () => {
+          grundId = g.id;
+          aktualisiere();
+        };
+        gruende.appendChild(btn);
+      }
+    }
+
+    function aktualisiere() {
+      zeichneGruende();
+      const g = store.getAbsageGrund(grundId);
+      freitextWrap.style.display = grundId === "sonstiges" ? "" : "none";
+      // Hat der Gast selbst abgesagt, braucht er keine Nachricht von uns – dann wäre das Feld nur im Weg.
+      const brauchtNachricht = !!g?.wirSagenAb;
+      nachrichtWrap.style.display = brauchtNachricht ? "" : "none";
+      waLink.style.display = brauchtNachricht ? "" : "none";
+      smsA.style.display = brauchtNachricht ? "" : "none";
+      ohne.textContent = brauchtNachricht ? "Ohne Nachricht absagen" : "Absagen";
+      ohne.className = brauchtNachricht ? "btn btn-link" : "btn btn-primary";
+
+      if (!geschrieben && brauchtNachricht) {
+        textFeld.value = absageText({
+          name: r.name,
+          datum: dateDe(r.date),
+          zeit: r.time,
+          personen: r.guests,
+          grundText: grundText(),
+          cafeName,
+        });
+      }
+      setzeLinks();
+    }
+
+    function setzeLinks() {
+      const wa = whatsappLink(r.phone, textFeld.value);
+      const sms = smsLink(r.phone, textFeld.value);
+      if (wa) {
+        waLink.href = wa;
+        waLink.classList.remove("btn-disabled");
+      } else {
+        waLink.removeAttribute("href");
+        waLink.classList.add("btn-disabled");
+      }
+      if (sms) {
+        smsA.href = sms;
+        smsA.classList.remove("btn-disabled");
+      } else {
+        smsA.removeAttribute("href");
+        smsA.classList.add("btn-disabled");
+      }
+      hinweis.textContent = wa
+        ? `Geht an ${r.phone}. Der Text lässt sich vorher noch ändern – abgeschickt wird in WhatsApp bzw. der SMS-App.`
+        : r.phone
+          ? `„${r.phone}“ sieht nicht nach einer Handynummer aus – bitte prüfen oder ohne Nachricht absagen.`
+          : "Für diese Reservierung ist keine Telefonnummer hinterlegt. Du kannst nur ohne Nachricht absagen.";
+    }
+
+    textFeld.oninput = () => {
+      geschrieben = true;
+      setzeLinks();
+    };
+    freitextFeld.oninput = () => {
+      freitext = freitextFeld.value;
+      // Solange niemand den Text selbst angefasst hat, zieht er mit dem Grund mit.
+      if (!geschrieben) aktualisiere();
+    };
+
+    const absagen = (benachrichtigt) => {
+      store.cancelReservation(r.id, { grund: grundId, freitext, benachrichtigt });
+      overlay.remove();
+      beimAbsagen();
+    };
+    waLink.onclick = () => {
+      if (!waLink.getAttribute("href")) return;
+      absagen(true);
+    };
+    smsA.onclick = () => {
+      if (!smsA.getAttribute("href")) return;
+      absagen(true);
+    };
+    ohne.onclick = () => absagen(false);
+
+    aktualisiere();
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
   }
 
   rerender();

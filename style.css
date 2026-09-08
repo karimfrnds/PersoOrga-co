@@ -432,6 +432,13 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .bestand-leer .bestand-status { color: var(--red); }
 .bestand-bestellt { border-color: var(--green); background: var(--green-light); }
 .bestand-bestellt .bestand-status { color: var(--green-dark); }
+
+/* Absage-Dialog: die Gruende untereinander, damit man sie am iPad sicher trifft und der Text nicht
+   mitten im Wort umbricht. */
+.res-gruende { display: grid; gap: 6px; margin-bottom: 12px; }
+.res-gruende .btn { text-align: left; }
+/* Ein Link ohne href sieht sonst aus wie ein Knopf, der nur nichts tut. */
+.btn-disabled { opacity: .4; pointer-events: none; }
 .task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }

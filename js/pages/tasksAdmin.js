@@ -25,6 +25,8 @@ function renderTasksAdmin() {
   }
 
   function build() {
+    // Damit man in der Uebersicht unten sofort sieht, was eine gerade angelegte Vorlage bewirkt.
+    store.ergaenzeStandardaufgabenAbHeute();
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Aufgaben</h1>`;
     frag.appendChild(buildTemplateCard());
@@ -46,7 +48,7 @@ function renderTasksAdmin() {
     card.innerHTML = `
       <h2>Standard-Aufgaben</h2>
       <p class="muted small">
-        Werden jedem neuen Tag automatisch mitgegeben – aber nur an den Tagen und in den Schichten, für die
+        Werden jedem Tag automatisch mitgegeben – aber nur an den Tagen und in den Schichten, für die
         sie gelten. Ohne Angabe heißt: jeden Tag, jede Schicht, den ganzen Tag.
       </p>
     `;
@@ -93,7 +95,7 @@ function renderTasksAdmin() {
     const hinweis = document.createElement("p");
     hinweis.className = "muted small";
     hinweis.textContent =
-      "Gilt ab dem nächsten Tag, der angelegt wird – der heutige Tag ändert sich dadurch nicht mehr.";
+      "Wird sofort in alle noch offenen Tage ab heute nachgetragen. Vergangene und abgeschlossene Tage bleiben, wie sie sind.";
     card.appendChild(hinweis);
     return card;
   }

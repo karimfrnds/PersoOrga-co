@@ -549,6 +549,8 @@ export const store = {
       availability: [],
       // Nur die Vorlagen, die an DIESEM Wochentag gelten. Schicht und Uhrzeit wandern mit an die Aufgabe:
       // ohne sie waere spaeter nicht mehr erkennbar, wer sie machen soll und ab wann sie ansteht.
+      // Welche Vorlagen in diesem Tag schon stecken – damit spaeter Nachgetragenes nicht doppelt kommt.
+      appliedTemplateIds: templatesForWeekday(dateStr).map((v) => v.id),
       tasks: templatesForWeekday(dateStr).map((v) => ({
         id: uid(),
         text: v.text,
@@ -651,6 +653,9 @@ export const store = {
   clockIn(employeeId) {
     const dateStr = todayStr();
     const d = this.getOrCreateDayByDate(dateStr);
+    // Der Tag kann schon seit der Verfuegbarkeits-Abfrage bestehen – dann fehlen ihm die Vorlagen,
+    // die seitdem dazugekommen sind.
+    this.ergaenzeStandardaufgaben(dateStr);
     const already = this.getOpenShiftForEmployeeToday(employeeId, dateStr);
     if (already) return { day: d, shift: already };
     const now = new Date();
@@ -1840,6 +1845,68 @@ export const store = {
     data.settings.taskTemplates = data.settings.taskTemplates.filter((t) => t.id !== id);
     persist();
   },
+  /** Fehlende Standard-Aufgaben in einem Tag nachtragen.
+   *
+   * Warum das noetig ist: Tage entstehen nicht erst am Morgen. Sobald jemand seine Verfuegbarkeit fuer
+   * die naechste Woche eintraegt, sind alle sieben Tage angelegt – mit den Vorlagen, die es in dem
+   * Moment gab. Eine Vorlage, die der Chef danach anlegt, fehlte in dieser ganzen Woche.
+   *
+   * Zwei Regeln, damit das Nachtragen nicht schlimmer wird als das Problem:
+   *   Vergangene und abgeschlossene Tage bleiben unangetastet. Das ist Historie.
+   *   Jede Vorlage wird pro Tag nur EINMAL angewandt (appliedTemplateIds). Wer eine Aufgabe im Tag
+   *   loescht, hat das so gemeint – sie darf nicht beim naechsten Blick wieder dastehen.
+   *
+   * Gibt die Zahl der nachgetragenen Aufgaben zurueck.
+   */
+  ergaenzeStandardaufgaben(dateStr) {
+    const d = this.getDayByDate(dateStr);
+    if (!d || dateStr < todayStr() || d.status !== "offen") return 0;
+
+    if (!Array.isArray(d.appliedTemplateIds)) {
+      // Tag von vor dieser Aenderung: ableiten, was schon angewandt wurde, damit nichts doppelt kommt.
+      // Eine bereits geloeschte Vorlagen-Aufgabe kann dadurch einmalig zurueckkommen – das laesst sich
+      // nicht unterscheiden, und einmal zu viel ist hier besser als eine Aufgabe, die nie erscheint.
+      d.appliedTemplateIds = data.settings.taskTemplates
+        .filter((v) => d.tasks.some((t) => t.source === "template" && t.text === v.text))
+        .map((v) => v.id);
+    }
+
+    const schon = new Set(d.appliedTemplateIds);
+    let neu = 0;
+    for (const v of templatesForWeekday(dateStr)) {
+      if (schon.has(v.id)) continue;
+      d.tasks.push({
+        id: uid(),
+        text: v.text,
+        done: false,
+        doneBy: null,
+        doneAt: null,
+        source: "template",
+        addedBy: null,
+        assignedTo: null,
+        priority: v.priority || "normal",
+        schicht: v.schicht || "",
+        bereich: v.bereich || "",
+        time: v.time || "",
+      });
+      d.appliedTemplateIds.push(v.id);
+      neu++;
+    }
+    if (neu > 0) persist();
+    return neu;
+  },
+  /** Dasselbe fuer heute und die naechsten Tage, die schon angelegt sind. Laeuft beim Abgleich mit –
+   * so greift eine neu angelegte Vorlage spaetestens nach 90 Sekunden ueberall. */
+  ergaenzeStandardaufgabenAbHeute(tage = 21) {
+    const heute = todayStr();
+    let neu = 0;
+    for (const d of data.days) {
+      if (d.date < heute || d.date > addDaysISOStore(heute, tage)) continue;
+      neu += this.ergaenzeStandardaufgaben(d.date);
+    }
+    return neu;
+  },
+
   /** Welche Vorlagen gelten an diesem Datum? Fuer die Vorschau in der Verwaltung. */
   getTaskTemplatesForDate(dateStr) {
     return templatesForWeekday(dateStr);

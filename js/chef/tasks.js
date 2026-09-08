@@ -54,9 +54,10 @@ function renderTasks(state, { onChanged }) {
     status.className = "muted small";
 
     card.innerHTML = `<h2>Standard-Aufgaben</h2>
-      <p class="muted small">Werden jedem neuen Tag automatisch mitgegeben – aber nur an den Tagen und in
+      <p class="muted small">Werden jedem Tag automatisch mitgegeben – aber nur an den Tagen und in
       den Schichten, für die sie gelten. Ohne Angabe: jeden Tag, jede Schicht, den ganzen Tag. Eine
-      Uhrzeit sorgt dafür, dass die Aufgabe ab dann auf dem iPad-Bildschirm angezeigt wird.</p>`;
+      Uhrzeit sorgt dafür, dass die Aufgabe ab dann auf dem iPad-Bildschirm angezeigt wird. Neu Angelegtes
+      wird in alle offenen Tage ab heute nachgetragen; vergangene bleiben, wie sie sind.</p>`;
 
     const vorlagen = Array.isArray(state.taskTemplates) ? state.taskTemplates : [];
     if (vorlagen.length === 0) {

@@ -85,6 +85,9 @@ function renderKiosk(navigate) {
   /** Was heute eine Uhrzeit hat, jetzt dran und noch offen ist. null, wenn es nichts gibt – dann soll
    * dort auch kein leerer Kasten stehen. */
   function buildFaelligBanner() {
+    // Beim Blick auf den Bildschirm nachtragen, was seit dem Anlegen des Tages an Vorlagen dazugekommen
+    // ist – sonst faellt eine heute angelegte Standard-Aufgabe erst morgen auf.
+    store.ergaenzeStandardaufgaben(todayStr());
     const day = store.getDayByDate(todayStr());
     if (!day) return null;
     const offen = day.tasks

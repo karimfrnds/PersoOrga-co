@@ -677,6 +677,10 @@ async function performTaskSync() {
 
   // Jetzt vollständig abgeglichenen lokalen Stand hochladen, damit die Cloud auch lokale
   // Änderungen (abgehakt, manuell angelegt/gelöscht/bearbeitet) und wer im Dienst ist kennt.
+  // Erst JETZT die Standard-Aufgaben nachtragen: eine Vorlage, die in diesem Abgleich vom Laptop kam,
+  // soll sofort als Aufgabe in den Tagen stehen und mit hochgehen – sonst dauert es einen Abgleich laenger.
+  store.ergaenzeStandardaufgabenAbHeute();
+
   const freshRows = store.getTasksFrom(todayStr());
   const pushTasks = freshRows.map((r) => ({
     id: r.id,

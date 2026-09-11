@@ -6,7 +6,7 @@
 // ============================================================================
 import { store } from "../store.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
-import { confirmDialog, alertDialog } from "../dialog.js";
+import { confirmDialog, alertDialog, promptDialog } from "../dialog.js";
 import { performBackup } from "../backup.js";
 import { performTaskSync } from "../taskSync.js";
 import { dateDe, todayStr } from "../format.js";
@@ -202,7 +202,61 @@ function renderSettings() {
     changePinBtn.textContent = "PIN ändern";
     changePinBtn.onclick = () => openChangePinDialog();
     pinCard.appendChild(changePinBtn);
-    return [pinCard];
+
+    // --- Zugang für die Social-Media-Betreuung ---
+    const socialCard = document.createElement("section");
+    socialCard.className = "card";
+    socialCard.innerHTML = `<h2>Zugang Social Media</h2>
+      <p class="muted small">Eigener PIN für die Social-Media-Betreuung. Damit kommt sie <b>ausschließlich</b>
+      an den Social-Bereich – nicht an Löhne, Kennzahlen, Reservierungen oder den Schichtplan. Ohne PIN
+      gibt es keinen Zugang.</p>`;
+    const stand = document.createElement("p");
+    stand.className = store.hasSocialPin() ? "callout" : "muted small";
+    stand.textContent = store.hasSocialPin()
+      ? "Ein Zugang ist eingerichtet."
+      : "Noch kein Zugang eingerichtet.";
+    socialCard.appendChild(stand);
+
+    const reihe = document.createElement("div");
+    reihe.className = "employee-actions";
+    const setzen = document.createElement("button");
+    setzen.className = "btn btn-secondary";
+    setzen.textContent = store.hasSocialPin() ? "PIN ändern" : "PIN vergeben";
+    setzen.onclick = async () => {
+      const pin = await promptDialog(
+        "Vier Ziffern oder mehr. Gib ihn der Person weiter, die euren Account betreut – sie meldet sich damit unter <b>Social</b> an.",
+        { title: "PIN für Social Media", type: "number", okLabel: "Speichern" }
+      );
+      if (pin === null) return;
+      const sauber = String(pin).trim();
+      if (sauber.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (sauber === String(store.getSettings().adminPin || "")) {
+        await alertDialog("Das ist dein Admin-PIN. Bitte einen anderen wählen – sonst käme sie überall hin.");
+        return;
+      }
+      store.setSocialPin(sauber);
+      rerender();
+      await alertDialog("Zugang eingerichtet. Er gilt, sobald sich das iPad das nächste Mal abgeglichen hat (spätestens 90 Sekunden).");
+    };
+    reihe.appendChild(setzen);
+    if (store.hasSocialPin()) {
+      const weg = document.createElement("button");
+      weg.className = "btn btn-link";
+      weg.textContent = "Zugang entziehen";
+      weg.onclick = async () => {
+        if (!(await confirmDialog("Zugang entziehen? Sie kommt danach nicht mehr in den Social-Bereich.", { danger: true, okLabel: "Entziehen" })))
+          return;
+        store.setSocialPin("");
+        rerender();
+      };
+      reihe.appendChild(weg);
+    }
+    socialCard.appendChild(reihe);
+
+    return [pinCard, socialCard];
   }
 
   // ---------------------------------------------------------------------

@@ -45,7 +45,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-11.1";
+const WORKER_VERSION = "2026-09-11.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -225,6 +225,11 @@ const EMPTY_STATE = {
   // Reservierungen MIT Namen fuer die Bot-Abfrage (der iPad schickt ein begrenztes Fenster).
   // [{id, code, date, time, name, phone, guests, area, note, status, source, tische[]}]
   reservationDetails: [],
+  // Social-Media-Bereich. Liegt als EINZIGES komplett hier und nicht auf dem iPad: daran arbeiten Chef
+  // und Betreuung an Laptop und Handy, und ein geteilter Kalender, dessen Aenderungen darauf warten,
+  // dass ein iPad im Cafe angeht, waere kein geteilter Kalender.
+  social: null,
+  socialPinHash: null,
   // Standard-Aufgaben vom iPad und die Aenderungswuensche vom Laptop.
   taskTemplates: [],
   taskTemplateChanges: [],
@@ -281,6 +286,8 @@ async function getState(env) {
       reservationConfig: parsed.reservationConfig && typeof parsed.reservationConfig === "object" ? parsed.reservationConfig : null,
       reservationRequests: Array.isArray(parsed.reservationRequests) ? parsed.reservationRequests : [],
       reservationDetails: Array.isArray(parsed.reservationDetails) ? parsed.reservationDetails : [],
+      social: parsed.social && typeof parsed.social === "object" ? parsed.social : null,
+      socialPinHash: typeof parsed.socialPinHash === "string" ? parsed.socialPinHash : null,
       taskTemplates: Array.isArray(parsed.taskTemplates) ? parsed.taskTemplates : [],
       taskTemplateChanges: Array.isArray(parsed.taskTemplateChanges) ? parsed.taskTemplateChanges : [],
       produktStatistik: Array.isArray(parsed.produktStatistik) ? parsed.produktStatistik : [],
@@ -392,7 +399,9 @@ async function requireSession(request, env, role) {
   } catch {
     return { error: jsonResponse({ error: "Sitzung ungültig. Bitte neu anmelden." }, 401) };
   }
-  if (session.role !== role) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
+  // role darf auch eine Liste sein: der Social-Bereich steht dem Chef UND der Betreuung offen.
+  const erlaubt = Array.isArray(role) ? role : [role];
+  if (!erlaubt.includes(session.role)) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
   return { session };
 }
 
@@ -1782,6 +1791,11 @@ async function handleAuthLogin(request, env) {
   let session = null;
   if (state.adminPinHash && sameHash(hash, state.adminPinHash)) {
     session = { role: "boss", name: "Chef" };
+  } else if (state.socialPinHash && sameHash(hash, state.socialPinHash)) {
+    // Eigene Rolle fuer die Social-Media-Betreuung: sie kommt ausschliesslich an den Social-Bereich.
+    // Loehne, Kennzahlen, Gastdaten und der Schichtplan sind fuer sie nicht erreichbar – nicht durch
+    // eine ausgeblendete Schaltflaeche, sondern weil kein Endpunkt sie ihr gibt.
+    session = { role: "social", name: "Social Media" };
   } else {
     const match = (state.authPins || []).find((p) => sameHash(hash, p.pinHash));
     if (match) session = { role: "employee", name: match.name };
@@ -1967,6 +1981,385 @@ async function handleMeSick(request, env) {
     const a = ABWESENHEIT_ARTEN[art];
     await sendToOwners(env, `${a.symbol} ${a.label}: ${guard.session.name} (${zeitraum})${note ? `\n„${note}“` : ""}`);
   }
+  return jsonResponse({ ok: true });
+}
+
+// ---------------------------------------------------------------------
+// Social-Media-Bereich
+//
+// Warum das hier liegt und nicht auf dem iPad: daran arbeiten zwei Leute an Laptop und Handy, oft
+// gleichzeitig. Ginge jede Aenderung ueber die iPad-Warteschlange, wuerde ein geteilter Kalender darauf
+// warten, dass ein Geraet im Cafe angeht. Also ist der Worker hier die Quelle der Wahrheit.
+//
+// Der Zuschnitt folgt dem, was in so einem Bereich wirklich gebraucht wird:
+//   Redaktionsplan  – was wann auf welchem Kanal rausgeht, mit Status. Der Status ist das Herz: ohne ihn
+//                     sieht man nicht, was in Arbeit, was fertig und was gefaehrdet ist.
+//   Freigabe        – der Inhaber schaut drauf, bevor etwas rausgeht. Genau dafuer gibt es so ein Tool.
+//   Shootings       – ein Termin mit Ort, Leuten und Shotlist. Speist die Posts.
+//   Listen          – Ideen, Hashtag-Sets, Aufgaben. Bewusst frei, weil jeder anders sortiert.
+//   Statistik       – von Hand gepflegt, weil kein API-Zugang da ist. Pro Post die Zahlen, dazu
+//                     regelmaessige Konto-Staende fuer die Follower-Kurve.
+// ---------------------------------------------------------------------
+const SOCIAL_STATUS = ["idee", "inArbeit", "freigabe", "geplant", "veroeffentlicht", "verworfen"];
+const SOCIAL_VORGABE = {
+  config: {
+    kanaele: ["Instagram", "TikTok", "Facebook", "Newsletter"],
+    formate: ["Foto", "Karussell", "Reel", "Story", "Text"],
+    // Content-Saeulen: worueber ueberhaupt gepostet wird. Ohne sie sieht man spaeter nicht, WAS
+    // funktioniert – nur DASS etwas funktioniert hat.
+    rubriken: ["Essen & Trinken", "Team", "Events", "Hinter den Kulissen", "Gäste", "Aktion"],
+    accountName: "",
+  },
+  posts: [],
+  shootings: [],
+  termine: [],
+  listen: [],
+  accountStats: [],
+};
+
+function socialState(state) {
+  const s = state.social || {};
+  return {
+    config: { ...SOCIAL_VORGABE.config, ...(s.config || {}) },
+    posts: Array.isArray(s.posts) ? s.posts : [],
+    shootings: Array.isArray(s.shootings) ? s.shootings : [],
+    termine: Array.isArray(s.termine) ? s.termine : [],
+    listen: Array.isArray(s.listen) ? s.listen : [],
+    accountStats: Array.isArray(s.accountStats) ? s.accountStats : [],
+  };
+}
+
+const istDatum = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
+const istZeit = (v) => /^\d{2}:\d{2}$/.test(String(v || ""));
+const text = (v, max = 200) => String(v ?? "").trim().slice(0, max);
+const zahlOderNull = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+
+/** Alles, was der Bereich zum Anzeigen braucht – in einem Aufruf.
+ *
+ * Dazu die Bingo-Termine aus dem Cafe-Teil: sie sind die wichtigsten Anker im Redaktionsplan. Eine
+ * Veranstaltung, die niemand ankuendigt, ist der haeufigste Fehler – und sie stehen ohnehin schon im
+ * System, also muss sie niemand abtippen.
+ */
+async function handleSocialOverview(request, env) {
+  const { session, error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  const state = await getState(env);
+  const s = socialState(state);
+  const heute = todayBerlin();
+  const cafeTermine = (state.events || [])
+    .filter((e) => e && e.date)
+    .map((e) => ({
+      id: "event-" + e.id,
+      datum: e.date,
+      titel: (state.eventConfig?.title || "Bingo-Abend") + (e.time ? ` · ab ${e.time} Uhr` : ""),
+      herkunft: "cafe",
+    }));
+  return jsonResponse({
+    rolle: session.role,
+    name: session.name,
+    heute,
+    ...s,
+    cafeTermine,
+  });
+}
+
+/** Ein Post im Redaktionsplan: anlegen, aendern, loeschen, Status setzen, Zahlen nachtragen. */
+async function handleSocialPost(request, env) {
+  const { session, error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete", "status", "stats"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !text(body?.postId)) return jsonResponse({ error: "Post fehlt." }, 400);
+
+  const state = await getState(env);
+  const s = socialState(state);
+  let posts = [...s.posts];
+
+  if (kind === "create") {
+    if (!istDatum(body?.datum)) return jsonResponse({ error: "Bitte ein Datum angeben." }, 400);
+    if (!text(body?.titel)) return jsonResponse({ error: "Bitte einen Titel angeben." }, 400);
+    posts.push({
+      id: crypto.randomUUID(),
+      datum: body.datum,
+      uhrzeit: istZeit(body?.uhrzeit) ? body.uhrzeit : "",
+      kanal: text(body?.kanal, 40) || s.config.kanaele[0],
+      format: text(body?.format, 40) || s.config.formate[0],
+      rubrik: text(body?.rubrik, 60),
+      titel: text(body?.titel, 120),
+      caption: text(body?.caption, 3000),
+      status: SOCIAL_STATUS.includes(body?.status) ? body.status : "idee",
+      verantwortlich: text(body?.verantwortlich, 60) || session.name,
+      notiz: text(body?.notiz, 500),
+      freigabeNotiz: "",
+      statistik: null,
+      erstelltVon: session.name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  } else if (kind === "delete") {
+    posts = posts.filter((p) => p.id !== body.postId);
+  } else {
+    posts = posts.map((p) => {
+      if (p.id !== body.postId) return p;
+      const neu = { ...p, updatedAt: new Date().toISOString() };
+      if (kind === "status") {
+        if (!SOCIAL_STATUS.includes(body?.status)) return p;
+        // Nur der Inhaber gibt frei. Sonst waere die Freigabe eine Formsache, die sich selbst abnickt.
+        if (body.status === "geplant" && p.status === "freigabe" && session.role !== "boss") return p;
+        neu.status = body.status;
+        if (body.freigabeNotiz !== undefined) neu.freigabeNotiz = text(body.freigabeNotiz, 500);
+        if (body.status === "veroeffentlicht" && !neu.veroeffentlichtAm) neu.veroeffentlichtAm = new Date().toISOString();
+      } else if (kind === "stats") {
+        // Zahlen von Hand: es gibt keinen API-Zugang zu den Plattformen. Leere Felder bleiben leer –
+        // eine 0 waere eine Aussage, ein leeres Feld ist "noch nicht abgelesen".
+        neu.statistik = {
+          reichweite: zahlOderNull(body?.reichweite),
+          likes: zahlOderNull(body?.likes),
+          kommentare: zahlOderNull(body?.kommentare),
+          saves: zahlOderNull(body?.saves),
+          shares: zahlOderNull(body?.shares),
+          profilaufrufe: zahlOderNull(body?.profilaufrufe),
+          neueFollower: zahlOderNull(body?.neueFollower),
+          erfasstAm: new Date().toISOString(),
+        };
+      } else {
+        if (body.datum !== undefined && istDatum(body.datum)) neu.datum = body.datum;
+        if (body.uhrzeit !== undefined) neu.uhrzeit = istZeit(body.uhrzeit) ? body.uhrzeit : "";
+        for (const [feld, max] of [["kanal", 40], ["format", 40], ["rubrik", 60], ["titel", 120], ["caption", 3000], ["notiz", 500], ["verantwortlich", 60]]) {
+          if (body[feld] !== undefined) neu[feld] = text(body[feld], max);
+        }
+      }
+      return neu;
+    });
+  }
+
+  await patchState(env, { social: { ...s, posts } });
+  return jsonResponse({ ok: true });
+}
+
+/** Shootings: ein Termin mit Ort, Leuten und Shotlist. */
+async function handleSocialShooting(request, env) {
+  const { session, error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete", "shot"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !text(body?.shootingId)) return jsonResponse({ error: "Shooting fehlt." }, 400);
+
+  const state = await getState(env);
+  const s = socialState(state);
+  let shootings = [...s.shootings];
+
+  if (kind === "create") {
+    if (!istDatum(body?.datum)) return jsonResponse({ error: "Bitte ein Datum angeben." }, 400);
+    shootings.push({
+      id: crypto.randomUUID(),
+      datum: body.datum,
+      von: istZeit(body?.von) ? body.von : "",
+      bis: istZeit(body?.bis) ? body.bis : "",
+      thema: text(body?.thema, 120),
+      ort: text(body?.ort, 120),
+      wer: text(body?.wer, 200),
+      notiz: text(body?.notiz, 1000),
+      shotlist: [],
+      erledigt: false,
+      createdAt: new Date().toISOString(),
+    });
+  } else if (kind === "delete") {
+    shootings = shootings.filter((x) => x.id !== body.shootingId);
+  } else {
+    shootings = shootings.map((x) => {
+      if (x.id !== body.shootingId) return x;
+      const neu = { ...x };
+      if (kind === "shot") {
+        const liste = Array.isArray(neu.shotlist) ? [...neu.shotlist] : [];
+        if (body.shotAktion === "add" && text(body?.shotText)) {
+          liste.push({ id: crypto.randomUUID(), text: text(body.shotText, 200), erledigt: false });
+        } else if (body.shotAktion === "toggle") {
+          const i = liste.findIndex((z) => z.id === body.shotId);
+          if (i >= 0) liste[i] = { ...liste[i], erledigt: !liste[i].erledigt };
+        } else if (body.shotAktion === "delete") {
+          return { ...neu, shotlist: liste.filter((z) => z.id !== body.shotId) };
+        }
+        neu.shotlist = liste;
+        return neu;
+      }
+      if (body.datum !== undefined && istDatum(body.datum)) neu.datum = body.datum;
+      if (body.von !== undefined) neu.von = istZeit(body.von) ? body.von : "";
+      if (body.bis !== undefined) neu.bis = istZeit(body.bis) ? body.bis : "";
+      for (const [feld, max] of [["thema", 120], ["ort", 120], ["wer", 200], ["notiz", 1000]]) {
+        if (body[feld] !== undefined) neu[feld] = text(body[feld], max);
+      }
+      if (body.erledigt !== undefined) neu.erledigt = !!body.erledigt;
+      return neu;
+    });
+  }
+
+  await patchState(env, { social: { ...s, shootings } });
+  return jsonResponse({ ok: true });
+}
+
+/** Eigene Termine im geteilten Kalender (Aktionen, Feiertage, Abwesenheit, Kampagnen-Start). */
+async function handleSocialTermin(request, env) {
+  const { error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+
+  const state = await getState(env);
+  const s = socialState(state);
+  let termine = [...s.termine];
+  if (kind === "create") {
+    if (!istDatum(body?.datum)) return jsonResponse({ error: "Bitte ein Datum angeben." }, 400);
+    if (!text(body?.titel)) return jsonResponse({ error: "Bitte einen Titel angeben." }, 400);
+    termine.push({
+      id: crypto.randomUUID(),
+      datum: body.datum,
+      bisDatum: istDatum(body?.bisDatum) && body.bisDatum >= body.datum ? body.bisDatum : body.datum,
+      titel: text(body.titel, 120),
+      notiz: text(body?.notiz, 500),
+    });
+  } else if (kind === "delete") {
+    termine = termine.filter((t) => t.id !== body.terminId);
+  } else {
+    termine = termine.map((t) => {
+      if (t.id !== body.terminId) return t;
+      const neu = { ...t };
+      if (body.datum !== undefined && istDatum(body.datum)) neu.datum = body.datum;
+      if (body.bisDatum !== undefined) neu.bisDatum = istDatum(body.bisDatum) && body.bisDatum >= neu.datum ? body.bisDatum : neu.datum;
+      if (body.titel !== undefined) neu.titel = text(body.titel, 120) || neu.titel;
+      if (body.notiz !== undefined) neu.notiz = text(body.notiz, 500);
+      return neu;
+    });
+  }
+  await patchState(env, { social: { ...s, termine } });
+  return jsonResponse({ ok: true });
+}
+
+/** Listen: Ideen, Hashtag-Sets, Aufgaben. Bewusst frei – jeder sortiert anders, und eine erzwungene
+ * Struktur waere in zwei Wochen im Weg. */
+async function handleSocialListe(request, env) {
+  const { error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "rename", "delete", "add", "toggle", "removeItem"].includes(kind)) {
+    return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  }
+  const state = await getState(env);
+  const s = socialState(state);
+  let listen = [...s.listen];
+
+  if (kind === "create") {
+    if (!text(body?.titel)) return jsonResponse({ error: "Bitte einen Namen für die Liste angeben." }, 400);
+    listen.push({ id: crypto.randomUUID(), titel: text(body.titel, 80), eintraege: [] });
+  } else if (kind === "delete") {
+    listen = listen.filter((l) => l.id !== body.listeId);
+  } else {
+    listen = listen.map((l) => {
+      if (l.id !== body.listeId) return l;
+      const eintraege = Array.isArray(l.eintraege) ? [...l.eintraege] : [];
+      if (kind === "rename") return { ...l, titel: text(body?.titel, 80) || l.titel };
+      if (kind === "add") {
+        if (!text(body?.eintragText)) return l;
+        eintraege.push({ id: crypto.randomUUID(), text: text(body.eintragText, 300), erledigt: false });
+      } else if (kind === "toggle") {
+        const i = eintraege.findIndex((e) => e.id === body.eintragId);
+        if (i >= 0) eintraege[i] = { ...eintraege[i], erledigt: !eintraege[i].erledigt };
+      } else if (kind === "removeItem") {
+        return { ...l, eintraege: eintraege.filter((e) => e.id !== body.eintragId) };
+      }
+      return { ...l, eintraege };
+    });
+  }
+  await patchState(env, { social: { ...s, listen } });
+  return jsonResponse({ ok: true });
+}
+
+/** Konto-Stand: Follower und Reichweite zu einem Stichtag. Daraus entsteht die Kurve, die zeigt, ob der
+ * Account waechst – die einzige Zahl, die ueber Monate zaehlt. */
+async function handleSocialAccount(request, env) {
+  const { error } = await requireSession(request, env, ["boss", "social"]);
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const state = await getState(env);
+  const s = socialState(state);
+  if (body?.kind === "delete") {
+    await patchState(env, { social: { ...s, accountStats: s.accountStats.filter((a) => a.id !== body.statId) } });
+    return jsonResponse({ ok: true });
+  }
+  if (!istDatum(body?.datum)) return jsonResponse({ error: "Bitte ein Datum angeben." }, 400);
+  const follower = zahlOderNull(body?.follower);
+  if (follower === null) return jsonResponse({ error: "Bitte die Follower-Zahl angeben." }, 400);
+  const eintrag = {
+    id: crypto.randomUUID(),
+    datum: body.datum,
+    follower,
+    reichweite: zahlOderNull(body?.reichweite),
+    profilaufrufe: zahlOderNull(body?.profilaufrufe),
+    notiz: text(body?.notiz, 300),
+  };
+  // Pro Stichtag nur ein Eintrag: zwei Staende fuer denselben Tag waeren in der Kurve ein Sprung, den
+  // es nie gab.
+  const ohneAlten = s.accountStats.filter((a) => a.datum !== eintrag.datum);
+  await patchState(env, { social: { ...s, accountStats: [...ohneAlten, eintrag].sort((a, b) => (a.datum < b.datum ? -1 : 1)) } });
+  return jsonResponse({ ok: true });
+}
+
+/** Kanaele und Rubriken anpassen – nur der Inhaber, es betrifft die Auswertung aller Posts. */
+async function handleSocialConfig(request, env) {
+  const { error } = await requireSession(request, env, "boss");
+  if (error) return error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const state = await getState(env);
+  const s = socialState(state);
+  const liste = (v, vorgabe) =>
+    Array.isArray(v) && v.length > 0 ? v.map((x) => text(x, 60)).filter(Boolean).slice(0, 20) : vorgabe;
+  const config = {
+    kanaele: liste(body?.kanaele, s.config.kanaele),
+    formate: liste(body?.formate, s.config.formate),
+    rubriken: liste(body?.rubriken, s.config.rubriken),
+    accountName: body?.accountName === undefined ? s.config.accountName : text(body.accountName, 60),
+  };
+  await patchState(env, { social: { ...s, config } });
   return jsonResponse({ ok: true });
 }
 
@@ -3969,6 +4362,9 @@ async function handleState(request, env) {
     // alle Handy-Logins wären auf einen Schlag tot.
     if (Array.isArray(body.authPins)) patch.authPins = body.authPins;
     if (typeof body.adminPinHash === "string") patch.adminPinHash = body.adminPinHash;
+    // PIN fuer den Social-Bereich. null heisst ausdruecklich "kein Zugang" – deshalb wird auch null
+    // uebernommen, sonst liesse sich ein einmal vergebener Zugang nie wieder entziehen.
+    if (body.socialPinHash !== undefined) patch.socialPinHash = body.socialPinHash || null;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
@@ -4313,7 +4709,13 @@ export default {
     }
 
     // Handy/Laptop – eigene Anmeldung, getrennt vom WEBHOOK_SECRET (siehe Kommentar bei requireSession).
-    if (url.pathname.startsWith("/auth/") || url.pathname === "/me" || url.pathname.startsWith("/me/") || url.pathname.startsWith("/admin/")) {
+    if (
+      url.pathname.startsWith("/auth/") ||
+      url.pathname === "/me" ||
+      url.pathname.startsWith("/me/") ||
+      url.pathname.startsWith("/admin/") ||
+      url.pathname.startsWith("/social/")
+    ) {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
       if (url.pathname === "/me") return handleMe(request, env);
@@ -4326,6 +4728,14 @@ export default {
       if (url.pathname === "/admin/document") return handleAdminDocument(request, env);
       if (url.pathname === "/admin/stock-item") return handleAdminStockItem(request, env);
       if (url.pathname === "/admin/task") return handleAdminTask(request, env);
+      // Social-Bereich: offen fuer Chef UND Social-Zugang, die Pruefung steckt in den Handlern.
+      if (url.pathname === "/social/overview") return handleSocialOverview(request, env);
+      if (url.pathname === "/social/post") return handleSocialPost(request, env);
+      if (url.pathname === "/social/shooting") return handleSocialShooting(request, env);
+      if (url.pathname === "/social/termin") return handleSocialTermin(request, env);
+      if (url.pathname === "/social/liste") return handleSocialListe(request, env);
+      if (url.pathname === "/social/account") return handleSocialAccount(request, env);
+      if (url.pathname === "/social/config") return handleSocialConfig(request, env);
       if (url.pathname === "/admin/task-template") return handleAdminTaskTemplate(request, env);
       if (url.pathname === "/admin/employee") return handleAdminEmployee(request, env);
       if (url.pathname === "/admin/message") return handleAdminMessage(request, env);

@@ -15,7 +15,7 @@ import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-09-11.1";
+const APP_VERSION = "2026-09-11.2";
 
 const outlet = document.getElementById("outlet");
 
@@ -139,7 +139,13 @@ function renderShell() {
     clearSession();
     renderLogin();
   };
-  actions.append(reload, logout);
+  // Der Social-Bereich ist eine eigene Seite mit eigener Anmeldung – hier nur der Weg dorthin.
+  const social = document.createElement("a");
+  social.className = "btn btn-secondary";
+  social.href = "social.html";
+  social.textContent = "📱 Social";
+  social.title = "Redaktionsplan, Shootings und Zahlen";
+  actions.append(social, reload, logout);
   head.append(title, actions);
   wrap.appendChild(head);
 

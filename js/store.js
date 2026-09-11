@@ -37,6 +37,9 @@ function defaultData() {
       lohnnebenkostenProzent: { minijob: 30, festangestellt: 21 },
       cashWagePayout: true, // wird Lohn bar aus der Kasse ausgezahlt?
       adminPin: null, // schützt Mitarbeiter/Einstellungen/Berichte – null = noch nicht eingerichtet
+      // Eigener Zugang für die Social-Media-Betreuung. Damit kommt sie AUSSCHLIESSLICH an den
+      // Social-Bereich – nicht an Löhne, Kennzahlen, Gastdaten oder den Schichtplan. null = kein Zugang.
+      socialPin: null,
       // Aufgaben-Vorlagen, werden beim Anlegen eines Tages nach day.tasks kopiert – aber nur die, die an
       // diesem Wochentag gelten. { id, text, weekdays[], schicht, bereich, time, priority }
       //   weekdays: [] = jeden Tag, sonst 0=Mo..6=So
@@ -522,6 +525,16 @@ export const store = {
   // ---- Admin-PIN (Schutz vor versehentlichen Änderungen, keine echte Sicherheit) ----
   hasAdminPin() {
     return !!data.settings.adminPin;
+  },
+  hasSocialPin() {
+    return !!data.settings.socialPin;
+  },
+  /** PIN für den Social-Bereich setzen oder (mit leerem Wert) den Zugang wieder entziehen. */
+  setSocialPin(pin) {
+    const p = String(pin || "").trim();
+    data.settings.socialPin = p || null;
+    persist();
+    return data.settings.socialPin;
   },
   setAdminPin(pin) {
     data.settings.adminPin = String(pin);

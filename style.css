@@ -449,6 +449,71 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .wochen-wechsler { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
 .wochen-wechsler .btn { flex: 0 0 auto; min-width: 52px; }
 .wochen-wechsler-mitte { flex: 1 1 auto; text-align: center; display: flex; flex-direction: column; line-height: 1.3; }
+
+/* ------------------------------------------------------------------
+   Social-Media-Bereich
+   ------------------------------------------------------------------ */
+.sm-kal-kopf { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0 10px; }
+.sm-kal-titel { margin: 0; flex: 1 1 auto; }
+
+/* Monatsraster. Sieben Spalten, und die Zellen duerfen wachsen - ein Tag mit vier Eintraegen soll sie
+   zeigen und nicht abschneiden. Unter 700px wird daraus eine Liste, weil sieben Spalten am Handy
+   nichts mehr lesbar machen. */
+.sm-kal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.sm-kal-wochentag { font-size: 12px; font-weight: 700; color: var(--gray); text-align: center; padding: 4px 0; }
+.sm-kal-tag {
+  min-height: 92px; border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  padding: 4px; display: flex; flex-direction: column; gap: 3px;
+}
+.sm-kal-leer { background: transparent; border-color: transparent; }
+.sm-kal-heute { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.sm-kal-tag-kopf { display: flex; align-items: center; justify-content: space-between; }
+.sm-kal-nr { font-size: 12px; font-weight: 600; color: var(--gray); }
+.sm-kal-plus {
+  border: none; background: none; color: var(--gray); cursor: pointer; font-size: 13px;
+  line-height: 1; padding: 2px 4px; border-radius: 6px; opacity: 0;
+}
+.sm-kal-tag:hover .sm-kal-plus { opacity: 1; }
+.sm-kal-plus:hover { background: var(--gray-light); color: var(--text); }
+
+.sm-chip {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: 11.5px; line-height: 1.25;
+  border: none; border-left: 3px solid var(--gray); border-radius: 4px; background: var(--gray-light);
+  color: var(--text); padding: 3px 5px; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sm-chip:hover { filter: brightness(0.96); }
+.sm-chip-zeit { color: var(--gray); font-variant-numeric: tabular-nums; }
+.sm-chip-shooting { border-left-color: #7c3aed; background: #f1ecfd; }
+.sm-chip-cafe { border-left-color: var(--green); background: var(--green-light); }
+.sm-chip-termin { border-left-color: var(--orange); background: var(--orange-light); }
+.sm-chip-fertig { opacity: .5; text-decoration: line-through; }
+
+@media (max-width: 700px) {
+  .sm-kal { grid-template-columns: 1fr; }
+  .sm-kal-wochentag { display: none; }
+  .sm-kal-leer { display: none; }
+  .sm-kal-tag { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .sm-kal-tag-kopf { flex: 0 0 46px; }
+  .sm-chip { width: auto; flex: 1 1 100%; white-space: normal; }
+}
+
+.sm-punkt { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+.sm-freigabe { border-left: 4px solid #7c3aed; }
+.sm-erledigt { opacity: .6; }
+.sm-dialog { max-width: 680px; }
+
+.sm-kennzahl { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 6px 0 12px; }
+.sm-kennzahl b { font-size: 34px; line-height: 1; }
+.sm-auf { color: var(--green); font-weight: 600; }
+.sm-ab { color: var(--red); font-weight: 600; }
+
+/* Balken statt Linie: es sind einzelne Ablesungen, keine durchgehende Messung - das soll man sehen. */
+.sm-chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; margin: 10px 0; }
+.sm-chart-saeule { flex: 1 1 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; text-align: center; }
+.sm-chart-saeule span { font-size: 10px; color: var(--gray); margin-top: 4px; }
+.sm-chart-balken { background: var(--green); border-radius: 4px 4px 0 0; min-height: 4px; }
+.sm-chart-leer { background: var(--gray-light); }
 .task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }

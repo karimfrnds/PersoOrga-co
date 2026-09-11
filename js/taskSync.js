@@ -40,7 +40,11 @@ async function buildAuthPinsPayload(cfg, employees) {
   }
   const adminPin = store.getSettings().adminPin;
   const adminPinHash = adminPin ? await hashPin(cfg.workerSecret, String(adminPin)) : null;
-  return { authPins, adminPinHash };
+  const socialPin = store.getSettings().socialPin;
+  // Bewusst null statt "weglassen", wenn kein PIN gesetzt ist: nur so laesst sich ein einmal vergebener
+  // Zugang wieder entziehen.
+  const socialPinHash = socialPin ? await hashPin(cfg.workerSecret, String(socialPin)) : null;
+  return { authPins, adminPinHash, socialPinHash };
 }
 
 function mondayOf(dateStr) {
@@ -798,7 +802,7 @@ async function performTaskSync() {
   }));
   const eventConfig = store.getEventSettings();
 
-  const { authPins, adminPinHash } = await buildAuthPinsPayload(cfg, employees);
+  const { authPins, adminPinHash, socialPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
   const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role }));
@@ -818,6 +822,7 @@ async function performTaskSync() {
     employeeDetails,
     authPins,
     adminPinHash,
+    socialPinHash,
     publishedWeeks: store.getPublishedWeeks(),
     tables,
     reservationSlots,

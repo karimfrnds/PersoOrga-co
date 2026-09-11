@@ -3,7 +3,7 @@
 // Bewusst OHNE Ein-/Ausstempeln: das bleibt am iPad im Café, damit niemand aus
 // der Ferne für sich oder andere stempeln kann.
 // ============================================================================
-import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick, markNotificationsRead } from "./api.js";
+import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead } from "./api.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 
 const outlet = document.getElementById("outlet");
@@ -11,6 +11,20 @@ const WEEKDAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Sa
 const WEEKDAY_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 let me = null;
+// Welche Woche gerade bei der Verfuegbarkeit offen ist. Ueberlebt das Neuzeichnen, damit man nach dem
+// Senden nicht wieder bei der ersten Woche landet.
+let verfuegbarkeitsWoche = null;
+// Wie weit im Voraus man eintragen kann. Vier Wochen decken Geschaeftsreisen und Kurse ab, ohne dass die
+// Auswahl unuebersichtlich wird – und weiter im Voraus weiss ohnehin kaum jemand, was er kann.
+const WOCHEN_VORAUS = 4;
+
+/** Muss zu store.ABWESENHEIT_ARTEN und den Arten im Worker passen. */
+const ABWESENHEIT_ARTEN = [
+  { id: "urlaub", label: "Urlaub", symbol: "🏖" },
+  { id: "krank", label: "Krankheit", symbol: "🤒" },
+  { id: "kind", label: "Kind krank", symbol: "🧒" },
+  { id: "sonstiges", label: "Sonstiges", symbol: "📌" },
+];
 // Kurzmeldung, die nach dem Neuladen EINMAL oben erscheint (sonst wäre sie durch das Rerendern sofort weg).
 let flash = null;
 
@@ -150,7 +164,8 @@ function renderMain() {
   wrap.appendChild(buildShifts());
   wrap.appendChild(buildWochenplan());
   wrap.appendChild(buildAvailability());
-  wrap.appendChild(buildSick());
+  wrap.appendChild(buildAbwesenheit());
+  wrap.appendChild(buildMeineAbwesenheiten());
   wrap.appendChild(buildNumbers());
   show(wrap);
 
@@ -446,7 +461,8 @@ function buildPlanTabelle(plan) {
           // Weicht die Zeit an dem Tag ab, steht sie in der Zelle – sonst wäre die Angabe oben falsch.
           const abweichend = beispiel && (s.from !== beispiel.from || s.to !== beispiel.to);
           td.innerHTML =
-            escapeHtml(s.name) + (s.krank ? " 🤒" : "") +
+            escapeHtml(s.name) +
+            (s.abwesend ? " " + (ABWESENHEIT_ARTEN.find((a) => a.id === s.abwesend)?.symbol || "❗") : "") +
             (abweichend ? `<br/><span class="muted small">${escapeHtml(s.from)}–${escapeHtml(s.to)}</span>` : "");
         }
         if (tag.date === me.heute) td.classList.add("wp-heute");
@@ -464,13 +480,52 @@ function buildPlanTabelle(plan) {
 function buildAvailability() {
   const card = document.createElement("section");
   card.className = "card";
-  const weekStart = addDaysISO(mondayOf(me.heute), 7);
+  const ersteWoche = addDaysISO(mondayOf(me.heute), 7);
+  const letzteWoche = addDaysISO(ersteWoche, WOCHEN_VORAUS * 7);
+  // Clamp: nach einem Tageswechsel kann eine gemerkte Woche in der Vergangenheit liegen.
+  if (!verfuegbarkeitsWoche || verfuegbarkeitsWoche < ersteWoche || verfuegbarkeitsWoche > letzteWoche) {
+    verfuegbarkeitsWoche = ersteWoche;
+  }
+  const weekStart = verfuegbarkeitsWoche;
   const weekEnd = addDaysISO(weekStart, 6);
   card.innerHTML = `
-    <h2>🗓 Verfügbarkeit nächste Woche</h2>
-    <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Tippe an, was du übernehmen könntest.
-    Wählst du nur eine Schicht, ist sie sofort deine – bei mehreren entscheidet der Chef.</p>
+    <h2>🗓 Verfügbarkeit eintragen</h2>
+    <p class="muted small">Tippe an, was du übernehmen könntest. Wählst du nur eine Schicht, ist sie sofort
+    deine – bei mehreren entscheidet der Chef. Du kannst bis zu ${WOCHEN_VORAUS} Wochen im Voraus eintragen.</p>
   `;
+
+  // --- Wochen-Wechsler ---
+  // Ohne ihn liesse sich nur die kommende Woche eintragen. Wer Kurse oder Reisen plant, muss aber
+  // frueher Bescheid geben koennen – und der Chef kann dann frueher freigeben.
+  const wechsler = document.createElement("div");
+  wechsler.className = "wochen-wechsler";
+  const zurueck = document.createElement("button");
+  zurueck.className = "btn btn-secondary";
+  zurueck.textContent = "←";
+  zurueck.disabled = weekStart <= ersteWoche;
+  zurueck.onclick = () => {
+    verfuegbarkeitsWoche = addDaysISO(weekStart, -7);
+    renderMain();
+  };
+  const vor = document.createElement("button");
+  vor.className = "btn btn-secondary";
+  vor.textContent = "→";
+  vor.disabled = weekStart >= letzteWoche;
+  vor.onclick = () => {
+    verfuegbarkeitsWoche = addDaysISO(weekStart, 7);
+    renderMain();
+  };
+  const mitte = document.createElement("div");
+  mitte.className = "wochen-wechsler-mitte";
+  const wochenNr = Math.round((new Date(weekStart) - new Date(ersteWoche)) / (7 * 86400000));
+  const schonGesendet = !!me.meineVerfuegbarkeit?.[weekStart]?.submittedAt;
+  mitte.innerHTML =
+    `<b>${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}</b>` +
+    `<span class="muted small">${wochenNr === 0 ? "nächste Woche" : `in ${wochenNr + 1} Wochen`}${
+      schonGesendet ? " · ✅ schon gesendet" : ""
+    }</span>`;
+  wechsler.append(zurueck, mitte, vor);
+  card.appendChild(wechsler);
 
   const alle = me.meineSchichtarten || [];
   if (alle.length === 0) {
@@ -583,10 +638,35 @@ function buildAvailability() {
   return card;
 }
 
-function buildSick() {
+/** Abwesenheit melden – Urlaub, Krankheit, Kind krank oder Sonstiges.
+ *
+ * Frueher hiess das "Krankmelden" und konnte nur eins. Wer Urlaub eintragen wollte, meldete sich krank,
+ * weil es nichts anderes gab – und danach stand im System etwas, das nicht stimmt. Die Art steht deshalb
+ * ganz oben und ist die erste Entscheidung, nicht eine Einstellung irgendwo unten.
+ */
+function buildAbwesenheit() {
   const card = document.createElement("section");
   card.className = "card";
-  card.innerHTML = `<h2>🤒 Krankmelden</h2><p class="muted small">Der Chef bekommt sofort Bescheid.</p>`;
+  card.innerHTML = `<h2>📅 Abwesenheit melden</h2>
+    <p class="muted small">Urlaub bitte so früh wie möglich – dann kann der Chef die Woche darum herum planen.</p>`;
+
+  let art = "urlaub";
+  const artReihe = document.createElement("div");
+  artReihe.className = "abw-arten";
+  for (const a of ABWESENHEIT_ARTEN) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = `${a.symbol} ${a.label}`;
+    const male = () => (btn.className = "btn " + (art === a.id ? "btn-primary" : "btn-secondary"));
+    btn.onclick = () => {
+      art = a.id;
+      [...artReihe.children].forEach((c) => c.dispatchEvent(new Event("neuzeichnen")));
+    };
+    btn.addEventListener("neuzeichnen", male);
+    male();
+    artReihe.appendChild(btn);
+  }
+  card.appendChild(artReihe);
 
   const grid = document.createElement("div");
   grid.className = "kb-grid";
@@ -603,6 +683,10 @@ function buildSick() {
   };
   const von = mk("Von", me.heute);
   const bis = mk("Bis", me.heute);
+  // Ein Bis vor dem Von ist immer ein Vertipper – das Feld zieht einfach mit.
+  von.onchange = () => {
+    if (bis.value < von.value) bis.value = von.value;
+  };
 
   const notiz = document.createElement("label");
   notiz.className = "field";
@@ -610,23 +694,31 @@ function buildSick() {
   const notizInput = document.createElement("input");
   notizInput.type = "text";
   notizInput.maxLength = 300;
-  notizInput.placeholder = "z.B. Erkältung, war beim Arzt";
+  notizInput.placeholder = "z.B. Kurs in Berlin, war beim Arzt";
   notiz.appendChild(notizInput);
 
   const status = document.createElement("p");
   status.className = "muted small";
   const btn = document.createElement("button");
   btn.className = "btn btn-secondary";
-  btn.textContent = "Krankmeldung senden";
+  btn.textContent = "Abwesenheit melden";
   btn.onclick = async () => {
+    if (bis.value < von.value) {
+      status.className = "callout callout-warn";
+      status.textContent = "⚠ Das Ende liegt vor dem Anfang.";
+      return;
+    }
     btn.disabled = true;
     status.className = "muted small";
     status.textContent = "Wird gesendet…";
     try {
-      await reportSick(von.value, bis.value, notizInput.value.trim());
+      await reportAbsence(von.value, bis.value, art, notizInput.value.trim());
       status.className = "callout";
-      status.textContent = "✅ Krankmeldung gesendet. Gute Besserung!";
+      const a = ABWESENHEIT_ARTEN.find((x) => x.id === art);
+      status.textContent = `✅ ${a.label} gemeldet. Der Chef hat Bescheid.`;
       notizInput.value = "";
+      // Gleich in der Liste darunter zeigen, statt erst beim nächsten Öffnen.
+      await load();
     } catch (e) {
       status.className = "callout callout-warn";
       status.textContent = "⚠ " + e.message;
@@ -634,6 +726,54 @@ function buildSick() {
     btn.disabled = false;
   };
   card.append(grid, notiz, btn, status);
+  return card;
+}
+
+/** Was diese Person schon gemeldet hat. Zusammenhaengende Tage sind im Worker bereits als Zeitraum
+ * gespeichert, deshalb reicht hier eine einfache Liste – neueste zuerst. */
+function buildMeineAbwesenheiten() {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<h2>Deine Abwesenheiten</h2>`;
+  const liste = Array.isArray(me.meineAbwesenheiten) ? me.meineAbwesenheiten : [];
+  if (liste.length === 0) {
+    card.innerHTML += `<p class="muted small">Du hast noch nichts gemeldet.</p>`;
+    return card;
+  }
+
+  const heute = me.heute;
+  const kommend = liste.filter((a) => a.bis >= heute);
+  const vorbei = liste.filter((a) => a.bis < heute);
+
+  const abschnitt = (titel, eintraege) => {
+    if (eintraege.length === 0) return;
+    const h = document.createElement("p");
+    h.className = "muted small";
+    h.innerHTML = `<b>${titel}</b>`;
+    card.appendChild(h);
+    const box = document.createElement("div");
+    box.className = "task-list";
+    for (const a of eintraege) {
+      const art = ABWESENHEIT_ARTEN.find((x) => x.id === a.art) || ABWESENHEIT_ARTEN[1];
+      const tage = Math.round((new Date(a.bis) - new Date(a.von)) / 86400000) + 1;
+      const row = document.createElement("div");
+      row.className = "task-row";
+      row.innerHTML = `<div class="task-row-text">
+        <span>${art.symbol} <b>${escapeHtml(art.label)}</b></span>
+        <span class="muted small task-row-meta">${escapeHtml(
+          a.von === a.bis ? dateDeShort(a.von) : `${dateDeShort(a.von)} – ${dateDeShort(a.bis)}`
+        )} · ${tage} ${tage === 1 ? "Tag" : "Tage"}${a.note ? " · " + escapeHtml(a.note) : ""}</span></div>`;
+      box.appendChild(row);
+    }
+    card.appendChild(box);
+  };
+  abschnitt("Kommend", kommend);
+  abschnitt("Vorbei", vorbei.slice(0, 10));
+
+  const hinweis = document.createElement("p");
+  hinweis.className = "muted small";
+  hinweis.textContent = "Stimmt etwas nicht? Sag dem Chef Bescheid – geändert wird es im System.";
+  card.appendChild(hinweis);
   return card;
 }
 

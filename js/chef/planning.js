@@ -15,6 +15,14 @@ const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 let gewaehlteWoche = null;
 let letzterHinweis = null;
 
+/** Muss zu store.ABWESENHEIT_ARTEN passen. */
+const ABWESENHEIT_ARTEN = {
+  urlaub: { label: "Urlaub", symbol: "🏖" },
+  krank: { label: "Krankheit", symbol: "🤒" },
+  kind: { label: "Kind krank", symbol: "🧒" },
+  sonstiges: { label: "Sonstiges", symbol: "📌" },
+};
+
 function mondayOf(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -64,11 +72,18 @@ function renderPlanning(state, { onChanged, today }) {
     return out;
   }
 
-  function istKrank(name, date) {
+  /** Ist jemand an diesem Tag abwesend – und warum? Frueher hiess das "krank"; es kann jetzt auch Urlaub
+   * sein. Fuer die Planung ist beides dasselbe (die Person kann nicht), fuer die Anzeige nicht. */
+  function abwesenheit(name, date) {
     const n = name.trim().toLowerCase();
-    return (state.sickReports || []).some(
-      (r) => String(r.employeeName || "").trim().toLowerCase() === n && r.from <= date && (r.to || r.from) >= date
+    return (
+      (state.absenceReports || []).find(
+        (r) => String(r.employeeName || "").trim().toLowerCase() === n && r.from <= date && (r.to || r.from) >= date
+      ) || null
     );
+  }
+  function istKrank(name, date) {
+    return !!abwesenheit(name, date);
   }
 
   function build() {
@@ -130,7 +145,7 @@ function renderPlanning(state, { onChanged, today }) {
 
     const legend = document.createElement("p");
     legend.className = "muted small";
-    legend.textContent = `✅ fest eingeteilt · 🔶 wartet auf dich · grau = Schicht entfällt an dem Tag · „frei" = noch niemand eingeteilt`;
+    legend.textContent = `✅ fest eingeteilt · 🔶 wartet auf dich · grau = Schicht entfällt an dem Tag · „frei“ = noch niemand eingeteilt`;
     frag.appendChild(legend);
     return frag;
   }
@@ -456,7 +471,14 @@ function renderPlanning(state, { onChanged, today }) {
     const eintrag = (name) => {
       const busyMit = anderweitig.get(name);
       const istKrankHeute = krank.has(name);
-      const hinweis = istKrankHeute ? "krank gemeldet" : busyMit ? `schon: ${busyMit}` : gemeldet.has(name) ? "hat sich gemeldet" : "";
+      const grund = istKrankHeute ? ABWESENHEIT_ARTEN[abwesenheit(name, date)?.art]?.label || "Abwesend" : "";
+      const hinweis = istKrankHeute
+        ? grund + " gemeldet"
+        : busyMit
+          ? `schon: ${busyMit}`
+          : gemeldet.has(name)
+            ? "hat sich gemeldet"
+            : "";
       return `<button class="picker-row${belegt?.name === name ? " picker-current" : ""}${istKrankHeute ? " picker-warn" : ""}" data-name="${escapeHtml(name)}">
           <span class="picker-name">${escapeHtml(name)}${belegt?.name === name ? " ✓" : ""}</span>
           ${hinweis ? `<span class="muted small">${escapeHtml(hinweis)}</span>` : ""}
@@ -526,25 +548,32 @@ function renderPlanning(state, { onChanged, today }) {
   }
 
 
+  /** Wer in dieser Woche abwesend ist. Steht direkt unter dem Plan, weil es die haeufigste Ursache
+   * dafuer ist, dass eine Schicht nicht besetzt werden kann – und weil Urlaub, der erst beim Einteilen
+   * auffaellt, schon zu spaet auffaellt. */
   function buildKranke() {
     const wochenEnde = addDaysISO(gewaehlteWoche, 6);
-    const krank = (state.sickReports || []).filter((r) => (r.to || r.from) >= gewaehlteWoche && r.from <= wochenEnde);
+    const abwesend = (state.absenceReports || []).filter((r) => (r.to || r.from) >= gewaehlteWoche && r.from <= wochenEnde);
     const card = document.createElement("section");
     card.className = "card";
-    card.innerHTML = `<h2>🤒 Krankmeldungen diese Woche</h2>`;
-    if (krank.length === 0) {
-      card.innerHTML += `<p class="muted small">Keine.</p>`;
+    card.innerHTML = `<h2>Abwesend diese Woche</h2>`;
+    if (abwesend.length === 0) {
+      card.innerHTML += `<p class="muted small">Niemand.</p>`;
       return card;
     }
     const list = document.createElement("div");
     list.className = "task-list";
-    for (const r of krank) {
+    for (const r of abwesend.sort((a, b) => (a.from < b.from ? -1 : 1))) {
+      const art = ABWESENHEIT_ARTEN[r.art] || ABWESENHEIT_ARTEN.krank;
       const row = document.createElement("div");
       row.className = "task-row";
-      const zeitraum = r.from === (r.to || r.from) ? dateDe(r.from) : `${dateDe(r.from)} – ${dateDe(r.to)}`;
-      row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(r.employeeName)}</b></span><span class="muted small task-row-meta">${escapeHtml(
-        zeitraum
-      )}${r.note ? ` · ${escapeHtml(r.note)}` : ""}</span></div>`;
+      const bis = r.to || r.from;
+      const zeitraum = r.from === bis ? dateDe(r.from) : `${dateDe(r.from)} – ${dateDe(bis)}`;
+      row.innerHTML = `<div class="task-row-text"><span>${art.symbol} <b>${escapeHtml(r.employeeName)}</b> · ${escapeHtml(
+        art.label
+      )}</span><span class="muted small task-row-meta">${escapeHtml(zeitraum)}${
+        r.note ? ` · ${escapeHtml(r.note)}` : ""
+      }</span></div>`;
       list.appendChild(row);
     }
     card.appendChild(list);

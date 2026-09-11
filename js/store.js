@@ -162,9 +162,9 @@ function defaultData() {
     // Vorräte – reine Bestell-Liste, keine Mengen.
     // { id, name, status, bereich, lieferant, bestellmenge, wochenmenge, lastOrderedAt, lastDeliveredAt }
     stock: [],
-    // Krankmeldungen (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
-    // { id, employeeId, date, note, reportedAt }
-    sickDays: [],
+    // Abwesenheiten (kommen vom Handy der Mitarbeiter über den Worker herein, ein Eintrag pro Tag).
+    // { id, employeeId, date, art: "urlaub"|"krank"|"kind"|"sonstiges", note, reportedAt }
+    absences: [],
     // Verkaufte Produkte je Tag, aus den Kassenberichten. Grundlage für "was läuft, was nicht" und
     // (mit dem Verkaufspreis) für den Deckungsbeitrag. Bewusst eine eigene Liste: der Verbrauchsverlauf
     // am Artikel ist auf 20 Einträge begrenzt und kennt nur Zutaten, nicht die verkauften Produkte.
@@ -316,7 +316,13 @@ function load() {
         lastOrderedAt: s.lastOrderedAt ?? null,
         lastDeliveredAt: s.lastDeliveredAt ?? null,
       })),
-      sickDays: parsed.sickDays ?? base.sickDays,
+      // Frueher hiess das sickDays und kannte nur Krankheit. Beim Uebernehmen bekommt alles die Art
+      // "krank" – was in Wahrheit Urlaub war, laesst sich in der Uebersicht umstellen.
+      absences: (parsed.absences ?? (parsed.sickDays || []).map((s) => ({ ...s, art: "krank" })) ?? base.absences).map((s) => ({
+        art: "krank",
+        note: "",
+        ...s,
+      })),
       publishedWeeks: parsed.publishedWeeks ?? base.publishedWeeks,
       productSales: parsed.productSales ?? base.productSales,
       stocktakes: parsed.stocktakes ?? base.stocktakes,
@@ -1169,30 +1175,89 @@ export const store = {
     persist();
     return item;
   },
-  // ---- Krankmeldungen (kommen vom Handy der Mitarbeiter herein) ----
-  /** Legt einen Krank-Tag an. Doppelte (gleiche Person, gleicher Tag) werden ignoriert, damit ein erneuter
-   * Abgleich oder eine zweite Meldung für denselben Tag nichts verdoppelt. */
-  addSickDay(employeeId, date, note) {
+  // ---- Abwesenheiten (kommen vom Handy der Mitarbeiter herein) ----
+  //
+  // Frueher hiess das "Krankmeldung" und konnte nur eins. Wer Urlaub eintragen wollte, hat ihn als
+  // Krankheit gemeldet, weil es nichts anderes gab – und danach stand im System etwas, das nicht stimmt.
+  // Deshalb jetzt eine Abwesenheit MIT Art. Die Meldung selbst bleibt so einfach wie vorher: von, bis,
+  // Art, optional eine Notiz.
+  ABWESENHEIT_ARTEN: [
+    { id: "urlaub", label: "Urlaub", symbol: "🏖" },
+    { id: "krank", label: "Krankheit", symbol: "🤒" },
+    { id: "kind", label: "Kind krank", symbol: "🧒" },
+    { id: "sonstiges", label: "Sonstiges", symbol: "📌" },
+  ],
+  getAbwesenheitArt(id) {
+    return this.ABWESENHEIT_ARTEN.find((a) => a.id === id) || this.ABWESENHEIT_ARTEN[1];
+  },
+  /** Legt einen Abwesenheitstag an. Doppelte (gleiche Person, gleicher Tag) werden nicht verdoppelt –
+   * ein erneuter Abgleich oder eine zweite Meldung fuer denselben Tag darf nichts vermehren. Eine
+   * spaetere Meldung mit anderer Art ueberschreibt die alte: wer nachtraegt "das war Urlaub", hat recht. */
+  addAbsence(employeeId, date, art = "krank", note = "") {
     if (!employeeId || !date) return null;
-    const exists = data.sickDays.find((s) => s.employeeId === employeeId && s.date === date);
-    if (exists) return exists;
-    const entry = { id: uid(), employeeId, date, note: note || "", reportedAt: new Date().toISOString() };
-    data.sickDays.push(entry);
+    const gueltig = this.ABWESENHEIT_ARTEN.some((a) => a.id === art) ? art : "krank";
+    const vorhanden = data.absences.find((s) => s.employeeId === employeeId && s.date === date);
+    if (vorhanden) {
+      vorhanden.art = gueltig;
+      if (note) vorhanden.note = note;
+      persist();
+      return vorhanden;
+    }
+    const entry = { id: uid(), employeeId, date, art: gueltig, note: note || "", reportedAt: new Date().toISOString() };
+    data.absences.push(entry);
     persist();
     return entry;
   },
-  /** Krank-Tage in einem Zeitraum (beide Grenzen inklusive), aufsteigend nach Datum. */
-  getSickDays(from, to) {
-    return data.sickDays
+  /** Abwesenheiten in einem Zeitraum (beide Grenzen inklusive), aufsteigend nach Datum. */
+  getAbsences(from, to) {
+    return data.absences
       .filter((s) => (!from || s.date >= from) && (!to || s.date <= to))
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   },
-  isSick(employeeId, date) {
-    return data.sickDays.some((s) => s.employeeId === employeeId && s.date === date);
+  /** Die Abwesenheit einer Person an einem Tag, oder null. */
+  getAbsence(employeeId, date) {
+    return data.absences.find((s) => s.employeeId === employeeId && s.date === date) || null;
   },
-  removeSickDay(id) {
-    data.sickDays = data.sickDays.filter((s) => s.id !== id);
+  isAbsent(employeeId, date) {
+    return !!this.getAbsence(employeeId, date);
+  },
+  updateAbsence(id, patch) {
+    const a = data.absences.find((s) => s.id === id);
+    if (!a) return null;
+    if (patch.art !== undefined && this.ABWESENHEIT_ARTEN.some((x) => x.id === patch.art)) a.art = patch.art;
+    if (patch.note !== undefined) a.note = String(patch.note).trim();
     persist();
+    return a;
+  },
+  removeAbsence(id) {
+    data.absences = data.absences.filter((s) => s.id !== id);
+    persist();
+  },
+  /** Zusammenhaengende Tage derselben Art zu einem Block zusammenfassen.
+   *
+   * Zehn einzelne Urlaubstage sind fuer den Menschen EIN Urlaub. Als zehn Zeilen liest das niemand, und
+   * in einer Uebersicht will man "24.–28.11., Urlaub" sehen, nicht fuenf Eintraege untereinander.
+   */
+  getAbsenceBloecke(employeeId, from, to) {
+    const tage = this.getAbsences(from, to).filter((s) => !employeeId || s.employeeId === employeeId);
+    const bloecke = [];
+    for (const t of tage) {
+      const letzter = bloecke[bloecke.length - 1];
+      const passtDazu =
+        letzter &&
+        letzter.employeeId === t.employeeId &&
+        letzter.art === t.art &&
+        addDaysISOStore(letzter.bis, 1) === t.date;
+      if (passtDazu) {
+        letzter.bis = t.date;
+        letzter.tage++;
+        if (t.note && !letzter.note) letzter.note = t.note;
+      } else {
+        bloecke.push({ ids: [], employeeId: t.employeeId, art: t.art, von: t.date, bis: t.date, tage: 1, note: t.note || "" });
+      }
+      bloecke[bloecke.length - 1].ids.push(t.id);
+    }
+    return bloecke.sort((a, b) => (a.von < b.von ? -1 : a.von > b.von ? 1 : 0));
   },
 
   // ---- Tische ----
@@ -2113,7 +2178,7 @@ export const store = {
       days: (parsed.days ?? []).map(normalizeDay),
       notifications: parsed.notifications ?? [],
       stock: parsed.stock ?? [],
-      sickDays: parsed.sickDays ?? [],
+      absences: parsed.absences ?? (parsed.sickDays || []).map((s) => ({ ...s, art: "krank" })),
       publishedWeeks: parsed.publishedWeeks ?? [],
       productSales: parsed.productSales ?? [],
       stocktakes: parsed.stocktakes ?? [],

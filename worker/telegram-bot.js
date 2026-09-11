@@ -26,6 +26,14 @@
 // ============================================================================
 
 const PRIORITIES = ["niedrig", "normal", "hoch"];
+
+/** Muss zu store.ABWESENHEIT_ARTEN passen – der Bot und die Handy-Ansicht beschriften damit dieselben Dinge. */
+const ABWESENHEIT_ARTEN = {
+  urlaub: { label: "Urlaub", symbol: "🏖" },
+  krank: { label: "Krankheit", symbol: "🤒" },
+  kind: { label: "Kind krank", symbol: "🧒" },
+  sonstiges: { label: "Sonstiges", symbol: "📌" },
+};
 // Zentrale Modell-Wahl für alle Claude-Aufrufe (Nachrichten verstehen, Fotos/PDFs auswerten, freie Fragen
 // beantworten) – an einer Stelle austauschbar. Sonnet 5 versteht Nuancen/komplexere Formulierungen spürbar
 // besser als Haiku, kostet aber etwa das Doppelte pro Nachricht (bei diesem Nachrichtenvolumen weiterhin
@@ -37,7 +45,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-08.1";
+const WORKER_VERSION = "2026-09-11.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -173,7 +181,8 @@ const EMPTY_STATE = {
   conversationHistory: [],
   // Krankmeldungen vom Handy: [{id, employeeName, from, to, note, createdAt}] – Warteschlange, die der iPad
   // abarbeitet (wie stockDeliveries & Co.), damit sein eigener Stand die Quelle der Wahrheit bleibt.
-  sickReports: [],
+  // Abwesenheits-Meldungen vom Handy: [{id, employeeName, from, to, art, note, createdAt}]
+  absenceReports: [],
   // Vom iPad gelieferte PIN-Hashes für den Handy-/Laptop-Login. NIEMALS an einen Client ausliefern.
   authPins: [], // [{name, pinHash}]
   adminPinHash: null,
@@ -252,7 +261,11 @@ async function getState(env) {
       minijobWarned: parsed.minijobWarned && typeof parsed.minijobWarned === "object" ? parsed.minijobWarned : {},
       staleShiftWarned: parsed.staleShiftWarned && typeof parsed.staleShiftWarned === "object" ? parsed.staleShiftWarned : {},
       conversationHistory: Array.isArray(parsed.conversationHistory) ? parsed.conversationHistory : [],
-      sickReports: Array.isArray(parsed.sickReports) ? parsed.sickReports : [],
+      // Alte Krankmeldungen, die noch in der Warteschlange liegen, kommen als Abwesenheit mit Art
+      // "krank" mit – sonst gingen sie beim Umstieg verloren.
+      absenceReports: Array.isArray(parsed.absenceReports)
+        ? parsed.absenceReports
+        : (Array.isArray(parsed.sickReports) ? parsed.sickReports : []).map((r) => ({ ...r, art: "krank" })),
       authPins: Array.isArray(parsed.authPins) ? parsed.authPins : [],
       adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
@@ -1845,7 +1858,7 @@ async function handleMe(request, env) {
   const wochenplaene = (state.publishedWeeks || [])
     .filter((w) => w.weekStart >= aktuellerMontag)
     .sort((a, b) => (a.weekStart < b.weekStart ? -1 : 1))
-    .slice(0, 4)
+    .slice(0, 8)
     .map((w) => ({ ...buildWochenplan(state, w.weekStart), publishedAt: w.publishedAt }));
 
   return jsonResponse({
@@ -1858,6 +1871,13 @@ async function handleMe(request, env) {
     tage: tage.slice(-90),
     meineSchichten,
     meineVerfuegbarkeit,
+    // Was diese Person selbst gemeldet hat – damit sie im Handy nachsehen kann, was schon eingereicht ist.
+    // Zusammenhaengende Tage derselben Art werden nicht hier, sondern in der Anzeige zusammengefasst.
+    meineAbwesenheiten: (state.absenceReports || [])
+      .filter((r) => kleinschreiben(r.employeeName) === needle)
+      .map((r) => ({ von: r.from, bis: r.to || r.from, art: r.art || "krank", note: r.note || "", gemeldetAm: r.createdAt }))
+      .sort((a, b) => (a.von < b.von ? 1 : -1))
+      .slice(0, 40),
     meineSchichtarten,
     belegteSchichten,
     // Ungelesene Kurznachrichten für diese Person (Schicht zugesagt/abgelehnt) – erscheinen als Pop-up.
@@ -1919,8 +1939,9 @@ async function handleMeAvailability(request, env) {
   return jsonResponse({ ok: true });
 }
 
-/** Krankmeldung vom Handy: geht als Warteschlangen-Eintrag rein, den der iPad übernimmt. Der Chef bekommt
- * sofort eine Telegram-Nachricht, damit er nicht auf den nächsten iPad-Abgleich warten muss. */
+/** Abwesenheit vom Handy (Urlaub, Krankheit, Kind krank, Sonstiges): geht als Warteschlangen-Eintrag
+ * rein, den der iPad übernimmt. Der Chef bekommt sofort eine Telegram-Nachricht, damit er nicht auf den
+ * nächsten iPad-Abgleich warten muss. */
 async function handleMeSick(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
   const guard = await requireSession(request, env, "employee");
@@ -1935,14 +1956,16 @@ async function handleMeSick(request, env) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return jsonResponse({ error: "Bitte ein gültiges Datum angeben." }, 400);
   const to = /^\d{4}-\d{2}-\d{2}$/.test(body?.to) && body.to >= from ? body.to : from;
   const note = String(body?.note || "").trim().slice(0, 300);
+  const art = ABWESENHEIT_ARTEN[body?.art] ? body.art : "krank";
 
   const state = await getState(env);
-  const report = { id: crypto.randomUUID(), employeeName: guard.session.name, from, to, note, createdAt: new Date().toISOString() };
-  await patchState(env, { sickReports: [...(state.sickReports || []), report] });
+  const report = { id: crypto.randomUUID(), employeeName: guard.session.name, from, to, art, note, createdAt: new Date().toISOString() };
+  await patchState(env, { absenceReports: [...(state.absenceReports || []), report] });
 
   if (ownerChatIds(env).length > 0) {
     const zeitraum = from === to ? formatDateDe(from) : `${formatDateDe(from)} – ${formatDateDe(to)}`;
-    await sendToOwners(env, `🤒 Krankmeldung: ${guard.session.name} (${zeitraum})${note ? `\n„${note}"` : ""}`);
+    const a = ABWESENHEIT_ARTEN[art];
+    await sendToOwners(env, `${a.symbol} ${a.label}: ${guard.session.name} (${zeitraum})${note ? `\n„${note}“` : ""}`);
   }
   return jsonResponse({ ok: true });
 }
@@ -2057,10 +2080,12 @@ function buildWochenplan(state, weekStart) {
     }
   }
 
-  const krankAm = (name, date) =>
-    (state.sickReports || []).some(
+  // Ist jemand an dem Tag abwesend – und warum? Frueher hiess das nur "krank"; jetzt kann es auch Urlaub
+  // sein, und im Wochenplan will man den Unterschied sehen.
+  const abwesendAm = (name, date) =>
+    (state.absenceReports || []).find(
       (r) => kleinschreiben(r.employeeName) === kleinschreiben(name) && r.from <= date && (r.to || r.from) >= date
-    );
+    ) || null;
 
   const tage = [];
   for (let i = 0; i < 7; i++) {
@@ -2077,7 +2102,7 @@ function buildWochenplan(state, weekStart) {
           from: zeiten.from,
           to: zeiten.to,
           name: wer?.name || null,
-          krank: wer ? krankAm(wer.name, date) : false,
+          abwesend: wer ? abwesendAm(wer.name, date)?.art || null : null,
         });
       }
     }
@@ -3972,10 +3997,23 @@ async function handleState(request, env) {
       const aktuell = await getState(env);
       patch.eventSignups = (aktuell.eventSignups || []).filter((s) => !erledigt.has(String(s.id)));
     }
-    const au = body.availabilityUpdate;
-    if (au && typeof au === "object" && au.weekStart && au.entries && typeof au.entries === "object") {
+    // Verfuegbarkeit: der iPad schickt inzwischen mehrere Wochen auf einmal (availabilityUpdates).
+    // availabilityUpdate im Singular bleibt zusaetzlich erlaubt – ein iPad, das noch nicht neu geladen
+    // hat, wuerde sonst gar keine Verfuegbarkeit mehr zurueckmelden.
+    const wochen = [
+      ...(Array.isArray(body.availabilityUpdates) ? body.availabilityUpdates : []),
+      ...(body.availabilityUpdate ? [body.availabilityUpdate] : []),
+    ].filter((w) => w && typeof w === "object" && w.weekStart && w.entries && typeof w.entries === "object");
+    if (wochen.length > 0) {
       const current = await getState(env);
-      patch.availability = mergeAvailabilityWeek(current.availability, au.weekStart, au.entries);
+      let zusammen = current.availability;
+      const gesehen = new Set();
+      for (const w of wochen) {
+        if (gesehen.has(w.weekStart)) continue; // dieselbe Woche nicht zweimal mergen
+        gesehen.add(w.weekStart);
+        zusammen = mergeAvailabilityWeek(zusammen, w.weekStart, w.entries);
+      }
+      patch.availability = zusammen;
     }
     await patchState(env, patch);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
@@ -4280,7 +4318,7 @@ export default {
       if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
       if (url.pathname === "/me") return handleMe(request, env);
       if (url.pathname === "/me/availability") return handleMeAvailability(request, env);
-      if (url.pathname === "/me/sick") return handleMeSick(request, env);
+      if (url.pathname === "/me/sick" || url.pathname === "/me/absence") return handleMeSick(request, env);
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);

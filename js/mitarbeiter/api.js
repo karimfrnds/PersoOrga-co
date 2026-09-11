@@ -72,6 +72,7 @@ async function login(pin) {
 const getMe = () => call("/me");
 const markNotificationsRead = (ids) => call("/me/notifications/read", { method: "POST", body: { ids } });
 const sendAvailability = (weekStart, days) => call("/me/availability", { method: "POST", body: { weekStart, days } });
-const reportSick = (from, to, note) => call("/me/sick", { method: "POST", body: { from, to, note } });
+/** Abwesenheit melden. art: "urlaub" | "krank" | "kind" | "sonstiges". */
+const reportAbsence = (from, to, art, note) => call("/me/absence", { method: "POST", body: { from, to, art, note } });
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportSick, markNotificationsRead };
+export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead };

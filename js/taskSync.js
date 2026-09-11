@@ -113,12 +113,11 @@ function buildFinancialsPayload() {
   return rows;
 }
 
-/** Aktueller Verfügbarkeits-Stand der Zielwoche (nächste Woche) für den Bot. Wichtig, damit "wer kann wann"
- * auch nach einer Chef-Zuweisung/-Ablehnung per Bot aktuell bleibt – die wird nur LOKAL übernommen
- * (confirmAvailability/rejectAvailability), landet sonst nirgends automatisch wieder in der Cloud. Nur
- * Personen mit tatsächlich abgeschickter Verfügbarkeit werden mitgeschickt. */
-function buildAvailabilityUpdatePayload() {
-  const weekStart = nextMondayFrom(todayStr());
+/** Aktueller Verfügbarkeits-Stand EINER Woche für Bot und Handy. Wichtig, damit "wer kann wann" auch nach
+ * einer Chef-Zuweisung/-Ablehnung aktuell bleibt – die wird nur LOKAL übernommen (confirmAvailability/
+ * rejectAvailability), landet sonst nirgends automatisch wieder in der Cloud. Nur Personen mit tatsächlich
+ * abgeschickter Verfügbarkeit werden mitgeschickt. */
+function buildAvailabilityUpdatePayload(weekStart = nextMondayFrom(todayStr())) {
   const employees = store.getEmployees(false);
   const entries = {};
   for (const emp of employees) {
@@ -139,6 +138,24 @@ function buildAvailabilityUpdatePayload() {
     if (submittedAt) entries[emp.name] = { submittedAt, days };
   }
   return { weekStart, entries };
+}
+
+/** Dasselbe für mehrere Wochen im Voraus.
+ *
+ * Am Handy lässt sich die Verfügbarkeit inzwischen mehrere Wochen im Voraus eintragen. Ginge nur die
+ * kommende Woche zurück in die Cloud, käme eine Zusage des Chefs für die übernächste Woche nie beim
+ * Mitarbeiter an – er sähe seine eigene Eingabe, aber nie die Antwort darauf. */
+const AVAILABILITY_WOCHEN = 5; // kommende Woche plus vier weitere – dasselbe Fenster wie am Handy
+function buildAvailabilityUpdatesPayload() {
+  const ersteWoche = nextMondayFrom(todayStr());
+  const wochen = [];
+  for (let i = 0; i < AVAILABILITY_WOCHEN; i++) {
+    const woche = addDaysISO(ersteWoche, i * 7);
+    const eintrag = buildAvailabilityUpdatePayload(woche);
+    // Leere Wochen weglassen: sie würden in der Cloud nur eine leere Schublade anlegen.
+    if (Object.keys(eintrag.entries).length > 0) wochen.push(eintrag);
+  }
+  return wochen;
 }
 
 /** Belegte Zeitfenster für die Kapazitätsprüfung der Online-Buchung – ab heute und nur so weit in die
@@ -459,12 +476,17 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedStockChangeIds: [...appliedStockChangeIds].slice(-300) });
   }
 
-  // Krankmeldungen vom Handy -> als Krank-Tage übernehmen. Ein Eintrag kann mehrere Tage umfassen
-  // (from..to), daraus wird pro Tag ein Krank-Tag. Nachsichtiger Namens-Vergleich wie oben.
-  const remoteSick = Array.isArray(remote.sickReports) ? remote.sickReports : [];
+  // Abwesenheiten vom Handy -> als Abwesenheitstage übernehmen. Ein Eintrag kann mehrere Tage umfassen
+  // (from..to), daraus wird pro Tag ein Eintrag. Nachsichtiger Namens-Vergleich wie oben.
+  // sickReports steht noch mit drin: Meldungen, die vor dem Umstieg abgeschickt wurden, liegen dort und
+  // sollen nicht verlorengehen.
+  const remoteAbsences = [
+    ...(Array.isArray(remote.absenceReports) ? remote.absenceReports : []),
+    ...(Array.isArray(remote.sickReports) ? remote.sickReports.map((r) => ({ ...r, art: "krank" })) : []),
+  ];
   const appliedSickIds = new Set(cfg.appliedSickIds || []);
   let newSickIds = false;
-  for (const r of remoteSick) {
+  for (const r of remoteAbsences) {
     if (!r.id || appliedSickIds.has(r.id)) continue;
     const needle = String(r.employeeName || "").trim().toLowerCase();
     const match = employees.find((e) => e.name.trim().toLowerCase() === needle);
@@ -472,10 +494,10 @@ async function performTaskSync() {
       const to = /^\d{4}-\d{2}-\d{2}$/.test(r.to) && r.to >= r.from ? r.to : r.from;
       // Sicherheitsnetz gegen einen kaputten/absurden Zeitraum: höchstens 60 Tage am Stück.
       for (let d = r.from, guard = 0; d <= to && guard < 60; d = addDaysISO(d, 1), guard++) {
-        store.addSickDay(match.id, d, r.note);
+        store.addAbsence(match.id, d, r.art || "krank", r.note);
       }
     } else {
-      syncWarnings.push(`Krankmeldung "${r.employeeName}": Mitarbeiter nicht gefunden oder Datum ungültig.`);
+      syncWarnings.push(`Abwesenheit "${r.employeeName}": Mitarbeiter nicht gefunden oder Datum ungültig.`);
     }
     appliedSickIds.add(r.id);
     newSickIds = true;
@@ -699,6 +721,7 @@ async function performTaskSync() {
   }));
   const financials = cfg.shareFinancials ? buildFinancialsPayload() : [];
   const availabilityUpdate = buildAvailabilityUpdatePayload();
+  const availabilityUpdates = buildAvailabilityUpdatesPayload();
   // Für die Minijob-Grenzen-Warnung braucht der Bot, wer Minijobber ist und wo die Grenze liegt (nur die
   // Metadaten, die eigentlichen Lohnsummen kommen wie bisher aus financials -> nur wenn Kennzahlen freigegeben).
   const employeeMeta = cfg.shareFinancials
@@ -788,6 +811,7 @@ async function performTaskSync() {
     shiftsInService,
     financials,
     availabilityUpdate,
+    availabilityUpdates,
     employeeMeta,
     staleOpenShifts,
     stock,

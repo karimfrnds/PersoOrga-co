@@ -439,6 +439,16 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .res-gruende .btn { text-align: left; }
 /* Ein Link ohne href sieht sonst aus wie ein Knopf, der nur nichts tut. */
 .btn-disabled { opacity: .4; pointer-events: none; }
+
+/* Art der Abwesenheit: vier Knoepfe nebeneinander, am Handy zweispaltig – das ist die erste
+   Entscheidung und soll nicht in einer Auswahlliste versteckt sein. */
+.abw-arten { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+@media (min-width: 560px) { .abw-arten { grid-template-columns: repeat(4, 1fr); } }
+
+/* Wochen-Wechsler: die Pfeile aussen, das Datum in der Mitte – am Handy mit einer Hand bedienbar. */
+.wochen-wechsler { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.wochen-wechsler .btn { flex: 0 0 auto; min-width: 52px; }
+.wochen-wechsler-mitte { flex: 1 1 auto; text-align: center; display: flex; flex-direction: column; line-height: 1.3; }
 .task-row-handoff { margin-left: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
 .task-add-row { display: flex; gap: 8px; margin-top: 4px; }
 .task-add-row input { flex: 1; }

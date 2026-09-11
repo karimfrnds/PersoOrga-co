@@ -3,7 +3,7 @@
 // aller zugeordneten Einzelaufgaben (manuell oder per Telegram-Bot angelegt),
 // mit Mitarbeiter, Tag und Priorität – hier auch anlegen/bearbeiten möglich.
 // ============================================================================
-import { store } from "../store.js";
+import { store, AUFGABEN_PHASEN, PHASE_LABEL } from "../store.js";
 import { todayStr, dateDe, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 
@@ -25,8 +25,6 @@ function renderTasksAdmin() {
   }
 
   function build() {
-    // Damit man in der Uebersicht unten sofort sieht, was eine gerade angelegte Vorlage bewirkt.
-    store.ergaenzeStandardaufgabenAbHeute();
     const frag = document.createElement("div");
     frag.innerHTML = `<h1>Aufgaben</h1>`;
     frag.appendChild(buildTemplateCard());
@@ -48,8 +46,9 @@ function renderTasksAdmin() {
     card.innerHTML = `
       <h2>Standard-Aufgaben</h2>
       <p class="muted small">
-        Werden jedem Tag automatisch mitgegeben – aber nur an den Tagen und in den Schichten, für die
-        sie gelten. Ohne Angabe heißt: jeden Tag, jede Schicht, den ganzen Tag.
+        Jede Standard-Aufgabe gehört in einen Abschnitt der Schicht: Schichtbeginn, während der Schicht
+        oder Schichtende. Wer einstempelt, bekommt daraus seine eigene Liste – nur die Tage, Schichten
+        und Bereiche, für die sie gilt. Ohne Angabe heißt: jeden Tag, jede Schicht, den ganzen Tag.
       </p>
     `;
 
@@ -57,33 +56,44 @@ function renderTasksAdmin() {
     if (vorlagen.length === 0) {
       card.innerHTML += `<p class="muted small">Noch keine Standard-Aufgabe angelegt.</p>`;
     } else {
-      const liste = document.createElement("div");
-      liste.className = "task-list";
-      for (const v of vorlagen) {
-        const row = document.createElement("div");
-        row.className = "task-row";
-        row.innerHTML = `<div class="task-row-text">
-          <span>${v.priority === "hoch" ? "🔴 " : v.priority === "niedrig" ? "🔵 " : ""}<b>${escapeHtml(v.text)}</b></span>
-          <span class="muted small task-row-meta">${escapeHtml(beschreibeVorlage(v))}</span></div>`;
-        const akt = document.createElement("div");
-        akt.className = "employee-actions";
-        const bearbeiten = document.createElement("button");
-        bearbeiten.className = "btn btn-secondary";
-        bearbeiten.textContent = "Ändern";
-        bearbeiten.onclick = () => openTemplateForm(v);
-        const weg = document.createElement("button");
-        weg.className = "btn btn-link";
-        weg.textContent = "✕";
-        weg.onclick = async () => {
-          if (!(await confirmDialog(`Standard-Aufgabe „${v.text}" löschen?`, { danger: true, okLabel: "Löschen" }))) return;
-          store.removeTaskTemplate(v.id);
-          rerender();
-        };
-        akt.append(bearbeiten, weg);
-        row.appendChild(akt);
-        liste.appendChild(row);
+      // Nach Abschnitt gruppiert, in der Reihenfolge des Tages – so liest sich die Liste wie ein Ablauf
+      // und nicht wie ein Haufen.
+      for (const ph of AUFGABEN_PHASEN) {
+        const gruppe = vorlagen.filter((v) => (AUFGABEN_PHASEN.includes(v.phase) ? v.phase : "schicht") === ph);
+        if (gruppe.length === 0) continue;
+        const kopf = document.createElement("p");
+        kopf.className = "muted small res-bereich";
+        kopf.innerHTML = `<b>${escapeHtml(PHASE_LABEL[ph])}</b> · ${gruppe.length}`;
+        card.appendChild(kopf);
+
+        const liste = document.createElement("div");
+        liste.className = "task-list";
+        for (const v of gruppe) {
+          const row = document.createElement("div");
+          row.className = "task-row";
+          row.innerHTML = `<div class="task-row-text">
+            <span>${v.priority === "hoch" ? "🔴 " : v.priority === "niedrig" ? "🔵 " : ""}<b>${escapeHtml(v.text)}</b></span>
+            <span class="muted small task-row-meta">${escapeHtml(beschreibeVorlage(v))}</span></div>`;
+          const akt = document.createElement("div");
+          akt.className = "employee-actions";
+          const bearbeiten = document.createElement("button");
+          bearbeiten.className = "btn btn-secondary";
+          bearbeiten.textContent = "Ändern";
+          bearbeiten.onclick = () => openTemplateForm(v);
+          const weg = document.createElement("button");
+          weg.className = "btn btn-link";
+          weg.textContent = "✕";
+          weg.onclick = async () => {
+            if (!(await confirmDialog(`Standard-Aufgabe „${v.text}“ löschen?`, { danger: true, okLabel: "Löschen" }))) return;
+            store.removeTaskTemplate(v.id);
+            rerender();
+          };
+          akt.append(bearbeiten, weg);
+          row.appendChild(akt);
+          liste.appendChild(row);
+        }
+        card.appendChild(liste);
       }
-      card.appendChild(liste);
     }
 
     const addBtn = document.createElement("button");
@@ -95,7 +105,7 @@ function renderTasksAdmin() {
     const hinweis = document.createElement("p");
     hinweis.className = "muted small";
     hinweis.textContent =
-      "Wird sofort in alle noch offenen Tage ab heute nachgetragen. Vergangene und abgeschlossene Tage bleiben, wie sie sind.";
+      "Gilt ab dem nächsten Einstempeln. Wer gerade im Dienst ist, bekommt sie beim nächsten Abgleich nachgetragen; abgeschlossene Tage bleiben, wie sie sind.";
     card.appendChild(hinweis);
     return card;
   }
@@ -121,6 +131,7 @@ function renderTasksAdmin() {
 
     const entwurf = {
       text: vorhanden?.text || "",
+      phase: vorhanden?.phase || "schicht",
       weekdays: [...(vorhanden?.weekdays || [])],
       schicht: vorhanden?.schicht || "",
       bereich: vorhanden?.bereich || "",
@@ -148,6 +159,21 @@ function renderTasksAdmin() {
     textInput.value = entwurf.text;
     textInput.oninput = () => (entwurf.text = textInput.value);
     box.appendChild(feld("Aufgabe", textInput));
+
+    // Der Abschnitt steht ganz oben, weil er die wichtigste Entscheidung ist: er bestimmt, wann die
+    // Aufgabe in der Schicht auftaucht.
+    const phase = document.createElement("select");
+    for (const ph of AUFGABEN_PHASEN) {
+      const o = document.createElement("option");
+      o.value = ph;
+      o.textContent = PHASE_LABEL[ph];
+      phase.appendChild(o);
+    }
+    phase.value = entwurf.phase;
+    phase.onchange = () => (entwurf.phase = phase.value);
+    box.appendChild(
+      feld("Wann in der Schicht?", phase, "Schichtbeginn steht beim Einstempeln oben, Schichtende erst gegen Feierabend.")
+    );
 
     // Wochentage als Umschalter
     const tage = document.createElement("div");

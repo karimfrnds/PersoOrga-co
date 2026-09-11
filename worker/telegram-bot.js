@@ -26,6 +26,8 @@
 // ============================================================================
 
 const PRIORITIES = ["niedrig", "normal", "hoch"];
+// Die drei Abschnitte einer Schicht – identisch zu js/store.js.
+const AUFGABEN_PHASEN = ["beginn", "schicht", "ende"];
 
 /** Muss zu store.ABWESENHEIT_ARTEN passen – der Bot und die Handy-Ansicht beschriften damit dieselben Dinge. */
 const ABWESENHEIT_ARTEN = {
@@ -45,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-11.2";
+const WORKER_VERSION = "2026-09-11.3";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -3295,6 +3297,9 @@ async function handleAdminTaskTemplate(request, env) {
     bereich: ["service", "kueche"].includes(body?.bereich) ? body.bereich : "",
     time: /^\d{2}:\d{2}$/.test(body?.time || "") ? body.time : "",
     priority: PRIORITIES.includes(body?.priority) ? body.priority : "normal",
+    // In welchem Abschnitt der Schicht die Aufgabe steht. Unbekanntes landet in der Mitte – das ist der
+    // Abschnitt, der niemanden aufhaelt, wenn die Zuordnung daneben liegt.
+    phase: AUFGABEN_PHASEN.includes(body?.phase) ? body.phase : "schicht",
   };
   const state = await getState(env);
   await patchState(env, {
@@ -3314,6 +3319,7 @@ function vorlagenVorschau(vorlagen, e) {
     bereich: e.bereich,
     time: e.time,
     priority: e.priority,
+    phase: e.phase,
   };
   if (e.kind === "update") return vorlagen.map((v) => (v.id === e.templateId ? { ...v, ...felder } : v));
   // Vorlaeufige ID: der iPad vergibt beim Uebernehmen eine eigene und schickt sie mit dem naechsten

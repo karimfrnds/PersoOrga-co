@@ -8,16 +8,16 @@
 // schließt sich dieses Fenster wieder, ohne auszustempeln, und man landet
 // wieder auf dem Leerlauf-Bildschirm.
 //
-// Ausstempeln ist erst möglich, wenn die eigenen zugeordneten Aufgaben
-// abgehakt/weitergegeben sind. Ist man zusätzlich die letzte im Dienst
-// verbliebene Person, müssen auch alle allgemeinen Aufgaben erledigt sein –
-// danach geht es automatisch weiter zum Kassenabschluss.
+// Offene Aufgaben halten niemanden mehr auf: wer gehen will, kann gehen. Vor
+// dem Ausstempeln kommt nur noch ein Hinweis, WAS noch offen ist und in
+// welchem Abschnitt. Ein Knopf, der sich nicht drücken lässt, erklärt nichts
+// und wird am Ende eines langen Tages nur umgangen.
 // ============================================================================
-import { store } from "../store.js";
+import { store, AUFGABEN_PHASEN, PHASE_LABEL } from "../store.js";
 import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
-import { alertDialog } from "../dialog.js";
+import { alertDialog, confirmDialog } from "../dialog.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -63,6 +63,9 @@ function renderKiosk(navigate) {
   let error = "";
   let greetEmployee = null; // erkannt am Leerlauf-Pad, wartet auf "Schicht starten?"-Bestätigung
   const wantsToEditWeek = new Set(); // "empId:weekStart", die nach "Chef anfragen" nochmal bearbeiten wollen
+  // Welcher Aufgaben-Abschnitt aufgeklappt ist. undefined = automatisch (was gerade dran ist),
+  // null = alle zu, sonst "beginn" | "schicht" | "ende". Gilt nur, solange das Fenster offen ist.
+  let offenePhase = undefined;
 
   // Neue Telegram-Aufgaben abholen, Leerlauf-Bildschirm danach neu zeichnen (falls gerade sichtbar).
   // Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden, damit sich nichts aufsummiert.
@@ -85,9 +88,6 @@ function renderKiosk(navigate) {
   /** Was heute eine Uhrzeit hat, jetzt dran und noch offen ist. null, wenn es nichts gibt – dann soll
    * dort auch kein leerer Kasten stehen. */
   function buildFaelligBanner() {
-    // Beim Blick auf den Bildschirm nachtragen, was seit dem Anlegen des Tages an Vorlagen dazugekommen
-    // ist – sonst faellt eine heute angelegte Standard-Aufgabe erst morgen auf.
-    store.ergaenzeStandardaufgaben(todayStr());
     const day = store.getDayByDate(todayStr());
     if (!day) return null;
     const offen = day.tasks
@@ -265,6 +265,7 @@ function renderKiosk(navigate) {
   function openPersonal(emp) {
     personalEmployee = emp;
     view = "personal";
+    offenePhase = undefined; // beim Öffnen wieder der Abschnitt, der gerade dran ist
     rerender();
     showUnreadNotifications(emp); // absichtlich nicht awaited, läuft als Pop-up-Kette über der Ansicht
   }
@@ -396,52 +397,110 @@ function renderKiosk(navigate) {
 
     // ---- Aufgaben ----
     //
-    // Sortiert nach dem, was gerade zaehlt: was JETZT dran ist, steht oben und faellt auf. Danach die
-    // eigenen, dann die der eigenen Schicht, dann alles Allgemeine. Aufgaben anderer Schichten stehen
-    // ganz unten und nur zur Kenntnis – sie blockieren das Ausstempeln nicht.
+    // Drei Abschnitte statt einer langen Liste: Schichtbeginn, Waehrend der Schicht, Schichtende. Immer
+    // nur einer ist aufgeklappt – man macht seinen Beginn, klappt zu, und hat waehrend des Tages nicht
+    // die Abschluss-Liste im Blick, die einen noch nichts angeht.
+    //
+    // Was eine Uhrzeit hat und JETZT dran ist, klappt den zugehoerigen Abschnitt von selbst auf. Sonst
+    // steht die Erinnerung in einem Abschnitt, den gerade niemand offen hat.
     const meineGruppe = store.getSchichtGruppeFuer(emp.id);
     const passt = (t) => store.aufgabeGehoertZu(t, { schichtGruppe: meineGruppe, rolle: emp.role });
 
     const mine = day.tasks.filter((t) => t.assignedTo === emp.id);
-    const offeneFremde = day.tasks.filter((t) => t.assignedTo && t.assignedTo !== emp.id);
-    const allgemein = day.tasks.filter((t) => !t.assignedTo);
-    // Faellig heisst: hat eine Uhrzeit, die erreicht ist, und ist noch offen. Ohne Uhrzeit ist nichts
-    // "faellig" – sonst stuende den ganzen Tag alles im Alarm-Kasten und niemand schaut mehr hin.
-    const faellig = [...mine, ...allgemein.filter(passt)].filter((t) => !t.done && t.time && store.istFaellig(t));
-    const faelligIds = new Set(faellig.map((t) => t.id));
+    const offeneFremde = day.tasks.filter((t) => t.assignedTo && t.assignedTo !== emp.id && !t.done);
+    const allgemein = day.tasks.filter((t) => !t.assignedTo && passt(t));
+    const andereSchichten = day.tasks.filter((t) => !t.assignedTo && !passt(t));
 
-    const meineRest = mine.filter((t) => !faelligIds.has(t.id));
-    const meineSchicht = allgemein.filter((t) => t.schicht && passt(t) && !faelligIds.has(t.id));
-    const fuerAlle = allgemein.filter((t) => !t.schicht && passt(t) && !faelligIds.has(t.id));
-    const andereSchichten = allgemein.filter((t) => !passt(t));
+    const meineAlle = [...mine, ...allgemein];
+    const nachPhase = store.aufgabenNachPhase(meineAlle);
+    const offenJe = (ph) => nachPhase[ph].filter((t) => !t.done);
+    const faellig = meineAlle.filter((t) => !t.done && t.time && store.istFaellig(t));
+
+    // Welcher Abschnitt steht offen?
+    //   Solange beim Schichtbeginn noch etwas offen ist, der – man ist gerade angekommen. Eine Aufgabe
+    //   mit Uhrzeit, die vor dem Einstempeln lag, waere sonst sofort "ueberfaellig" und wuerde die
+    //   Ankunfts-Liste wegdraengen.
+    //   Danach das, was jetzt dran ist, sonst der erste Abschnitt mit offenen Punkten.
+    // Eine eigene Wahl der Person schlaegt alles – bis sie das Fenster verlaesst.
+    const faelligPhase = faellig.length > 0 ? (AUFGABEN_PHASEN.includes(faellig[0].phase) ? faellig[0].phase : "schicht") : null;
+    const autoPhase =
+      (offenJe("beginn").length > 0 ? "beginn" : null) || faelligPhase || AUFGABEN_PHASEN.find((ph) => offenJe(ph).length > 0) || null;
+    const aktivePhase = offenePhase === undefined ? autoPhase : offenePhase;
 
     const tasksCard = document.createElement("section");
     tasksCard.className = "card";
-    tasksCard.innerHTML = `<h2>📋 Aufgaben heute</h2>`;
-    if (day.tasks.length === 0) {
+    const erledigt = meineAlle.filter((t) => t.done).length;
+    tasksCard.innerHTML = `<h2>📋 Deine Aufgaben</h2>
+      <p class="muted small">${escapeHtml(SCHICHT_TITEL[meineGruppe] || "Heute")}${
+        meineAlle.length > 0 ? ` · ${erledigt} von ${meineAlle.length} erledigt` : ""
+      }</p>`;
+
+    if (meineAlle.length === 0 && andereSchichten.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
-      empty.textContent = "Keine Aufgaben für heute.";
+      empty.textContent = "Keine Aufgaben für dich heute.";
       tasksCard.appendChild(empty);
     } else {
-      const abschnitt = (titel, liste, handoff, klasse) => {
-        if (liste.length === 0) return;
-        const subHead = document.createElement("p");
-        subHead.className = "muted small" + (klasse ? " " + klasse : "");
-        subHead.style.margin = "0";
-        subHead.innerHTML = `<b>${titel}</b>`;
-        tasksCard.appendChild(subHead);
-        tasksCard.appendChild(buildTaskList(day, liste, emp, handoff));
-      };
-      abschnitt("⏰ Jetzt dran", faellig, true, "task-faellig-kopf");
-      abschnitt("Deine Aufgaben", meineRest, true);
-      abschnitt(SCHICHT_TITEL[meineGruppe] || "Deine Schicht", meineSchicht, false);
-      abschnitt("Für alle", fuerAlle, false);
-      abschnitt("Andere Schichten", andereSchichten, false);
-      if (offeneFremde.some((t) => !t.done)) {
+      if (faellig.length > 0) {
+        // Anklickbar, weil der faellige Punkt in einem zugeklappten Abschnitt stecken kann – dann fuehrt
+        // der Hinweis direkt dorthin, statt nur zu behaupten, dass etwas ansteht.
+        const spaet = faellig.some((t) => store.ueberfaelligSeit(t) >= 30);
+        const hinweis = document.createElement("button");
+        hinweis.type = "button";
+        hinweis.className = "callout kiosk-faellig-hinweis" + (spaet ? " callout-warn" : "");
+        hinweis.textContent =
+          faellig.length === 1
+            ? `⏰ „${faellig[0].text}“ ist jetzt dran (${faellig[0].time} Uhr)`
+            : `⏰ ${faellig.length} Aufgaben sind jetzt dran`;
+        hinweis.onclick = () => {
+          offenePhase = faelligPhase;
+          rerender();
+        };
+        tasksCard.appendChild(hinweis);
+      }
+
+      const gruppen = document.createElement("div");
+      gruppen.className = "group-list";
+      for (const ph of AUFGABEN_PHASEN) {
+        const liste = nachPhase[ph];
+        if (liste.length === 0) continue;
+        const offen = offenJe(ph).length;
+        const istOffen = aktivePhase === ph;
+
+        const wrapGruppe = document.createElement("div");
+        const kopf = document.createElement("button");
+        kopf.type = "button";
+        kopf.className = "group-header" + (istOffen ? " open" : "");
+        kopf.innerHTML = `
+          <span class="group-header-chevron">▶</span>
+          <span class="group-header-name">${escapeHtml(PHASE_LABEL[ph])}</span>
+          <span class="group-header-meta">${offen === 0 ? "✓ alles erledigt" : `${offen} von ${liste.length} offen`}</span>
+        `;
+        kopf.onclick = () => {
+          offenePhase = istOffen ? null : ph;
+          rerender();
+        };
+        wrapGruppe.appendChild(kopf);
+        if (istOffen) {
+          const body = document.createElement("div");
+          body.className = "group-body";
+          body.appendChild(buildTaskList(day, liste, emp, true));
+          wrapGruppe.appendChild(body);
+        }
+        gruppen.appendChild(wrapGruppe);
+      }
+      tasksCard.appendChild(gruppen);
+
+      if (andereSchichten.length > 0) {
         const rest = document.createElement("p");
         rest.className = "muted small";
-        rest.textContent = `${offeneFremde.filter((t) => !t.done).length} weitere Aufgaben sind anderen zugeordnet.`;
+        rest.textContent = `${andereSchichten.filter((t) => !t.done).length} Aufgaben gehören zu anderen Schichten.`;
+        tasksCard.appendChild(rest);
+      }
+      if (offeneFremde.length > 0) {
+        const rest = document.createElement("p");
+        rest.className = "muted small";
+        rest.textContent = `${offeneFremde.length} weitere Aufgaben sind anderen zugeordnet.`;
         tasksCard.appendChild(rest);
       }
     }
@@ -500,30 +559,47 @@ function renderKiosk(navigate) {
     }
 
     // ---- Ausstempeln ----
-    // Blockieren duerfen nur die eigenen und die der eigenen Schicht – eine Aufgabe der Spaetschicht
-    // darf die Frueh nicht festhalten.
-    const openMine = [...mine, ...meineSchicht, ...faellig.filter((t) => !t.assignedTo)].filter((t) => !t.done);
+    //
+    // Offene Aufgaben halten niemanden fest. Ein Knopf, der sich nicht druecken laesst, sagt nicht, was
+    // fehlt, und wer wirklich gehen muss, stempelt dann eben gar nicht aus – dann fehlt am Ende die Zeit
+    // in der Abrechnung, und das ist schlimmer als eine liegen gebliebene Aufgabe. Stattdessen: ein
+    // Hinweis, der beim Namen nennt, welcher Abschnitt noch offen ist.
+    const offeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: offenJe(ph).length })).filter((x) => x.offen > 0);
+    const offenGesamt = offeneAbschnitte.reduce((n, x) => n + x.offen, 0);
     const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
     const wouldBeLast = otherOpenShifts.length === 0;
-    const allDone = store.allTasksDone(day.id);
-    const blocked = openMine.length > 0 || (wouldBeLast && !allDone);
+
+    if (offenGesamt > 0) {
+      const hint = document.createElement("p");
+      hint.className = "callout callout-warn";
+      hint.innerHTML =
+        `<b>Achtung: ${offenGesamt} ${offenGesamt === 1 ? "Aufgabe ist" : "Aufgaben sind"} noch offen.</b><br>` +
+        offeneAbschnitte.map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen}`).join(" · ");
+      wrap.appendChild(hint);
+    }
 
     const endBtn = document.createElement("button");
     endBtn.className = "btn btn-primary btn-huge";
-    endBtn.disabled = blocked;
     endBtn.textContent = "🚪 Schicht beenden";
-    endBtn.onclick = () => endShift(day, emp, shift, wouldBeLast);
+    endBtn.onclick = async () => {
+      if (offenGesamt > 0) {
+        const zeilen = offeneAbschnitte
+          .map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen} ${x.offen === 1 ? "Aufgabe" : "Aufgaben"}`)
+          .join("<br>");
+        const weiter = await confirmDialog(
+          `Es ${offenGesamt === 1 ? "ist noch eine Aufgabe" : `sind noch ${offenGesamt} Aufgaben`} offen:<br><br>${zeilen}<br><br>` +
+            "Du kannst trotzdem Schluss machen. Offenes bleibt stehen und der Chef sieht es im Tagesabschluss.",
+          { title: "Noch offene Aufgaben", okLabel: "Trotzdem beenden", cancelLabel: "Zurück zu den Aufgaben" }
+        );
+        if (!weiter) {
+          offenePhase = offeneAbschnitte[0].ph; // den ersten offenen Abschnitt gleich aufklappen
+          rerender();
+          return;
+        }
+      }
+      endShift(day, emp, shift, wouldBeLast);
+    };
     wrap.appendChild(endBtn);
-
-    if (blocked) {
-      const hint = document.createElement("p");
-      hint.className = "muted small";
-      hint.textContent =
-        openMine.length > 0
-          ? "Erst deine Aufgaben abhaken oder weitergeben, dann kannst du dich ausstempeln."
-          : "Du bist die Letzte/der Letzte im Dienst – erst müssen alle Aufgaben erledigt sein, bevor es zum Kassenabschluss geht.";
-      wrap.appendChild(hint);
-    }
 
     return wrap;
   }
@@ -843,9 +919,9 @@ function renderKiosk(navigate) {
 
   /** Weitergeben: an WEN und auf WELCHEN TAG.
    *
-   * Der Tag ist wichtig: bleibt die Aufgabe auf heute, zählt sie weiter als offen und blockiert das
-   * Ausstempeln der letzten Person – die Aufgabe ist dann weitergegeben, hält aber trotzdem alle fest.
-   * Deshalb ist "morgen" vorausgewählt, sobald die Person heute gar nicht mehr im Dienst ist. */
+   * Der Tag ist wichtig: bleibt die Aufgabe auf heute, obwohl die Person gar nicht mehr kommt, ist sie
+   * weitergegeben an niemanden – sie steht abends nur als offener Punkt da. Deshalb ist "morgen"
+   * vorausgewählt, sobald die Person heute nicht mehr im Dienst ist. */
   function openHandoffPicker(day, task, fromEmp) {
     const others = store.getEmployees(false).filter((e) => e.id !== fromEmp.id);
     const heute = todayStr();
@@ -884,7 +960,7 @@ function renderKiosk(navigate) {
       btn.onclick = () => {
         gewaehlt = other;
         // Ist die Person heute gar nicht mehr im Dienst, wäre "heute" nur eine Aufgabe, die niemand macht
-        // und die abends alle blockiert – dann ist morgen die sinnvollere Vorauswahl.
+        // und die abends als offen dasteht – dann ist morgen die sinnvollere Vorauswahl.
         zielDatum = store.getOpenShiftForEmployeeToday(other.id, heute) ? heute : morgen;
         zeichneTag();
       };
@@ -940,8 +1016,8 @@ function renderKiosk(navigate) {
       hinweis.className = zielDatum === heute ? "callout callout-warn" : "muted small";
       hinweis.textContent =
         zielDatum === heute
-          ? "Bleibt die Aufgabe auf heute, zählt sie weiter als offen – die letzte Person im Dienst kann dann nicht ausstempeln, bis sie erledigt ist."
-          : `Die Aufgabe taucht am ${dateDe(zielDatum)} bei ${gewaehlt.name} auf und blockiert den heutigen Feierabend nicht mehr.`;
+          ? `Bleibt die Aufgabe auf heute, steht sie heute Abend als offen da – ${gewaehlt.name} ist nicht mehr im Dienst.`
+          : `Die Aufgabe taucht am ${dateDe(zielDatum)} bei ${gewaehlt.name} auf und zählt heute nicht mehr als offen.`;
       tagBereich.appendChild(hinweis);
 
       const uebernehmen = document.createElement("button");

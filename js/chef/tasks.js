@@ -16,6 +16,10 @@ import { taskAction, taskTemplateAction } from "./api.js";
 const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const SCHICHT_LABEL = { frueh: "Frühschicht", mittel: "Mittelschicht", spaet: "Spätschicht" };
 const PRIO_LABEL = { hoch: "🔴 Hoch", normal: "Normal", niedrig: "🔵 Niedrig" };
+// Die drei Abschnitte einer Schicht – dieselbe Reihenfolge und dieselben Namen wie auf dem iPad.
+const PHASEN = ["beginn", "schicht", "ende"];
+const PHASE_LABEL = { beginn: "Schichtbeginn", schicht: "Während der Schicht", ende: "Schichtende" };
+const phaseVon = (v) => (PHASEN.includes(v?.phase) ? v.phase : "schicht");
 
 function addDaysISO(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -38,8 +42,9 @@ function renderTasks(state, { onChanged }) {
     const frag = document.createElement("div");
     frag.innerHTML = `
       <h1>📋 Aufgaben</h1>
-      <p class="muted">Standard-Aufgaben gelten für jeden Tag, der neu angelegt wird. Einzelaufgaben
-      betreffen nur einen bestimmten Tag.</p>
+      <p class="muted">Standard-Aufgaben sind die Regel: Wer einstempelt, bekommt sie als eigene Liste,
+      geordnet nach Schichtbeginn, während der Schicht und Schichtende. Einzelaufgaben betreffen nur
+      einen bestimmten Tag und eine bestimmte Person.</p>
     `;
     frag.appendChild(buildVorlagen());
     frag.appendChild(buildAufgaben());
@@ -54,10 +59,11 @@ function renderTasks(state, { onChanged }) {
     status.className = "muted small";
 
     card.innerHTML = `<h2>Standard-Aufgaben</h2>
-      <p class="muted small">Werden jedem Tag automatisch mitgegeben – aber nur an den Tagen und in
-      den Schichten, für die sie gelten. Ohne Angabe: jeden Tag, jede Schicht, den ganzen Tag. Eine
-      Uhrzeit sorgt dafür, dass die Aufgabe ab dann auf dem iPad-Bildschirm angezeigt wird. Neu Angelegtes
-      wird in alle offenen Tage ab heute nachgetragen; vergangene bleiben, wie sie sind.</p>`;
+      <p class="muted small">Jede Standard-Aufgabe gehört in einen Abschnitt der Schicht:
+      <b>Schichtbeginn</b>, <b>während der Schicht</b> oder <b>Schichtende</b>. Wer einstempelt, bekommt
+      daraus seine eigene Liste – nur die Tage, Schichten und Bereiche, für die sie gilt. Ohne Angabe:
+      jeden Tag, jede Schicht, den ganzen Tag. Eine Uhrzeit sorgt dafür, dass die Aufgabe ab dann auf dem
+      iPad-Bildschirm gemeldet wird. Neues gilt ab dem nächsten Einstempeln.</p>`;
 
     const vorlagen = Array.isArray(state.taskTemplates) ? state.taskTemplates : [];
     if (vorlagen.length === 0) {
@@ -69,7 +75,15 @@ function renderTasks(state, { onChanged }) {
       tabelle.className = "calc-table";
       tabelle.innerHTML = `<thead><tr><th>Aufgabe</th><th>Tage</th><th>Schicht</th><th>Bereich</th><th>Ab</th><th>Priorität</th><th></th></tr></thead>`;
       const tbody = document.createElement("tbody");
-      for (const v of vorlagen) {
+      const sortiert = PHASEN.flatMap((ph) => vorlagen.filter((v) => phaseVon(v) === ph));
+      let letztePhase = null;
+      for (const v of sortiert) {
+        if (phaseVon(v) !== letztePhase) {
+          letztePhase = phaseVon(v);
+          const kopfZeile = document.createElement("tr");
+          kopfZeile.innerHTML = `<td colspan="7" class="muted small"><b>${escapeHtml(PHASE_LABEL[letztePhase])}</b></td>`;
+          tbody.appendChild(kopfZeile);
+        }
         const tr = document.createElement("tr");
         tr.innerHTML = `<td><b>${escapeHtml(v.text)}</b></td>
           <td>${v.weekdays && v.weekdays.length > 0 ? v.weekdays.map((w) => WOCHENTAGE_KURZ[w]).join(", ") : "<span class='muted'>jeden Tag</span>"}</td>
@@ -123,6 +137,7 @@ function renderTasks(state, { onChanged }) {
     box.className = "res-form";
     const entwurf = {
       text: vorhanden?.text || "",
+      phase: phaseVon(vorhanden),
       weekdays: [...(vorhanden?.weekdays || [])],
       schicht: vorhanden?.schicht || "",
       bereich: vorhanden?.bereich || "",
@@ -161,6 +176,12 @@ function renderTasks(state, { onChanged }) {
     textInput.value = entwurf.text;
     textInput.oninput = () => (entwurf.text = textInput.value);
     box.appendChild(feld("Aufgabe", textInput));
+
+    const phase = auswahl(PHASEN.map((ph) => [ph, PHASE_LABEL[ph]]), entwurf.phase);
+    phase.onchange = () => (entwurf.phase = phase.value);
+    box.appendChild(
+      feld("Wann in der Schicht?", phase, "Schichtbeginn steht beim Einstempeln oben, Schichtende erst gegen Feierabend.")
+    );
 
     // Wochentage als Umschalter – schneller zu überblicken als eine Mehrfachauswahl-Liste.
     const tage = document.createElement("div");
@@ -258,8 +279,9 @@ function renderTasks(state, { onChanged }) {
     const heute = todayStr();
 
     card.innerHTML = `<h2>Aufgaben der nächsten Tage</h2>
-      <p class="muted small">Alles ab heute – aus den Standard-Aufgaben entstanden, per Telegram angelegt
-      oder hier eingetragen.</p>`;
+      <p class="muted small">Alles ab heute – hier eingetragen, per Telegram angelegt oder beim
+      Einstempeln aus einer Standard-Aufgabe entstanden. Für kommende Tage steht hier nur, was jemandem
+      fest zugeteilt ist: die Standard-Aufgaben entstehen erst, wenn die Person einstempelt.</p>`;
 
     card.appendChild(buildNeueAufgabe(status));
 
@@ -280,7 +302,9 @@ function renderTasks(state, { onChanged }) {
       const kopf = document.createElement("p");
       kopf.className = "muted small res-bereich";
       const offen = proTag[datum].filter((t) => !t.done).length;
-      kopf.innerHTML = `<b>${escapeHtml(dateDe(datum))}</b> · ${proTag[datum].length} Aufgaben, ${offen} offen`;
+      kopf.innerHTML = `<b>${escapeHtml(dateDe(datum))}</b> · ${proTag[datum].length} ${
+        proTag[datum].length === 1 ? "Aufgabe" : "Aufgaben"
+      }, ${offen} offen`;
       card.appendChild(kopf);
 
       const liste = document.createElement("div");
@@ -289,6 +313,7 @@ function renderTasks(state, { onChanged }) {
         const row = document.createElement("div");
         row.className = "task-row" + (t.done ? " done" : "");
         const merkmale = [
+          t.phase ? PHASE_LABEL[t.phase] : null,
           t.assignedToName || null,
           t.schicht ? SCHICHT_LABEL[t.schicht] : null,
           t.bereich ? (t.bereich === "kueche" ? "Küche" : "Service") : null,

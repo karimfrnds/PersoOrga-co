@@ -142,6 +142,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   font-size: 15px;
 }
 .callout-warn { background: var(--orange-light); color: var(--orange); font-weight: 600; }
+/* Der Hinweis "jetzt dran" ist ein Knopf (er klappt den Abschnitt auf), soll aber aussehen wie ein
+   Hinweis und nicht wie eine Schaltflaeche. */
+.kiosk-faellig-hinweis {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  margin: 0 0 10px;
+}
 
 .empty-state {
   text-align: center;

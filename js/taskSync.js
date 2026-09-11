@@ -557,6 +557,7 @@ async function performTaskSync() {
       bereich: c.bereich,
       time: c.time,
       priority: c.priority,
+      phase: c.phase,
     };
     if (c.kind === "create") store.addTaskTemplate(felder);
     else if (c.kind === "update") {
@@ -704,8 +705,9 @@ async function performTaskSync() {
   // Jetzt vollständig abgeglichenen lokalen Stand hochladen, damit die Cloud auch lokale
   // Änderungen (abgehakt, manuell angelegt/gelöscht/bearbeitet) und wer im Dienst ist kennt.
   // Erst JETZT die Standard-Aufgaben nachtragen: eine Vorlage, die in diesem Abgleich vom Laptop kam,
-  // soll sofort als Aufgabe in den Tagen stehen und mit hochgehen – sonst dauert es einen Abgleich laenger.
-  store.ergaenzeStandardaufgabenAbHeute();
+  // soll sofort bei denen stehen, die gerade im Dienst sind, und mit hochgehen – sonst dauert es
+  // einen Abgleich laenger.
+  store.ergaenzeSchichtaufgabenFuerOffene();
 
   const freshRows = store.getTasksFrom(todayStr());
   const pushTasks = freshRows.map((r) => ({
@@ -718,6 +720,7 @@ async function performTaskSync() {
     schicht: r.schicht || "",
     bereich: r.bereich || "",
     time: r.time || "",
+    phase: r.phase || "",
   }));
   const shiftsInService = store.getOpenShiftsToday().map((s) => ({
     name: store.getEmployee(s.employeeId)?.name || "?",

@@ -215,6 +215,33 @@ function migrateEventSettings(gemischt, vorgabe) {
 
 const PRIORITIES = ["niedrig", "normal", "hoch"];
 
+/** Die drei Abschnitte einer Schicht. Jede Standard-Aufgabe gehoert in genau einen davon: was beim
+ * Ankommen zu tun ist, was waehrend des Betriebs laeuft, was vor dem Gehen erledigt sein muss.
+ * So denkt man im Betrieb ohnehin – und in dieser Reihenfolge stehen die Listen auf dem iPad. */
+const AUFGABEN_PHASEN = ["beginn", "schicht", "ende"];
+const PHASE_LABEL = { beginn: "Schichtbeginn", schicht: "Während der Schicht", ende: "Schichtende" };
+
+/** Woerter, an denen sich eine alte Vorlage ohne Abschnitt erkennen laesst. */
+const PHASE_WORTE = {
+  ende: ["abschluss", "abschlie", "zusperr", "abrechn", "kasse z", "aufr", "müll", "muell", "spülmaschine", "spuelmaschine",
+    "putz", "reinig", "wischen", "runterfahren", "ausschalten", "abstuhl", "abbauen", "wegr", "leeren"],
+  beginn: ["aufsperr", "aufschlie", "öffn", "oeffn", "hochfahren", "wechselgeld", "kasse vorbereiten", "stühle raus",
+    "terrasse", "aufstuhl", "anmachen", "einschalten", "teelicht", "vorbereiten", "aufbauen", "rausstellen"],
+};
+/** Zu welchem Abschnitt gehoert eine Vorlage, die noch keinen hat?
+ *
+ * Geraten wird nur, solange es niemand selbst gesagt hat – sobald ein Abschnitt einmal gespeichert ist,
+ * kommt diese Funktion nicht mehr zum Zug. Im Zweifel "Waehrend der Schicht": das ist der Abschnitt, der
+ * niemanden aufhaelt, wenn die Zuordnung daneben liegt.
+ */
+function ratePhase(text) {
+  const t = String(text || "").toLowerCase();
+  for (const p of ["ende", "beginn"]) {
+    if (PHASE_WORTE[p].some((w) => t.includes(w))) return p;
+  }
+  return "schicht";
+}
+
 function uhrzeitJetzt() {
   return new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
@@ -228,7 +255,7 @@ function minutenAusUhrzeit(hhmm) {
  * jeden Tag, jede Schicht, den ganzen Tag – also genau das Verhalten von vorher. */
 function normalizeTaskTemplate(v) {
   if (typeof v === "string") {
-    return { id: uid(), text: v.trim(), weekdays: [], schicht: "", bereich: "", time: "", priority: "normal" };
+    return { id: uid(), text: v.trim(), weekdays: [], schicht: "", bereich: "", time: "", priority: "normal", phase: ratePhase(v) };
   }
   return {
     id: v?.id || uid(),
@@ -238,6 +265,7 @@ function normalizeTaskTemplate(v) {
     bereich: ["service", "kueche"].includes(v?.bereich) ? v.bereich : "",
     time: /^\d{2}:\d{2}$/.test(v?.time || "") ? v.time : "",
     priority: PRIORITIES.includes(v?.priority) ? v.priority : "normal",
+    phase: AUFGABEN_PHASEN.includes(v?.phase) ? v.phase : ratePhase(v?.text),
   };
 }
 function normalizeTaskTemplates(list) {
@@ -273,7 +301,7 @@ function normalizeDay(d) {
     })),
     // Aufgaben aus der Zeit vor Schicht/Uhrzeit: die Felder ergaenzen, damit nirgends auf undefined
     // geprueft werden muss. Leer heisst ueberall "gilt fuer alle / den ganzen Tag".
-    tasks: (d.tasks || []).map((t) => ({ priority: "normal", schicht: "", bereich: "", time: "", ...t })),
+    tasks: (d.tasks || []).map((t) => ({ priority: "normal", schicht: "", bereich: "", time: "", phase: "", ...t })),
     // Wareneinsatz des Tages (Summe der verbrauchten Waren zum Einkaufspreis).
     materialkosten: Number(d.materialkosten) || 0,
   };
@@ -566,23 +594,12 @@ export const store = {
       shifts: [],
       plannedShifts: [],
       availability: [],
-      // Nur die Vorlagen, die an DIESEM Wochentag gelten. Schicht und Uhrzeit wandern mit an die Aufgabe:
-      // ohne sie waere spaeter nicht mehr erkennbar, wer sie machen soll und ab wann sie ansteht.
-      // Welche Vorlagen in diesem Tag schon stecken – damit spaeter Nachgetragenes nicht doppelt kommt.
-      appliedTemplateIds: templatesForWeekday(dateStr).map((v) => v.id),
-      tasks: templatesForWeekday(dateStr).map((v) => ({
-        id: uid(),
-        text: v.text,
-        done: false,
-        doneBy: null,
-        doneAt: null,
-        source: "template",
-        assignedTo: null,
-        priority: v.priority || "normal",
-        schicht: v.schicht || "",
-        bereich: v.bereich || "",
-        time: v.time || "",
-      })),
+      // Ein frischer Tag ist leer. Die Standard-Aufgaben entstehen erst beim Einstempeln, und zwar fuer
+      // die Person, die einstempelt – siehe ergaenzeSchichtaufgaben(). Vorher weiss niemand, wer kommt;
+      // eine Liste, die keinem gehoert, hakt am Ende auch keiner ab.
+      // Welche Vorlagen fuer wen schon angelegt wurden ("mitarbeiterId:vorlagenId").
+      appliedShiftTemplateIds: [],
+      tasks: [],
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
@@ -592,7 +609,7 @@ export const store = {
     persist();
     return d;
   },
-  /** Holt den heutigen Tag oder legt ihn an (inkl. Aufgaben aus den Vorlagen). */
+  /** Holt den heutigen Tag oder legt ihn an. */
   getOrCreateDayByDate(dateStr) {
     return this.getDayByDate(dateStr) || this.createDay(dateStr);
   },
@@ -672,16 +689,21 @@ export const store = {
   clockIn(employeeId) {
     const dateStr = todayStr();
     const d = this.getOrCreateDayByDate(dateStr);
-    // Der Tag kann schon seit der Verfuegbarkeits-Abfrage bestehen – dann fehlen ihm die Vorlagen,
-    // die seitdem dazugekommen sind.
-    this.ergaenzeStandardaufgaben(dateStr);
     const already = this.getOpenShiftForEmployeeToday(employeeId, dateStr);
-    if (already) return { day: d, shift: already };
+    if (already) {
+      // Auch beim zweiten Blick nachtragen: eine Vorlage, die seit dem Einstempeln dazugekommen ist,
+      // soll nicht bis morgen warten.
+      this.ergaenzeSchichtaufgaben(employeeId, dateStr);
+      return { day: d, shift: already };
+    }
     const now = new Date();
     const s = { id: uid(), employeeId, from: hhmmLocal(now), to: null, note: "", source: "pin", clockInAt: now.toISOString(), clockOutAt: null };
     d.shifts.push(s);
     this.logAudit(d.id, "eingestempelt", `${this.getEmployee(employeeId)?.name || employeeId} um ${s.from} Uhr`);
     persist();
+    // Erst jetzt, nachdem die Schicht steht: daraus ergibt sich, ob es die Frueh-, Mittel- oder
+    // Spaetschicht ist – und damit, welche Standard-Aufgaben diese Person heute bekommt.
+    this.ergaenzeSchichtaufgaben(employeeId, dateStr);
     return { day: d, shift: s };
   },
   /** Mitarbeiter stempelt aus: schließt die offene Schicht mit der aktuellen Uhrzeit ab. */
@@ -1923,36 +1945,56 @@ export const store = {
     data.settings.taskTemplates = data.settings.taskTemplates.filter((t) => t.id !== id);
     persist();
   },
-  /** Fehlende Standard-Aufgaben in einem Tag nachtragen.
+  /** Die Standard-Aufgaben, die diese Person an diesem Tag bekommt.
    *
-   * Warum das noetig ist: Tage entstehen nicht erst am Morgen. Sobald jemand seine Verfuegbarkeit fuer
-   * die naechste Woche eintraegt, sind alle sieben Tage angelegt – mit den Vorlagen, die es in dem
-   * Moment gab. Eine Vorlage, die der Chef danach anlegt, fehlte in dieser ganzen Woche.
-   *
-   * Zwei Regeln, damit das Nachtragen nicht schlimmer wird als das Problem:
-   *   Vergangene und abgeschlossene Tage bleiben unangetastet. Das ist Historie.
-   *   Jede Vorlage wird pro Tag nur EINMAL angewandt (appliedTemplateIds). Wer eine Aufgabe im Tag
-   *   loescht, hat das so gemeint – sie darf nicht beim naechsten Blick wieder dastehen.
-   *
-   * Gibt die Zahl der nachgetragenen Aufgaben zurueck.
+   * Gefiltert wird dreifach: Wochentag, Schicht und Bereich. Was ohne Angabe dasteht, gilt fuer alle –
+   * so wie bisher. Sortiert nach Abschnitt (Beginn, waehrend, Ende) und darin nach Uhrzeit, damit die
+   * Reihenfolge auf dem iPad die Reihenfolge des Abends ist.
    */
-  ergaenzeStandardaufgaben(dateStr) {
-    const d = this.getDayByDate(dateStr);
-    if (!d || dateStr < todayStr() || d.status !== "offen") return 0;
+  vorlagenFuerSchicht(dateStr, { schichtGruppe, rolle }) {
+    return templatesForWeekday(dateStr)
+      .filter((v) => this.aufgabeGehoertZu(v, { schichtGruppe, rolle }))
+      .sort(
+        (a, b) =>
+          AUFGABEN_PHASEN.indexOf(a.phase || "schicht") - AUFGABEN_PHASEN.indexOf(b.phase || "schicht") ||
+          (a.time || "99:99").localeCompare(b.time || "99:99")
+      );
+  },
 
-    if (!Array.isArray(d.appliedTemplateIds)) {
-      // Tag von vor dieser Aenderung: ableiten, was schon angewandt wurde, damit nichts doppelt kommt.
-      // Eine bereits geloeschte Vorlagen-Aufgabe kann dadurch einmalig zurueckkommen – das laesst sich
-      // nicht unterscheiden, und einmal zu viel ist hier besser als eine Aufgabe, die nie erscheint.
-      d.appliedTemplateIds = data.settings.taskTemplates
-        .filter((v) => d.tasks.some((t) => t.source === "template" && t.text === v.text))
-        .map((v) => v.id);
+  /** Die Standard-Aufgaben fuer eine Person anlegen, die gerade eingestempelt hat.
+   *
+   * Frueher hingen die Vorlagen am Tag: eine Liste, die niemandem gehoerte. Jetzt bekommt jede Person
+   * beim Einstempeln ihre eigene – sonst ist nach einer Schicht nicht mehr zu sehen, wer was gemacht
+   * hat, und bei zwei Leuten im Haus fuehlt sich fuer keine Aufgabe jemand zustaendig.
+   *
+   * Jede Vorlage entsteht pro Person und Tag nur EINMAL (appliedShiftTemplateIds). Wer eine Aufgabe
+   * loescht, hat das so gemeint – sie darf nicht beim naechsten Blick wieder dastehen.
+   *
+   * Gibt die Zahl der angelegten Aufgaben zurueck.
+   */
+  ergaenzeSchichtaufgaben(employeeId, dateStr = todayStr()) {
+    const d = this.getDayByDate(dateStr);
+    if (!d || d.status !== "offen") return 0;
+    const emp = this.getEmployee(employeeId);
+    if (!emp) return 0;
+
+    const gruppe = this.getSchichtGruppeFuer(employeeId, dateStr);
+    const vorlagen = this.vorlagenFuerSchicht(dateStr, { schichtGruppe: gruppe, rolle: emp.role });
+    if (!Array.isArray(d.appliedShiftTemplateIds)) d.appliedShiftTemplateIds = [];
+
+    // Uebergang vom alten System: Vorlagen-Aufgaben, die dem Tag als Ganzes mitgegeben wurden, gehoeren
+    // ab jetzt einer Person. Die alten, noch offenen Kopien fliegen beim ersten Einstempeln raus –
+    // sonst stuende alles doppelt da. Erledigtes und Weitergegebenes bleibt unangetastet, das ist Historie.
+    if (!d.schichtaufgabenMigriert) {
+      d.tasks = d.tasks.filter((t) => !(t.source === "template" && !t.assignedTo && !t.done && !t.handoffFrom));
+      d.schichtaufgabenMigriert = true;
     }
 
-    const schon = new Set(d.appliedTemplateIds);
+    const schon = new Set(d.appliedShiftTemplateIds);
     let neu = 0;
-    for (const v of templatesForWeekday(dateStr)) {
-      if (schon.has(v.id)) continue;
+    for (const v of vorlagen) {
+      const schluessel = `${employeeId}:${v.id}`;
+      if (schon.has(schluessel)) continue;
       d.tasks.push({
         id: uid(),
         text: v.text,
@@ -1960,29 +2002,36 @@ export const store = {
         doneBy: null,
         doneAt: null,
         source: "template",
+        templateId: v.id,
         addedBy: null,
-        assignedTo: null,
+        assignedTo: employeeId,
         priority: v.priority || "normal",
-        schicht: v.schicht || "",
+        schicht: v.schicht || gruppe || "",
         bereich: v.bereich || "",
         time: v.time || "",
+        phase: v.phase || "schicht",
       });
-      d.appliedTemplateIds.push(v.id);
+      d.appliedShiftTemplateIds.push(schluessel);
       neu++;
     }
-    if (neu > 0) persist();
+    if (neu > 0 || d.schichtaufgabenMigriert) persist();
     return neu;
   },
-  /** Dasselbe fuer heute und die naechsten Tage, die schon angelegt sind. Laeuft beim Abgleich mit –
-   * so greift eine neu angelegte Vorlage spaetestens nach 90 Sekunden ueberall. */
-  ergaenzeStandardaufgabenAbHeute(tage = 21) {
-    const heute = todayStr();
+
+  /** Dasselbe fuer alle, die heute gerade im Dienst sind. Laeuft beim Abgleich mit – so greift eine neu
+   * angelegte Vorlage spaetestens nach 90 Sekunden auch bei denen, die schon eingestempelt sind. */
+  ergaenzeSchichtaufgabenFuerOffene(dateStr = todayStr()) {
     let neu = 0;
-    for (const d of data.days) {
-      if (d.date < heute || d.date > addDaysISOStore(heute, tage)) continue;
-      neu += this.ergaenzeStandardaufgaben(d.date);
-    }
+    for (const s of this.getOpenShiftsToday(dateStr)) neu += this.ergaenzeSchichtaufgaben(s.employeeId, dateStr);
     return neu;
+  },
+
+  /** Aufgaben nach Abschnitt sortiert: { beginn: [...], schicht: [...], ende: [...] }.
+   * Eine Aufgabe ohne Abschnitt (Einzelaufgabe, per Bot angelegt) zaehlt zu "waehrend der Schicht". */
+  aufgabenNachPhase(tasks) {
+    const nach = { beginn: [], schicht: [], ende: [] };
+    for (const t of tasks || []) nach[AUFGABEN_PHASEN.includes(t.phase) ? t.phase : "schicht"].push(t);
+    return nach;
   },
 
   /** Welche Vorlagen gelten an diesem Datum? Fuer die Vorschau in der Verwaltung. */
@@ -2049,12 +2098,6 @@ export const store = {
   ueberfaelligSeit(task, jetzt = uhrzeitJetzt()) {
     if (!task.time || jetzt < task.time) return 0;
     return minutenAusUhrzeit(jetzt) - minutenAusUhrzeit(task.time);
-  },
-  /** Alle Aufgaben eines Tages erledigt? (leere Liste zählt als erledigt.) */
-  allTasksDone(dayId) {
-    const d = this.getDay(dayId);
-    if (!d) return true;
-    return d.tasks.every((t) => t.done);
   },
   toggleDayTask(dayId, taskId, employeeName) {
     const d = this.getDay(dayId);
@@ -2208,4 +2251,4 @@ export const store = {
   },
 };
 
-export { uid };
+export { uid, AUFGABEN_PHASEN, PHASE_LABEL };

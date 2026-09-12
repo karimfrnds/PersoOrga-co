@@ -317,10 +317,64 @@ async function performTaskSync() {
 
   const localRows = store.getTasksFrom(todayStr());
   const localIds = new Set(localRows.map((r) => r.id));
-  const employees = store.getEmployees(false);
 
   let applied = 0;
   const syncWarnings = []; // Zuweisungen/Nachrichten/Ablehnungen, die NICHT übernommen werden konnten (sichtbar in lastError)
+
+  // Mitarbeiter-Änderungen aus der Laptop-Ansicht übernehmen. Wie bei den Artikeln hält das iPad die
+  // maßgebliche Liste, der Laptop reicht nur Änderungswünsche ein – ohne diesen Schritt würde der Push
+  // am Ende dieses Durchlaufs die Warteschlange des Workers mit dem unveränderten iPad-Stand
+  // überschreiben und die Änderung wäre stillschweigend weg.
+  //
+  // Bewusst GANZ AM ANFANG, noch vor `employees`: eine hier neu angelegte oder wieder aktivierte Person
+  // steht dann schon zur Verfügung, wenn weiter unten Nachrichten/Abwesenheiten über den Namen
+  // zugeordnet werden – sonst käme all das eine Runde zu spät.
+  const remoteEmployeeChanges = Array.isArray(remote.employeeChanges) ? remote.employeeChanges : [];
+  const appliedEmployeeChangeIds = new Set(cfg.appliedEmployeeChangeIds || []);
+  let newEmployeeChangeIds = false;
+  for (const c of remoteEmployeeChanges) {
+    if (!c.id || appliedEmployeeChangeIds.has(c.id)) continue;
+    if (c.kind === "create") {
+      // PIN und feste Schichten kennt der Laptop nicht – die werden am iPad vergeben.
+      store.addEmployee({
+        name: c.name,
+        role: c.role,
+        hourlyWage: c.hourlyWage,
+        isMinijob: c.isMinijob,
+        minijobLimit: c.minijobLimit,
+      });
+    } else if (c.kind === "update") {
+      if (store.getEmployee(c.employeeId)) {
+        // NUR die Felder, die es am Laptop überhaupt zu bearbeiten gibt. updateEmployee() macht ein
+        // Object.assign: ein mitgeschicktes `pin: null` würde den PIN löschen (der Worker kennt ihn
+        // nie im Klartext, kann ihn also auch nicht zurückschicken) und ein `festeSchichten: undefined`
+        // würde die festen Schichten wegwerfen. Beides darf durch eine Laptop-Änderung nicht passieren.
+        store.updateEmployee(c.employeeId, {
+          name: c.name,
+          role: c.role,
+          hourlyWage: Number(c.hourlyWage) || 0,
+          isMinijob: !!c.isMinijob,
+          minijobLimit: Number(c.minijobLimit) || 556,
+        });
+      } else {
+        syncWarnings.push(`Mitarbeiter-Änderung "${c.name}": gibt es hier nicht mehr, Änderung verworfen.`);
+      }
+    } else if (c.kind === "deactivate") {
+      // Soft-Delete wie am iPad: alte Tage bleiben erhalten, die Person verschwindet nur aus den Listen.
+      if (store.getEmployee(c.employeeId)) store.removeEmployee(c.employeeId);
+      else syncWarnings.push(`Mitarbeiter deaktivieren: gibt es hier nicht mehr.`);
+    } else if (c.kind === "activate") {
+      if (store.getEmployee(c.employeeId)) store.updateEmployee(c.employeeId, { active: true });
+      else syncWarnings.push(`Mitarbeiter aktivieren: gibt es hier nicht mehr.`);
+    }
+    appliedEmployeeChangeIds.add(c.id);
+    newEmployeeChangeIds = true;
+  }
+  if (newEmployeeChangeIds) {
+    store.updateTaskInboxConfig({ appliedEmployeeChangeIds: [...appliedEmployeeChangeIds].slice(-300) });
+  }
+
+  const employees = store.getEmployees(false);
 
   // Vom Bot per Wochenplan-Nachricht angelegte geplante Schichten -> lokal übernehmen.
   // Zwei Formen: freie Uhrzeit (from/to, per rs.id dedupliziert wie bisher) ODER Zuweisung anhand des

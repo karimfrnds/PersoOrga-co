@@ -150,6 +150,7 @@ function defaultData() {
         appliedAvailabilityKeys: [],
         // IDs der vom Laptop eingereichten Artikel-Änderungen, die schon übernommen wurden.
         appliedStockChangeIds: [],
+        // IDs der vom Laptop eingereichten Mitarbeiter-Änderungen, die schon übernommen wurden.
         appliedEmployeeChangeIds: [],
         // IDs der am Laptop abgeschlossenen (bzw. wieder geöffneten) Wochenpläne, die schon übernommen wurden.
         appliedPublicationIds: [],

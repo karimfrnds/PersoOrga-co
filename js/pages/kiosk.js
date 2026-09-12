@@ -54,6 +54,9 @@ function weekdayIndexOf(dateStr) {
 }
 
 function renderKiosk(navigate) {
+  // Feste Schichten der kommenden Wochen eintragen, falls das seit dem letzten Abgleich noch niemand
+  // getan hat – sonst stuende bei jemandem mit festem Montag "keine Schichten eingetragen".
+  store.ergaenzeFesteSchichten();
   const container = document.createElement("div");
   container.className = "page kiosk-page";
 
@@ -506,6 +509,11 @@ function renderKiosk(navigate) {
     }
     wrap.appendChild(tasksCard);
 
+    // ---- Küche: Vorbereitungen und Rezepte ----
+    // Nur für die Küche, und bewusst weit oben: das ist die erste Frage nach dem Einstempeln, nicht die
+    // letzte. Für alle anderen wäre es eine Kachel, die nie jemand antippt.
+    if (emp.role === "kueche") wrap.appendChild(buildKuecheCard());
+
     // ---- Deine Schichten (Wochenplan) ----
     wrap.appendChild(buildShiftsCard(emp));
 
@@ -609,11 +617,54 @@ function renderKiosk(navigate) {
   // Deine Schichten: geplante Schichten (aus CSV-Upload oder vom Bot per
   // Wochenplan-Nachricht eingetragen) für die kommenden Tage – reine Anzeige.
   // ---------------------------------------------------------------------
+  /** Kurzer Blick in die Küche: was unter Soll ist, und der Weg zum Zählen und zu den Rezepten. */
+  function buildKuecheCard() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>🍳 Küche</h2>`;
+    const preps = store.getPreps();
+    const zeile = document.createElement("p");
+    if (preps.length === 0) {
+      zeile.className = "muted small";
+      zeile.textContent = "Noch keine Vorbereitungen angelegt.";
+    } else {
+      const leer = preps.filter((p) => store.prepStatus(p) === "leer");
+      const knapp = preps.filter((p) => store.prepStatus(p) === "knapp");
+      if (leer.length === 0 && knapp.length === 0) {
+        zeile.className = "muted small";
+        zeile.textContent = "Alles über Soll.";
+      } else {
+        zeile.className = "callout callout-warn";
+        const teile = [];
+        if (leer.length > 0) teile.push(`leer: ${leer.map((p) => p.name).join(", ")}`);
+        if (knapp.length > 0) teile.push(`unter Soll: ${knapp.map((p) => p.name).join(", ")}`);
+        zeile.textContent = teile.join(" · ");
+      }
+    }
+    card.appendChild(zeile);
+    const akt = document.createElement("div");
+    akt.className = "employee-actions";
+    const zaehlen = document.createElement("button");
+    zaehlen.className = "btn btn-primary";
+    zaehlen.textContent = "Vorbereitungen zählen";
+    zaehlen.onclick = () => navigate("kueche");
+    const rezepte = document.createElement("button");
+    rezepte.className = "btn btn-secondary";
+    rezepte.textContent = "📖 Rezepte";
+    rezepte.onclick = () => navigate("kueche");
+    akt.append(zaehlen, rezepte);
+    card.appendChild(akt);
+    return card;
+  }
+
   function buildShiftsCard(emp) {
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `<h2>📅 Deine Schichten</h2>`;
-    const upcoming = store.getPlannedShiftsFrom(emp.id, todayStr()).slice(0, 14);
+    // Nur die naechsten acht: mit festen Schichten stuenden hier sonst vier Wochen derselben drei Tage,
+    // und die Karte schoebe alles andere aus dem Bild.
+    const alleKommenden = store.getPlannedShiftsFrom(emp.id, todayStr());
+    const upcoming = alleKommenden.slice(0, 8);
     if (upcoming.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
@@ -639,17 +690,27 @@ function renderKiosk(navigate) {
         }
       }
       card.appendChild(list);
+      if (alleKommenden.length > upcoming.length) {
+        const rest = document.createElement("p");
+        rest.className = "muted small";
+        rest.textContent = `… und ${alleKommenden.length - upcoming.length} weitere danach.`;
+        card.appendChild(rest);
+      }
     }
     return card;
   }
 
-  /** true, wenn für diese Zielwoche schon mindestens ein Tag "abgeschickt" wurde. */
+  /** true, wenn für diese Zielwoche schon mindestens ein Tag "abgeschickt" wurde.
+   *
+   * Automatisch gesetzte feste Schichten zaehlen ausdruecklich NICHT: sonst gaelte die Woche als erledigt,
+   * sobald jemand einen festen Montag hat – und fuer Donnerstag und Freitag kaeme er nicht mehr an die
+   * Auswahl heran. */
   function weekHasSubmission(emp, weekStart) {
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      if (entry?.submittedAt) return true;
+      if (entry?.submittedAt && entry.quelle !== "fest") return true;
     }
     return false;
   }
@@ -722,6 +783,23 @@ function renderKiosk(navigate) {
       label.className = "avail-day-label";
       label.textContent = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
       head.appendChild(label);
+
+      // Feste Schicht: nichts zu wählen. Die Auswahl hier trotzdem anzuzeigen, hiesse die Person zu
+      // fragen, was längst entschieden ist – und ein Fehlgriff würde die feste Schicht aufheben.
+      const fest = entry?.quelle === "fest" ? store.festeSchichtAm(emp.id, date) : null;
+      if (fest) {
+        row.appendChild(head);
+        const slotDef = dayDefSlots.find((x) => x.id === fest.slotId);
+        const info = document.createElement("p");
+        info.className = "callout avail-fest";
+        info.innerHTML = slotDef
+          ? `🔒 <b>Feste Schicht:</b> ${escapeHtml(slotDef.label)}, ${escapeHtml(slotDef.from)}–${escapeHtml(slotDef.to)} Uhr. Musst du nicht eintragen.`
+          : "🔒 <b>Feste Schicht.</b> Musst du nicht eintragen.";
+        row.appendChild(info);
+        list.appendChild(row);
+        continue;
+      }
+
       const allBtn = document.createElement("button");
       allBtn.type = "button";
       allBtn.className = "btn btn-link avail-all-btn";

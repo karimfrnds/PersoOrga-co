@@ -186,6 +186,15 @@ function defaultData() {
     // { id, code, date, time, name, phone, guests, area, note, tableIds[], status, source, createdAt, arrivedAt }
     // status: "offen" (noch kein Tisch) | "zugewiesen" | "da" | "weg" | "storniert" | "noshow"
     reservations: [],
+    // Küche: was immer vorbereitet sein muss ("mise en place"). Der Bestand ist eine Zahl, die jede
+    // Schicht beim Gehen neu einträgt – damit die nächste Schicht sieht, was da ist, ohne nachzusehen.
+    // soll = was mindestens dastehen sollte. { id, name, einheit, soll, notiz, rezeptId, aktiv, sort,
+    //                                          bestand: { menge, at, by } | null, verlauf: [{menge, at, by}] }
+    preps: [],
+    // Rezepte zu den Vorbereitungen. Bewusst frei als Zeilen, nicht als gerechnete Zutatenliste:
+    // in der Küche wird abgelesen, nicht gerechnet. { id, name, ergibt, zutaten[], schritte[], notiz,
+    //                                                 updatedAt, updatedBy, quelle }
+    recipes: [],
     // Veranstaltungen mit Anmeldung (Bingo-Abend). Bewusst NICHT als Reservierung geführt: hier wird pro
     // Person gezählt und kassiert, der Termin steht fest, und die Tische verteilt man erst am Abend.
     // { id, date, time, price, capacity, note, active, createdAt }
@@ -307,6 +316,57 @@ function normalizeDay(d) {
   };
 }
 
+/** Einheiten, die in der Kueche vorkommen. Frei tippbar waere hier schlechter: "Behälter", "Behaelter"
+ * und "Beh." nebeneinander machen die Liste unlesbar. */
+const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Liter", "Stück", "Portionen"];
+
+function normalizePrep(v) {
+  const bestand = v?.bestand && Number.isFinite(Number(v.bestand.menge))
+    ? { menge: Number(v.bestand.menge), at: v.bestand.at || null, by: v.bestand.by || null }
+    : null;
+  return {
+    id: v?.id || uid(),
+    name: String(v?.name || "").trim(),
+    einheit: String(v?.einheit || "Behälter"),
+    soll: Math.max(0, Number(v?.soll) || 0),
+    notiz: String(v?.notiz || ""),
+    rezeptId: v?.rezeptId || null,
+    aktiv: v?.aktiv === undefined ? true : !!v.aktiv,
+    sort: Number(v?.sort) || 0,
+    bestand,
+    // Nur die letzten Zaehlungen: mehr braucht niemand, und die Liste soll nicht unbegrenzt wachsen.
+    verlauf: Array.isArray(v?.verlauf) ? v.verlauf.slice(-30) : [],
+  };
+}
+
+function normalizeRecipe(v) {
+  const zeilen = (x) => (Array.isArray(x) ? x : String(x || "").split("\n")).map((z) => String(z).trim()).filter(Boolean);
+  return {
+    id: v?.id || uid(),
+    name: String(v?.name || "").trim(),
+    ergibt: String(v?.ergibt || ""),
+    zutaten: zeilen(v?.zutaten),
+    schritte: zeilen(v?.schritte),
+    notiz: String(v?.notiz || ""),
+    quelle: String(v?.quelle || ""),
+    updatedAt: v?.updatedAt || null,
+    updatedBy: v?.updatedBy || null,
+  };
+}
+
+/** Feste Schichten einer Person: an welchem Wochentag sie immer welche Schicht hat.
+ * [{ weekday: 0..6, slotId }] – hoechstens ein Eintrag pro Wochentag. */
+function normalizeFesteSchichten(list) {
+  const proTag = new Map();
+  for (const f of Array.isArray(list) ? list : []) {
+    const wd = Number(f?.weekday);
+    const slotId = String(f?.slotId || "").trim();
+    if (!Number.isInteger(wd) || wd < 0 || wd > 6 || !slotId) continue;
+    proTag.set(wd, { weekday: wd, slotId });
+  }
+  return [...proTag.values()].sort((a, b) => a.weekday - b.weekday);
+}
+
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return defaultData();
@@ -315,7 +375,7 @@ function load() {
     const base = defaultData();
     const migratedTemplates = migrateTaskTemplates(parsed.settings);
     return {
-      employees: parsed.employees ?? base.employees,
+      employees: (parsed.employees ?? base.employees).map((e) => ({ ...e, festeSchichten: normalizeFesteSchichten(e.festeSchichten) })),
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
@@ -361,6 +421,8 @@ function load() {
       reservations: parsed.reservations ?? base.reservations,
       events: parsed.events ?? base.events,
       eventSignups: parsed.eventSignups ?? base.eventSignups,
+      preps: (parsed.preps ?? base.preps).map(normalizePrep),
+      recipes: (parsed.recipes ?? base.recipes).map(normalizeRecipe),
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -450,6 +512,12 @@ function resolveDayAvailability(d) {
 /** Bildet jede fest zugeteilte Verfügbarkeit als geplante Schicht ab (stabile ID "avail-<id>", damit
  * wiederholtes Auflösen nichts verdoppelt) und entfernt sie wieder, falls die Zuteilung wegfällt. */
 function materializePlannedShiftsFromAvailability(d) {
+  // Zuerst aufraeumen: eine geplante Schicht, deren Verfuegbarkeit es gar nicht mehr gibt (weggenommene
+  // feste Schicht, geloeschter Eintrag), wuerde von der Schleife unten nie erreicht – und bliebe fuer
+  // immer im Plan stehen, obwohl niemand mehr dahintersteckt.
+  const bekannt = new Set(d.availability.map((a) => "avail-" + a.id));
+  d.plannedShifts = d.plannedShifts.filter((s) => !String(s.id).startsWith("avail-") || bekannt.has(s.id));
+
   for (const a of d.availability) {
     const shiftId = "avail-" + a.id;
     const idx = d.plannedShifts.findIndex((s) => s.id === shiftId);
@@ -494,6 +562,9 @@ export const store = {
       minijobLimit: Number(emp.minijobLimit) || 556,
       active: true,
       pin: emp.pin ? String(emp.pin) : null,
+      // Wochentage, an denen diese Person immer dieselbe Schicht hat – dann muss sie sich nicht
+      // jede Woche neu eintragen.
+      festeSchichten: normalizeFesteSchichten(emp.festeSchichten),
     };
     data.employees.push(e);
     persist();
@@ -503,6 +574,7 @@ export const store = {
     const e = this.getEmployee(id);
     if (!e) return;
     Object.assign(e, patch);
+    if (patch.festeSchichten !== undefined) e.festeSchichten = normalizeFesteSchichten(patch.festeSchichten);
     persist();
   },
   /** true, wenn der PIN schon von einem anderen aktiven Mitarbeiter oder dem Admin-PIN benutzt wird. */
@@ -911,6 +983,107 @@ export const store = {
     return this.getAvailability(dayId, employeeId);
   },
 
+  // ---- Feste Schichten ----
+  //
+  // Manche arbeiten immer dieselben Tage. Die sollen sich nicht jede Woche neu eintragen – das ist
+  // Arbeit fuer nichts, und vergisst es jemand, steht der Tag ploetzlich leer da. Eine feste Schicht ist
+  // deshalb eine Regel an der Person ("Timm: Mo, Di, Mi jeweils Kueche 1"), aus der das System die
+  // Verfuegbarkeit selbst eintraegt – fest zugeteilt und vom Chef bestaetigt, denn er hat sie ja gesetzt.
+  //
+  // Drei Dinge, die dabei Vorrang haben und eine feste Schicht NICHT ueberschreibt:
+  //   Was die Person selbst schon eingetragen hat. Eine Ausnahme von der Regel ist eine Entscheidung.
+  //   Eine Abwesenheit. Wer Urlaub hat, arbeitet auch montags nicht.
+  //   Eine Schicht, die schon jemand anderes fest hat.
+  getFesteSchichten(employeeId) {
+    return this.getEmployee(employeeId)?.festeSchichten || [];
+  },
+  /** Die feste Schicht dieser Person an diesem Datum, oder null. */
+  festeSchichtAm(employeeId, dateStr) {
+    const wd = weekdayIndexOfDate(dateStr);
+    return this.getFesteSchichten(employeeId).find((f) => f.weekday === wd) || null;
+  },
+  /** Setzt die festen Schichten einer Person neu.
+   *
+   * Wichtig ist das Aufraeumen danach: nimmt der Chef "Timm montags" wieder heraus, muessen die daraus
+   * schon erzeugten Eintraege der kommenden Wochen weg. Sonst aendert er die Regel und im Plan steht
+   * weiter das Alte – und niemand versteht, warum.
+   */
+  setFesteSchichten(employeeId, list) {
+    const emp = this.getEmployee(employeeId);
+    if (!emp) return null;
+    emp.festeSchichten = normalizeFesteSchichten(list);
+    const heute = todayStr();
+    for (const d of data.days) {
+      if (d.date < heute || d.status !== "offen") continue;
+      const soll = emp.festeSchichten.find((f) => f.weekday === weekdayIndexOfDate(d.date));
+      const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
+      const eintrag = idx >= 0 ? d.availability[idx] : null;
+      // Nur selbst erzeugte Eintraege anfassen – von Hand Eingetragenes gehoert der Person.
+      if (eintrag?.quelle === "fest" && (!soll || soll.slotId !== eintrag.confirmedSlotId)) {
+        d.availability.splice(idx, 1);
+        resolveDayAvailability(d);
+      }
+      if (Array.isArray(d.festeSchichtenAngewandt)) {
+        d.festeSchichtenAngewandt = d.festeSchichtenAngewandt.filter((id) => id !== employeeId);
+      }
+    }
+    persist();
+    this.ergaenzeFesteSchichten();
+    return emp.festeSchichten;
+  },
+  /** Traegt die festen Schichten fuer die naechsten Tage ein. Laeuft beim Abgleich und beim Oeffnen der
+   * Schichtplanung mit. Jede Person bekommt pro Tag nur EINMAL einen Eintrag (festeSchichtenAngewandt):
+   * wer ihn danach loescht oder umplant, hat das so gemeint. */
+  ergaenzeFesteSchichten(tage = 28) {
+    const mitFesten = data.employees.filter((e) => e.active && (e.festeSchichten || []).length > 0);
+    if (mitFesten.length === 0) return 0;
+    const heute = todayStr();
+    let gesamt = 0;
+    for (let i = 0; i <= tage; i++) {
+      const dateStr = addDaysISOStore(heute, i);
+      const wd = weekdayIndexOfDate(dateStr);
+      const dran = mitFesten.filter((e) => e.festeSchichten.some((f) => f.weekday === wd));
+      if (dran.length === 0) continue;
+      // Erst jetzt einen Tag anlegen: sonst entstuenden leere Tage fuer Wochentage, an denen niemand
+      // eine feste Schicht hat.
+      const d = this.getOrCreateDayByDate(dateStr);
+      if (d.status !== "offen") continue;
+      if (!Array.isArray(d.festeSchichtenAngewandt)) d.festeSchichtenAngewandt = [];
+      let neuAmTag = 0;
+      for (const e of dran) {
+        if (d.festeSchichtenAngewandt.includes(e.id)) continue;
+        // Abwesenheit macht den Eintrag NICHT dauerhaft unmoeglich: wird der Urlaub zurueckgezogen,
+        // soll die feste Schicht wieder greifen. Deshalb hier nicht als "angewandt" vermerken.
+        if (this.isAbsent(e.id, dateStr)) continue;
+        const f = e.festeSchichten.find((x) => x.weekday === wd);
+        if (!this.getShiftSlotsForRole(e.role, dateStr).some((sl) => sl.id === f.slotId)) continue;
+        if (d.availability.some((a) => a.employeeId === e.id)) {
+          d.festeSchichtenAngewandt.push(e.id); // eigener Eintrag gewinnt, und zwar dauerhaft
+          continue;
+        }
+        if (this.isSlotTaken(d.id, f.slotId, e.id)) continue;
+        d.availability.push({
+          id: uid(),
+          employeeId: e.id,
+          slotIds: [f.slotId],
+          confirmedSlotId: f.slotId,
+          bossConfirmed: true,
+          note: "",
+          quelle: "fest",
+          submittedAt: new Date().toISOString(),
+        });
+        d.festeSchichtenAngewandt.push(e.id);
+        neuAmTag++;
+      }
+      if (neuAmTag > 0) {
+        resolveDayAvailability(d);
+        gesamt += neuAmTag;
+      }
+    }
+    if (gesamt > 0) persist();
+    return gesamt;
+  },
+
   // ---- Nachrichten an Mitarbeiter (Pop-up beim nächsten Öffnen des Kiosk-Fensters) ----
   addNotification(employeeId, text) {
     const n = { id: uid(), employeeId, text, createdAt: new Date().toISOString(), readAt: null };
@@ -1240,8 +1413,25 @@ export const store = {
     }
     const entry = { id: uid(), employeeId, date, art: gueltig, note: note || "", reportedAt: new Date().toISOString() };
     data.absences.push(entry);
+    this.loeseFesteSchichtAuf(employeeId, date);
     persist();
     return entry;
+  },
+  /** Eine automatisch gesetzte feste Schicht wieder wegnehmen – z.B. weil Urlaub gemeldet wurde.
+   * Von Hand Eingetragenes bleibt stehen: das hat jemand entschieden, das loescht das System nicht. */
+  loeseFesteSchichtAuf(employeeId, date) {
+    const d = this.getDayByDate(date);
+    if (!d || d.status !== "offen") return false;
+    const idx = d.availability.findIndex((a) => a.employeeId === employeeId && a.quelle === "fest");
+    if (idx < 0) return false;
+    d.availability.splice(idx, 1);
+    // Marke ebenfalls entfernen: wird der Urlaub zurueckgezogen, soll die feste Schicht wiederkommen.
+    if (Array.isArray(d.festeSchichtenAngewandt)) {
+      d.festeSchichtenAngewandt = d.festeSchichtenAngewandt.filter((id) => id !== employeeId);
+    }
+    resolveDayAvailability(d);
+    persist();
+    return true;
   },
   /** Abwesenheiten in einem Zeitraum (beide Grenzen inklusive), aufsteigend nach Datum. */
   getAbsences(from, to) {
@@ -1917,6 +2107,128 @@ export const store = {
     persist();
   },
 
+  // ---- Küche: Vorbereitungen und Rezepte ----
+  //
+  // Die Frage am Anfang jeder Schicht ist immer dieselbe: Was ist noch da? Bisher hiess die Antwort
+  // nachsehen – in jeden Behaelter, jedes Mal. Hier traegt die Schicht beim Gehen eine Zahl ein, und die
+  // naechste liest sie ab. Daneben steht das Soll: was mindestens dastehen sollte. Der Unterschied
+  // zwischen "3 Behaelter" und "3 von 5" ist der ganze Sinn der Sache.
+  PREP_EINHEITEN,
+  getPreps(nurAktive = true) {
+    return data.preps
+      .filter((p) => !nurAktive || p.aktiv)
+      .sort((a, b) => (a.sort || 0) - (b.sort || 0) || a.name.localeCompare(b.name));
+  },
+  getPrep(id) {
+    return data.preps.find((p) => p.id === id) || null;
+  },
+  addPrep(v) {
+    const p = normalizePrep({ ...v, sort: v?.sort ?? (data.preps.length + 1) * 10 });
+    if (!p.name) return null;
+    data.preps.push(p);
+    persist();
+    return p;
+  },
+  updatePrep(id, patch) {
+    const i = data.preps.findIndex((p) => p.id === id);
+    if (i < 0) return null;
+    // bestand und verlauf bewusst nicht ueber diesen Weg: die aendert nur setPrepBestand().
+    const { bestand, verlauf, ...rest } = patch || {};
+    data.preps[i] = normalizePrep({ ...data.preps[i], ...rest, id });
+    persist();
+    return data.preps[i];
+  },
+  removePrep(id) {
+    data.preps = data.preps.filter((p) => p.id !== id);
+    persist();
+  },
+  /** Was gerade da ist. menge darf 0 sein ("nichts mehr da") – das ist etwas anderes als "nicht gezaehlt". */
+  setPrepBestand(id, menge, by) {
+    const p = this.getPrep(id);
+    if (!p) return null;
+    const zahl = Math.max(0, Number(menge));
+    if (!Number.isFinite(zahl)) return null;
+    p.bestand = { menge: zahl, at: new Date().toISOString(), by: by || null };
+    p.verlauf = [...(p.verlauf || []), { menge: zahl, at: p.bestand.at, by: by || null }].slice(-30);
+    persist();
+    return p;
+  },
+  /** "leer" | "knapp" | "ok" | "unbekannt" – "unbekannt" heisst: seit dem Anlegen nie gezaehlt. */
+  prepStatus(p) {
+    if (!p?.bestand) return "unbekannt";
+    if (p.bestand.menge <= 0) return "leer";
+    if (p.soll > 0 && p.bestand.menge < p.soll) return "knapp";
+    return "ok";
+  },
+  /** Wie alt ist die Zaehlung, in Stunden? null, wenn nie gezaehlt. */
+  prepAlterStunden(p) {
+    if (!p?.bestand?.at) return null;
+    return Math.max(0, (Date.now() - new Date(p.bestand.at).getTime()) / 3600000);
+  },
+
+  getRecipes() {
+    return [...data.recipes].sort((a, b) => a.name.localeCompare(b.name));
+  },
+  getRecipe(id) {
+    return data.recipes.find((r) => r.id === id) || null;
+  },
+  addRecipe(v) {
+    const r = normalizeRecipe({ ...v, updatedAt: new Date().toISOString() });
+    if (!r.name) return null;
+    data.recipes.push(r);
+    persist();
+    return r;
+  },
+  updateRecipe(id, patch) {
+    const i = data.recipes.findIndex((r) => r.id === id);
+    if (i < 0) return null;
+    data.recipes[i] = normalizeRecipe({ ...data.recipes[i], ...patch, id, updatedAt: new Date().toISOString() });
+    persist();
+    return data.recipes[i];
+  },
+  removeRecipe(id) {
+    data.recipes = data.recipes.filter((r) => r.id !== id);
+    for (const p of data.preps) if (p.rezeptId === id) p.rezeptId = null;
+    persist();
+  },
+  /** Rezepte aus einer anderen App uebernehmen.
+   *
+   * Gleiche Namen werden ueberschrieben statt verdoppelt: wer zweimal importiert, will nicht jedes Rezept
+   * zweimal in der Liste haben. Gibt zurueck, was passiert ist – ein Import, der nur "fertig" sagt, laesst
+   * einen im Unklaren, ob ueberhaupt etwas angekommen ist.
+   */
+  importRecipes(liste, quelle = "") {
+    const eingang = Array.isArray(liste) ? liste : [];
+    let neu = 0;
+    let aktualisiert = 0;
+    for (const roh of eingang) {
+      const r = normalizeRecipe({ ...roh, quelle: roh?.quelle || quelle, updatedAt: new Date().toISOString() });
+      if (!r.name) continue;
+      const vorhanden = data.recipes.find((x) => x.name.toLowerCase() === r.name.toLowerCase());
+      if (vorhanden) {
+        Object.assign(vorhanden, { ...r, id: vorhanden.id });
+        aktualisiert++;
+      } else {
+        data.recipes.push(r);
+        neu++;
+      }
+    }
+    // Gleicher Name = gemeint ist dasselbe: eine Vorbereitung ohne Rezept bekommt es jetzt automatisch
+    // angehaengt. Sonst muesste man nach dem Import jede Zeile von Hand zuordnen, obwohl die Zuordnung
+    // offensichtlich ist.
+    let verknuepft = 0;
+    for (const pr of data.preps) {
+      if (pr.rezeptId) continue;
+      const treffer = data.recipes.find((r) => r.name.toLowerCase() === pr.name.toLowerCase());
+      if (treffer) {
+        pr.rezeptId = treffer.id;
+        verknuepft++;
+      }
+    }
+    persist();
+    return { neu, aktualisiert, verknuepft, gesamt: eingang.length };
+  },
+
   // ---- Aufgaben ----
   getTaskTemplates() {
     return data.settings.taskTemplates;
@@ -2220,7 +2532,7 @@ export const store = {
     const base = defaultData();
     const migratedTemplates = migrateTaskTemplates(parsed.settings);
     data = {
-      employees: parsed.employees ?? [],
+      employees: (parsed.employees ?? []).map((e) => ({ ...e, festeSchichten: normalizeFesteSchichten(e.festeSchichten) })),
       settings: {
         ...base.settings,
         ...(parsed.settings ?? {}),
@@ -2242,6 +2554,8 @@ export const store = {
       reservations: parsed.reservations ?? [],
       events: parsed.events ?? [],
       eventSignups: parsed.eventSignups ?? [],
+      preps: (parsed.preps ?? []).map(normalizePrep),
+      recipes: (parsed.recipes ?? []).map(normalizeRecipe),
     };
     persist();
   },

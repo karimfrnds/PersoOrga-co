@@ -42,7 +42,21 @@ function renderAdminDays(navigate) {
     el.appendChild(warn);
   }
 
-  const days = store.getDays();
+  // Diese Liste ist fuer das, was passiert IST – Stunden, Kasse, Abschluss. Kuenftige Tage entstehen
+  // inzwischen auf Vorrat (feste Schichten, eingetragene Verfuegbarkeit); stuenden sie hier, faengt die
+  // Seite mit vier Wochen Nullen an und der heutige Tag rutscht aus dem Bild. Der Plan steht unter
+  // "Schichtplanung", da gehoert er auch hin.
+  const heute = todayStr();
+  const alle = store.getDays();
+  const istVergangen = (d) => d.date <= heute || d.shifts.length > 0 || d.tasks.length > 0 || d.kassenabschluss.umsatzGesamt > 0;
+  const days = alle.filter(istVergangen);
+  const geplant = alle.length - days.length;
+  if (geplant > 0) {
+    const hinweis = document.createElement("p");
+    hinweis.className = "muted small";
+    hinweis.textContent = `${geplant} ${geplant === 1 ? "künftiger Tag ist" : "künftige Tage sind"} schon verplant – zu sehen unter „Schichtplanung“.`;
+    el.appendChild(hinweis);
+  }
   if (days.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
@@ -64,10 +78,17 @@ function renderAdminDays(navigate) {
     const badgeLabel = day.status === "abgeschlossen" ? "Abgeschlossen" : "Offen";
     const staffCount = new Set(day.shifts.map((s) => s.employeeId)).size;
     const openTasks = day.tasks.filter((t) => !t.done).length;
+    // Fuer kuenftige Tage ist die gearbeitete Zeit immer 0 – dort zaehlt, wer eingeplant ist.
+    const zukunft = day.date > heute;
+    const zeile = zukunft
+      ? `${day.plannedShifts.length} eingeplant`
+      : `${staffCount} Mitarbeiter · ${breakdown.totalHours.toFixed(2).replace(".", ",")} Std.${
+          day.tasks.length ? ` · ${openTasks === 0 ? "✔ Aufgaben erledigt" : `${openTasks} Aufgabe(n) offen`}` : ""
+        }`;
     row.innerHTML = `
       <div class="day-row-main">
         <div class="day-row-date">${escapeHtml(dateDe(day.date))}</div>
-        <div class="muted small">${staffCount} Mitarbeiter · ${breakdown.totalHours.toFixed(2).replace(".", ",")} Std.${day.tasks.length ? ` · ${openTasks === 0 ? "✔ Aufgaben erledigt" : `${openTasks} Aufgabe(n) offen`}` : ""}</div>
+        <div class="muted small">${zeile}</div>
       </div>
       <div class="day-row-numbers">
         <div><span class="muted small">Umsatz</span><br/>${euro(day.kassenabschluss.umsatzGesamt)}</div>

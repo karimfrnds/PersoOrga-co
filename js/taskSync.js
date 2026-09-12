@@ -708,6 +708,9 @@ async function performTaskSync() {
   // soll sofort bei denen stehen, die gerade im Dienst sind, und mit hochgehen – sonst dauert es
   // einen Abgleich laenger.
   store.ergaenzeSchichtaufgabenFuerOffene();
+  // Feste Schichten ebenfalls vor dem Hochladen: so steht der Plan der naechsten Wochen auch am Laptop
+  // und im Bot, ohne dass jemand am iPad eine bestimmte Seite geoeffnet haben muss.
+  store.ergaenzeFesteSchichten();
 
   const freshRows = store.getTasksFrom(todayStr());
   const pushTasks = freshRows.map((r) => ({
@@ -766,6 +769,9 @@ async function performTaskSync() {
     minijobLimit: e.minijobLimit,
     active: e.active !== false,
     hasPin: !!e.pin,
+    // Feste Schichten mitschicken, damit am Laptop sichtbar ist, wer ohnehin schon fest verplant ist.
+    // Geaendert werden sie am iPad – dort haengt die Logik, die die kommenden Wochen aufraeumt.
+    festeSchichten: e.festeSchichten || [],
   }));
   // Grundlage der Online-Buchung. Die belegten Zeitfenster gehen BEWUSST OHNE Namen und Telefonnummern
   // raus: für die Frage "ist noch etwas frei?" braucht es die nicht, und Gästedaten haben in der Cloud

@@ -3,8 +3,25 @@
 // ============================================================================
 import { store } from "../store.js";
 import { ROLE_LABEL } from "../calc.js";
+
 import { euro, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
+
+const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+/** "Mo, Di, Mi: Küche 1" – und bei verschiedenen Schichten je Tag entsprechend aufgeteilt. Eine Zeile
+ * pro Wochentag wäre bei jemandem mit fünf festen Tagen fünf Zeilen für eine einzige Information. */
+function festeSchichtenText(emp) {
+  const proSlot = new Map();
+  for (const f of emp.festeSchichten || []) {
+    if (!proSlot.has(f.slotId)) proSlot.set(f.slotId, []);
+    proSlot.get(f.slotId).push(f.weekday);
+  }
+  const slots = store.getShiftSlotsForRole(emp.role);
+  return [...proSlot.entries()]
+    .map(([slotId, tage]) => `${tage.sort((a, b) => a - b).map((w) => WOCHENTAGE_KURZ[w]).join(", ")}: ${slots.find((s) => s.id === slotId)?.label || slotId}`)
+    .join(" · ");
+}
 
 function renderEmployees() {
   const container = document.createElement("div");
@@ -26,6 +43,7 @@ function renderEmployees() {
         <b>${escapeHtml(emp.name)}</b>
         <span class="muted small">${ROLE_LABEL[emp.role]} · ${euro(emp.hourlyWage)}/Std.${emp.isMinijob ? ` · Minijob (Grenze ${euro(emp.minijobLimit)}/Monat)` : ""}</span>
         <span class="muted small">PIN: ${emp.pin ? escapeHtml(emp.pin) : "– nicht vergeben –"}</span>
+        ${(emp.festeSchichten || []).length > 0 ? `<span class="muted small">🔒 Fest: ${escapeHtml(festeSchichtenText(emp))}</span>` : ""}
       </div>
     `;
     const actions = document.createElement("div");
@@ -157,6 +175,13 @@ function renderEmployees() {
         <label class="field" id="f-limit-wrap" style="display:${emp?.isMinijob ? "block" : "none"}">
           <span>Minijob-Grenze pro Monat (€)</span><input type="number" step="1" min="0" id="f-limit" value="${emp ? emp.minijobLimit : 556}" />
         </label>
+        <div class="field">
+          <span>Feste Schichten</span>
+          <p class="muted small">Wer immer dieselben Tage arbeitet, trägt sich nicht jede Woche neu ein –
+          das System setzt die Schicht selbst und gilt als vom Chef bestätigt. Urlaub, Krankheit und ein
+          eigener Eintrag der Person gehen vor.</p>
+          <div id="f-fest" class="fest-liste"></div>
+        </div>
         <div class="dialog-actions">
           <button class="btn btn-secondary" id="f-cancel">Abbrechen</button>
           <button class="btn btn-primary" id="f-save">Speichern</button>
@@ -167,6 +192,46 @@ function renderEmployees() {
     overlay.querySelector("#f-minijob").onchange = (e) => {
       overlay.querySelector("#f-limit-wrap").style.display = e.target.checked ? "block" : "none";
     };
+
+    // Feste Schichten: je Wochentag eine Auswahl. Welche Schichten es gibt, haengt an der Rolle – wird
+    // die im Formular geaendert, muss die Liste neu gezeichnet werden, sonst stuenden dort die Schichten
+    // der alten Rolle. Was dabei nicht mehr passt, faellt weg.
+    const festEntwurf = new Map((emp?.festeSchichten || []).map((f) => [f.weekday, f.slotId]));
+    const rolleSel = overlay.querySelector("#f-role");
+    const festBox = overlay.querySelector("#f-fest");
+    function zeichneFest() {
+      const slots = store.getShiftSlotsForRole(rolleSel.value);
+      festBox.innerHTML = "";
+      for (let wd = 0; wd < 7; wd++) {
+        const zeile = document.createElement("label");
+        zeile.className = "fest-zeile";
+        zeile.innerHTML = `<span class="fest-tag">${WOCHENTAGE_KURZ[wd]}</span>`;
+        const sel = document.createElement("select");
+        const keine = document.createElement("option");
+        keine.value = "";
+        keine.textContent = "– keine feste Schicht –";
+        sel.appendChild(keine);
+        for (const sl of slots) {
+          const o = document.createElement("option");
+          o.value = sl.id;
+          // Der Wochentag kann eigene Zeiten haben; hier steht bewusst die Grunddefinition, weil eine
+          // feste Schicht fuer alle Wochen gilt und nicht fuer ein Datum.
+          o.textContent = `${sl.label} (${sl.from}–${sl.to})`;
+          sel.appendChild(o);
+        }
+        const gewaehlt = festEntwurf.get(wd) || "";
+        sel.value = slots.some((sl) => sl.id === gewaehlt) ? gewaehlt : "";
+        if (sel.value !== gewaehlt) festEntwurf.delete(wd);
+        sel.onchange = () => {
+          if (sel.value) festEntwurf.set(wd, sel.value);
+          else festEntwurf.delete(wd);
+        };
+        zeile.appendChild(sel);
+        festBox.appendChild(zeile);
+      }
+    }
+    rolleSel.onchange = zeichneFest;
+    zeichneFest();
     overlay.querySelector("#f-cancel").onclick = () => overlay.remove();
     overlay.querySelector("#f-save").onclick = async () => {
       const name = overlay.querySelector("#f-name").value.trim();
@@ -191,10 +256,15 @@ function renderEmployees() {
         isMinijob: overlay.querySelector("#f-minijob").checked,
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
       };
+      const feste = [...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId }));
       if (isEdit) {
         store.updateEmployee(emp.id, payload);
+        // Ueber setFesteSchichten, nicht ueber das payload: nur dieser Weg raeumt die schon erzeugten
+        // Eintraege der kommenden Wochen auf, wenn eine feste Schicht wegfaellt.
+        store.setFesteSchichten(emp.id, feste);
       } else {
-        store.addEmployee(payload);
+        const neu = store.addEmployee(payload);
+        if (neu) store.setFesteSchichten(neu.id, feste);
       }
       overlay.remove();
       rerender();

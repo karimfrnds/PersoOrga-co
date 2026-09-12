@@ -16,6 +16,15 @@ const ROLLEN = [
 ];
 const rollenName = (r) => ROLLEN.find(([id]) => id === r)?.[1] || r;
 
+const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+/** "Mo, Di, Mi" – welche Schicht das ist, steht am iPad; hier zaehlt, DASS jemand fest verplant ist. */
+function festeText(e) {
+  return (e.festeSchichten || [])
+    .map((f) => WOCHENTAGE_KURZ[f.weekday])
+    .filter(Boolean)
+    .join(", ");
+}
+
 function renderTeam(state, { onChanged }) {
   const el = document.createElement("div");
 
@@ -59,7 +68,7 @@ function renderTeam(state, { onChanged }) {
       scroll.style.overflowX = "auto";
       const table = document.createElement("table");
       table.className = "calc-table";
-      table.innerHTML = `<thead><tr><th>Name</th><th>Rolle</th><th>Stundenlohn</th><th>Minijob</th><th>PIN</th><th></th></tr></thead>`;
+      table.innerHTML = `<thead><tr><th>Name</th><th>Rolle</th><th>Stundenlohn</th><th>Minijob</th><th>PIN</th><th>Feste Schichten</th><th></th></tr></thead>`;
       const tbody = document.createElement("tbody");
       for (const e of leute) {
         const tr = document.createElement("tr");
@@ -69,7 +78,8 @@ function renderTeam(state, { onChanged }) {
           <td>${escapeHtml(rollenName(e.role))}</td>
           <td>${euro(e.hourlyWage)}</td>
           <td>${e.isMinijob ? `ja (${euro(e.minijobLimit)})` : "nein"}</td>
-          <td>${e.hasPin ? "✅" : '<span class="muted">fehlt</span>'}</td>`;
+          <td>${e.hasPin ? "✅" : '<span class="muted">fehlt</span>'}</td>
+          <td>${(e.festeSchichten || []).length > 0 ? escapeHtml(festeText(e)) : '<span class="muted">–</span>'}</td>`;
         const akt = document.createElement("td");
         akt.className = "employee-actions";
         const bearb = document.createElement("button");

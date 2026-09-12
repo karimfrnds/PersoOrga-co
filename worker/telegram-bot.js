@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-11.3";
+const WORKER_VERSION = "2026-09-12.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -200,7 +200,7 @@ const EMPTY_STATE = {
   stockChanges: [], // [{id, kind:"create"|"update"|"delete"|"status"|"bestellt"|"geliefert", ...}]
   // Mitarbeiter-Stammdaten vom iPad für die Laptop-Verwaltung. Bewusst OHNE PIN – der wird weiterhin nur
   // am iPad vergeben, damit kein PIN im Klartext das Gerät verlässt.
-  employeeDetails: [], // [{id, name, role, hourlyWage, isMinijob, minijobLimit, active, hasPin}]
+  employeeDetails: [], // [{id, name, role, hourlyWage, isMinijob, minijobLimit, active, hasPin, festeSchichten[]}]
   employeeChanges: [], // [{id, kind:"create"|"update"|"deactivate"|"activate", ...}]
   // Wochen, deren Schichtplan der Chef abgeschlossen hat: [{weekStart, publishedAt}].
   // Das ist der Schalter für ALLE Schicht-Benachrichtigungen: Solange eine Woche hier nicht steht, erfährt

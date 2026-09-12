@@ -923,3 +923,59 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .inv-fehlt { color: #b3261e; font-weight: 600; }
 .inv-mehr { color: var(--orange); font-weight: 600; }
 @media (prefers-color-scheme: dark) { .inv-fehlt { color: #f2b8b5; } }
+
+/* ---------------------------------------------------------------------------
+   Küche: Vorbereitungen zählen.
+   Die Zahl ist das Wichtigste auf der Zeile, deshalb steht sie gross und mittig zwischen zwei grossen
+   Knöpfen – das wird mit mehlingen Fingern bedient, oft im Stehen, oft in Eile. Die Farbe sagt, ob
+   etwas fehlt, bevor man die Zahl gelesen hat.
+--------------------------------------------------------------------------- */
+.prep-list { display: grid; gap: 10px; margin: 14px 0; }
+.prep-row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prep-row-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.prep-row-titel { display: flex; flex-direction: column; gap: 2px; font-size: 17px; }
+.prep-chip {
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  padding: 4px 10px; border-radius: 999px; background: var(--gray-light); color: var(--gray);
+}
+.prep-row.bestand-knapp { border-color: var(--orange); background: var(--orange-light); }
+.prep-row.bestand-knapp .prep-chip { background: var(--orange); color: #fff; }
+.prep-row.bestand-leer { border-color: var(--red); background: var(--red-light); }
+.prep-row.bestand-leer .prep-chip { background: var(--red); color: #fff; }
+.prep-row.bestand-ok .prep-chip { background: var(--green-light); color: var(--green-dark); }
+
+.prep-zaehl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prep-step {
+  width: 54px; min-width: 54px; height: 54px; font-size: 26px; line-height: 1;
+  padding: 0; border-radius: 12px;
+}
+.prep-input {
+  width: 92px; height: 54px; text-align: center;
+  font-size: 26px; font-weight: 700; padding: 0 6px;
+}
+.prep-soll { font-size: 15px; color: var(--gray); }
+.prep-zaehler { margin-bottom: 4px; }
+.prep-fuss {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 0 14px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 28%);
+}
+/* Rezepte zum Kochen: breiter als ein normaler Dialog, weil Zutaten und Schritte zusammen gelesen
+   werden und Umbrüche mitten in einer Menge ("2 EL / Öl") stören. */
+.dialog-gross { max-width: 640px; }
+.avail-fest { margin: 4px 0 0; font-size: 15px; }
+
+/* Feste Schichten im Mitarbeiter-Formular: sieben Zeilen, Wochentag links, Schicht rechts. */
+.fest-liste { display: grid; gap: 6px; }
+.fest-zeile { display: flex; align-items: center; gap: 10px; }
+.fest-tag { width: 34px; min-width: 34px; font-weight: 600; color: var(--gray); }
+.fest-zeile select { flex: 1; }

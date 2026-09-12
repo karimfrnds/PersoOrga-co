@@ -33,6 +33,9 @@ function todayStrLocal() {
 }
 
 function renderShiftPlanningAdmin() {
+  // Damit der Plan beim Öffnen vollständig ist: feste Schichten sind Regeln, keine Eingaben – sie sollen
+  // schon dastehen, bevor jemand danach fragt.
+  store.ergaenzeFesteSchichten();
   const container = document.createElement("div");
   container.className = "page";
 

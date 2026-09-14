@@ -195,6 +195,9 @@ function defaultData() {
     // in der Küche wird abgelesen, nicht gerechnet. { id, name, ergibt, zutaten[], schritte[], notiz,
     //                                                 updatedAt, updatedBy, quelle }
     recipes: [],
+    // Was die Küche der nächsten Schicht mitgeben will: "Gurken fehlen", "Fritteuse macht Geräusche".
+    // fuer = der Tag, für den es gilt. { id, text, fuer, von, at, erledigtAm, erledigtVon }
+    kuechenNotizen: [],
     // Veranstaltungen mit Anmeldung (Bingo-Abend). Bewusst NICHT als Reservierung geführt: hier wird pro
     // Person gezählt und kassiert, der Termin steht fest, und die Tische verteilt man erst am Abend.
     // { id, date, time, price, capacity, note, active, createdAt }
@@ -316,6 +319,13 @@ function normalizeDay(d) {
   };
 }
 
+/** Kalendertag eines Zeitstempels in Ortszeit (nicht UTC – sonst kippt alles nach 22 Uhr in den
+ * nächsten Tag). */
+function localDateOf(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /** Einheiten, die in der Kueche vorkommen. Frei tippbar waere hier schlechter: "Behälter", "Behaelter"
  * und "Beh." nebeneinander machen die Liste unlesbar. */
 const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Liter", "Stück", "Portionen"];
@@ -423,6 +433,7 @@ function load() {
       eventSignups: parsed.eventSignups ?? base.eventSignups,
       preps: (parsed.preps ?? base.preps).map(normalizePrep),
       recipes: (parsed.recipes ?? base.recipes).map(normalizeRecipe),
+      kuechenNotizen: parsed.kuechenNotizen ?? base.kuechenNotizen,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -2166,6 +2177,42 @@ export const store = {
     return Math.max(0, (Date.now() - new Date(p.bestand.at).getTime()) / 3600000);
   },
 
+  // ---- Küche: Hinweise an die nächste Schicht ----
+  //
+  // "Gurken fehlen für morgen" – das wusste bisher die Person, die es gemerkt hat, und die war am
+  // nächsten Morgen nicht da. Ein Zettel am Kühlschrank geht verloren oder hängt drei Wochen. Hier steht
+  // er, bis ihn jemand abhakt, und fällt danach von selbst weg.
+  addKuechenNotiz(text, fuer, von) {
+    const t = String(text || "").trim();
+    if (!t) return null;
+    const n = { id: uid(), text: t, fuer: fuer || todayStr(), von: von || null, at: new Date().toISOString(), erledigtAm: null, erledigtVon: null };
+    // Aufräumen bei der Gelegenheit: Erledigtes älter als eine Woche braucht niemand mehr.
+    const grenze = Date.now() - 7 * 86400000;
+    data.kuechenNotizen = data.kuechenNotizen.filter((x) => !x.erledigtAm || new Date(x.erledigtAm).getTime() > grenze);
+    data.kuechenNotizen.push(n);
+    persist();
+    return n;
+  },
+  /** Was die Küche jetzt sehen soll: alles Offene (auch von früheren Tagen – liegen geblieben ist nicht
+   * erledigt) und was HEUTE abgehakt wurde, damit ein versehentlicher Haken rückgängig zu machen ist. */
+  getKuechenNotizen(heute = todayStr()) {
+    return data.kuechenNotizen
+      .filter((n) => !n.erledigtAm || localDateOf(n.erledigtAm) === heute)
+      .sort((a, b) => Number(!!a.erledigtAm) - Number(!!b.erledigtAm) || a.fuer.localeCompare(b.fuer) || a.at.localeCompare(b.at));
+  },
+  toggleKuechenNotiz(id, von) {
+    const n = data.kuechenNotizen.find((x) => x.id === id);
+    if (!n) return null;
+    n.erledigtAm = n.erledigtAm ? null : new Date().toISOString();
+    n.erledigtVon = n.erledigtAm ? von || null : null;
+    persist();
+    return n;
+  },
+  removeKuechenNotiz(id) {
+    data.kuechenNotizen = data.kuechenNotizen.filter((x) => x.id !== id);
+    persist();
+  },
+
   getRecipes() {
     return [...data.recipes].sort((a, b) => a.name.localeCompare(b.name));
   },
@@ -2556,6 +2603,7 @@ export const store = {
       eventSignups: parsed.eventSignups ?? [],
       preps: (parsed.preps ?? []).map(normalizePrep),
       recipes: (parsed.recipes ?? []).map(normalizeRecipe),
+      kuechenNotizen: parsed.kuechenNotizen ?? [],
     };
     persist();
   },

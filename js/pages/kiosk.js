@@ -18,6 +18,7 @@ import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
+import { buildKuecheKarte, buildRezepteKarte } from "./kueche.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -509,10 +510,13 @@ function renderKiosk(navigate) {
     }
     wrap.appendChild(tasksCard);
 
-    // ---- Küche: Vorbereitungen und Rezepte ----
-    // Nur für die Küche, und bewusst weit oben: das ist die erste Frage nach dem Einstempeln, nicht die
-    // letzte. Für alle anderen wäre es eine Kachel, die nie jemand antippt.
-    if (emp.role === "kueche") wrap.appendChild(buildKuecheCard());
+    // ---- Küche: Vorbereitungen, Hinweise an die nächste Schicht, Rezepte ----
+    // Nur für die Küche, und direkt hier statt auf einer eigenen Seite: das ist die erste Frage nach dem
+    // Einstempeln. Für alle anderen wären es Karten, die nie jemand öffnet.
+    if (emp.role === "kueche") {
+      wrap.appendChild(buildKuecheKarte(emp, { onChange: rerender }));
+      wrap.appendChild(buildRezepteKarte(emp, { onChange: rerender }));
+    }
 
     // ---- Deine Schichten (Wochenplan) ----
     wrap.appendChild(buildShiftsCard(emp));
@@ -617,46 +621,6 @@ function renderKiosk(navigate) {
   // Deine Schichten: geplante Schichten (aus CSV-Upload oder vom Bot per
   // Wochenplan-Nachricht eingetragen) für die kommenden Tage – reine Anzeige.
   // ---------------------------------------------------------------------
-  /** Kurzer Blick in die Küche: was unter Soll ist, und der Weg zum Zählen und zu den Rezepten. */
-  function buildKuecheCard() {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `<h2>🍳 Küche</h2>`;
-    const preps = store.getPreps();
-    const zeile = document.createElement("p");
-    if (preps.length === 0) {
-      zeile.className = "muted small";
-      zeile.textContent = "Noch keine Vorbereitungen angelegt.";
-    } else {
-      const leer = preps.filter((p) => store.prepStatus(p) === "leer");
-      const knapp = preps.filter((p) => store.prepStatus(p) === "knapp");
-      if (leer.length === 0 && knapp.length === 0) {
-        zeile.className = "muted small";
-        zeile.textContent = "Alles über Soll.";
-      } else {
-        zeile.className = "callout callout-warn";
-        const teile = [];
-        if (leer.length > 0) teile.push(`leer: ${leer.map((p) => p.name).join(", ")}`);
-        if (knapp.length > 0) teile.push(`unter Soll: ${knapp.map((p) => p.name).join(", ")}`);
-        zeile.textContent = teile.join(" · ");
-      }
-    }
-    card.appendChild(zeile);
-    const akt = document.createElement("div");
-    akt.className = "employee-actions";
-    const zaehlen = document.createElement("button");
-    zaehlen.className = "btn btn-primary";
-    zaehlen.textContent = "Vorbereitungen zählen";
-    zaehlen.onclick = () => navigate("kueche");
-    const rezepte = document.createElement("button");
-    rezepte.className = "btn btn-secondary";
-    rezepte.textContent = "📖 Rezepte";
-    rezepte.onclick = () => navigate("kueche");
-    akt.append(zaehlen, rezepte);
-    card.appendChild(akt);
-    return card;
-  }
-
   function buildShiftsCard(emp) {
     const card = document.createElement("section");
     card.className = "card";

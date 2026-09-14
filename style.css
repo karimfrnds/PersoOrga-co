@@ -979,3 +979,16 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .fest-zeile { display: flex; align-items: center; gap: 10px; }
 .fest-tag { width: 34px; min-width: 34px; font-weight: 600; color: var(--gray); }
 .fest-zeile select { flex: 1; }
+
+/* Küche im persönlichen Fenster: Abschnitte in einer Karte, Hinweise für heute hervorgehoben. */
+.kueche-abschnitt { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.kueche-abschnitt + .kueche-abschnitt { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 14px; }
+.kueche-notiz-heute { border-left: 4px solid var(--orange); }
+.kueche-tage { margin-top: -2px; }
+.rezept-liste { display: grid; gap: 6px; margin: 8px 0; }
+.rezept-zeile {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
+  font: inherit; font-size: 16px; color: var(--text);
+  padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); cursor: pointer;
+}
+.rezept-zeile:hover { border-color: var(--green); }

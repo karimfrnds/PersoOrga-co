@@ -1392,7 +1392,7 @@ export const store = {
     if (status === "knapp") return "leer";
     return "ok";
   },
-  /** Artikel nach Bereich, fuer die Melde-Ansicht. Was fehlt, steht oben. */
+  /** Artikel nach Bereich, was fehlt steht oben. (Die Melde-Seite am iPad gibt es nicht mehr.) */
   getStockNachBereich(bereich) {
     const RANG = { leer: 0, knapp: 1, bestellt: 2, ok: 3 };
     return data.stock

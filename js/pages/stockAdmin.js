@@ -5,8 +5,9 @@
 // welcher Einheit bestellt wird – plus, wie viel davon in einer normalen Woche weggeht. Aus dem letzten
 // entsteht die Standard-Bestellliste am Laptop.
 //
-// Was das Team im Betrieb macht (knapp/leer melden), passiert nicht hier, sondern unter „Bestand" in der
-// Hauptleiste. Diese Seite ist Verwaltung und wird selten gebraucht.
+// Gezählt wird nicht hier, sondern im neuen Bestand (Admin → Soll-Bestand, am Handy und im persönlichen
+// Fenster). Die frühere Melde-Seite „Bestand" in der Hauptleiste gibt es nicht mehr. Diese Seite ist
+// Verwaltung für die Bestellliste und wird selten gebraucht.
 // ============================================================================
 import { store } from "../store.js";
 import { escapeHtml } from "../format.js";
@@ -29,8 +30,7 @@ function renderStockAdmin() {
     const frag = document.createElement("div");
     frag.innerHTML = `
       <h1>📦 Vorräte</h1>
-      <p class="muted">Die Artikel, die das Team unter „Bestand“ als knapp oder leer melden kann.
-      Wochenmenge heißt: wie viel davon in einer normalen Woche weggeht – daraus entsteht am Laptop die
+      <p class="muted">Die Artikel der Bestellliste. Gezählt wird unter „Soll-Bestand“. Wochenmenge heißt: wie viel davon in einer normalen Woche weggeht – daraus entsteht am Laptop die
       Standard-Bestellliste.</p>`;
     frag.appendChild(buildForm());
     frag.appendChild(buildDoppelte());

@@ -25,7 +25,7 @@ import { renderPosts, renderFreigaben, openPostDialog, openStatsDialog } from ".
 import { renderShootings, openShootingDialog, renderListen } from "./shootings.js";
 import { renderStatistik } from "./statistik.js";
 
-const APP_VERSION = "2026-09-15.1";
+const APP_VERSION = "2026-09-15.2";
 const outlet = document.getElementById("outlet");
 
 const TABS = [

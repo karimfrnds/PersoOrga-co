@@ -123,14 +123,36 @@ function zahlText(n) {
 }
 
 // =====================================================================
-// Karte: Küche (Hinweise an die nächste Schicht + Vorbereitungen)
+// Die Karten für eine Person – je nach Rolle
+// =====================================================================
+/** Küche: Hinweise an die nächste Schicht, Bestand, Rezepte. Bar und Service: der Bar-Bestand – aber nur,
+ * wenn der Chef dort überhaupt Artikel angelegt hat; eine leere Karte wäre nur Rauschen. */
+function buildBestandKarten(emp, { onChange }) {
+  const karten = [];
+  for (const b of store.bestandBereicheFuerRolle(emp.role)) {
+    if (b.id === "kueche") {
+      karten.push(buildKuecheKarte(emp, { onChange }));
+      karten.push(buildRezepteKarte(emp, { onChange }));
+    } else if (store.getPreps(true, b.id).length > 0) {
+      const z = zustandFuer(emp);
+      const card = el("section", "card");
+      card.appendChild(el("h2", null, `${b.symbol} ${b.label}`));
+      card.appendChild(buildBestandAbschnitt(emp, b.id, z, onChange));
+      karten.push(card);
+    }
+  }
+  return karten;
+}
+
+// =====================================================================
+// Karte: Küche (Hinweise an die nächste Schicht + Bestand)
 // =====================================================================
 function buildKuecheKarte(emp, { onChange }) {
   const z = zustandFuer(emp);
   const card = el("section", "card");
   card.appendChild(el("h2", null, "🍳 Küche"));
   card.appendChild(buildNotizen(emp, z, onChange));
-  card.appendChild(buildVorbereitungen(emp, z, onChange));
+  card.appendChild(buildBestandAbschnitt(emp, "kueche", z, onChange));
   return card;
 }
 
@@ -229,44 +251,93 @@ function buildNotizen(emp, z, onChange) {
   return wrap;
 }
 
-// ---- Vorbereitungen ----
-function buildVorbereitungen(emp, z, onChange) {
+// ---- Bestand eines Bereichs ----
+//
+// Zwei Arten zu speichern, weil es zwei Anlässe gibt:
+//   Im Lauf der Schicht: nur die Zahlen, die sich geändert haben. Wer die Milch auffüllt, trägt die Milch
+//   ein – und bestätigt nicht nebenbei zwanzig Zahlen, die er gar nicht angesehen hat.
+//   Am Zähltag (Standard-Aufgabe "Bestand zählen"): alles durchgehen und die Zählung ABSCHLIESSEN. Dann
+//   gilt jede Zahl als heute gezählt, und die Aufgabe ist für alle erledigt.
+function buildBestandAbschnitt(emp, bereich, z, onChange) {
   const wrap = el("div", "kueche-abschnitt");
-  wrap.appendChild(el("p", "muted small res-bereich", "<b>Vorbereitungen</b>"));
-  const preps = store.getPreps();
+  wrap.appendChild(el("p", "muted small res-bereich", "<b>Bestand</b>"));
+  const preps = store.getPreps(true, bereich);
 
   if (preps.length === 0) {
-    wrap.appendChild(
-      el("p", "muted small", "Noch keine Vorbereitung angelegt. Trag ein, was immer vorbereitet sein muss – z.B. Tomatensauce, Aioli, geschnittene Zwiebeln.")
-    );
-    wrap.appendChild(neuKnopf(onChange));
+    wrap.appendChild(el("p", "muted small", "Noch keine Artikel. Welche gezählt werden und wie viel da sein soll, legt der Chef fest."));
     return wrap;
   }
 
+  const faellig = store.zaehlungFaellig(bereich);
+  const abgeschlossen = store.zaehlungAbgeschlossen(bereich);
+  if (faellig) {
+    wrap.appendChild(
+      el("p", "callout callout-warn", "🧮 <b>Heute wird gezählt.</b> Geh alle Artikel durch und trag ein, was da ist – dann unten „Zählung abschließen“.")
+    );
+  } else if (abgeschlossen) {
+    wrap.appendChild(el("p", "muted small", `✓ Heute gezählt von ${escapeHtml(abgeschlossen.by || "?")}, ${uhrzeit(abgeschlossen.at)} Uhr.`));
+  }
   wrap.appendChild(buildZusammenfassung(preps));
 
   const liste = el("div", "prep-list");
-  // Was fehlt, steht oben: leer, dann unter Soll, dann nie gezählt, dann der Rest.
-  const sortiert = [...preps].sort(
-    (a, b) => STATUS[store.prepStatus(a)].rang - STATUS[store.prepStatus(b)].rang || (a.sort || 0) - (b.sort || 0)
-  );
+  // Was fehlt, steht oben – außer am Zähltag: da geht man der Reihe nach durch, und eine Liste, die sich
+  // beim Tippen umsortiert, wäre nicht durchzuzählen.
+  const sortiert = faellig
+    ? [...preps]
+    : [...preps].sort((a, b) => STATUS[store.prepStatus(a)].rang - STATUS[store.prepStatus(b)].rang || (a.sort || 0) - (b.sort || 0));
+  const eigene = () => [...z.entwurf.keys()].filter((id) => preps.some((p) => p.id === id));
   const fuss = el("div", "prep-fuss");
   const zeichneFuss = () => {
     fuss.innerHTML = "";
-    const anzahl = z.entwurf.size;
-    if (anzahl === 0) {
-      fuss.appendChild(el("p", "muted small", "Zahlen eintragen, dann hier einmal speichern."));
+    const geaendert = eigene();
+    if (faellig) {
+      // Beim Abschließen zählt, was im Feld steht – ob geändert oder nicht. Ohne Zahl bleibt ein Artikel
+      // offen und wird genannt, statt stillschweigend als gezählt zu gelten.
+      const ohneZahl = preps.filter((p) => !z.entwurf.has(p.id) && !p.bestand);
+      const btn = el("button", "btn btn-primary btn-huge", "✓ Zählung abschließen");
+      btn.onclick = async () => {
+        if (ohneZahl.length > 0) {
+          const weiter = await confirmDialog(
+            `Für ${ohneZahl.length} ${ohneZahl.length === 1 ? "Artikel steht" : "Artikel stehen"} noch keine Zahl: ${ohneZahl
+              .map((p) => escapeHtml(p.name))
+              .join(", ")}.<br><br>Trotzdem abschließen?`,
+            { title: "Noch nicht alles gezählt", okLabel: "Trotzdem abschließen", cancelLabel: "Zurück" }
+          );
+          if (!weiter) return;
+        }
+        const jetzt = new Date().toISOString();
+        for (const p of preps) {
+          const menge = z.entwurf.has(p.id) ? z.entwurf.get(p.id) : p.bestand ? p.bestand.menge : null;
+          if (menge !== null) store.setPrepBestand(p.id, menge, emp.name, jetzt);
+          z.entwurf.delete(p.id);
+        }
+        store.schliesseZaehlungAb(bereich, emp.name, jetzt);
+        onChange();
+      };
+      fuss.appendChild(btn);
+      fuss.appendChild(
+        el("p", "muted small", ohneZahl.length > 0 ? `Noch ohne Zahl: ${ohneZahl.length}` : "Unveränderte Zahlen gelten beim Abschließen als heute gezählt.")
+      );
+    }
+    if (geaendert.length === 0) {
+      if (!faellig) fuss.appendChild(el("p", "muted small", "Zahlen eintragen, dann hier einmal speichern."));
       return;
     }
-    const btn = el("button", "btn btn-primary btn-huge", `✓ ${anzahl} ${anzahl === 1 ? "Zahl" : "Zahlen"} eintragen`);
+    const btn = el(
+      "button",
+      faellig ? "btn btn-secondary" : "btn btn-primary btn-huge",
+      faellig ? `Nur die ${geaendert.length} geänderten eintragen` : `✓ ${geaendert.length} ${geaendert.length === 1 ? "Zahl" : "Zahlen"} eintragen`
+    );
     btn.onclick = () => {
-      for (const [id, menge] of z.entwurf) store.setPrepBestand(id, menge, emp.name);
-      z.entwurf.clear();
+      for (const id of geaendert) {
+        store.setPrepBestand(id, z.entwurf.get(id), emp.name);
+        z.entwurf.delete(id);
+      }
       onChange();
     };
     const weg = el("button", "btn btn-link", "Eingaben verwerfen");
     weg.onclick = () => {
-      z.entwurf.clear();
+      for (const id of geaendert) z.entwurf.delete(id);
       onChange();
     };
     fuss.append(btn, weg);
@@ -275,7 +346,6 @@ function buildVorbereitungen(emp, z, onChange) {
   wrap.appendChild(liste);
   zeichneFuss();
   wrap.appendChild(fuss);
-  wrap.appendChild(neuKnopf(onChange));
   return wrap;
 }
 
@@ -349,54 +419,55 @@ function buildPrepRow(p, z, zeichneFuss, onChange) {
     zeichneFuss();
   };
   zaehl.append(minus, input, plus);
+  // "/ 80 Liter" statt "von 80": so steht es auch auf dem Handy, und so liest man es im Vorbeigehen.
   zaehl.appendChild(
-    el(
-      "span",
-      "prep-soll",
-      p.soll > 0 ? `von ${zahlText(p.soll)} ${escapeHtml(einheitText(p.einheit, p.soll))}` : escapeHtml(einheitText(p.einheit, 2))
-    )
+    el("span", "prep-soll", p.soll > 0 ? `/ ${zahlText(p.soll)} ${escapeHtml(einheitText(p.einheit, p.soll))}` : escapeHtml(einheitText(p.einheit, 2)))
   );
   row.appendChild(zaehl);
 
-  const akt = el("div", "employee-actions");
+  // Nur das Rezept. Ändern (Name, Soll) ist Sache des Chefs – das steht im Admin-Bereich.
   const rezept = p.rezeptId ? store.getRecipe(p.rezeptId) : null;
   if (rezept) {
+    const akt = el("div", "employee-actions");
     const b = el("button", "btn btn-link", "📖 Rezept");
     b.onclick = () => zeigeRezept(rezept, onChange);
     akt.appendChild(b);
+    row.appendChild(akt);
   }
-  const aendern = el("button", "btn btn-link", "Ändern");
-  aendern.onclick = () => openPrepForm(p, z, onChange);
-  akt.appendChild(aendern);
-  row.appendChild(akt);
   return row;
 }
 
-function neuKnopf(onChange) {
-  const btn = el("button", "btn btn-secondary", "＋ Vorbereitung");
-  btn.onclick = () => openPrepForm(null, zustand, onChange);
-  return btn;
-}
-
-function openPrepForm(vorhanden, z, onChange) {
+/** Artikel anlegen oder ändern – im Admin-Bereich. Welche Artikel die Leute sehen und was das Soll ist,
+ * entscheidet der Chef. */
+function openPrepForm(vorhanden, { onChange, bereich = "kueche" } = {}) {
   const overlay = el("div", "overlay");
   const box = el("div", "dialog");
-  box.appendChild(el("h2", null, vorhanden ? "Vorbereitung ändern" : "Neue Vorbereitung"));
+  box.appendChild(el("h2", null, vorhanden ? "Artikel ändern" : "Neuer Artikel"));
 
-  const name = eingabe("text", vorhanden?.name || "", "z.B. Tomatensauce");
-  const soll = eingabe("text", vorhanden ? zahlText(vorhanden.soll) : "", "z.B. 4");
+  const name = eingabe("text", vorhanden?.name || "", "z.B. Hafermilch");
+  const bereichSel = auswahl(store.BESTAND_BEREICHE.map((b) => [b.id, `${b.symbol} ${b.label}`]), vorhanden?.bereich || bereich);
+  const soll = eingabe("text", vorhanden ? zahlText(vorhanden.soll) : "", "z.B. 80");
   soll.inputMode = "decimal";
-  const einheit = auswahl(store.PREP_EINHEITEN.map((e) => [e, e]), vorhanden?.einheit || "Behälter");
-  const notiz = eingabe("text", vorhanden?.notiz || "", "z.B. im großen Kühlschrank unten");
+  const einheit = auswahl(store.PREP_EINHEITEN.map((e) => [e, e]), vorhanden?.einheit || "Stück");
+  const notiz = eingabe("text", vorhanden?.notiz || "", "z.B. Lager hinten links");
   const rezepte = store.getRecipes();
   const rezept = auswahl([["", "– kein Rezept –"], ...rezepte.map((r) => [r.id, r.name])], vorhanden?.rezeptId || "");
+  const aktiv = document.createElement("input");
+  aktiv.type = "checkbox";
+  aktiv.checked = vorhanden ? vorhanden.aktiv !== false : true;
 
-  box.appendChild(feld("Was wird vorbereitet?", name));
+  box.appendChild(feld("Artikel", name));
+  const reihe0 = el("div", "res-form-row");
+  reihe0.append(feld("Wer zählt?", bereichSel, "Küche: Küchen-Team. Bar: Bar und Service."));
+  box.appendChild(reihe0);
   const reihe = el("div", "res-form-row");
   reihe.append(feld("Soll (mindestens)", soll), feld("Einheit", einheit));
   box.appendChild(reihe);
-  box.appendChild(feld("Rezept", rezept, rezepte.length === 0 ? "Noch keine Rezepte – die kommen in die Karte „Rezepte“." : ""));
+  box.appendChild(feld("Rezept", rezept));
   box.appendChild(feld("Notiz", notiz, "Wo es steht, worauf zu achten ist."));
+  const aktivZeile = el("label", "field-checkbox");
+  aktivZeile.append(aktiv, document.createTextNode(" Wird gezählt (ausschalten, statt zu löschen – der Verlauf bleibt)"));
+  box.appendChild(aktivZeile);
 
   const akt = el("div", "dialog-actions");
   const abbrechen = el("button", "btn btn-secondary", "Abbrechen");
@@ -409,10 +480,12 @@ function openPrepForm(vorhanden, z, onChange) {
     }
     const daten = {
       name: name.value.trim(),
+      bereich: bereichSel.value,
       soll: Number(soll.value.replace(",", ".")) || 0,
       einheit: einheit.value,
       notiz: notiz.value.trim(),
       rezeptId: rezept.value || null,
+      aktiv: aktiv.checked,
     };
     if (vorhanden) store.updatePrep(vorhanden.id, daten);
     else store.addPrep(daten);
@@ -426,9 +499,9 @@ function openPrepForm(vorhanden, z, onChange) {
     const unten = el("div", "res-dialog-danger");
     const weg = el("button", "btn btn-link", "Löschen");
     weg.onclick = async () => {
-      if (!(await confirmDialog(`„${escapeHtml(vorhanden.name)}“ aus der Liste nehmen?`, { danger: true, okLabel: "Löschen" }))) return;
+      if (!(await confirmDialog(`„${escapeHtml(vorhanden.name)}“ endgültig löschen?`, { danger: true, okLabel: "Löschen" }))) return;
       store.removePrep(vorhanden.id);
-      z.entwurf.delete(vorhanden.id);
+      zustand.entwurf.delete(vorhanden.id);
       overlay.remove();
       onChange();
     };
@@ -771,4 +844,4 @@ function ausText(block) {
   return r;
 }
 
-export { buildKuecheKarte, buildRezepteKarte, leseRezepte };
+export { buildBestandKarten, buildKuecheKarte, buildRezepteKarte, openPrepForm, zahlText, einheitText, wannText, leseRezepte };

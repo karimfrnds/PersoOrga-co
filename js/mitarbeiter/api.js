@@ -74,5 +74,7 @@ const markNotificationsRead = (ids) => call("/me/notifications/read", { method: 
 const sendAvailability = (weekStart, days) => call("/me/availability", { method: "POST", body: { weekStart, days } });
 /** Abwesenheit melden. art: "urlaub" | "krank" | "kind" | "sonstiges". */
 const reportAbsence = (from, to, art, note) => call("/me/absence", { method: "POST", body: { from, to, art, note } });
+/** Bestand zählen. werte: [{itemId, menge}]. abschliessen: die Zählung des Tages ist fertig. */
+const sendBestand = (bereich, werte, abschliessen = false) => call("/me/bestand", { method: "POST", body: { bereich, werte, abschliessen } });
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead };
+export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead, sendBestand };

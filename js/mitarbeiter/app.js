@@ -3,7 +3,7 @@
 // Bewusst OHNE Ein-/Ausstempeln: das bleibt am iPad im Café, damit niemand aus
 // der Ferne für sich oder andere stempeln kann.
 // ============================================================================
-import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead } from "./api.js";
+import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead, sendBestand } from "./api.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 
 const outlet = document.getElementById("outlet");
@@ -25,6 +25,10 @@ const ABWESENHEIT_ARTEN = [
   { id: "kind", label: "Kind krank", symbol: "🧒" },
   { id: "sonstiges", label: "Sonstiges", symbol: "📌" },
 ];
+// Bestand: eingetippte, noch nicht gesendete Zahlen (itemId -> Zahl) und ob die Karte offen ist. Beides
+// überlebt das Neuladen – schlägt das Senden fehl, soll nichts vom Gezählten verloren sein.
+const bestandEntwurf = new Map();
+let bestandOffen = null; // null = automatisch (offen, wenn heute gezählt wird)
 // Kurzmeldung, die nach dem Neuladen EINMAL oben erscheint (sonst wäre sie durch das Rerendern sofort weg).
 let flash = null;
 
@@ -161,6 +165,8 @@ function renderMain() {
   }
 
   wrap.appendChild(buildPostfach());
+  const bestandKarte = buildBestand();
+  if (bestandKarte) wrap.appendChild(bestandKarte);
   wrap.appendChild(buildShifts());
   wrap.appendChild(buildWochenplan());
   wrap.appendChild(buildAvailability());
@@ -196,6 +202,209 @@ function showMessages(nachrichten) {
       me.neueNachrichten = [];
     } catch {}
   };
+}
+
+// ---------------------------------------------------------------------
+// Bestand
+//
+// Wer an der Bar auffüllt, sieht ohnehin, wie viel Milch da ist – die Zahl steht in fünf Sekunden im Handy.
+// Gespeichert werden nur die Zahlen, die sich geändert haben. Am Zähltag (vom Chef als Standard-Aufgabe
+// festgelegt) gibt es zusätzlich "Zählung abschließen": dann gilt jede Zahl als heute gezählt.
+// ---------------------------------------------------------------------
+const zahlDe = (n) => (Number.isInteger(n) ? String(n) : String(n).replace(".", ","));
+function zeitDe(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const min = Math.round((Date.now() - d.getTime()) / 60000);
+  if (min < 2) return "gerade eben";
+  if (min < 60) return `vor ${min} Min`;
+  const uhr = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const tag = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return tag === todayStr() ? `${uhr} Uhr` : `${d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}, ${uhr} Uhr`;
+}
+function bestandStatus(menge, soll) {
+  if (menge === null || menge === undefined) return "unbekannt";
+  if (menge <= 0) return "leer";
+  if (soll > 0 && menge < soll) return "knapp";
+  return "ok";
+}
+const BESTAND_KLASSE = { leer: "bestand-leer", knapp: "bestand-knapp", unbekannt: "bestand-bestellt", ok: "bestand-ok" };
+const BESTAND_LABEL = { leer: "leer", knapp: "unter Soll", unbekannt: "nicht gezählt", ok: "genug" };
+
+function buildBestand() {
+  const bereiche = me.bestand || [];
+  if (bereiche.length === 0) return null;
+  const faellig = bereiche.some((b) => b.faellig);
+  const offen = bestandOffen === null ? faellig : bestandOffen;
+
+  const card = document.createElement("section");
+  card.className = "card";
+  const kopf = document.createElement("button");
+  kopf.className = "klapp-kopf";
+  const unterSoll = bereiche.flatMap((b) => b.artikel).filter((a) => ["leer", "knapp"].includes(bestandStatus(a.menge, a.soll))).length;
+  kopf.innerHTML = `<span><b>📦 Bestand</b>${
+    faellig
+      ? ' <span class="badge badge-orange">heute zählen</span>'
+      : unterSoll > 0
+        ? ` <span class="muted small">${unterSoll} unter Soll</span>`
+        : ""
+  }</span><span class="klapp-pfeil">${offen ? "▾" : "▸"}</span>`;
+  kopf.onclick = () => {
+    bestandOffen = !offen;
+    renderMain();
+  };
+  card.appendChild(kopf);
+  if (!offen) return card;
+
+  for (const b of bereiche) card.appendChild(buildBestandBereich(b));
+  return card;
+}
+
+function buildBestandBereich(b) {
+  const wrap = document.createElement("div");
+  wrap.className = "kueche-abschnitt";
+  if ((me.bestand || []).length > 1) {
+    const h = document.createElement("p");
+    h.className = "muted small res-bereich";
+    h.innerHTML = `<b>${escapeHtml(b.label)}</b>`;
+    wrap.appendChild(h);
+  }
+  if (b.faellig) {
+    const c = document.createElement("p");
+    c.className = "callout callout-warn";
+    c.innerHTML = "🧮 <b>Heute wird gezählt.</b> Geh alle Artikel durch, dann unten „Zählung abschließen“.";
+    wrap.appendChild(c);
+  } else if (b.letzteZaehlung && b.letzteZaehlung.date === me.heute) {
+    const c = document.createElement("p");
+    c.className = "muted small";
+    c.textContent = `✓ Heute gezählt von ${b.letzteZaehlung.by || "?"}.`;
+    wrap.appendChild(c);
+  }
+
+  const liste = document.createElement("div");
+  liste.className = "prep-list";
+  const fuss = document.createElement("div");
+  fuss.className = "prep-fuss";
+  const geaenderte = () => b.artikel.filter((a) => bestandEntwurf.has(a.id));
+
+  for (const a of b.artikel) {
+    const row = document.createElement("div");
+    const wert = () => (bestandEntwurf.has(a.id) ? bestandEntwurf.get(a.id) : a.menge);
+    const faerben = () => {
+      row.className = "prep-row " + BESTAND_KLASSE[bestandStatus(wert(), a.soll)];
+    };
+    faerben();
+    const status = bestandStatus(a.menge, a.soll);
+    row.innerHTML = `<div class="prep-row-kopf"><div class="prep-row-titel"><b>${escapeHtml(a.name)}</b>
+      <span class="muted small">${a.at ? `zuletzt ${escapeHtml(zeitDe(a.at))}${a.by ? " · " + escapeHtml(a.by) : ""}` : "noch nie gezählt"}</span>
+      ${a.notiz ? `<span class="muted small">${escapeHtml(a.notiz)}</span>` : ""}</div>
+      <span class="prep-chip">${BESTAND_LABEL[status]}</span></div>`;
+
+    const zaehl = document.createElement("div");
+    zaehl.className = "prep-zaehl";
+    const minus = document.createElement("button");
+    minus.className = "btn btn-secondary prep-step";
+    minus.textContent = "−";
+    const plus = document.createElement("button");
+    plus.className = "btn btn-secondary prep-step";
+    plus.textContent = "＋";
+    // Kein type="number": dort ändert Wischen über dem Feld auf manchen Handys still die Zahl.
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.className = "prep-input";
+    input.placeholder = "?";
+    input.value = wert() === null || wert() === undefined ? "" : zahlDe(wert());
+    const setze = (n) => {
+      const zahl = Math.max(0, Math.round(n * 2) / 2);
+      bestandEntwurf.set(a.id, zahl);
+      input.value = zahlDe(zahl);
+      faerben();
+      zeichneFuss();
+    };
+    minus.onclick = () => setze((wert() ?? 0) - 1);
+    plus.onclick = () => setze((wert() ?? 0) + 1);
+    input.oninput = () => {
+      const roh = input.value.trim();
+      if (roh === "") {
+        bestandEntwurf.delete(a.id);
+      } else {
+        const zahl = Number(roh.replace(",", "."));
+        if (!Number.isFinite(zahl) || zahl < 0) return;
+        bestandEntwurf.set(a.id, zahl);
+      }
+      faerben();
+      zeichneFuss();
+    };
+    const soll = document.createElement("span");
+    soll.className = "prep-soll";
+    soll.textContent = a.soll > 0 ? `/ ${zahlDe(a.soll)} ${a.einheit}` : a.einheit;
+    zaehl.append(minus, input, plus, soll);
+    row.appendChild(zaehl);
+    liste.appendChild(row);
+  }
+
+  const senden = async (btn, abschliessen) => {
+    const werte = abschliessen
+      ? b.artikel
+          .map((a) => ({ itemId: a.id, menge: bestandEntwurf.has(a.id) ? bestandEntwurf.get(a.id) : a.menge }))
+          .filter((w) => w.menge !== null && w.menge !== undefined)
+      : geaenderte().map((a) => ({ itemId: a.id, menge: bestandEntwurf.get(a.id) }));
+    btn.disabled = true;
+    btn.textContent = "Sende…";
+    try {
+      await sendBestand(b.id, werte, abschliessen);
+      for (const a of b.artikel) bestandEntwurf.delete(a.id);
+      flash = abschliessen ? `✓ Zählung ${b.label} abgeschlossen.` : `✓ ${werte.length} ${werte.length === 1 ? "Zahl" : "Zahlen"} gespeichert.`;
+      bestandOffen = true;
+      await load();
+    } catch (e) {
+      // Das Gezählte bleibt im Entwurf stehen – nochmal tippen genügt.
+      alert("Nicht gespeichert: " + e.message);
+      zeichneFuss();
+    }
+  };
+
+  function zeichneFuss() {
+    fuss.innerHTML = "";
+    const geaendert = geaenderte();
+    if (b.faellig) {
+      const ohneZahl = b.artikel.filter((a) => !bestandEntwurf.has(a.id) && (a.menge === null || a.menge === undefined));
+      const btn = document.createElement("button");
+      btn.className = "btn btn-primary btn-huge";
+      btn.textContent = "✓ Zählung abschließen";
+      btn.onclick = () => {
+        if (ohneZahl.length > 0 && !confirm(`Für ${ohneZahl.map((a) => a.name).join(", ")} steht noch keine Zahl. Trotzdem abschließen?`)) return;
+        senden(btn, true);
+      };
+      fuss.appendChild(btn);
+      const hinweis = document.createElement("p");
+      hinweis.className = "muted small";
+      hinweis.textContent = ohneZahl.length > 0 ? `Noch ohne Zahl: ${ohneZahl.length}` : "Unveränderte Zahlen gelten beim Abschließen als heute gezählt.";
+      fuss.appendChild(hinweis);
+    }
+    if (geaendert.length === 0) {
+      if (!b.faellig) {
+        const p = document.createElement("p");
+        p.className = "muted small";
+        p.textContent = "Zahl ändern, dann hier speichern.";
+        fuss.appendChild(p);
+      }
+      return;
+    }
+    const btn = document.createElement("button");
+    btn.className = b.faellig ? "btn btn-secondary" : "btn btn-primary btn-huge";
+    btn.textContent = b.faellig
+      ? `Nur die ${geaendert.length} geänderten senden`
+      : `✓ ${geaendert.length} ${geaendert.length === 1 ? "Zahl" : "Zahlen"} speichern`;
+    btn.onclick = () => senden(btn, false);
+    fuss.appendChild(btn);
+  }
+
+  wrap.appendChild(liste);
+  zeichneFuss();
+  wrap.appendChild(fuss);
+  return wrap;
 }
 
 /** Postfach: alle Nachrichten vom Chef, auch bereits gelesene.

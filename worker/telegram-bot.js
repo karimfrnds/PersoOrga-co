@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-12.1";
+const WORKER_VERSION = "2026-09-15.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -242,6 +242,16 @@ const EMPTY_STATE = {
   events: [],
   eventConfig: null,
   eventSignups: [],
+  // Bestand (Küche und Bar). Der iPad ist maßgeblich und schickt die Liste; Handy und Laptop reichen
+  // Zählungen und Änderungen über Warteschlangen ein.
+  // bestand:            [{id, name, bereich, einheit, soll, notiz, aktiv, sort, menge, at, by}]
+  // bestandZaehlungen:  [{id, employeeName, bereich, werte:[{itemId, menge}], abschliessen, at}]
+  // bestandChanges:     [{id, kind:"create"|"update"|"delete", itemId, name, bereich, einheit, soll, notiz, aktiv, at}]
+  // bestandAbschluesse: [{bereich, date, by, at}] – abgeschlossene Zählungen (Grundlage für "heute dran?")
+  bestand: [],
+  bestandZaehlungen: [],
+  bestandChanges: [],
+  bestandAbschluesse: [],
 };
 
 async function getState(env) {
@@ -297,6 +307,10 @@ async function getState(env) {
       events: Array.isArray(parsed.events) ? parsed.events : [],
       eventConfig: parsed.eventConfig && typeof parsed.eventConfig === "object" ? parsed.eventConfig : null,
       eventSignups: Array.isArray(parsed.eventSignups) ? parsed.eventSignups : [],
+      bestand: Array.isArray(parsed.bestand) ? parsed.bestand : [],
+      bestandZaehlungen: Array.isArray(parsed.bestandZaehlungen) ? parsed.bestandZaehlungen : [],
+      bestandChanges: Array.isArray(parsed.bestandChanges) ? parsed.bestandChanges : [],
+      bestandAbschluesse: Array.isArray(parsed.bestandAbschluesse) ? parsed.bestandAbschluesse : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -1877,9 +1891,23 @@ async function handleMe(request, env) {
     .slice(0, 8)
     .map((w) => ({ ...buildWochenplan(state, w.weekStart), publishedAt: w.publishedAt }));
 
+  // Bestand: nur die Bereiche, die die eigene Rolle zählt. Mengen sind keine Lohn- oder Gastdaten, aber
+  // wer an der Bar steht, braucht die Küchenliste trotzdem nicht auf dem Handy.
+  const bestand = bestandBereicheFuerRolle(meineRolle)
+    .map((b) => {
+      const artikel = (state.bestand || [])
+        .filter((a) => a.bereich === b && a.aktiv !== false)
+        .sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0) || String(x.name).localeCompare(String(y.name)))
+        .map((a) => ({ id: a.id, name: a.name, einheit: a.einheit || "", soll: Number(a.soll) || 0, notiz: a.notiz || "", menge: a.menge ?? null, at: a.at || null, by: a.by || null }));
+      const abschluss = (state.bestandAbschluesse || []).filter((a) => a.bereich === b).slice(-1)[0] || null;
+      return { id: b, label: BESTAND_BEREICHE[b].label, faellig: bestandZaehlungFaellig(state, b, today), letzteZaehlung: abschluss, artikel };
+    })
+    .filter((b) => b.artikel.length > 0);
+
   return jsonResponse({
     name,
     heute: today,
+    bestand,
     wochenplaene,
     kennzahlenFreigegeben: (state.financials || []).length > 0,
     dieseWoche: summe(mondayOf(today), today),
@@ -1983,6 +2011,142 @@ async function handleMeSick(request, env) {
     const a = ABWESENHEIT_ARTEN[art];
     await sendToOwners(env, `${a.symbol} ${a.label}: ${guard.session.name} (${zeitraum})${note ? `\n„${note}“` : ""}`);
   }
+  return jsonResponse({ ok: true });
+}
+
+// ---------------------------------------------------------------------
+// Bestand (Küche und Bar)
+//
+// Gezählt wird vom Handy oder am iPad, festgelegt (welche Artikel, welches Soll) vom Chef. Der iPad hält
+// die Liste; Handy und Laptop schreiben in Warteschlangen, die er abarbeitet. Damit die eigene Zahl nicht
+// erst nach dem nächsten Abgleich erscheint, wird jede Zählung zusätzlich sofort auf die Worker-Kopie
+// angewandt.
+// ---------------------------------------------------------------------
+const BESTAND_BEREICHE = {
+  kueche: { label: "Küche", rollen: ["kueche"] },
+  // Service und Bar teilen sich im Café die Theke – wer im Service steht, füllt auch auf.
+  bar: { label: "Bar", rollen: ["bar", "service"] },
+};
+const BESTAND_EINHEITEN_MAX = 40;
+
+function bestandBereicheFuerRolle(rolle) {
+  return Object.keys(BESTAND_BEREICHE).filter((b) => BESTAND_BEREICHE[b].rollen.includes(rolle));
+}
+
+/** Ist in diesem Bereich heute eine Zählung dran? Ja, wenn eine Standard-Aufgabe mit diesem Bestand
+ * verknüpft ist und heute gilt – und die Zählung heute noch niemand abgeschlossen hat. */
+function bestandZaehlungFaellig(state, bereich, heute) {
+  const wd = (weekdayOf(heute) + 6) % 7; // 0=Mo wie in den Vorlagen
+  const vorlage = (state.taskTemplates || []).some(
+    (t) => t && t.bestandBereich === bereich && (!Array.isArray(t.weekdays) || t.weekdays.length === 0 || t.weekdays.map(Number).includes(wd))
+  );
+  if (!vorlage) return false;
+  return !(state.bestandAbschluesse || []).some((a) => a.bereich === bereich && a.date === heute);
+}
+
+/** Eine Zählung auf die Liste anwenden. Eine ältere Zahl überschreibt nie eine neuere – kommt eine
+ * Handy-Zählung verspätet an, hat die Person am iPad in der Zwischenzeit womöglich schon neu gezählt. */
+function bestandVorschau(liste, z) {
+  const werte = new Map((z.werte || []).map((w) => [String(w.itemId), Number(w.menge)]));
+  return (liste || []).map((a) => {
+    if (!werte.has(String(a.id))) return a;
+    if (a.at && z.at && a.at > z.at) return a;
+    return { ...a, menge: werte.get(String(a.id)), at: z.at, by: z.employeeName };
+  });
+}
+
+function bestandAenderungVorschau(liste, c) {
+  if (c.kind === "delete") return (liste || []).filter((a) => String(a.id) !== String(c.itemId));
+  const felder = { name: c.name, bereich: c.bereich, einheit: c.einheit, soll: c.soll, notiz: c.notiz, aktiv: c.aktiv };
+  if (c.kind === "update") return (liste || []).map((a) => (String(a.id) === String(c.itemId) ? { ...a, ...felder } : a));
+  // Vorläufige ID, bis der iPad eine eigene vergibt.
+  return [...(liste || []), { id: "vorlaeufig-" + c.id, ...felder, sort: 9999, menge: null, at: null, by: null }];
+}
+
+/** Eine gezählte Menge: "1,5" wie "1.5", nie negativ. Eigener Name – zahlOderNull gibt es schon im
+ * Social-Bereich, und die lässt Negatives zu (dort sinnvoll, hier nicht). */
+function bestandZahl(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(String(v).replace(",", "."));
+  return Number.isFinite(n) && n >= 0 && n < 1e6 ? Math.round(n * 100) / 100 : null;
+}
+
+/** Bestand vom Handy. Der Name kommt aus der Sitzung, und gezählt werden darf nur, was die eigene Rolle
+ * sieht – sonst könnte die Küche die Bar-Zahlen überschreiben, ohne dort zu stehen. */
+async function handleMeBestand(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const name = guard.session.name;
+  const state = await getState(env);
+  const rolle = (state.employeeRoles || []).find((r) => kleinschreiben(r.name) === kleinschreiben(name))?.role || null;
+  const bereich = String(body?.bereich || "");
+  if (!BESTAND_BEREICHE[bereich]) return jsonResponse({ error: "Unbekannter Bereich." }, 400);
+  if (!bestandBereicheFuerRolle(rolle).includes(bereich)) return jsonResponse({ error: "Diesen Bestand zählt deine Rolle nicht." }, 403);
+
+  const erlaubteIds = new Set((state.bestand || []).filter((a) => a.bereich === bereich && a.aktiv !== false).map((a) => String(a.id)));
+  const werte = [];
+  for (const w of Array.isArray(body?.werte) ? body.werte.slice(0, 300) : []) {
+    const menge = bestandZahl(w?.menge);
+    if (menge === null || !erlaubteIds.has(String(w?.itemId))) continue;
+    werte.push({ itemId: String(w.itemId), menge });
+  }
+  const abschliessen = body?.abschliessen === true;
+  if (werte.length === 0 && !abschliessen) return jsonResponse({ error: "Keine gültige Zahl dabei." }, 400);
+
+  const at = new Date().toISOString();
+  const eintrag = { id: crypto.randomUUID(), employeeName: name, bereich, werte, abschliessen, at };
+  const patch = {
+    bestandZaehlungen: [...(state.bestandZaehlungen || []), eintrag].slice(-200),
+    bestand: bestandVorschau(state.bestand, eintrag),
+  };
+  if (abschliessen) {
+    patch.bestandAbschluesse = [...(state.bestandAbschluesse || []), { bereich, date: todayBerlin(), by: name, at }].slice(-60);
+  }
+  await patchState(env, patch);
+  return jsonResponse({ ok: true, gespeichert: werte.length });
+}
+
+/** Artikel und Soll vom Laptop. Wie überall: Wunsch in die Warteschlange, sofort als Vorschau sichtbar. */
+async function handleAdminBestand(request, env) {
+  const guard = await requireSession(request, env, "boss");
+  if (guard.error) return guard.error;
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
+  if (kind !== "delete" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
+  if (kind !== "delete" && !BESTAND_BEREICHE[body?.bereich]) return jsonResponse({ error: "Bitte Küche oder Bar wählen." }, 400);
+
+  const eintrag = {
+    id: crypto.randomUUID(),
+    kind,
+    itemId: String(body?.itemId || "") || null,
+    name: String(body?.name || "").trim().slice(0, 80),
+    bereich: BESTAND_BEREICHE[body?.bereich] ? body.bereich : "kueche",
+    einheit: String(body?.einheit || "Stück").slice(0, BESTAND_EINHEITEN_MAX),
+    soll: bestandZahl(body?.soll) ?? 0,
+    notiz: String(body?.notiz || "").trim().slice(0, 200),
+    aktiv: body?.aktiv !== false,
+    at: new Date().toISOString(),
+  };
+  const state = await getState(env);
+  await patchState(env, {
+    bestandChanges: [...(state.bestandChanges || []), eintrag].slice(-200),
+    bestand: bestandAenderungVorschau(state.bestand, eintrag),
+  });
   return jsonResponse({ ok: true });
 }
 
@@ -3300,6 +3464,9 @@ async function handleAdminTaskTemplate(request, env) {
     // In welchem Abschnitt der Schicht die Aufgabe steht. Unbekanntes landet in der Mitte – das ist der
     // Abschnitt, der niemanden aufhaelt, wenn die Zuordnung daneben liegt.
     phase: AUFGABEN_PHASEN.includes(body?.phase) ? body.phase : "schicht",
+    // Mit einem Bestand verknüpft ("Bar zählen"): dann ist die Aufgabe erledigt, sobald die Zählung
+    // abgeschlossen ist, und das Handy weiß, dass heute gezählt wird.
+    bestandBereich: BESTAND_BEREICHE[body?.bestandBereich] ? body.bestandBereich : "",
   };
   const state = await getState(env);
   await patchState(env, {
@@ -3320,6 +3487,7 @@ function vorlagenVorschau(vorlagen, e) {
     time: e.time,
     priority: e.priority,
     phase: e.phase,
+    bestandBereich: e.bestandBereich || "",
   };
   if (e.kind === "update") return vorlagen.map((v) => (v.id === e.templateId ? { ...v, ...felder } : v));
   // Vorlaeufige ID: der iPad vergibt beim Uebernehmen eine eigene und schickt sie mit dem naechsten
@@ -4399,6 +4567,32 @@ async function handleState(request, env) {
       const aktuell = await getState(env);
       patch.eventSignups = (aktuell.eventSignups || []).filter((s) => !erledigt.has(String(s.id)));
     }
+    // Bestand: der iPad schickt seine Liste und die Zählungen, die er schon übernommen hat. Die fliegen
+    // aus der Warteschlange. Was noch NICHT übernommen ist (kam zwischen seinem Abholen und diesem Push
+    // vom Handy), wird auf die mitgeschickte Liste gleich wieder angewandt – sonst sähe die Person ihre
+    // eben eingetragene Zahl für einen Abgleich lang wieder verschwinden.
+    if (Array.isArray(body.bestand)) {
+      const aktuell = await getState(env);
+      const uebernommen = new Set((Array.isArray(body.bestandZaehlungenApplied) ? body.bestandZaehlungenApplied : []).map(String));
+      const offen = (aktuell.bestandZaehlungen || []).filter((z) => !uebernommen.has(String(z.id)));
+      patch.bestandZaehlungen = offen;
+      patch.bestand = offen.reduce((liste, z) => bestandVorschau(liste, z), body.bestand);
+      const erledigteAenderungen = new Set((Array.isArray(body.bestandChangesApplied) ? body.bestandChangesApplied : []).map(String));
+      const offeneAenderungen = (aktuell.bestandChanges || []).filter((c) => !erledigteAenderungen.has(String(c.id)));
+      patch.bestandChanges = offeneAenderungen;
+      patch.bestand = offeneAenderungen.reduce((liste, c) => bestandAenderungVorschau(liste, c), patch.bestand);
+    }
+    if (Array.isArray(body.bestandAbschluesse)) {
+      const aktuell = await getState(env);
+      // Zusammenführen statt ersetzen: ein Abschluss vom Handy, den der iPad noch nicht kennt, darf nicht
+      // verloren gehen – sonst wäre "heute zählen" am Handy wieder offen, obwohl längst gezählt ist.
+      const schluessel = (a) => `${a.bereich}:${a.date}`;
+      const alle = new Map();
+      for (const a of [...(aktuell.bestandAbschluesse || []), ...body.bestandAbschluesse]) {
+        if (a && a.bereich && a.date && !alle.has(schluessel(a))) alle.set(schluessel(a), a);
+      }
+      patch.bestandAbschluesse = [...alle.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-60);
+    }
     // Verfuegbarkeit: der iPad schickt inzwischen mehrere Wochen auf einmal (availabilityUpdates).
     // availabilityUpdate im Singular bleibt zusaetzlich erlaubt – ein iPad, das noch nicht neu geladen
     // hat, wuerde sonst gar keine Verfuegbarkeit mehr zurueckmelden.
@@ -4728,6 +4922,8 @@ export default {
       if (url.pathname === "/me/availability") return handleMeAvailability(request, env);
       if (url.pathname === "/me/sick" || url.pathname === "/me/absence") return handleMeSick(request, env);
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
+      if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
+      if (url.pathname === "/admin/bestand") return handleAdminBestand(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/publish-week") return handleAdminPublishWeek(request, env);

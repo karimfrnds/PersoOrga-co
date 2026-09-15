@@ -992,3 +992,18 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
   padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); cursor: pointer;
 }
 .rezept-zeile:hover { border-color: var(--green); }
+/* Am Handy muss "[−] 30 [+] / 80 Liter" in eine Zeile passen – steht das Soll darunter, liest man die
+   Zahl nicht mehr als "30 von 80". */
+@media (max-width: 480px) {
+  .prep-zaehl { flex-wrap: nowrap; gap: 6px; }
+  .prep-step { width: 44px; min-width: 44px; height: 48px; font-size: 22px; }
+  .prep-input { width: 64px; height: 48px; font-size: 22px; }
+  .prep-soll { white-space: nowrap; font-size: 14px; }
+  .prep-row { padding: 12px; }
+  /* Die Speicher-Leiste bleibt unten stehen, darf aber beim Durchzählen nicht die halbe Liste verdecken:
+     Knöpfe nebeneinander, Hinweis klein darunter. */
+  .prep-fuss { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0 10px; }
+  .prep-fuss .btn-huge { flex: 1 1 55%; width: auto; padding: 12px 8px; font-size: 16px; }
+  .prep-fuss .btn-secondary, .prep-fuss .btn-link { flex: 1 1 35%; width: auto; padding: 10px 6px; font-size: 13px; }
+  .prep-fuss p { flex: 1 1 100%; order: 3; margin: 0; font-size: 12px; }
+}

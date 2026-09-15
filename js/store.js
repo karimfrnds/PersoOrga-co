@@ -198,6 +198,9 @@ function defaultData() {
     // Was die Küche der nächsten Schicht mitgeben will: "Gurken fehlen", "Fritteuse macht Geräusche".
     // fuer = der Tag, für den es gilt. { id, text, fuer, von, at, erledigtAm, erledigtVon }
     kuechenNotizen: [],
+    // Abgeschlossene Bestandszählungen: { bereich, date, by, at }. Daran hängt, ob die Standard-Aufgabe
+    // "Bestand zählen" heute schon erledigt ist.
+    bestandAbschluesse: [],
     // Veranstaltungen mit Anmeldung (Bingo-Abend). Bewusst NICHT als Reservierung geführt: hier wird pro
     // Person gezählt und kassiert, der Termin steht fest, und die Tische verteilt man erst am Abend.
     // { id, date, time, price, capacity, note, active, createdAt }
@@ -267,7 +270,7 @@ function minutenAusUhrzeit(hhmm) {
  * jeden Tag, jede Schicht, den ganzen Tag – also genau das Verhalten von vorher. */
 function normalizeTaskTemplate(v) {
   if (typeof v === "string") {
-    return { id: uid(), text: v.trim(), weekdays: [], schicht: "", bereich: "", time: "", priority: "normal", phase: ratePhase(v) };
+    return { id: uid(), text: v.trim(), weekdays: [], schicht: "", bereich: "", time: "", priority: "normal", phase: ratePhase(v), bestandBereich: "" };
   }
   return {
     id: v?.id || uid(),
@@ -278,6 +281,8 @@ function normalizeTaskTemplate(v) {
     time: /^\d{2}:\d{2}$/.test(v?.time || "") ? v.time : "",
     priority: PRIORITIES.includes(v?.priority) ? v.priority : "normal",
     phase: AUFGABEN_PHASEN.includes(v?.phase) ? v.phase : ratePhase(v?.text),
+    // Mit einem Bestand verknüpft: die Aufgabe ist erledigt, sobald dort die Zählung abgeschlossen ist.
+    bestandBereich: v?.bestandBereich === "kueche" || v?.bestandBereich === "bar" ? v.bestandBereich : "",
   };
 }
 function normalizeTaskTemplates(list) {
@@ -328,7 +333,14 @@ function localDateOf(iso) {
 
 /** Einheiten, die in der Kueche vorkommen. Frei tippbar waere hier schlechter: "Behälter", "Behaelter"
  * und "Beh." nebeneinander machen die Liste unlesbar. */
-const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Liter", "Stück", "Portionen"];
+const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Liter", "Stück", "Portionen", "Flaschen", "Packungen", "Kisten"];
+
+/** Wer welchen Bestand zählt. Service und Bar teilen sich im Café die Theke – wer im Service steht,
+ * füllt dort auch auf. Muss zu BESTAND_BEREICHE im Worker passen. */
+const BESTAND_BEREICHE = [
+  { id: "kueche", label: "Küche", symbol: "🍳", rollen: ["kueche"] },
+  { id: "bar", label: "Bar", symbol: "🍸", rollen: ["bar", "service"] },
+];
 
 function normalizePrep(v) {
   const bestand = v?.bestand && Number.isFinite(Number(v.bestand.menge))
@@ -338,6 +350,8 @@ function normalizePrep(v) {
     id: v?.id || uid(),
     name: String(v?.name || "").trim(),
     einheit: String(v?.einheit || "Behälter"),
+    // Küche oder Bar. Alles aus der Zeit vor der Bar war Küche.
+    bereich: v?.bereich === "bar" ? "bar" : "kueche",
     soll: Math.max(0, Number(v?.soll) || 0),
     notiz: String(v?.notiz || ""),
     rezeptId: v?.rezeptId || null,
@@ -434,6 +448,7 @@ function load() {
       preps: (parsed.preps ?? base.preps).map(normalizePrep),
       recipes: (parsed.recipes ?? base.recipes).map(normalizeRecipe),
       kuechenNotizen: parsed.kuechenNotizen ?? base.kuechenNotizen,
+      bestandAbschluesse: parsed.bestandAbschluesse ?? base.bestandAbschluesse,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -2125,9 +2140,15 @@ export const store = {
   // naechste liest sie ab. Daneben steht das Soll: was mindestens dastehen sollte. Der Unterschied
   // zwischen "3 Behaelter" und "3 von 5" ist der ganze Sinn der Sache.
   PREP_EINHEITEN,
-  getPreps(nurAktive = true) {
+  BESTAND_BEREICHE,
+  /** Welche Bestände zählt diese Rolle? */
+  bestandBereicheFuerRolle(rolle) {
+    return BESTAND_BEREICHE.filter((b) => b.rollen.includes(rolle));
+  },
+  getPreps(nurAktive = true, bereich = null) {
     return data.preps
       .filter((p) => !nurAktive || p.aktiv)
+      .filter((p) => !bereich || p.bereich === bereich)
       .sort((a, b) => (a.sort || 0) - (b.sort || 0) || a.name.localeCompare(b.name));
   },
   getPrep(id) {
@@ -2154,15 +2175,58 @@ export const store = {
     persist();
   },
   /** Was gerade da ist. menge darf 0 sein ("nichts mehr da") – das ist etwas anderes als "nicht gezaehlt". */
-  setPrepBestand(id, menge, by) {
+  setPrepBestand(id, menge, by, at = null) {
     const p = this.getPrep(id);
     if (!p) return null;
     const zahl = Math.max(0, Number(menge));
-    if (!Number.isFinite(zahl)) return null;
-    p.bestand = { menge: zahl, at: new Date().toISOString(), by: by || null };
-    p.verlauf = [...(p.verlauf || []), { menge: zahl, at: p.bestand.at, by: by || null }].slice(-30);
+    if (!Number.isFinite(zahl) || menge === null || menge === "") return null;
+    const zeit = at || new Date().toISOString();
+    // Eine ältere Zählung überschreibt keine neuere: kommt eine Handy-Zählung verspätet an, hat am iPad
+    // womöglich schon jemand neu gezählt. Im Verlauf steht sie trotzdem.
+    const neuer = !p.bestand?.at || zeit >= p.bestand.at;
+    if (neuer) p.bestand = { menge: zahl, at: zeit, by: by || null };
+    p.verlauf = [...(p.verlauf || []), { menge: zahl, at: zeit, by: by || null }]
+      .sort((a, b) => (a.at < b.at ? -1 : 1))
+      .slice(-30);
     persist();
     return p;
+  },
+  /** Die heutige (bzw. an dateStr) abgeschlossene Zählung in diesem Bereich, oder null. */
+  zaehlungAbgeschlossen(bereich, dateStr = todayStr()) {
+    return data.bestandAbschluesse.find((a) => a.bereich === bereich && a.date === dateStr) || null;
+  },
+  letzteZaehlung(bereich) {
+    return data.bestandAbschluesse.filter((a) => a.bereich === bereich).sort((a, b) => (a.at < b.at ? -1 : 1)).slice(-1)[0] || null;
+  },
+  getBestandAbschluesse() {
+    return data.bestandAbschluesse;
+  },
+  /** Ist heute in diesem Bereich eine Zählung dran? Ja, wenn eine Standard-Aufgabe damit verknüpft ist,
+   * heute gilt, und die Zählung noch nicht abgeschlossen ist. */
+  zaehlungFaellig(bereich, dateStr = todayStr()) {
+    if (this.zaehlungAbgeschlossen(bereich, dateStr)) return false;
+    return templatesForWeekday(dateStr).some((v) => v.bestandBereich === bereich);
+  },
+  /** Zählung abschließen: vermerken und die verknüpften Aufgaben des Tages abhaken – bei allen, die sie
+   * bekommen haben. Gezählt wird einmal, nicht einmal pro Person. */
+  schliesseZaehlungAb(bereich, by, at = null, dateStr = todayStr()) {
+    const zeit = at || new Date().toISOString();
+    if (!this.zaehlungAbgeschlossen(bereich, dateStr)) {
+      data.bestandAbschluesse.push({ bereich, date: dateStr, by: by || null, at: zeit });
+      data.bestandAbschluesse = data.bestandAbschluesse.slice(-60);
+    }
+    const d = this.getDayByDate(dateStr);
+    let abgehakt = 0;
+    for (const t of d?.tasks || []) {
+      if (t.bestandBereich === bereich && !t.done) {
+        t.done = true;
+        t.doneBy = by || null;
+        t.doneAt = zeit;
+        abgehakt++;
+      }
+    }
+    persist();
+    return abgehakt;
   },
   /** "leer" | "knapp" | "ok" | "unbekannt" – "unbekannt" heisst: seit dem Anlegen nie gezaehlt. */
   prepStatus(p) {
@@ -2369,7 +2433,19 @@ export const store = {
         bereich: v.bereich || "",
         time: v.time || "",
         phase: v.phase || "schicht",
+        bestandBereich: v.bestandBereich || "",
       });
+      // Hat heute schon jemand diesen Bestand fertig gezählt (z.B. am Handy, bevor diese Person kam),
+      // steht die Aufgabe gleich als erledigt da – sonst zählte sie ein zweites Mal.
+      if (v.bestandBereich) {
+        const abschluss = this.zaehlungAbgeschlossen(v.bestandBereich, dateStr);
+        if (abschluss) {
+          const t = d.tasks[d.tasks.length - 1];
+          t.done = true;
+          t.doneBy = abschluss.by || null;
+          t.doneAt = abschluss.at || new Date().toISOString();
+        }
+      }
       d.appliedShiftTemplateIds.push(schluessel);
       neu++;
     }
@@ -2604,6 +2680,7 @@ export const store = {
       preps: (parsed.preps ?? []).map(normalizePrep),
       recipes: (parsed.recipes ?? []).map(normalizeRecipe),
       kuechenNotizen: parsed.kuechenNotizen ?? [],
+      bestandAbschluesse: parsed.bestandAbschluesse ?? [],
     };
     persist();
   },

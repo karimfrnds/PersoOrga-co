@@ -8,6 +8,7 @@ import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOvervie
 import { renderPlanning } from "./planning.js";
 import { renderTasks } from "./tasks.js";
 import { renderBestellung } from "./bestellung.js";
+import { renderBestand } from "./bestand.js";
 import { renderCosts } from "./costs.js";
 import { renderTeam } from "./team.js";
 import { renderForecast } from "./forecast.js";
@@ -15,13 +16,14 @@ import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-09-14.1";
+const APP_VERSION = "2026-09-15.1";
 
 const outlet = document.getElementById("outlet");
 
 const TABS = [
   { id: "planning", label: "📅 Schichtplanung" },
   { id: "tasks", label: "📋 Aufgaben" },
+  { id: "bestand", label: "🧮 Bestand" },
   { id: "bestellung", label: "📦 Bestellung" },
   { id: "costs", label: "💰 Kosten" },
   { id: "team", label: "👥 Mitarbeiter" },
@@ -166,6 +168,7 @@ function renderShell() {
   const onChanged = () => loadAndRender();
   let view;
   if (activeTab === "tasks") view = renderTasks(state, { onChanged });
+  else if (activeTab === "bestand") view = renderBestand(state, { onChanged });
   else if (activeTab === "bestellung") view = renderBestellung(state, { onChanged });
   else if (activeTab === "costs") view = renderCosts(state);
   else if (activeTab === "team") view = renderTeam(state, { onChanged });

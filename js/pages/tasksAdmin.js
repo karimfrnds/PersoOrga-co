@@ -117,6 +117,7 @@ function renderTasksAdmin() {
     if (v.schicht) teile.push(SCHICHT_LABEL[v.schicht]);
     if (v.bereich) teile.push(v.bereich === "kueche" ? "Küche" : "Service");
     if (v.time) teile.push("ab " + v.time + " Uhr");
+    if (v.bestandBereich) teile.push("🧮 " + (store.BESTAND_BEREICHE.find((b) => b.id === v.bestandBereich)?.label || "") + " zählen");
     return teile.join(" · ");
   }
 
@@ -132,6 +133,7 @@ function renderTasksAdmin() {
     const entwurf = {
       text: vorhanden?.text || "",
       phase: vorhanden?.phase || "schicht",
+      bestandBereich: vorhanden?.bestandBereich || "",
       weekdays: [...(vorhanden?.weekdays || [])],
       schicht: vorhanden?.schicht || "",
       bereich: vorhanden?.bereich || "",
@@ -242,6 +244,19 @@ function renderTasksAdmin() {
     box.appendChild(reihe);
     box.appendChild(feld("Ab wann fällig?", zeit, "Leer lassen, wenn es den ganzen Tag über erledigt werden kann. Mit Uhrzeit erscheint sie ab dann auf dem iPad-Bildschirm."));
     box.appendChild(feld("Priorität", prio));
+
+    // "Bar zählen" als Standard-Aufgabe: verknüpft, hakt sie sich ab, sobald jemand die Zählung abschließt,
+    // und am Handy steht an dem Tag "Heute wird gezählt".
+    const bestandSel = document.createElement("select");
+    for (const [wert, label] of [["", "– nein –"], ...store.BESTAND_BEREICHE.map((b) => [b.id, `${b.symbol} ${b.label} zählen`])]) {
+      const o = document.createElement("option");
+      o.value = wert;
+      o.textContent = label;
+      bestandSel.appendChild(o);
+    }
+    bestandSel.value = entwurf.bestandBereich;
+    bestandSel.onchange = () => (entwurf.bestandBereich = bestandSel.value);
+    box.appendChild(feld("Mit Bestand verknüpft", bestandSel, "Dann ist die Aufgabe erledigt, sobald die Zählung abgeschlossen ist – egal ob am iPad oder am Handy."));
 
     const fehler = document.createElement("p");
     fehler.className = "muted small";

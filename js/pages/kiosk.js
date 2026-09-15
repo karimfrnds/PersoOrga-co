@@ -18,7 +18,7 @@ import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
-import { buildKuecheKarte, buildRezepteKarte } from "./kueche.js";
+import { buildBestandKarten } from "./kueche.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -510,13 +510,9 @@ function renderKiosk(navigate) {
     }
     wrap.appendChild(tasksCard);
 
-    // ---- Küche: Vorbereitungen, Hinweise an die nächste Schicht, Rezepte ----
-    // Nur für die Küche, und direkt hier statt auf einer eigenen Seite: das ist die erste Frage nach dem
-    // Einstempeln. Für alle anderen wären es Karten, die nie jemand öffnet.
-    if (emp.role === "kueche") {
-      wrap.appendChild(buildKuecheKarte(emp, { onChange: rerender }));
-      wrap.appendChild(buildRezepteKarte(emp, { onChange: rerender }));
-    }
+    // ---- Bestand (Küche: mit Hinweisen und Rezepten; Bar und Service: der Bar-Bestand) ----
+    // Direkt hier statt auf einer eigenen Seite: das ist die erste Frage nach dem Einstempeln.
+    for (const karte of buildBestandKarten(emp, { onChange: rerender })) wrap.appendChild(karte);
 
     // ---- Deine Schichten (Wochenplan) ----
     wrap.appendChild(buildShiftsCard(emp));

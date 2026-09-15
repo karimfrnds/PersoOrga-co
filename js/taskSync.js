@@ -558,6 +558,7 @@ async function performTaskSync() {
       time: c.time,
       priority: c.priority,
       phase: c.phase,
+      bestandBereich: c.bestandBereich || "",
     };
     if (c.kind === "create") store.addTaskTemplate(felder);
     else if (c.kind === "update") {
@@ -623,6 +624,47 @@ async function performTaskSync() {
   }
   if (newPublicationIds) {
     store.updateTaskInboxConfig({ appliedPublicationIds: [...appliedPublicationIds].slice(-300) });
+  }
+
+  // Bestand: Artikel und Soll vom Laptop, Zählungen vom Handy. Beides einmal anwenden (Merkliste) und die
+  // übernommenen IDs beim Push zurückmelden, damit der Worker sie aus seiner Warteschlange nimmt.
+  const bestandChangesApplied = [];
+  const appliedBestandChangeIds = new Set(cfg.appliedBestandChangeIds || []);
+  for (const c of Array.isArray(remote.bestandChanges) ? remote.bestandChanges : []) {
+    if (!c.id) continue;
+    bestandChangesApplied.push(c.id);
+    if (appliedBestandChangeIds.has(c.id)) continue;
+    const felder = { name: c.name, bereich: c.bereich, einheit: c.einheit, soll: c.soll, notiz: c.notiz, aktiv: c.aktiv !== false };
+    if (c.kind === "create") store.addPrep(felder);
+    else if (c.kind === "update") {
+      if (!store.updatePrep(c.itemId, felder)) syncWarnings.push(`Bestand: "${c.name}" gibt es hier nicht mehr, Änderung verworfen.`);
+    } else if (c.kind === "delete") store.removePrep(c.itemId);
+    appliedBestandChangeIds.add(c.id);
+  }
+  if (bestandChangesApplied.length > 0) {
+    store.updateTaskInboxConfig({ appliedBestandChangeIds: [...appliedBestandChangeIds].slice(-300) });
+  }
+
+  const bestandZaehlungenApplied = [];
+  const appliedBestandZaehlungIds = new Set(cfg.appliedBestandZaehlungIds || []);
+  for (const z of Array.isArray(remote.bestandZaehlungen) ? remote.bestandZaehlungen : []) {
+    if (!z.id) continue;
+    bestandZaehlungenApplied.push(z.id);
+    if (appliedBestandZaehlungIds.has(z.id)) continue;
+    for (const w of Array.isArray(z.werte) ? z.werte : []) {
+      // Eine Zählung für einen Artikel, den es hier nicht (mehr) gibt, wird still übergangen: die
+      // übrigen Zahlen derselben Zählung sollen deshalb nicht verloren gehen.
+      if (store.getPrep(w.itemId)) store.setPrepBestand(w.itemId, w.menge, z.employeeName, z.at);
+    }
+    if (z.abschliessen && (z.bereich === "kueche" || z.bereich === "bar")) {
+      // Das Datum aus dem Zeitpunkt der Zählung, nicht von heute: kommt die Zählung von gestern Abend erst
+      // heute Morgen an, ist die Aufgabe von GESTERN erledigt.
+      store.schliesseZaehlungAb(z.bereich, z.employeeName, z.at, lokalesDatum(z.at));
+    }
+    appliedBestandZaehlungIds.add(z.id);
+  }
+  if (bestandZaehlungenApplied.length > 0) {
+    store.updateTaskInboxConfig({ appliedBestandZaehlungIds: [...appliedBestandZaehlungIds].slice(-500) });
   }
 
   // Verfügbarkeiten, die Mitarbeiter über ihr HANDY eingetragen haben -> lokal übernehmen.
@@ -843,6 +885,23 @@ async function performTaskSync() {
     eventConfig,
     eventSignupsApplied: geradeUebernommen,
     taskTemplates: store.getTaskTemplates(),
+    // Bestand: die Liste ohne Verlauf und Rezept-Verknüpfung – am Handy wird nur gezählt.
+    bestand: store.getPreps(false).map((p) => ({
+      id: p.id,
+      name: p.name,
+      bereich: p.bereich,
+      einheit: p.einheit,
+      soll: p.soll,
+      notiz: p.notiz,
+      aktiv: p.aktiv,
+      sort: p.sort,
+      menge: p.bestand ? p.bestand.menge : null,
+      at: p.bestand ? p.bestand.at : null,
+      by: p.bestand ? p.bestand.by : null,
+    })),
+    bestandZaehlungenApplied,
+    bestandChangesApplied,
+    bestandAbschluesse: store.getBestandAbschluesse(),
   });
 
   store.updateTaskInboxConfig({
@@ -854,6 +913,13 @@ async function performTaskSync() {
     knownRemoteState: pushTasks.map((t) => ({ id: t.id, done: t.done })).slice(-300),
   });
   return { applied, warnings: syncWarnings };
+}
+
+/** Kalendertag eines Zeitstempels in Ortszeit. */
+function lokalesDatum(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  if (Number.isNaN(d.getTime())) return todayStr();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Beim App-Start / im Leerlauf aufrufen: gleicht still im Hintergrund ab, wenn aktiviert. */

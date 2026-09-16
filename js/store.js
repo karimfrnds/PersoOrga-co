@@ -40,6 +40,10 @@ function defaultData() {
       // Eigener Zugang für die Social-Media-Betreuung. Damit kommt sie AUSSCHLIESSLICH an den
       // Social-Bereich – nicht an Löhne, Kennzahlen, Gastdaten oder den Schichtplan. null = kein Zugang.
       socialPin: null,
+      // Zugang für die Store-Managerin: eigener PIN und der Name, unter dem sie angezeigt wird. Sie kommt
+      // an Bestand, Aufgaben, Team und Schichtplan – nicht an Löhne, Umsätze oder Reservierungen.
+      managerPin: null,
+      managerName: "",
       // Aufgaben-Vorlagen, werden beim Anlegen eines Tages nach day.tasks kopiert – aber nur die, die an
       // diesem Wochentag gelten. { id, text, weekdays[], schicht, bereich, time, priority }
       //   weekdays: [] = jeden Tag, sonst 0=Mo..6=So
@@ -608,6 +612,9 @@ export const store = {
   isPinTaken(pin, excludingEmployeeId) {
     const p = String(pin);
     if (data.settings.adminPin === p) return true;
+    // Auch die Zugangs-PINs: beim Anmelden gewinnt der Zugang, und die Person käme mit ihrem eigenen PIN
+    // nie mehr in ihre Mitarbeiter-Ansicht.
+    if (data.settings.socialPin === p || data.settings.managerPin === p) return true;
     return data.employees.some((e) => e.active && e.id !== excludingEmployeeId && e.pin === p);
   },
   /** Findet den aktiven Mitarbeiter zu einem eingegebenen PIN (fürs Ein-/Ausstempeln am Kiosk). */
@@ -662,6 +669,17 @@ export const store = {
     data.settings.socialPin = p || null;
     persist();
     return data.settings.socialPin;
+  },
+  hasManagerPin() {
+    return !!data.settings.managerPin;
+  },
+  /** PIN (und Name) für das Store-Management setzen, oder mit leerem PIN den Zugang entziehen. */
+  setManagerZugang(pin, name) {
+    const p = String(pin || "").trim();
+    data.settings.managerPin = p || null;
+    if (name !== undefined) data.settings.managerName = String(name || "").trim();
+    persist();
+    return data.settings.managerPin;
   },
   setAdminPin(pin) {
     data.settings.adminPin = String(pin);

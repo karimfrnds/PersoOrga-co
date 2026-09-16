@@ -44,7 +44,9 @@ async function buildAuthPinsPayload(cfg, employees) {
   // Bewusst null statt "weglassen", wenn kein PIN gesetzt ist: nur so laesst sich ein einmal vergebener
   // Zugang wieder entziehen.
   const socialPinHash = socialPin ? await hashPin(cfg.workerSecret, String(socialPin)) : null;
-  return { authPins, adminPinHash, socialPinHash };
+  const managerPin = store.getSettings().managerPin;
+  const managerPinHash = managerPin ? await hashPin(cfg.workerSecret, String(managerPin)) : null;
+  return { authPins, adminPinHash, socialPinHash, managerPinHash };
 }
 
 function mondayOf(dateStr) {
@@ -314,6 +316,10 @@ async function performTaskSync() {
   const remoteTasks = Array.isArray(remote.tasks) ? remote.tasks : [];
   const remoteById = new Map(remoteTasks.map((t) => [t.id, t]));
   const knownState = new Map((cfg.knownRemoteState || []).map((k) => [k.id, k.done]));
+  // Zusätzlich der Inhalt, wie er beim letzten Abgleich in der Cloud stand. Nur so lässt sich erkennen, dass
+  // jemand eine Aufgabe am Laptop oder im Store-Management GEÄNDERT hat – vorher wurde das beim nächsten
+  // Hochladen still mit dem alten iPad-Stand überschrieben.
+  const knownSig = new Map((cfg.knownRemoteState || []).filter((k) => k.sig).map((k) => [k.id, k.sig]));
 
   const localRows = store.getTasksFrom(todayStr());
   const localIds = new Set(localRows.map((r) => r.id));
@@ -349,13 +355,13 @@ async function performTaskSync() {
         // Object.assign: ein mitgeschicktes `pin: null` würde den PIN löschen (der Worker kennt ihn
         // nie im Klartext, kann ihn also auch nicht zurückschicken) und ein `festeSchichten: undefined`
         // würde die festen Schichten wegwerfen. Beides darf durch eine Laptop-Änderung nicht passieren.
-        store.updateEmployee(c.employeeId, {
-          name: c.name,
-          role: c.role,
-          hourlyWage: Number(c.hourlyWage) || 0,
-          isMinijob: !!c.isMinijob,
-          minijobLimit: Number(c.minijobLimit) || 556,
-        });
+        const patch = { name: c.name, role: c.role };
+        // Lohnfelder nur, wenn sie mitkommen: die Store-Managerin sieht keine Löhne und schickt deshalb
+        // keine – sonst stünde nach jeder Namensänderung ein Stundenlohn von 0 € da.
+        if (c.hourlyWage !== undefined && c.hourlyWage !== null) patch.hourlyWage = Number(c.hourlyWage) || 0;
+        if (c.isMinijob !== undefined && c.isMinijob !== null) patch.isMinijob = !!c.isMinijob;
+        if (c.minijobLimit !== undefined && c.minijobLimit !== null) patch.minijobLimit = Number(c.minijobLimit) || 556;
+        store.updateEmployee(c.employeeId, patch);
       } else {
         syncWarnings.push(`Mitarbeiter-Änderung "${c.name}": gibt es hier nicht mehr, Änderung verworfen.`);
       }
@@ -791,6 +797,29 @@ async function performTaskSync() {
     }
   }
 
+  // Inhaltlich von außen geändert (Text, Person, Tag, Uhrzeit, Priorität) -> lokal übernehmen. Nur wenn sich
+  // die Cloud seit dem letzten Abgleich verändert hat; eigene Änderungen am iPad bleiben sonst stehen.
+  for (const row of localRows) {
+    const rt = remoteById.get(row.id);
+    const alt = knownSig.get(row.id);
+    if (!rt || !alt || aufgabenSignatur(rt) === alt) continue;
+    const match = rt.assignedToName
+      ? employees.find((e) => e.name.trim().toLowerCase() === String(rt.assignedToName).trim().toLowerCase())
+      : null;
+    let dayId = row.dayId;
+    if (rt.date && rt.date !== row.date) {
+      const verschoben = store.moveTaskToDay(row.dayId, row.id, rt.date);
+      if (verschoben) dayId = store.getDayByDate(rt.date).id;
+    }
+    store.updateTaskFields(dayId, row.id, {
+      text: rt.text || row.text,
+      assignedTo: match ? match.id : null,
+      priority: ["niedrig", "normal", "hoch"].includes(rt.priority) ? rt.priority : row.priority,
+      time: rt.time || "",
+    });
+    applied++;
+  }
+
   // War beim letzten Abgleich noch in der Cloud, jetzt nicht mehr (z.B. per Telegram gelöscht) -> lokal auch entfernen
   for (const id of knownState.keys()) {
     if (remoteById.has(id)) continue;
@@ -907,7 +936,7 @@ async function performTaskSync() {
   }));
   const eventConfig = store.getEventSettings();
 
-  const { authPins, adminPinHash, socialPinHash } = await buildAuthPinsPayload(cfg, employees);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
   const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role }));
@@ -928,6 +957,10 @@ async function performTaskSync() {
     authPins,
     adminPinHash,
     socialPinHash,
+    managerPinHash,
+    managerName: store.getSettings().managerName || "",
+    // Was die Küche der nächsten Schicht mitgibt ("Gurken fehlen") – die Store-Managerin bestellt danach.
+    kuechenNotizen: store.getKuechenNotizen(),
     publishedWeeks: store.getPublishedWeeks(),
     tables,
     reservationSlots,
@@ -964,9 +997,14 @@ async function performTaskSync() {
     // angekommen) – aber sichtbar in den Einstellungen, statt eine nicht zuordenbare Zuweisung/Nachricht/
     // Ablehnung stillschweigend zu verwerfen.
     lastError: syncWarnings.length > 0 ? syncWarnings.join(" · ") : null,
-    knownRemoteState: pushTasks.map((t) => ({ id: t.id, done: t.done })).slice(-300),
+    knownRemoteState: pushTasks.map((t) => ({ id: t.id, done: t.done, sig: aufgabenSignatur(t) })).slice(-300),
   });
   return { applied, warnings: syncWarnings };
+}
+
+/** Was an einer Aufgabe von außen änderbar ist, als ein Vergleichswert. */
+function aufgabenSignatur(t) {
+  return [t.text || "", String(t.assignedToName || "").trim().toLowerCase(), t.date || "", t.time || "", t.priority || "normal"].join("|");
 }
 
 /** Kalendertag eines Zeitstempels in Ortszeit. */

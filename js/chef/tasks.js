@@ -11,7 +11,7 @@
 // alles auf einem Bildschirm.
 // ============================================================================
 import { escapeHtml, todayStr, dateDe } from "../format.js";
-import { taskAction, taskTemplateAction } from "./api.js";
+import { taskAction, taskTemplateAction, managerAufgabeAction } from "./api.js";
 
 const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const SCHICHT_LABEL = { frueh: "Frühschicht", mittel: "Mittelschicht", spaet: "Spätschicht" };
@@ -46,9 +46,86 @@ function renderTasks(state, { onChanged }) {
       geordnet nach Schichtbeginn, während der Schicht und Schichtende. Einzelaufgaben betreffen nur
       einen bestimmten Tag und eine bestimmte Person.</p>
     `;
+    if (state.managerZugang || (state.managerAufgaben || []).length > 0) frag.appendChild(buildFuerManagerin());
     frag.appendChild(buildVorlagen());
     frag.appendChild(buildAufgaben());
     return frag;
+  }
+
+  // ---- Für die Store-Managerin ----
+  // Dinge, die nicht an eine Schicht gehören, sondern an sie: "Freitag Event – mehr Wein bestellen".
+  // Sie sieht sie oben in ihrem Bereich mit "vom Chef" und hakt sie dort ab.
+  function buildFuerManagerin() {
+    const card = document.createElement("section");
+    card.className = "card";
+    const status = document.createElement("p");
+    status.className = "muted small";
+    card.innerHTML = `<h2>📌 Für die Store-Managerin</h2>
+      <p class="muted small">Steht bei ihr im Store-Management oben unter „Für dich heute“ – ab dem Datum, bis sie es abhakt.</p>`;
+
+    const eigene = (state.managerAufgaben || []).filter((a) => a.von === "chef");
+    const offen = eigene.filter((a) => !a.erledigtAm);
+    const erledigt = eigene.filter((a) => a.erledigtAm).slice(-5).reverse();
+    const liste = document.createElement("div");
+    liste.className = "task-list";
+    for (const a of [...offen, ...erledigt]) {
+      const row = document.createElement("div");
+      row.className = "task-row" + (a.erledigtAm ? " done" : "");
+      const wann = a.art === "wiederkehrend" ? "regelmäßig" : a.faellig ? "ab " + dateDe(a.faellig) : "ohne Datum";
+      row.innerHTML = `<div class="task-row-text"><span>${a.prioritaet === "hoch" ? "🔴 " : ""}${escapeHtml(a.text)}</span>
+        <span class="muted small task-row-meta">${escapeHtml(wann)}${a.erledigtAm ? " · ✓ erledigt " + escapeHtml(new Date(a.erledigtAm).toLocaleDateString("de-DE")) : ""}${
+        a.notiz ? " · " + escapeHtml(a.notiz) : ""
+      }</span></div>`;
+      const weg = document.createElement("button");
+      weg.className = "btn btn-link";
+      weg.textContent = "✕";
+      weg.title = "Löschen";
+      weg.onclick = () => {
+        if (!confirm(`„${a.text}“ löschen?`)) return;
+        aktion(() => managerAufgabeAction({ kind: "delete", id: a.id }), status);
+      };
+      row.appendChild(weg);
+      liste.appendChild(row);
+    }
+    if (eigene.length === 0) liste.innerHTML = `<p class="muted small">Noch nichts eingetragen.</p>`;
+    card.appendChild(liste);
+
+    const form = document.createElement("div");
+    form.className = "res-form-row";
+    const text = Object.assign(document.createElement("input"), { type: "text", placeholder: "z.B. Freitag Event – mehr Wein bestellen" });
+    const datum = Object.assign(document.createElement("input"), { type: "date" });
+    const notiz = Object.assign(document.createElement("input"), { type: "text", placeholder: "Details (optional)" });
+    const wichtig = Object.assign(document.createElement("input"), { type: "checkbox" });
+    const feld = (label, node) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(node);
+      return l;
+    };
+    form.append(feld("Was?", text), feld("Ab wann?", datum), feld("Details", notiz));
+    card.appendChild(form);
+    const wichtigZeile = document.createElement("label");
+    wichtigZeile.className = "field-checkbox";
+    wichtigZeile.append(wichtig, document.createTextNode(" Wichtig"));
+    card.appendChild(wichtigZeile);
+    const los = document.createElement("button");
+    los.className = "btn btn-primary";
+    los.textContent = "Eintragen";
+    los.onclick = () => {
+      if (!text.value.trim()) {
+        status.className = "res-warn small";
+        status.textContent = "Bitte eintragen, was zu tun ist.";
+        return;
+      }
+      aktion(
+        () => managerAufgabeAction({ kind: "create", text: text.value.trim(), faellig: datum.value, notiz: notiz.value.trim(), prioritaet: wichtig.checked ? "hoch" : "normal" }),
+        status
+      );
+    };
+    card.appendChild(los);
+    card.appendChild(status);
+    return card;
   }
 
   // ---- Standard-Aufgaben ----

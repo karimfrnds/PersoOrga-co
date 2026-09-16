@@ -16,7 +16,7 @@ import { escapeHtml, todayStr } from "../format.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-09-15.2";
+const APP_VERSION = "2026-09-16.1";
 
 const outlet = document.getElementById("outlet");
 
@@ -147,7 +147,12 @@ function renderShell() {
   social.href = "social.html";
   social.textContent = "📱 Social";
   social.title = "Redaktionsplan, Shootings und Zahlen";
-  actions.append(social, reload, logout);
+  const store = document.createElement("a");
+  store.className = "btn btn-secondary";
+  store.href = "manager.html";
+  store.textContent = "🗂 Store";
+  store.title = "Store-Management – mit deinem Admin-PIN kannst du dort auch hinein";
+  actions.append(store, social, reload, logout);
   head.append(title, actions);
   wrap.appendChild(head);
 

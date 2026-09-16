@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-15.1";
+const WORKER_VERSION = "2026-09-16.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -252,6 +252,13 @@ const EMPTY_STATE = {
   bestandZaehlungen: [],
   bestandChanges: [],
   bestandAbschluesse: [],
+  // Store-Management: PIN-Hash und Anzeigename vom iPad. Ihr eigener Bereich (Notizen, Fotos, Aufgaben)
+  // liegt bewusst NICHT hier, sondern unter eigenen Schlüsseln – der Zustand wird bei jeder Anfrage
+  // gelesen, und Fotos darin würden jede davon langsam machen.
+  managerPinHash: null,
+  managerName: "",
+  // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
+  kuechenNotizen: [],
 };
 
 async function getState(env) {
@@ -311,6 +318,9 @@ async function getState(env) {
       bestandZaehlungen: Array.isArray(parsed.bestandZaehlungen) ? parsed.bestandZaehlungen : [],
       bestandChanges: Array.isArray(parsed.bestandChanges) ? parsed.bestandChanges : [],
       bestandAbschluesse: Array.isArray(parsed.bestandAbschluesse) ? parsed.bestandAbschluesse : [],
+      managerPinHash: typeof parsed.managerPinHash === "string" ? parsed.managerPinHash : null,
+      managerName: typeof parsed.managerName === "string" ? parsed.managerName : "",
+      kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -418,6 +428,15 @@ async function requireSession(request, env, role) {
   // role darf auch eine Liste sein: der Social-Bereich steht dem Chef UND der Betreuung offen.
   const erlaubt = Array.isArray(role) ? role : [role];
   if (!erlaubt.includes(session.role)) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
+  if (session.role === "manager") {
+    // Ein entzogener oder geänderter Zugang gilt sofort – nicht erst, wenn die Sitzung in 30 Tagen abläuft.
+    const state = await getState(env);
+    if (!state.managerPinHash || !sameHash(session.zugang || "", state.managerPinHash)) {
+      await env.TASKS_KV.delete(`session:${token}`);
+      return { error: jsonResponse({ error: "Der Zugang wurde geändert. Bitte neu anmelden." }, 401) };
+    }
+    session.name = state.managerName || session.name;
+  }
   return { session };
 }
 
@@ -1812,6 +1831,11 @@ async function handleAuthLogin(request, env) {
     // Loehne, Kennzahlen, Gastdaten und der Schichtplan sind fuer sie nicht erreichbar – nicht durch
     // eine ausgeblendete Schaltflaeche, sondern weil kein Endpunkt sie ihr gibt.
     session = { role: "social", name: "Social Media" };
+  } else if (state.managerPinHash && sameHash(hash, state.managerPinHash)) {
+    // Store-Management: Bestand, Aufgaben, Team, Schichtplan – aber keine Löhne, Umsätze, Kosten oder
+    // Gastdaten. Der Hash wandert mit in die Sitzung: wird der PIN geändert oder der Zugang entzogen,
+    // endet jede offene Sitzung damit (siehe requireSession).
+    session = { role: "manager", name: state.managerName || "Store-Management", zugang: state.managerPinHash };
   } else {
     const match = (state.authPins || []).find((p) => sameHash(hash, p.pinHash));
     if (match) session = { role: "employee", name: match.name };
@@ -2115,7 +2139,7 @@ async function handleMeBestand(request, env) {
 
 /** Artikel und Soll vom Laptop. Wie überall: Wunsch in die Warteschlange, sofort als Vorschau sichtbar. */
 async function handleAdminBestand(request, env) {
-  const guard = await requireSession(request, env, "boss");
+  const guard = await requireSession(request, env, ["boss", "manager"]);
   if (guard.error) return guard.error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
   let body;
@@ -2148,6 +2172,233 @@ async function handleAdminBestand(request, env) {
     bestand: bestandAenderungVorschau(state.bestand, eintrag),
   });
   return jsonResponse({ ok: true });
+}
+
+// ---------------------------------------------------------------------
+// Store-Management
+//
+// Die Store-Managerin plant den Laden: Bestand und Bestellung, Aufgaben, Team, Schichtplan. Dafür nutzt sie
+// dieselben Wege wie der Chef am Laptop (Warteschlangen an den iPad) – nur die Übersicht ist eine eigene,
+// die Löhne, Umsätze, Kosten und Gastdaten gar nicht erst enthält.
+//
+// Ihr eigener Bereich (Notizen, Fotos, Aufgaben für sich und vom Chef) gehört dagegen nicht dem iPad: den
+// pflegen sie und der Chef von Handy und Laptop aus. Er liegt deshalb hier, unter eigenen Schlüsseln.
+// ---------------------------------------------------------------------
+const MANAGER_KEY = "manager";
+const MANAGER_FOTO_MAX_BYTES = 1_500_000; // nach dem Verkleinern im Browser liegt ein Foto bei ~150–300 KB
+const MANAGER_FOTOS_MAX = 300;
+
+async function getManagerBereich(env) {
+  const raw = await env.TASKS_KV.get(MANAGER_KEY);
+  let b = {};
+  try {
+    b = raw ? JSON.parse(raw) : {};
+  } catch {
+    b = {};
+  }
+  return {
+    notizen: Array.isArray(b.notizen) ? b.notizen : [],
+    aufgaben: Array.isArray(b.aufgaben) ? b.aufgaben : [],
+    fotoIds: Array.isArray(b.fotoIds) ? b.fotoIds : [],
+  };
+}
+async function putManagerBereich(env, b) {
+  await env.TASKS_KV.put(MANAGER_KEY, JSON.stringify(b));
+}
+
+async function handleManagerOverview(request, env) {
+  const guard = await requireSession(request, env, ["boss", "manager"]);
+  if (guard.error) return guard.error;
+  const state = await getState(env);
+  const heute = todayBerlin();
+  const ab = addDaysISO(mondayOf(heute), -7);
+  const bereich = await getManagerBereich(env);
+
+  return jsonResponse({
+    rolle: guard.session.role,
+    name: guard.session.role === "manager" ? guard.session.name : state.managerName || "Store-Management",
+    heute,
+    updatedAt: state.updatedAt,
+    // Bestand und was die Küche meldet – Grundlage fürs Bestellen.
+    bestand: state.bestand || [],
+    bestandAbschluesse: state.bestandAbschluesse || [],
+    kuechenNotizen: state.kuechenNotizen || [],
+    taskTemplates: state.taskTemplates || [],
+    tasks: (state.tasks || []).filter((t) => (t.date || "") >= addDaysISO(heute, -1)),
+    // Team OHNE Lohn, Minijob-Grenze und Lohnnebenkosten. Nur, was man zum Planen braucht.
+    team: (state.employeeDetails || []).map((e) => ({
+      id: e.id,
+      name: e.name,
+      role: e.role,
+      active: e.active !== false,
+      hasPin: !!e.hasPin,
+      festeSchichten: Array.isArray(e.festeSchichten) ? e.festeSchichten : [],
+    })),
+    employees: state.employees || [],
+    employeeRoles: state.employeeRoles || [],
+    shiftSlots: state.shiftSlots,
+    availability: Object.fromEntries(Object.entries(state.availability || {}).filter(([w]) => w >= ab)),
+    publishedWeeks: state.publishedWeeks || [],
+    absenceReports: (state.absenceReports || []).filter((r) => (r.to || r.from) >= addDaysISO(heute, -7)),
+    shiftsInService: state.shiftsInService || [],
+    aufgaben: bereich.aufgaben,
+    // Notizen sind ihr eigener Bereich – der Chef sieht nur die Aufgaben, die er ihr gibt.
+    notizen: guard.session.role === "manager" ? bereich.notizen : [],
+  });
+}
+
+const MANAGER_PRIO = ["normal", "hoch"];
+
+/** Aufgaben für die Store-Managerin: von ihr selbst (Putzroutine) oder vom Chef (Event Freitag, mehr
+ * bestellen). Einmalig mit Datum oder wiederkehrend an Wochentagen. Wiederkehrendes wird pro Tag
+ * abgehakt – "erledigt" heißt bei einer Putzroutine ja nicht "für immer". */
+async function handleManagerAufgabe(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, ["boss", "manager"]);
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete", "toggle"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  const rolle = guard.session.role;
+  const b = await getManagerBereich(env);
+  const jetzt = new Date().toISOString();
+
+  const felder = () => {
+    const wochentage = Array.isArray(body?.wochentage) ? [...new Set(body.wochentage.map(Number).filter((n) => n >= 0 && n <= 6))].sort() : [];
+    const wiederkehrend = body?.art === "wiederkehrend";
+    return {
+      text: String(body?.text || "").trim().slice(0, 200),
+      notiz: String(body?.notiz || "").trim().slice(0, 1000),
+      art: wiederkehrend ? "wiederkehrend" : "einmalig",
+      faellig: !wiederkehrend && /^\d{4}-\d{2}-\d{2}$/.test(body?.faellig || "") ? body.faellig : null,
+      wochentage: wiederkehrend ? wochentage : [],
+      prioritaet: MANAGER_PRIO.includes(body?.prioritaet) ? body.prioritaet : "normal",
+    };
+  };
+
+  if (kind === "create") {
+    const f = felder();
+    if (!f.text) return jsonResponse({ error: "Bitte eintragen, was zu tun ist." }, 400);
+    b.aufgaben.push({ id: crypto.randomUUID(), ...f, von: rolle === "boss" ? "chef" : "manager", erstelltAm: jetzt, erledigtAm: null, erledigtTage: {} });
+  } else {
+    const i = b.aufgaben.findIndex((a) => a.id === body?.id);
+    if (i < 0) return jsonResponse({ error: "Diese Aufgabe gibt es nicht mehr." }, 404);
+    const a = b.aufgaben[i];
+    // Was der Chef ihr gibt, ändert oder löscht nur der Chef. Abhaken darf sie es natürlich.
+    if ((kind === "update" || kind === "delete") && a.von === "chef" && rolle !== "boss") {
+      return jsonResponse({ error: "Diese Aufgabe kommt vom Chef – ändern oder löschen kann nur er." }, 403);
+    }
+    if (kind === "delete") b.aufgaben.splice(i, 1);
+    else if (kind === "update") {
+      const f = felder();
+      if (!f.text) return jsonResponse({ error: "Bitte eintragen, was zu tun ist." }, 400);
+      b.aufgaben[i] = { ...a, ...f };
+    } else {
+      const datum = /^\d{4}-\d{2}-\d{2}$/.test(body?.datum || "") ? body.datum : todayBerlin();
+      if (a.art === "wiederkehrend") {
+        const tage = { ...(a.erledigtTage || {}) };
+        if (tage[datum]) delete tage[datum];
+        else tage[datum] = jetzt;
+        // Nur die letzten 60 Tage behalten – mehr braucht niemand, und die Liste soll nicht wachsen.
+        const grenze = addDaysISO(todayBerlin(), -60);
+        b.aufgaben[i] = { ...a, erledigtTage: Object.fromEntries(Object.entries(tage).filter(([d]) => d >= grenze)) };
+      } else {
+        b.aufgaben[i] = { ...a, erledigtAm: a.erledigtAm ? null : jetzt };
+      }
+    }
+  }
+  await putManagerBereich(env, b);
+  return jsonResponse({ ok: true, aufgaben: b.aufgaben });
+}
+
+/** Notizen – nur für sie selbst. Fotos hängen per ID daran und werden beim Löschen mit weggeräumt. */
+async function handleManagerNotiz(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "manager");
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind;
+  if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
+  const b = await getManagerBereich(env);
+  const jetzt = new Date().toISOString();
+  const bekannteFotos = new Set(b.fotoIds);
+  const felder = () => ({
+    titel: String(body?.titel || "").trim().slice(0, 120),
+    text: String(body?.text || "").slice(0, 5000),
+    // Nur Fotos, die es wirklich gibt – eine fremde oder erfundene ID soll nichts bewirken.
+    fotoIds: (Array.isArray(body?.fotoIds) ? body.fotoIds : []).map(String).filter((id) => bekannteFotos.has(id)).slice(0, 20),
+    angeheftet: !!body?.angeheftet,
+  });
+
+  let weg = [];
+  if (kind === "create") {
+    const f = felder();
+    if (!f.titel && !f.text.trim() && f.fotoIds.length === 0) return jsonResponse({ error: "Die Notiz ist leer." }, 400);
+    b.notizen.push({ id: crypto.randomUUID(), ...f, erstellt: jetzt, geaendert: jetzt });
+  } else {
+    const i = b.notizen.findIndex((n) => n.id === body?.id);
+    if (i < 0) return jsonResponse({ error: "Diese Notiz gibt es nicht mehr." }, 404);
+    if (kind === "delete") {
+      weg = b.notizen[i].fotoIds || [];
+      b.notizen.splice(i, 1);
+    } else {
+      const f = felder();
+      weg = (b.notizen[i].fotoIds || []).filter((id) => !f.fotoIds.includes(id));
+      b.notizen[i] = { ...b.notizen[i], ...f, geaendert: jetzt };
+    }
+  }
+  // Fotos, an denen keine Notiz mehr hängt, verschwinden – auch solche, die hochgeladen wurden, deren Notiz
+  // dann aber nie gespeichert wurde. Sonst füllt sich der Speicher mit Waisen.
+  const nochGebraucht = new Set(b.notizen.flatMap((n) => n.fotoIds || []));
+  for (const id of [...new Set([...weg, ...b.fotoIds])]) {
+    if (nochGebraucht.has(id)) continue;
+    await env.TASKS_KV.delete(`managerfoto:${id}`);
+    b.fotoIds = b.fotoIds.filter((x) => x !== id);
+  }
+  await putManagerBereich(env, b);
+  return jsonResponse({ ok: true, notizen: b.notizen });
+}
+
+/** Fotos: POST legt eines an (als bereits verkleinertes JPEG), GET ?id= liefert es zurück. Ohne eigenen
+ * Dateispeicher im Worker liegt jedes Foto als eigener Eintrag im KV – außerhalb des großen Zustands. */
+async function handleManagerFoto(request, env) {
+  const guard = await requireSession(request, env, "manager");
+  if (guard.error) return guard.error;
+  if (request.method === "GET") {
+    const id = new URL(request.url).searchParams.get("id") || "";
+    const daten = await env.TASKS_KV.get(`managerfoto:${id}`);
+    if (!daten) return jsonResponse({ error: "Foto nicht gefunden." }, 404);
+    return jsonResponse({ id, dataUrl: daten });
+  }
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const dataUrl = String(body?.dataUrl || "");
+  if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return jsonResponse({ error: "Das ist kein Foto." }, 400);
+  if (dataUrl.length > MANAGER_FOTO_MAX_BYTES) return jsonResponse({ error: "Das Foto ist zu groß." }, 413);
+  const b = await getManagerBereich(env);
+  if (b.fotoIds.length >= MANAGER_FOTOS_MAX) {
+    return jsonResponse({ error: `Es sind schon ${MANAGER_FOTOS_MAX} Fotos gespeichert. Bitte erst alte Notizen aufräumen.` }, 400);
+  }
+  const id = crypto.randomUUID();
+  await env.TASKS_KV.put(`managerfoto:${id}`, dataUrl);
+  b.fotoIds.push(id);
+  await putManagerBereich(env, b);
+  return jsonResponse({ ok: true, id });
 }
 
 // ---------------------------------------------------------------------
@@ -2534,8 +2785,9 @@ async function handleSocialConfig(request, env) {
 async function handleAdminOverview(request, env) {
   const guard = await requireSession(request, env, "boss");
   if (guard.error) return guard.error;
-  const { authPins, adminPinHash, conversationHistory, ...safe } = await getState(env);
-  return jsonResponse(safe);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash, conversationHistory, ...safe } = await getState(env);
+  const bereich = await getManagerBereich(env);
+  return jsonResponse({ ...safe, managerZugang: !!managerPinHash, managerAufgaben: bereich.aufgaben });
 }
 
 /** Spiegelt eine Schicht-Entscheidung sofort in state.availability, damit der Chef am Laptop direkt sieht,
@@ -2704,7 +2956,7 @@ function findSlotDefinition(state, employeeName, slotLabel) {
  * Telegram-Bot nutzt – der iPad übernimmt ihn beim nächsten Abgleich und bleibt die maßgebliche Instanz. */
 async function handleAdminShiftDecision(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
+  const guard = await requireSession(request, env, ["boss", "manager"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -2755,7 +3007,7 @@ async function handleAdminShiftDecision(request, env) {
  * Instanz, würde die Freigabe sonst aber beim nächsten Abgleich wieder überschreiben. */
 async function handleAdminPublishWeek(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
+  const guard = await requireSession(request, env, ["boss", "manager"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -3374,7 +3626,7 @@ function stockVorschau(stock, e) {
  * beidseitig abgeglichen, anders als Vorraete oder Rezepte.
  */
 async function handleAdminTask(request, env) {
-  const { session, error } = await requireSession(request, env, "boss");
+  const { session, error } = await requireSession(request, env, ["boss", "manager"]);
   if (error) return error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
 
@@ -3436,7 +3688,7 @@ async function handleAdminTask(request, env) {
  * dasteht, wird die Aenderung zusaetzlich sofort auf der Worker-Kopie nachgebildet.
  */
 async function handleAdminTaskTemplate(request, env) {
-  const { error } = await requireSession(request, env, "boss");
+  const { error } = await requireSession(request, env, ["boss", "manager"]);
   if (error) return error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
 
@@ -3497,7 +3749,7 @@ function vorlagenVorschau(vorlagen, e) {
 
 async function handleAdminEmployee(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
+  const guard = await requireSession(request, env, ["boss", "manager"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -3518,10 +3770,15 @@ async function handleAdminEmployee(request, env) {
     employeeId: String(body?.employeeId || "") || null,
     name: String(body?.name || "").trim(),
     role: body?.role,
-    hourlyWage: Number(body?.hourlyWage) || 0,
-    isMinijob: !!body?.isMinijob,
-    minijobLimit: Number(body?.minijobLimit) || 556,
   };
+  // Lohnfelder setzt nur der Chef. Die Store-Managerin sieht keine Löhne – schickte sie welche mit, stünde
+  // nach jeder Namensänderung 0 € da. Ohne diese Felder lässt der iPad den Lohn unangetastet.
+  if (guard.session.role === "boss") {
+    eintrag.hourlyWage = Number(body?.hourlyWage) || 0;
+    eintrag.isMinijob = !!body?.isMinijob;
+    eintrag.minijobLimit = Number(body?.minijobLimit) || 556;
+  }
+  eintrag.von = guard.session.name;
   const state = await getState(env);
   await patchState(env, { employeeChanges: [...(state.employeeChanges || []), eintrag] });
   return jsonResponse({ ok: true });
@@ -3530,7 +3787,7 @@ async function handleAdminEmployee(request, env) {
 /** Freie Nachricht an eine Person (oder alle) – landet im Postfach der Handy-Ansicht. */
 async function handleAdminMessage(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, "boss");
+  const guard = await requireSession(request, env, ["boss", "manager"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -3547,10 +3804,12 @@ async function handleAdminMessage(request, env) {
   if (empfaenger.length === 0) return jsonResponse({ error: "Kein Empfänger gefunden." }, 400);
 
   let notifs = state.employeeNotifications;
-  for (const name of empfaenger) notifs = withEmployeeNotification({ employeeNotifications: notifs }, name, `💬 ${text}`);
+  // Von der Store-Managerin mit ihrem Namen – sonst hielte jeder die Nachricht für eine vom Chef.
+  const absender = guard.session.role === "manager" ? `${guard.session.name}: ` : "";
+  for (const name of empfaenger) notifs = withEmployeeNotification({ employeeNotifications: notifs }, name, `💬 ${absender}${text}`);
   // Zusätzlich als Pop-up im Kiosk am iPad, damit es auch dort ankommt.
   const kiosk = (Array.isArray(state.employeeMessages) ? state.employeeMessages : []).concat(
-    empfaenger.map((name) => ({ id: crypto.randomUUID(), employeeName: name, text }))
+    empfaenger.map((name) => ({ id: crypto.randomUUID(), employeeName: name, text: absender + text }))
   );
   await patchState(env, { employeeNotifications: notifs, employeeMessages: kiosk });
   return jsonResponse({ ok: true, empfaenger: empfaenger.length });
@@ -4539,6 +4798,10 @@ async function handleState(request, env) {
     // PIN fuer den Social-Bereich. null heisst ausdruecklich "kein Zugang" – deshalb wird auch null
     // uebernommen, sonst liesse sich ein einmal vergebener Zugang nie wieder entziehen.
     if (body.socialPinHash !== undefined) patch.socialPinHash = body.socialPinHash || null;
+    // Genauso für das Store-Management: null entzieht den Zugang.
+    if (body.managerPinHash !== undefined) patch.managerPinHash = body.managerPinHash || null;
+    if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
+    if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
@@ -4914,7 +5177,8 @@ export default {
       url.pathname === "/me" ||
       url.pathname.startsWith("/me/") ||
       url.pathname.startsWith("/admin/") ||
-      url.pathname.startsWith("/social/")
+      url.pathname.startsWith("/social/") ||
+      url.pathname.startsWith("/manager/")
     ) {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
@@ -4924,6 +5188,10 @@ export default {
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
       if (url.pathname === "/admin/bestand") return handleAdminBestand(request, env);
+      if (url.pathname === "/manager/overview") return handleManagerOverview(request, env);
+      if (url.pathname === "/manager/aufgabe") return handleManagerAufgabe(request, env);
+      if (url.pathname === "/manager/notiz") return handleManagerNotiz(request, env);
+      if (url.pathname === "/manager/foto") return handleManagerFoto(request, env);
       if (url.pathname === "/admin/overview") return handleAdminOverview(request, env);
       if (url.pathname === "/admin/shift-decision") return handleAdminShiftDecision(request, env);
       if (url.pathname === "/admin/publish-week") return handleAdminPublishWeek(request, env);

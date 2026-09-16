@@ -29,7 +29,7 @@ function renderSettings() {
 
     const GROUPS = [
       { id: "abrechnung", icon: "💰", label: "Abrechnung", hint: "Trinkgeld-Verteilung, Rundung, Lohnnebenkosten, Auszahlung", build: buildAbrechnungCards },
-      { id: "sicherheit", icon: "🔒", label: "Sicherheit", hint: "Admin-PIN", build: buildSicherheitCards },
+      { id: "sicherheit", icon: "🔒", label: "Sicherheit", hint: "Admin-PIN, Zugänge Social Media und Store-Management", build: buildSicherheitCards },
       { id: "backup", icon: "☁️", label: "Backup & Synchronisation", hint: "GitHub-Backup, Telegram-Aufgaben, manuelle Sicherung", build: buildBackupCards },
       { id: "hinweise", icon: "ℹ️", label: "Hinweise", hint: "Steuer & Recht", build: buildHinweiseCards },
     ];
@@ -256,7 +256,68 @@ function renderSettings() {
     }
     socialCard.appendChild(reihe);
 
-    return [pinCard, socialCard];
+    // --- Zugang für die Store-Managerin ---
+    const managerCard = document.createElement("section");
+    managerCard.className = "card";
+    const mName = store.getSettings().managerName || "";
+    managerCard.innerHTML = `<h2>Zugang Store-Management</h2>
+      <p class="muted small">Eigener PIN für die Store-Managerin. Sie meldet sich damit auf <b>manager.html</b> an –
+      am Handy und am iPad – und kommt an Bestand, Aufgaben, Team, Schichtplan und ihren eigenen Bereich.
+      <b>Nicht</b> an Löhne, Umsätze, Kosten oder Reservierungen. Ihr normaler PIN zum Einstempeln bleibt davon unberührt.</p>`;
+    const mStand = document.createElement("p");
+    mStand.className = store.hasManagerPin() ? "callout" : "muted small";
+    mStand.textContent = store.hasManagerPin() ? `Zugang eingerichtet${mName ? ` für ${mName}` : ""}.` : "Noch kein Zugang eingerichtet.";
+    managerCard.appendChild(mStand);
+    const mReihe = document.createElement("div");
+    mReihe.className = "employee-actions";
+    const mSetzen = document.createElement("button");
+    mSetzen.className = "btn btn-secondary";
+    mSetzen.textContent = store.hasManagerPin() ? "Ändern" : "Zugang einrichten";
+    mSetzen.onclick = async () => {
+      const name = await promptDialog("Wie heißt sie? So steht es oben in ihrer Ansicht und an allem, was sie verschickt.", {
+        title: "Store-Management",
+        defaultValue: mName,
+        okLabel: "Weiter",
+      });
+      if (name === null) return;
+      const pin = await promptDialog(
+        "Vier Ziffern oder mehr – und <b>nicht</b> ihr PIN zum Einstempeln. Damit meldet sie sich auf manager.html an.",
+        { title: "PIN für das Store-Management", type: "number", okLabel: "Speichern" }
+      );
+      if (pin === null) return;
+      const sauber = String(pin).trim();
+      if (sauber.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (sauber === String(store.getSettings().adminPin || "")) {
+        await alertDialog("Das ist dein Admin-PIN. Bitte einen anderen wählen – sonst käme sie überall hin.");
+        return;
+      }
+      if (sauber === String(store.getSettings().socialPin || "") || store.findEmployeeByPin(sauber)) {
+        await alertDialog("Dieser PIN ist schon vergeben (Social-Zugang oder ein Mitarbeiter-PIN). Bitte einen eigenen wählen.");
+        return;
+      }
+      store.setManagerZugang(sauber, name);
+      rerender();
+      await alertDialog("Zugang eingerichtet. Er gilt, sobald sich das iPad das nächste Mal abgeglichen hat (spätestens 90 Sekunden).");
+    };
+    mReihe.appendChild(mSetzen);
+    if (store.hasManagerPin()) {
+      const weg = document.createElement("button");
+      weg.className = "btn btn-link";
+      weg.textContent = "Zugang entziehen";
+      weg.onclick = async () => {
+        if (!(await confirmDialog("Zugang entziehen? Sie kommt danach nicht mehr ins Store-Management.", { danger: true, okLabel: "Entziehen" })))
+          return;
+        store.setManagerZugang("");
+        rerender();
+      };
+      mReihe.appendChild(weg);
+    }
+    managerCard.appendChild(mReihe);
+
+    return [pinCard, socialCard, managerCard];
   }
 
   // ---------------------------------------------------------------------

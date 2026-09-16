@@ -113,6 +113,7 @@ const sendMessage = (body) => request("/admin/message", { method: "POST", body }
 const taskAction = (body) => request("/admin/task", { method: "POST", body });
 const taskTemplateAction = (body) => request("/admin/task-template", { method: "POST", body });
 const bestandAction = (body) => request("/admin/bestand", { method: "POST", body });
+const managerAufgabeAction = (body) => request("/manager/aufgabe", { method: "POST", body });
 
 export {
   getSession,
@@ -129,6 +130,7 @@ export {
   taskAction,
   taskTemplateAction,
   bestandAction,
+  managerAufgabeAction,
   employeeAction,
   sendMessage,
 };

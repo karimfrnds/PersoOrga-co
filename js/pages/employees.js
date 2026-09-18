@@ -43,6 +43,7 @@ function renderEmployees() {
         <b>${escapeHtml(emp.name)}</b>
         <span class="muted small">${ROLE_LABEL[emp.role]} · ${euro(emp.hourlyWage)}/Std.${emp.isMinijob ? ` · Minijob (Grenze ${euro(emp.minijobLimit)}/Monat)` : ""}</span>
         <span class="muted small">PIN: ${emp.pin ? escapeHtml(emp.pin) : "– nicht vergeben –"}</span>
+        ${emp.istStoreManagerin ? `<span class="muted small">🗂 Store-Managerin – zählt alle Bereiche</span>` : ""}
         ${(emp.festeSchichten || []).length > 0 ? `<span class="muted small">🔒 Fest: ${escapeHtml(festeSchichtenText(emp))}</span>` : ""}
       </div>
     `;
@@ -175,6 +176,7 @@ function renderEmployees() {
         <label class="field" id="f-limit-wrap" style="display:${emp?.isMinijob ? "block" : "none"}">
           <span>Minijob-Grenze pro Monat (€)</span><input type="number" step="1" min="0" id="f-limit" value="${emp ? emp.minijobLimit : 556}" />
         </label>
+        <label class="field-checkbox"><input type="checkbox" id="f-store" ${emp?.istStoreManagerin ? "checked" : ""} /> Store-Managerin (sieht beim Zählen Küche, Bar und Divers)</label>
         <div class="field">
           <span>Feste Schichten</span>
           <p class="muted small">Wer immer dieselben Tage arbeitet, trägt sich nicht jede Woche neu ein –
@@ -211,7 +213,9 @@ function renderEmployees() {
         keine.value = "";
         keine.textContent = "– keine feste Schicht –";
         sel.appendChild(keine);
-        for (const sl of slots) {
+        // Nur Schichten, die es an diesem Wochentag gibt: eine feste Mittelschicht für Montag würde
+        // stillschweigend nie gesetzt, weil es sie montags nicht mehr gibt.
+        for (const sl of slots.filter((x) => !x.allowedWeekdays || x.allowedWeekdays.includes(wd))) {
           const o = document.createElement("option");
           o.value = sl.id;
           // Der Wochentag kann eigene Zeiten haben; hier steht bewusst die Grunddefinition, weil eine
@@ -220,7 +224,7 @@ function renderEmployees() {
           sel.appendChild(o);
         }
         const gewaehlt = festEntwurf.get(wd) || "";
-        sel.value = slots.some((sl) => sl.id === gewaehlt) ? gewaehlt : "";
+        sel.value = [...sel.options].some((o) => o.value === gewaehlt) ? gewaehlt : "";
         if (sel.value !== gewaehlt) festEntwurf.delete(wd);
         sel.onchange = () => {
           if (sel.value) festEntwurf.set(wd, sel.value);
@@ -231,6 +235,15 @@ function renderEmployees() {
       }
     }
     rolleSel.onchange = zeichneFest;
+    // Die Store-Managerin arbeitet Mo–Fr in ihrer eigenen Schicht. Beim Setzen des Hakens werden diese Tage
+    // vorbelegt – aber nur, wo noch nichts steht, und sichtbar, damit man es vor dem Speichern sieht.
+    overlay.querySelector("#f-store").onchange = (e) => {
+      if (!e.target.checked) return;
+      const storeSlot = store.getShiftSlotsForRole(rolleSel.value).find((sl) => sl.nurFest);
+      if (!storeSlot) return;
+      for (let wd = 0; wd <= 4; wd++) if (!festEntwurf.has(wd)) festEntwurf.set(wd, storeSlot.id);
+      zeichneFest();
+    };
     zeichneFest();
     overlay.querySelector("#f-cancel").onclick = () => overlay.remove();
     overlay.querySelector("#f-save").onclick = async () => {
@@ -255,6 +268,7 @@ function renderEmployees() {
         pin: pinRaw || null,
         isMinijob: overlay.querySelector("#f-minijob").checked,
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
+        istStoreManagerin: overlay.querySelector("#f-store").checked,
       };
       const feste = [...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId }));
       if (isEdit) {

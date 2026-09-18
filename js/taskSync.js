@@ -716,7 +716,7 @@ async function performTaskSync() {
       // übrigen Zahlen derselben Zählung sollen deshalb nicht verloren gehen.
       if (store.getPrep(w.itemId)) store.setPrepBestand(w.itemId, w.menge, z.employeeName, z.at);
     }
-    if (z.abschliessen && (z.bereich === "kueche" || z.bereich === "bar")) {
+    if (z.abschliessen && store.BESTAND_BEREICHE.some((b) => b.id === z.bereich)) {
       // Das Datum aus dem Zeitpunkt der Zählung, nicht von heute: kommt die Zählung von gestern Abend erst
       // heute Morgen an, ist die Aufgabe von GESTERN erledigt.
       store.schliesseZaehlungAb(z.bereich, z.employeeName, z.at, lokalesDatum(z.at));
@@ -939,7 +939,9 @@ async function performTaskSync() {
   const { authPins, adminPinHash, socialPinHash, managerPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
-  const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role }));
+  // alleBestaende: die Store-Managerin zählt Küche, Bar und Divers – der Worker muss das wissen, sonst
+  // zeigt ihr Handy nur den Bestand ihrer Rolle.
+  const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role, ...(e.istStoreManagerin ? { alleBestaende: true } : {}) }));
   const shiftSlots = store.getSettings().shiftSlots;
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),

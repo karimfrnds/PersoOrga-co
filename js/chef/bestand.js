@@ -11,6 +11,7 @@ import { bestandAction } from "./api.js";
 const BEREICHE = [
   { id: "kueche", label: "Küche", symbol: "🍳", wer: "Küchen-Team" },
   { id: "bar", label: "Bar", symbol: "🍸", wer: "Bar und Service" },
+  { id: "divers", label: "Divers", symbol: "🧺", wer: "Store-Managerin" },
 ];
 // Muss zu PREP_EINHEITEN in js/store.js passen.
 const EINHEITEN = ["Stück", "Flaschen", "Packungen", "Kisten", "Liter", "kg", "g", "Behälter", "Schale", "Blech", "Beutel", "Portionen"];
@@ -44,7 +45,8 @@ function renderBestand(state, { onChanged }) {
     frag.innerHTML = `
       <h1>🧮 Bestand</h1>
       <p class="muted">Du legst fest, welche Artikel gezählt werden und was mindestens da sein soll. Gezählt
-      wird am Handy und im persönlichen Fenster am iPad – <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service.</p>`;
+      wird am Handy und im persönlichen Fenster am iPad – <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service,
+      <b>Divers</b> von der Store-Managerin (sie sieht alle drei).</p>`;
 
     const vorlagen = (state.taskTemplates || []).filter((t) => t.bestandBereich);
     const tipp = document.createElement("p");

@@ -74,9 +74,9 @@ function renderHeute(daten, { neuLaden, wechsle, rolle }) {
     }
     for (const n of kueche.slice(0, 3)) k2.appendChild(text("p", "small", `🍳 ${n.text} – ${n.von || "?"}`));
   }
-  for (const b of ["kueche", "bar"]) {
+  for (const [b, label] of [["kueche", "Küche"], ["bar", "Bar"], ["divers", "Divers"]]) {
     const letzte = (daten.bestandAbschluesse || []).filter((x) => x.bereich === b).slice(-1)[0];
-    if (letzte && letzte.date === heute) k2.appendChild(text("p", "muted small", `✓ ${b === "bar" ? "Bar" : "Küche"} heute gezählt von ${letzte.by || "?"}`));
+    if (letzte && letzte.date === heute) k2.appendChild(text("p", "muted small", `✓ ${label} heute gezählt von ${letzte.by || "?"}`));
   }
   wrap.appendChild(k2);
 

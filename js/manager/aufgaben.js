@@ -219,7 +219,7 @@ function beschreibe(v) {
   if (v.schicht) teile.push(SCHICHTEN.find((s) => s[0] === v.schicht)?.[1]);
   if (v.bereich) teile.push(v.bereich === "kueche" ? "Küche" : "Service");
   if (v.time) teile.push(`ab ${v.time}`);
-  if (v.bestandBereich) teile.push(`🧮 ${v.bestandBereich === "bar" ? "Bar" : "Küche"} zählen`);
+  if (v.bestandBereich) teile.push(`🧮 ${{ bar: "Bar", kueche: "Küche", divers: "Divers" }[v.bestandBereich] || ""} zählen`);
   return teile.filter(Boolean).join(" · ");
 }
 
@@ -239,6 +239,7 @@ function vorlageBlatt(v, neuLaden) {
         ["", "– nein –"],
         ["kueche", "🍳 Küche zählen"],
         ["bar", "🍸 Bar zählen"],
+        ["divers", "🧺 Divers zählen"],
       ],
       v?.bestandBereich || ""
     );

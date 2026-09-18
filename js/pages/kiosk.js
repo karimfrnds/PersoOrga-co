@@ -727,7 +727,9 @@ function renderKiosk(navigate) {
     list.className = "avail-list";
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
-      const dayDefSlots = store.getShiftSlotsForRole(emp.role, date); // an diesem Wochentag angebotene Schichten
+      // An diesem Wochentag angebotene Schichten – ohne die, die nur als feste Schicht vergeben werden
+      // (Store-Management): die kann sich niemand selbst aussuchen.
+      const dayDefSlots = store.getShiftSlotsForRole(emp.role, date).filter((s) => !s.nurFest);
       const dayObj = store.getDayByDate(date);
       const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
       const draftSelected = new Set(entry?.slotIds || []);

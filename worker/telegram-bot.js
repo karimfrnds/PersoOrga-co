@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-16.1";
+const WORKER_VERSION = "2026-09-18.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -134,6 +134,11 @@ const KNOWN_SLOT_LABELS = new Set(["Früh1", "Früh2", "Mittel", "Spät1", "Spä
 /** Gültige Schicht-Namen: bevorzugt die vom iPad gelieferten Definitionen, damit ein Umbenennen der
  * Schichten dort nicht dazu führt, dass hier plötzlich alles abgelehnt wird. Nur solange noch nichts
  * synchronisiert wurde, greift die fest hinterlegte Liste. */
+/** Die aktuellen Schicht-Namen vom iPad, für Hinweise im Chat ("Bar, Service 2, …"). */
+function schichtNamenListe(state) {
+  const namen = [...new Set([...(state?.shiftSlots?.service || []), ...(state?.shiftSlots?.kueche || [])].map((s) => s.label).filter(Boolean))];
+  return namen.length ? namen.join(", ") : "Früh1/Früh2/Mittel/Spät1/Spät2";
+}
 function knownSlotLabels(state) {
   const slots = state?.shiftSlots;
   const aus = [...(slots?.service || []), ...(slots?.kueche || [])].map((s) => normalizeSlotLabelCheck(s.label));
@@ -1886,7 +1891,10 @@ async function handleMe(request, env) {
 
   // Schichten, die für die eigene Rolle angeboten werden (Service und Bar teilen sich einen Plan).
   const meineRolle = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role || null;
-  const meineSchichtarten = state.shiftSlots ? (meineRolle === "kueche" ? state.shiftSlots.kueche : state.shiftSlots.service) || [] : [];
+  // Ohne Schichten, die nur als feste Schicht vergeben werden (Store-Management) – die sucht sich niemand aus.
+  const meineSchichtarten = (state.shiftSlots ? (meineRolle === "kueche" ? state.shiftSlots.kueche : state.shiftSlots.service) || [] : []).filter(
+    (s) => !s.nurFest
+  );
 
   // Welche Schichten im eigenen Konkurrenz-Pool schon FEST an jemand anderen vergeben sind – damit die
   // Person sie gar nicht erst auswählt. Bewusst OHNE Namen: wer die Schicht hat, geht sie nichts an.
@@ -1917,7 +1925,7 @@ async function handleMe(request, env) {
 
   // Bestand: nur die Bereiche, die die eigene Rolle zählt. Mengen sind keine Lohn- oder Gastdaten, aber
   // wer an der Bar steht, braucht die Küchenliste trotzdem nicht auf dem Handy.
-  const bestand = bestandBereicheFuerRolle(meineRolle)
+  const bestand = bestandBereicheFuerPerson(state, name)
     .map((b) => {
       const artikel = (state.bestand || [])
         .filter((a) => a.bereich === b && a.aktiv !== false)
@@ -2050,11 +2058,19 @@ const BESTAND_BEREICHE = {
   kueche: { label: "Küche", rollen: ["kueche"] },
   // Service und Bar teilen sich im Café die Theke – wer im Service steht, füllt auch auf.
   bar: { label: "Bar", rollen: ["bar", "service"] },
+  // Alles, was weder Küche noch Bar ist. Zählt die Store-Managerin.
+  divers: { label: "Divers", rollen: [] },
 };
 const BESTAND_EINHEITEN_MAX = 40;
 
 function bestandBereicheFuerRolle(rolle) {
   return Object.keys(BESTAND_BEREICHE).filter((b) => BESTAND_BEREICHE[b].rollen.includes(rolle));
+}
+/** Welche Bestände zählt diese Person? Die Store-Managerin (vom iPad als alleBestaende markiert) alle. */
+function bestandBereicheFuerPerson(state, name) {
+  const eintrag = (state.employeeRoles || []).find((r) => kleinschreiben(r.name) === kleinschreiben(name));
+  if (eintrag?.alleBestaende) return Object.keys(BESTAND_BEREICHE);
+  return bestandBereicheFuerRolle(eintrag?.role || null);
 }
 
 /** Ist in diesem Bereich heute eine Zählung dran? Ja, wenn eine Standard-Aufgabe mit diesem Bestand
@@ -2109,10 +2125,9 @@ async function handleMeBestand(request, env) {
   }
   const name = guard.session.name;
   const state = await getState(env);
-  const rolle = (state.employeeRoles || []).find((r) => kleinschreiben(r.name) === kleinschreiben(name))?.role || null;
   const bereich = String(body?.bereich || "");
   if (!BESTAND_BEREICHE[bereich]) return jsonResponse({ error: "Unbekannter Bereich." }, 400);
-  if (!bestandBereicheFuerRolle(rolle).includes(bereich)) return jsonResponse({ error: "Diesen Bestand zählt deine Rolle nicht." }, 403);
+  if (!bestandBereicheFuerPerson(state, name).includes(bereich)) return jsonResponse({ error: "Diesen Bestand zählst du nicht." }, 403);
 
   const erlaubteIds = new Set((state.bestand || []).filter((a) => a.bereich === bereich && a.aktiv !== false).map((a) => String(a.id)));
   const werte = [];
@@ -2152,7 +2167,7 @@ async function handleAdminBestand(request, env) {
   if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind !== "delete" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
-  if (kind !== "delete" && !BESTAND_BEREICHE[body?.bereich]) return jsonResponse({ error: "Bitte Küche oder Bar wählen." }, 400);
+  if (kind !== "delete" && !BESTAND_BEREICHE[body?.bereich]) return jsonResponse({ error: "Bitte Küche, Bar oder Divers wählen." }, 400);
 
   const eintrag = {
     id: crypto.randomUUID(),
@@ -4678,7 +4693,7 @@ async function handleTelegram(request, env) {
           replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((s) => s.employeeName).join(", ")}`;
         }
         if (badLabels.length > 0) {
-          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((s) => `${s.employeeName}: „${s.slotLabel}"`).join(", ")}`;
+          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte: ${schichtNamenListe(state)}), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((s) => `${s.employeeName}: „${s.slotLabel}"`).join(", ")}`;
         }
       }
     } else if (result.action === "notify") {
@@ -4733,7 +4748,7 @@ async function handleTelegram(request, env) {
           replyText += `\n\n⚠ Kenne diese Namen nicht als aktive Mitarbeiter, bitte prüfen: ${unresolved.map((r) => r.employeeName).join(", ")}`;
         }
         if (badLabels.length > 0) {
-          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte Früh1/Früh2/Mittel/Spät1/Spät2), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((r) => `${r.employeeName}: „${r.slotLabel}"`).join(", ")}`;
+          replyText += `\n\n⚠ Diese Schicht-Namen erkenne ich nicht (erwarte: ${schichtNamenListe(state)}), kommt so NICHT im System an – bitte korrigieren: ${badLabels.map((r) => `${r.employeeName}: „${r.slotLabel}"`).join(", ")}`;
         }
       }
     } else if (result.action === "stock_list") {

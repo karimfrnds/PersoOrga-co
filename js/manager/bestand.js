@@ -12,6 +12,7 @@ import { el, text, knopf, feld, eingabe, auswahl, haken, blatt, toast, ausfuehre
 const BEREICHE = [
   { id: "kueche", label: "Küche", symbol: "🍳" },
   { id: "bar", label: "Bar", symbol: "🍸" },
+  { id: "divers", label: "Divers", symbol: "🧺" },
 ];
 const EINHEITEN = ["Stück", "Flaschen", "Packungen", "Kisten", "Liter", "kg", "g", "Behälter", "Schale", "Blech", "Beutel", "Portionen"];
 
@@ -168,7 +169,7 @@ function artikelBlatt(vorhanden, bereich, neuLaden) {
     const reihe = el("div", "mg-reihe");
     reihe.append(feld("Soll", soll), feld("Einheit", einheit));
     box.appendChild(reihe);
-    box.appendChild(feld("Wer zählt?", wo, "Küche: Küchen-Team · Bar: Bar und Service"));
+    box.appendChild(feld("Wer zählt?", wo, "Küche: Küchen-Team · Bar: Bar und Service · Divers: du. Du siehst alle drei."));
     box.appendChild(feld("Notiz", notiz));
     box.appendChild(aktiv.zeile);
     if (vorhanden && String(vorhanden.id).startsWith("vorlaeufig-")) {

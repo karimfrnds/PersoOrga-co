@@ -126,10 +126,11 @@ function zahlText(n) {
 // Die Karten für eine Person – je nach Rolle
 // =====================================================================
 /** Küche: Hinweise an die nächste Schicht, Bestand, Rezepte. Bar und Service: der Bar-Bestand – aber nur,
- * wenn der Chef dort überhaupt Artikel angelegt hat; eine leere Karte wäre nur Rauschen. */
+ * wenn dort überhaupt Artikel angelegt sind; eine leere Karte wäre nur Rauschen. Die Store-Managerin sieht
+ * alle Bereiche: Küche, Bar und Divers. */
 function buildBestandKarten(emp, { onChange }) {
   const karten = [];
-  for (const b of store.bestandBereicheFuerRolle(emp.role)) {
+  for (const b of store.bestandBereicheFuer(emp)) {
     if (b.id === "kueche") {
       karten.push(buildKuecheKarte(emp, { onChange }));
       karten.push(buildRezepteKarte(emp, { onChange }));
@@ -458,7 +459,7 @@ function openPrepForm(vorhanden, { onChange, bereich = "kueche" } = {}) {
 
   box.appendChild(feld("Artikel", name));
   const reihe0 = el("div", "res-form-row");
-  reihe0.append(feld("Wer zählt?", bereichSel, "Küche: Küchen-Team. Bar: Bar und Service."));
+  reihe0.append(feld("Wer zählt?", bereichSel, "Küche: Küchen-Team · Bar: Bar und Service · Divers: Store-Managerin. Die Store-Managerin sieht alle drei."));
   box.appendChild(reihe0);
   const reihe = el("div", "res-form-row");
   reihe.append(feld("Soll (mindestens)", soll), feld("Einheit", einheit));

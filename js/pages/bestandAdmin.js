@@ -24,7 +24,8 @@ function renderBestandAdmin() {
     frag.innerHTML = `
       <h1>Soll-Bestand</h1>
       <p class="muted">Welche Artikel gezählt werden und was mindestens da sein soll. Gezählt wird im
-      persönlichen Fenster am iPad und am Handy: <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service.</p>
+      persönlichen Fenster am iPad und am Handy: <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service,
+      <b>Divers</b> von der Store-Managerin – sie sieht alle drei.</p>
       <p class="muted small">Einen festen Zähltag legst du unter <b>Aufgaben</b> an: Standard-Aufgabe, z.B.
       „Bar zählen“ für Dienstag, und bei „Mit Bestand verknüpft“ die Bar wählen. Dann steht am Dienstag
       „Heute wird gezählt“ – und die Aufgabe hakt sich ab, sobald jemand die Zählung abschließt.</p>`;

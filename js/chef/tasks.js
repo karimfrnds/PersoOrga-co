@@ -162,7 +162,7 @@ function renderTasks(state, { onChanged }) {
           tbody.appendChild(kopfZeile);
         }
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td><b>${escapeHtml(v.text)}</b>${v.bestandBereich ? ` <span class="badge badge-orange">🧮 ${v.bestandBereich === "bar" ? "Bar" : "Küche"}</span>` : ""}</td>
+        tr.innerHTML = `<td><b>${escapeHtml(v.text)}</b>${v.bestandBereich ? ` <span class="badge badge-orange">🧮 ${{ bar: "Bar", kueche: "Küche", divers: "Divers" }[v.bestandBereich] || ""}</span>` : ""}</td>
           <td>${v.weekdays && v.weekdays.length > 0 ? v.weekdays.map((w) => WOCHENTAGE_KURZ[w]).join(", ") : "<span class='muted'>jeden Tag</span>"}</td>
           <td>${v.schicht ? escapeHtml(SCHICHT_LABEL[v.schicht]) : "<span class='muted'>alle</span>"}</td>
           <td>${v.bereich ? (v.bereich === "kueche" ? "Küche" : "Service") : "<span class='muted'>alle</span>"}</td>
@@ -314,7 +314,7 @@ function renderTasks(state, { onChanged }) {
     );
     box.appendChild(reihe);
     const bestandSel = auswahl(
-      [["", "– nein –"], ["kueche", "🍳 Küche zählen"], ["bar", "🍸 Bar zählen"]],
+      [["", "– nein –"], ["kueche", "🍳 Küche zählen"], ["bar", "🍸 Bar zählen"], ["divers", "🧺 Divers zählen"]],
       entwurf.bestandBereich
     );
     bestandSel.onchange = () => (entwurf.bestandBereich = bestandSel.value);

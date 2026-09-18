@@ -100,9 +100,14 @@ function defaultData() {
       // weekdayOverrides: abweichende Zeiten an einzelnen Wochentagen (0=Mo).
       shiftSlots: {
         service: [
-          { id: "frueh1", label: "Service 1", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
+          // Hieß bis 09/2026 "Service 1". Die ID bleibt, damit alle bisherigen Einträge weiter passen.
+          { id: "frueh1", label: "Bar", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
           { id: "frueh2", label: "Service 2", from: "09:00", to: "17:00", allowedWeekdays: [5, 6], weekdayOverrides: { 6: { to: "17:30" } } }, // nur Sa/So, So bis 17:30
-          { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00" },
+          // Unter der Woche macht das die Store-Managerin (siehe "frueh3") – die Mittelschicht gibt es nur noch am Wochenende.
+          { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00", allowedWeekdays: [5, 6] },
+          // Die Schicht der Store-Managerin, Mo–Fr. nurFest: wird ausschließlich über eine feste Schicht vergeben
+          // und taucht deshalb in keiner Verfügbarkeits-Abfrage auf – sonst könnten andere sie auswählen.
+          { id: "frueh3", label: "Store-Management", from: "08:00", to: "14:00", allowedWeekdays: [0, 1, 2, 3, 4], nurFest: true },
           { id: "spaet1", label: "Service Abend 1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
           { id: "spaet2", label: "Service Abend 2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
         ],
@@ -287,7 +292,7 @@ function normalizeTaskTemplate(v) {
     priority: PRIORITIES.includes(v?.priority) ? v.priority : "normal",
     phase: AUFGABEN_PHASEN.includes(v?.phase) ? v.phase : ratePhase(v?.text),
     // Mit einem Bestand verknüpft: die Aufgabe ist erledigt, sobald dort die Zählung abgeschlossen ist.
-    bestandBereich: v?.bestandBereich === "kueche" || v?.bestandBereich === "bar" ? v.bestandBereich : "",
+    bestandBereich: BESTAND_IDS.includes(v?.bestandBereich) ? v.bestandBereich : "",
   };
 }
 function normalizeTaskTemplates(list) {
@@ -345,7 +350,10 @@ const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Li
 const BESTAND_BEREICHE = [
   { id: "kueche", label: "Küche", symbol: "🍳", rollen: ["kueche"] },
   { id: "bar", label: "Bar", symbol: "🍸", rollen: ["bar", "service"] },
+  // Alles, was weder Küche noch Bar ist (Putzmittel, Servietten, To-go-Becher). Zählt die Store-Managerin.
+  { id: "divers", label: "Divers", symbol: "🧺", rollen: [] },
 ];
+const BESTAND_IDS = BESTAND_BEREICHE.map((b) => b.id);
 
 function normalizePrep(v) {
   const bestand = v?.bestand && Number.isFinite(Number(v.bestand.menge))
@@ -356,7 +364,7 @@ function normalizePrep(v) {
     name: String(v?.name || "").trim(),
     einheit: String(v?.einheit || "Behälter"),
     // Küche oder Bar. Alles aus der Zeit vor der Bar war Küche.
-    bereich: v?.bereich === "bar" ? "bar" : "kueche",
+    bereich: BESTAND_IDS.includes(v?.bereich) ? v.bereich : "kueche",
     soll: Math.max(0, Number(v?.soll) || 0),
     notiz: String(v?.notiz || ""),
     rezeptId: v?.rezeptId || null,
@@ -465,6 +473,55 @@ let data = load();
 
 function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+einmaligeMigrationen();
+
+/** Umstellungen, die genau einmal über die vorhandenen Daten laufen müssen. Jede hat einen Namen und wird
+ * danach in settings.migrationen vermerkt – beim nächsten Laden passiert nichts mehr. */
+function einmaligeMigrationen() {
+  const erledigt = new Set(data.settings.migrationen || []);
+  let geaendert = false;
+
+  // 09/2026: Die Service-Mittelschicht gibt es unter der Woche nicht mehr. Wer für einen kommenden
+  // Werktag schon darauf eingeteilt war, stünde sonst weiter in "Deine Schichten", obwohl die Schicht in
+  // keinem Plan mehr auftaucht – und niemand könnte sie dort austragen. Deshalb: austragen und Bescheid
+  // geben. Vergangene Tage bleiben, wie sie waren (das ist Abrechnung).
+  if (!erledigt.has("mitte-werktags-weg")) {
+    const heute = todayStr();
+    for (const d of data.days) {
+      if (d.date < heute || d.status !== "offen" || weekdayIndexOfDate(d.date) > 4) continue;
+      let tagGeaendert = false;
+      for (const a of d.availability || []) {
+        if (roleOf(a.employeeId) !== "service" || !(a.slotIds || []).includes("mittel")) continue;
+        const warFest = a.confirmedSlotId === "mittel";
+        a.slotIds = a.slotIds.filter((id) => id !== "mittel");
+        if (warFest) {
+          a.confirmedSlotId = null;
+          a.bossConfirmed = false;
+          data.notifications.push({
+            id: uid(),
+            employeeId: a.employeeId,
+            text: `ℹ️ Die Mittelschicht unter der Woche gibt es nicht mehr. Deine Schicht am ${dateDe(d.date)} (Service Mitte) entfällt.`,
+            createdAt: new Date().toISOString(),
+            readAt: null,
+          });
+        }
+        tagGeaendert = true;
+      }
+      if (tagGeaendert) {
+        resolveDayAvailability(d);
+        geaendert = true;
+      }
+    }
+    erledigt.add("mitte-werktags-weg");
+    geaendert = true;
+  }
+
+  if (geaendert) {
+    data.settings.migrationen = [...erledigt];
+    persist();
+  }
 }
 
 /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
@@ -596,6 +653,7 @@ export const store = {
       // Wochentage, an denen diese Person immer dieselbe Schicht hat – dann muss sie sich nicht
       // jede Woche neu eintragen.
       festeSchichten: normalizeFesteSchichten(emp.festeSchichten),
+      istStoreManagerin: !!emp.istStoreManagerin,
     };
     data.employees.push(e);
     persist();
@@ -606,6 +664,7 @@ export const store = {
     if (!e) return;
     Object.assign(e, patch);
     if (patch.festeSchichten !== undefined) e.festeSchichten = normalizeFesteSchichten(patch.festeSchichten);
+    if (patch.istStoreManagerin !== undefined) e.istStoreManagerin = !!patch.istStoreManagerin;
     persist();
   },
   /** true, wenn der PIN schon von einem anderen aktiven Mitarbeiter oder dem Admin-PIN benutzt wird. */
@@ -2163,6 +2222,12 @@ export const store = {
   /** Welche Bestände zählt diese Rolle? */
   bestandBereicheFuerRolle(rolle) {
     return BESTAND_BEREICHE.filter((b) => b.rollen.includes(rolle));
+  },
+  /** Welche Bestände zählt diese Person? Die Store-Managerin alle – sie behält den Überblick über
+   * Küche, Bar und Divers. Alle anderen nach ihrer Rolle. */
+  bestandBereicheFuer(emp) {
+    if (emp?.istStoreManagerin) return [...BESTAND_BEREICHE];
+    return this.bestandBereicheFuerRolle(emp?.role);
   },
   getPreps(nurAktive = true, bereich = null) {
     return data.preps

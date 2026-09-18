@@ -17,7 +17,7 @@ import { renderTeam } from "./team.js";
 import { renderPlan } from "./plan.js";
 import { renderMeins } from "./meins.js";
 
-const APP_VERSION = "2026-09-16.1";
+const APP_VERSION = "2026-09-18.1";
 const outlet = document.getElementById("outlet");
 
 const TABS = [

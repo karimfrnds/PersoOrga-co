@@ -31,13 +31,14 @@ const WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "
 
 // Überlebt das Neuzeichnen des Kiosks. Gehört zu genau einer Person: meldet sich jemand anderes an,
 // fängt sie mit einer leeren Eingabe an, statt die halbe Zählung der vorigen zu speichern.
-const zustand = { fuer: null, entwurf: new Map(), suche: "", notizTag: 1 };
+const zustand = { fuer: null, entwurf: new Map(), suche: "", notizTag: 1, offen: new Map() };
 function zustandFuer(emp) {
   if (zustand.fuer !== emp.id) {
     zustand.fuer = emp.id;
     zustand.entwurf = new Map();
     zustand.suche = "";
     zustand.notizTag = 1;
+    zustand.offen = new Map(); // welcher Bestand aufgeklappt ist: bereich -> true/false
   }
   return zustand;
 }
@@ -130,6 +131,28 @@ function zahlText(n) {
  * alle Bereiche: Küche, Bar und Divers. */
 function buildBestandKarten(emp, { onChange }) {
   const karten = [];
+  // Die Store-Managerin: eine Karte "Bestand" mit Küche, Bar und Divers als eigene Klapp-Menüs – drei
+  // offene Listen untereinander wären eine halbe Seite Zahlen, von denen sie meist nur eine braucht.
+  if (emp.istStoreManagerin) {
+    const z = zustandFuer(emp);
+    const card = el("section", "card");
+    card.appendChild(el("h2", null, "📦 Bestand"));
+    const liste = el("div", "group-list");
+    for (const b of store.bestandBereicheFuer(emp)) {
+      liste.appendChild(
+        klappBestand(emp, b, z, onChange, () => {
+          const inhalt = el("div");
+          if (b.id === "kueche") inhalt.appendChild(buildNotizen(emp, z, onChange));
+          inhalt.appendChild(buildBestandAbschnitt(emp, b.id, z, onChange, false));
+          return inhalt;
+        })
+      );
+    }
+    card.appendChild(liste);
+    karten.push(card);
+    karten.push(buildRezepteKarte(emp, { onChange }));
+    return karten;
+  }
   for (const b of store.bestandBereicheFuer(emp)) {
     if (b.id === "kueche") {
       karten.push(buildKuecheKarte(emp, { onChange }));
@@ -138,7 +161,7 @@ function buildBestandKarten(emp, { onChange }) {
       const z = zustandFuer(emp);
       const card = el("section", "card");
       card.appendChild(el("h2", null, `${b.symbol} ${b.label}`));
-      card.appendChild(buildBestandAbschnitt(emp, b.id, z, onChange));
+      card.appendChild(klappBestand(emp, { ...b, label: "Bestand", symbol: "📦" }, z, onChange, () => buildBestandAbschnitt(emp, b.id, z, onChange, false), b.id));
       karten.push(card);
     }
   }
@@ -153,8 +176,52 @@ function buildKuecheKarte(emp, { onChange }) {
   const card = el("section", "card");
   card.appendChild(el("h2", null, "🍳 Küche"));
   card.appendChild(buildNotizen(emp, z, onChange));
-  card.appendChild(buildBestandAbschnitt(emp, "kueche", z, onChange));
+  const klapp = klappBestand(emp, { id: "kueche", label: "Bestand", symbol: "📦" }, z, onChange, () => buildBestandAbschnitt(emp, "kueche", z, onChange, false));
+  klapp.classList.add("kueche-abschnitt");
+  card.appendChild(klapp);
   return card;
+}
+
+/** Ein Bestand als Klapp-Menü. Zugeklappt nimmt er eine Zeile ein und sagt trotzdem, was los ist
+ * ("2 unter Soll", "heute zählen"). Von selbst offen ist er nur, wenn heute gezählt wird oder schon Zahlen
+ * eingetippt sind – sonst ginge eine halbe Zählung beim Zuklappen unter. */
+function klappBestand(emp, b, z, onChange, inhaltBauen, bereichId = b.id) {
+  const preps = store.getPreps(true, bereichId);
+  const faellig = store.zaehlungFaellig(bereichId);
+  const hatEntwurf = preps.some((p) => z.entwurf.has(p.id));
+  const offen = z.offen.has(bereichId) ? z.offen.get(bereichId) : faellig || hatEntwurf;
+  const leer = preps.filter((p) => store.prepStatus(p) === "leer").length;
+  const knapp = preps.filter((p) => store.prepStatus(p) === "knapp").length;
+  const nie = preps.filter((p) => store.prepStatus(p) === "unbekannt").length;
+  // "Alles über Soll" nur, wenn es auch stimmt: nie Gezähltes ist nicht über Soll, sondern unbekannt.
+  const meta = faellig
+    ? "🧮 heute zählen"
+    : preps.length === 0
+      ? "noch keine Artikel"
+      : leer + knapp === 0
+        ? nie > 0
+          ? `${nie} noch nie gezählt`
+          : "✓ alles über Soll"
+        : [`${knapp + leer} unter Soll`, leer ? `${leer} leer` : null, nie ? `${nie} nie gezählt` : null].filter(Boolean).join(" · ");
+
+  const wrap = el("div");
+  const kopf = el("button", "group-header" + (offen ? " open" : ""));
+  kopf.type = "button";
+  kopf.innerHTML = `<span class="group-header-chevron">▶</span><span class="group-header-name"></span><span class="group-header-meta"></span>`;
+  kopf.querySelector(".group-header-name").textContent = `${b.symbol} ${b.label}`;
+  kopf.querySelector(".group-header-meta").textContent = meta + (hatEntwurf ? " · Eingaben offen" : "");
+  if (faellig || leer + knapp > 0) kopf.querySelector(".group-header-meta").classList.add("res-warn");
+  kopf.onclick = () => {
+    z.offen.set(bereichId, !offen);
+    onChange();
+  };
+  wrap.appendChild(kopf);
+  if (offen) {
+    const body = el("div", "group-body");
+    body.appendChild(inhaltBauen());
+    wrap.appendChild(body);
+  }
+  return wrap;
 }
 
 // ---- Hinweise an die nächste Schicht ----
@@ -259,9 +326,9 @@ function buildNotizen(emp, z, onChange) {
 //   ein – und bestätigt nicht nebenbei zwanzig Zahlen, die er gar nicht angesehen hat.
 //   Am Zähltag (Standard-Aufgabe "Bestand zählen"): alles durchgehen und die Zählung ABSCHLIESSEN. Dann
 //   gilt jede Zahl als heute gezählt, und die Aufgabe ist für alle erledigt.
-function buildBestandAbschnitt(emp, bereich, z, onChange) {
+function buildBestandAbschnitt(emp, bereich, z, onChange, mitTitel = true) {
   const wrap = el("div", "kueche-abschnitt");
-  wrap.appendChild(el("p", "muted small res-bereich", "<b>Bestand</b>"));
+  if (mitTitel) wrap.appendChild(el("p", "muted small res-bereich", "<b>Bestand</b>"));
   const preps = store.getPreps(true, bereich);
 
   if (preps.length === 0) {

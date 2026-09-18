@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-18.1";
+const WORKER_VERSION = "2026-09-18.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2314,19 +2314,43 @@ async function handleManagerAufgabe(request, env) {
       if (!f.text) return jsonResponse({ error: "Bitte eintragen, was zu tun ist." }, 400);
       b.aufgaben[i] = { ...a, ...f };
     } else {
-      const datum = /^\d{4}-\d{2}-\d{2}$/.test(body?.datum || "") ? body.datum : todayBerlin();
-      if (a.art === "wiederkehrend") {
-        const tage = { ...(a.erledigtTage || {}) };
-        if (tage[datum]) delete tage[datum];
-        else tage[datum] = jetzt;
-        // Nur die letzten 60 Tage behalten – mehr braucht niemand, und die Liste soll nicht wachsen.
-        const grenze = addDaysISO(todayBerlin(), -60);
-        b.aufgaben[i] = { ...a, erledigtTage: Object.fromEntries(Object.entries(tage).filter(([d]) => d >= grenze)) };
-      } else {
-        b.aufgaben[i] = { ...a, erledigtAm: a.erledigtAm ? null : jetzt };
-      }
+      b.aufgaben[i] = abgehakteManagerAufgabe(a, body?.datum, jetzt);
     }
   }
+  await putManagerBereich(env, b);
+  return jsonResponse({ ok: true, aufgaben: b.aufgaben });
+}
+
+/** Eine Aufgabe der Store-Managerin abhaken oder wieder öffnen. Wiederkehrendes pro Tag. */
+function abgehakteManagerAufgabe(a, datumRoh, jetzt = new Date().toISOString()) {
+  const datum = /^\d{4}-\d{2}-\d{2}$/.test(datumRoh || "") ? datumRoh : todayBerlin();
+  if (a.art === "wiederkehrend") {
+    const tage = { ...(a.erledigtTage || {}) };
+    if (tage[datum]) delete tage[datum];
+    else tage[datum] = jetzt;
+    // Nur die letzten 60 Tage behalten – mehr braucht niemand, und die Liste soll nicht wachsen.
+    const grenze = addDaysISO(todayBerlin(), -60);
+    return { ...a, erledigtTage: Object.fromEntries(Object.entries(tage).filter(([d]) => d >= grenze)) };
+  }
+  return { ...a, erledigtAm: a.erledigtAm ? null : jetzt };
+}
+
+/** Vom iPad: die Store-Managerin hakt in ihrem persönlichen Fenster eine ihrer Aufgaben ab. Mit dem
+ * iPad-Schlüssel, nicht mit ihrer Sitzung – am iPad ist sie über ihren Einstempel-PIN angemeldet. */
+async function handleStateManagerAufgabe(request, env) {
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!env.WEBHOOK_SECRET || token !== env.WEBHOOK_SECRET) return new Response("forbidden", { status: 403, headers: CORS_HEADERS });
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const b = await getManagerBereich(env);
+  const i = b.aufgaben.findIndex((a) => a.id === body?.id);
+  if (i < 0) return jsonResponse({ error: "Diese Aufgabe gibt es nicht mehr." }, 404);
+  b.aufgaben[i] = abgehakteManagerAufgabe(b.aufgaben[i], body?.datum);
   await putManagerBereich(env, b);
   return jsonResponse({ ok: true, aufgaben: b.aufgaben });
 }
@@ -4788,7 +4812,10 @@ async function handleState(request, env) {
 
   if (request.method === "GET") {
     const state = await getState(env);
-    return new Response(JSON.stringify(state), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+    // Die Aufgaben der Store-Managerin liegen außerhalb des Zustands, gehören für das iPad aber dazu: dort
+    // stehen sie in ihrem persönlichen Fenster.
+    const bereich = await getManagerBereich(env);
+    return new Response(JSON.stringify({ ...state, managerAufgaben: bereich.aufgaben }), { headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
   }
   if (request.method === "POST") {
     let body;
@@ -5154,6 +5181,10 @@ export default {
     if (url.pathname === "/state") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       return handleState(request, env);
+    }
+    if (url.pathname === "/state/manager-aufgabe") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return handleStateManagerAufgabe(request, env);
     }
     if (url.pathname === "/note") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });

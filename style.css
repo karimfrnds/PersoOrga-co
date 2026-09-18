@@ -1216,3 +1216,5 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .mg-foto-kachel .mg-foto-klein { width: 84px; height: 84px; cursor: zoom-in; }
 .mg-foto-weg { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--red); color: #fff; font-size: 13px; cursor: pointer; }
 .mg-blatt textarea, .mg-inhalt textarea { font-family: inherit; font-size: 16px; }
+.task-vom-chef { background: var(--orange-light); border-radius: 10px; }
+.klapp-unter { font-size: 16px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--gray-light); }

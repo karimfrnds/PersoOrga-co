@@ -211,6 +211,9 @@ function defaultData() {
     // Abgeschlossene Bestandszählungen: { bereich, date, by, at }. Daran hängt, ob die Standard-Aufgabe
     // "Bestand zählen" heute schon erledigt ist.
     bestandAbschluesse: [],
+    // Aufgaben der Store-Managerin (eigene und vom Chef). Gehören dem Worker – hier nur die Kopie vom
+    // letzten Abgleich, damit sie in ihrem persönlichen Fenster stehen.
+    managerAufgaben: [],
     // Veranstaltungen mit Anmeldung (Bingo-Abend). Bewusst NICHT als Reservierung geführt: hier wird pro
     // Person gezählt und kassiert, der Termin steht fest, und die Tische verteilt man erst am Abend.
     // { id, date, time, price, capacity, note, active, createdAt }
@@ -462,6 +465,7 @@ function load() {
       recipes: (parsed.recipes ?? base.recipes).map(normalizeRecipe),
       kuechenNotizen: parsed.kuechenNotizen ?? base.kuechenNotizen,
       bestandAbschluesse: parsed.bestandAbschluesse ?? base.bestandAbschluesse,
+      managerAufgaben: parsed.managerAufgaben ?? base.managerAufgaben,
     };
   } catch (e) {
     console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
@@ -2282,6 +2286,27 @@ export const store = {
   letzteZaehlung(bereich) {
     return data.bestandAbschluesse.filter((a) => a.bereich === bereich).sort((a, b) => (a.at < b.at ? -1 : 1)).slice(-1)[0] || null;
   },
+  // ---- Aufgaben der Store-Managerin (Kopie aus dem Worker) ----
+  getManagerAufgaben() {
+    return data.managerAufgaben || [];
+  },
+  setManagerAufgaben(liste) {
+    if (!Array.isArray(liste)) return;
+    data.managerAufgaben = liste;
+    persist();
+  },
+  /** Steht die Aufgabe an diesem Tag an – und ist sie dort erledigt? Wiederkehrendes zählt pro Tag,
+   * Einmaliges ab dem Fälligkeitstag, bis es erledigt ist (heute Erledigtes bleibt sichtbar). */
+  managerAufgabeAm(a, datum = todayStr()) {
+    if (a.art === "wiederkehrend") {
+      const gilt = !a.wochentage?.length || a.wochentage.includes(weekdayIndexOfDate(datum));
+      return { gilt, erledigt: !!a.erledigtTage?.[datum] };
+    }
+    const heuteErledigt = a.erledigtAm && localDateOf(a.erledigtAm) === datum;
+    const gilt = (!a.erledigtAm && (!a.faellig || a.faellig <= datum)) || heuteErledigt;
+    return { gilt, erledigt: !!a.erledigtAm, ueberfaellig: !a.erledigtAm && !!a.faellig && a.faellig < datum };
+  },
+
   getBestandAbschluesse() {
     return data.bestandAbschluesse;
   },

@@ -29,6 +29,8 @@ const ABWESENHEIT_ARTEN = [
 // überlebt das Neuladen – schlägt das Senden fehl, soll nichts vom Gezählten verloren sein.
 const bestandEntwurf = new Map();
 let bestandOffen = null; // null = automatisch (offen, wenn heute gezählt wird)
+// Bei mehreren Bereichen (Store-Managerin: Küche, Bar, Divers) ist jeder ein eigenes Klapp-Menü.
+const bereichOffen = new Map();
 // Kurzmeldung, die nach dem Neuladen EINMAL oben erscheint (sonst wäre sie durch das Rerendern sofort weg).
 let flash = null;
 
@@ -256,14 +258,35 @@ function buildBestand() {
   card.appendChild(kopf);
   if (!offen) return card;
 
-  for (const b of bereiche) card.appendChild(buildBestandBereich(b));
+  if (bereiche.length === 1) {
+    card.appendChild(buildBestandBereich(bereiche[0]));
+    return card;
+  }
+  const SYMBOL = { kueche: "🍳", bar: "🍸", divers: "🧺" };
+  for (const b of bereiche) {
+    const hatEntwurf = b.artikel.some((a) => bestandEntwurf.has(a.id));
+    const auf = bereichOffen.has(b.id) ? bereichOffen.get(b.id) : b.faellig || hatEntwurf;
+    const unter = b.artikel.filter((a) => ["leer", "knapp"].includes(bestandStatus(a.menge, a.soll))).length;
+    const k = document.createElement("button");
+    k.className = "klapp-kopf klapp-unter";
+    k.innerHTML = `<span><b></b> <span class="muted small"></span></span><span class="klapp-pfeil">${auf ? "▾" : "▸"}</span>`;
+    k.querySelector("b").textContent = `${SYMBOL[b.id] || "📦"} ${b.label}`;
+    const nie = b.artikel.filter((a) => a.menge === null || a.menge === undefined).length;
+    k.querySelector(".muted").textContent = b.faellig ? "heute zählen" : unter ? `${unter} unter Soll` : nie ? `${nie} noch nie gezählt` : "alles da";
+    k.onclick = () => {
+      bereichOffen.set(b.id, !auf);
+      renderMain();
+    };
+    card.appendChild(k);
+    if (auf) card.appendChild(buildBestandBereich(b, false));
+  }
   return card;
 }
 
-function buildBestandBereich(b) {
+function buildBestandBereich(b, mitTitel = true) {
   const wrap = document.createElement("div");
   wrap.className = "kueche-abschnitt";
-  if ((me.bestand || []).length > 1) {
+  if (mitTitel && (me.bestand || []).length > 1) {
     const h = document.createElement("p");
     h.className = "muted small res-bereich";
     h.innerHTML = `<b>${escapeHtml(b.label)}</b>`;

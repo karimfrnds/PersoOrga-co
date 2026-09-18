@@ -313,6 +313,8 @@ async function performTaskSync() {
   }
 
   const remote = await fetchRemoteState(cfg);
+  // Aufgaben der Store-Managerin: gehören dem Worker, hier nur zum Anzeigen in ihrem Fenster.
+  if (Array.isArray(remote.managerAufgaben)) store.setManagerAufgaben(remote.managerAufgaben);
   const remoteTasks = Array.isArray(remote.tasks) ? remote.tasks : [];
   const remoteById = new Map(remoteTasks.map((t) => [t.id, t]));
   const knownState = new Map((cfg.knownRemoteState || []).map((k) => [k.id, k.done]));
@@ -1009,6 +1011,22 @@ function aufgabenSignatur(t) {
   return [t.text || "", String(t.assignedToName || "").trim().toLowerCase(), t.date || "", t.time || "", t.priority || "normal"].join("|");
 }
 
+/** Die Store-Managerin hakt am iPad eine ihrer Aufgaben ab. Geht sofort an den Worker (dem gehören die
+ * Aufgaben) und übernimmt dessen Stand – so ist es auch in ihrer App sofort abgehakt. */
+async function toggleManagerAufgabe(id, datum) {
+  const cfg = store.getTaskInboxConfig();
+  if (!cfg.enabled || !cfg.workerUrl || !cfg.workerSecret) throw new Error("Der Abgleich ist nicht eingerichtet.");
+  const res = await fetch(workerUrl(cfg, "/state/manager-aufgabe"), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${cfg.workerSecret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ id, datum }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Worker antwortete mit ${res.status}`);
+  store.setManagerAufgaben(data.aufgaben);
+  return data.aufgaben;
+}
+
 /** Kalendertag eines Zeitstempels in Ortszeit. */
 function lokalesDatum(iso) {
   const d = iso ? new Date(iso) : new Date();
@@ -1027,4 +1045,4 @@ async function maybeSyncPendingTasks() {
   }
 }
 
-export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, sendDayClosedReport };
+export { performTaskSync, maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, sendDayClosedReport, toggleManagerAufgabe };

@@ -16,7 +16,7 @@
 import { store, AUFGABEN_PHASEN, PHASE_LABEL } from "../store.js";
 import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
-import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent } from "../taskSync.js";
+import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, toggleManagerAufgabe } from "../taskSync.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { buildBestandKarten } from "./kueche.js";
 import { computeRange } from "../calc.js";
@@ -416,8 +416,16 @@ function renderKiosk(navigate) {
     const andereSchichten = day.tasks.filter((t) => !t.assignedTo && !passt(t));
 
     const meineAlle = [...mine, ...allgemein];
-    const nachPhase = store.aufgabenNachPhase(meineAlle);
+    // Bei der Store-Managerin stehen die Standard-Aufgaben für sich – ausgewiesen und bearbeitbar. Was ihr
+    // sonst zugeteilt wurde, steht darunter getrennt, damit es nicht als "Standard" durchgeht.
+    const istStore = !!emp.istStoreManagerin;
+    const anzeige = istStore ? meineAlle.filter((t) => t.source === "template") : meineAlle;
+    const zugeteilt = istStore ? meineAlle.filter((t) => t.source !== "template") : [];
+    const nachPhase = store.aufgabenNachPhase(anzeige);
     const offenJe = (ph) => nachPhase[ph].filter((t) => !t.done);
+    // Für den Hinweis beim Ausstempeln zählt alles, was offen ist – nicht nur die Standard-Aufgaben.
+    const nachPhaseAlle = store.aufgabenNachPhase(meineAlle);
+    const offenAlleJe = (ph) => nachPhaseAlle[ph].filter((t) => !t.done);
     const faellig = meineAlle.filter((t) => !t.done && t.time && store.istFaellig(t));
 
     // Welcher Abschnitt steht offen?
@@ -434,7 +442,11 @@ function renderKiosk(navigate) {
     const tasksCard = document.createElement("section");
     tasksCard.className = "card";
     const erledigt = meineAlle.filter((t) => t.done).length;
-    tasksCard.innerHTML = `<h2>📋 Deine Aufgaben</h2>
+    tasksCard.innerHTML = istStore
+      ? `<h2>📋 Standard-Aufgaben</h2>
+      <p class="muted small">Was jede Schicht bekommt – ${escapeHtml(SCHICHT_TITEL[meineGruppe] || "heute")}. Mit ✏️ änderst du die
+      Vorlage: gilt ab dem nächsten Einstempeln für alle.</p>`
+      : `<h2>📋 Deine Aufgaben</h2>
       <p class="muted small">${escapeHtml(SCHICHT_TITEL[meineGruppe] || "Heute")}${
         meineAlle.length > 0 ? ` · ${erledigt} von ${meineAlle.length} erledigt` : ""
       }</p>`;
@@ -488,12 +500,20 @@ function renderKiosk(navigate) {
         if (istOffen) {
           const body = document.createElement("div");
           body.className = "group-body";
-          body.appendChild(buildTaskList(day, liste, emp, true));
+          body.appendChild(buildTaskList(day, liste, emp, true, istStore));
           wrapGruppe.appendChild(body);
         }
         gruppen.appendChild(wrapGruppe);
       }
       tasksCard.appendChild(gruppen);
+
+      if (zugeteilt.length > 0) {
+        const kopf = document.createElement("p");
+        kopf.className = "muted small res-bereich";
+        kopf.innerHTML = "<b>Dir heute zugeteilt</b>";
+        tasksCard.appendChild(kopf);
+        tasksCard.appendChild(buildTaskList(day, zugeteilt, emp, true));
+      }
 
       if (andereSchichten.length > 0) {
         const rest = document.createElement("p");
@@ -508,6 +528,8 @@ function renderKiosk(navigate) {
         tasksCard.appendChild(rest);
       }
     }
+    // Ihre eigenen Aufgaben aus der Store-App (und was der Chef ihr dort gibt) stehen darüber, als eigene Karte.
+    if (istStore) wrap.appendChild(buildManagerAufgabenKarte());
     wrap.appendChild(tasksCard);
 
     // ---- Bestand (Küche: mit Hinweisen und Rezepten; Bar und Service: der Bar-Bestand) ----
@@ -572,7 +594,7 @@ function renderKiosk(navigate) {
     // fehlt, und wer wirklich gehen muss, stempelt dann eben gar nicht aus – dann fehlt am Ende die Zeit
     // in der Abrechnung, und das ist schlimmer als eine liegen gebliebene Aufgabe. Stattdessen: ein
     // Hinweis, der beim Namen nennt, welcher Abschnitt noch offen ist.
-    const offeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: offenJe(ph).length })).filter((x) => x.offen > 0);
+    const offeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: offenAlleJe(ph).length })).filter((x) => x.offen > 0);
     const offenGesamt = offeneAbschnitte.reduce((n, x) => n + x.offen, 0);
     const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
     const wouldBeLast = otherOpenShifts.length === 0;
@@ -892,7 +914,7 @@ function renderKiosk(navigate) {
     }
   }
 
-  function buildTaskList(day, tasks, viewerEmp, allowHandoff) {
+  function buildTaskList(day, tasks, viewerEmp, allowHandoff, vorlageBearbeiten = false) {
     const list = document.createElement("div");
     list.className = "task-list";
     const priorityOrder = { hoch: 0, normal: 1, niedrig: 2 };
@@ -952,9 +974,147 @@ function renderKiosk(navigate) {
         };
         row.appendChild(handoffBtn);
       }
+      if (vorlageBearbeiten && task.templateId) {
+        const stift = document.createElement("button");
+        stift.type = "button";
+        stift.className = "btn btn-secondary task-row-handoff";
+        stift.textContent = "✏️";
+        stift.title = "Standard-Aufgabe ändern";
+        stift.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openVorlageBearbeiten(day, task);
+        };
+        row.appendChild(stift);
+      }
       list.appendChild(row);
     }
     return list;
+  }
+
+  /** Die Store-Managerin ändert eine Standard-Aufgabe direkt aus ihrer Liste. Geändert wird die Vorlage
+   * (gilt ab dem nächsten Einstempeln für alle) und ihre eigene Aufgabe von heute gleich mit. */
+  function openVorlageBearbeiten(day, task) {
+    const vorlage = store.getTaskTemplates().find((v) => v.id === task.templateId);
+    if (!vorlage) {
+      alertDialog("Diese Standard-Aufgabe gibt es nicht mehr – sie wurde inzwischen gelöscht.");
+      return;
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const box = document.createElement("div");
+    box.className = "dialog";
+    box.innerHTML = `<h2>Standard-Aufgabe ändern</h2>
+      <p class="muted small">Gilt ab dem nächsten Einstempeln für alle, die sie bekommen. Wochentage, Schicht und Bereich änderst du in der Store-App.</p>`;
+    const feldMit = (label, node) => {
+      const l = document.createElement("label");
+      l.className = "field";
+      l.innerHTML = `<span>${label}</span>`;
+      l.appendChild(node);
+      return l;
+    };
+    const text = document.createElement("input");
+    text.type = "text";
+    text.value = vorlage.text;
+    const phase = document.createElement("select");
+    for (const ph of AUFGABEN_PHASEN) {
+      const o = document.createElement("option");
+      o.value = ph;
+      o.textContent = PHASE_LABEL[ph];
+      phase.appendChild(o);
+    }
+    phase.value = vorlage.phase || "schicht";
+    const zeit = document.createElement("input");
+    zeit.type = "time";
+    zeit.step = 300;
+    zeit.value = vorlage.time || "";
+    box.append(feldMit("Aufgabe", text), feldMit("Wann in der Schicht?", phase), feldMit("Ab wann? (leer = ganztägig)", zeit));
+    const akt = document.createElement("div");
+    akt.className = "dialog-actions";
+    const abbrechen = document.createElement("button");
+    abbrechen.className = "btn btn-secondary";
+    abbrechen.textContent = "Abbrechen";
+    abbrechen.onclick = () => overlay.remove();
+    const speichern = document.createElement("button");
+    speichern.className = "btn btn-primary";
+    speichern.textContent = "Speichern";
+    speichern.onclick = async () => {
+      if (!text.value.trim()) {
+        await alertDialog("Bitte einen Text eintragen.");
+        return;
+      }
+      const felder = { text: text.value.trim(), phase: phase.value, time: zeit.value };
+      store.updateTaskTemplate(vorlage.id, felder);
+      store.updateTaskFields(day.id, task.id, felder);
+      overlay.remove();
+      rerender();
+    };
+    akt.append(abbrechen, speichern);
+    box.appendChild(akt);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    text.focus();
+  }
+
+  /** Karte "Meine Aufgaben" der Store-Managerin: was sie sich in ihrer App anlegt und was der Chef ihr gibt.
+   * Die Aufgaben gehören dem Worker; abgehakt wird deshalb direkt dort, damit es in der App gleich stimmt. */
+  function buildManagerAufgabenKarte() {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>🗂 Meine Aufgaben</h2><p class="muted small">Deine eigenen Aufgaben aus der Store-App – und was Karim dir dort gibt.</p>`;
+    const heute = todayStr();
+    const liste = store
+      .getManagerAufgaben()
+      .map((a) => ({ a, s: store.managerAufgabeAm(a, heute) }))
+      .filter((x) => x.s.gilt)
+      .sort((x, y) => Number(x.s.erledigt) - Number(y.s.erledigt) || Number(y.a.von === "chef") - Number(x.a.von === "chef"));
+    if (liste.length === 0) {
+      const leer = document.createElement("p");
+      leer.className = "muted small";
+      leer.textContent = "Für heute nichts offen.";
+      card.appendChild(leer);
+      return card;
+    }
+    const box = document.createElement("div");
+    box.className = "task-list";
+    for (const { a, s } of liste) {
+      const row = document.createElement("label");
+      row.className = "task-row" + (s.erledigt ? " done" : "") + (a.von === "chef" ? " task-vom-chef" : "");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = s.erledigt;
+      cb.onchange = async () => {
+        cb.disabled = true;
+        try {
+          await toggleManagerAufgabe(a.id, heute);
+          rerender();
+        } catch (e) {
+          cb.checked = !cb.checked;
+          cb.disabled = false;
+          await alertDialog("Konnte nicht gespeichert werden: " + e.message, { title: "Fehler" });
+        }
+      };
+      row.appendChild(cb);
+      const t = document.createElement("div");
+      t.className = "task-row-text";
+      const titel = document.createElement("span");
+      titel.textContent = (a.prioritaet === "hoch" ? "🔴 " : "") + a.text;
+      const meta = document.createElement("span");
+      meta.className = "muted small task-row-meta";
+      meta.textContent = [
+        a.von === "chef" ? "vom Chef" : "eigene Aufgabe",
+        a.art === "wiederkehrend" ? "Routine" : null,
+        s.ueberfaellig ? "überfällig" : null,
+        a.notiz || null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      t.append(titel, meta);
+      row.appendChild(t);
+      box.appendChild(row);
+    }
+    card.appendChild(box);
+    return card;
   }
 
   /** Weitergeben: an WEN und auf WELCHEN TAG.

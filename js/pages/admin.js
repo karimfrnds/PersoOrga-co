@@ -4,11 +4,13 @@
 // ein Schutz gegen versehentliche Änderungen auf einem gemeinsam genutzten Gerät.
 // ============================================================================
 import { store } from "../store.js";
+import { kann } from "../betrieb.js";
 import { renderAdminDays } from "./adminDays.js";
 import { renderEmployees } from "./employees.js";
 import { renderTasksAdmin } from "./tasksAdmin.js";
 import { renderStockAdmin } from "./stockAdmin.js";
 import { renderBestandAdmin } from "./bestandAdmin.js";
+import { renderPopupAdmin } from "./popupAdmin.js";
 import { renderTablesAdmin } from "./tablesAdmin.js";
 import { renderEvents } from "./events.js";
 import { renderShiftPlanningAdmin } from "./shiftPlanningAdmin.js";
@@ -28,13 +30,14 @@ function renderAdmin(navigate) {
   let lockPin = "";
   let lockError = "";
 
-  const TABS = [
+  const ALLE_TABS = [
     { id: "days", label: "Tage", render: () => renderAdminDays(navigate) },
     { id: "employees", label: "Mitarbeiter", render: () => renderEmployees() },
     { id: "tasks", label: "Aufgaben", render: () => renderTasksAdmin() },
     { id: "planning", label: "Schichtplanung", render: () => renderShiftPlanningAdmin() },
     { id: "stock", label: "Vorräte", render: () => renderStockAdmin() },
     { id: "sollbestand", label: "Soll-Bestand", render: () => renderBestandAdmin() },
+    { id: "produkte", label: "Produkte & Schichten", render: () => renderPopupAdmin() },
     { id: "tables", label: "Tische", render: () => renderTablesAdmin() },
     { id: "events", label: "🎱 Bingo", render: () => renderEvents() },
     { id: "hours", label: "Stunden", render: () => renderHours(navigate) },
@@ -42,6 +45,15 @@ function renderAdmin(navigate) {
     { id: "beta", label: "🧪 Beta", render: () => renderBeta(navigate) },
     { id: "settings", label: "Einstellungen", render: () => renderSettings() },
   ];
+  // Was es in diesem Betrieb nicht gibt, steht auch nicht als leerer Tab da.
+  const TABS = ALLE_TABS.filter((t) => {
+    if (t.id === "tables") return kann("tische");
+    if (t.id === "events") return kann("events");
+    if (t.id === "stock") return kann("bestellliste");
+    if (t.id === "produkte" || t.id === "schichten") return kann("verkauf") || kann("schichtenEditierbar");
+    return true;
+  });
+  if (!TABS.some((t) => t.id === activeTab)) activeTab = TABS[0].id;
 
   function rerender() {
     container.innerHTML = "";

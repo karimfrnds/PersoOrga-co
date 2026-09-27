@@ -13,10 +13,12 @@ import { renderCosts } from "./costs.js";
 import { renderTeam } from "./team.js";
 import { renderForecast } from "./forecast.js";
 import { escapeHtml, todayStr } from "../format.js";
+import { betrieb, kann } from "../betrieb.js";
+import { renderVerkauf } from "./verkauf.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-09-18.2";
+const APP_VERSION = "2026-09-27.1";
 
 const outlet = document.getElementById("outlet");
 
@@ -24,10 +26,11 @@ const TABS = [
   { id: "planning", label: "📅 Schichtplanung" },
   { id: "tasks", label: "📋 Aufgaben" },
   { id: "bestand", label: "🧮 Bestand" },
-  { id: "bestellung", label: "📦 Bestellung" },
+  ...(kann("verkauf") ? [{ id: "verkauf", label: "🧁 Verkauf" }] : []),
+  ...(kann("bestellliste") ? [{ id: "bestellung", label: "📦 Bestellung" }] : []),
   { id: "costs", label: "💰 Kosten" },
   { id: "team", label: "👥 Mitarbeiter" },
-  { id: "forecast", label: "📈 Auswertung" },
+  ...(kann("reservierungen") ? [{ id: "forecast", label: "📈 Auswertung" }] : []),
 ];
 let activeTab = "planning";
 let state = null;
@@ -122,7 +125,7 @@ function renderShell() {
   head.className = "chef-head";
   const title = document.createElement("div");
   title.innerHTML =
-    `<b>Chef-Bereich</b> <span class="muted small">· Stand vom letzten iPad-Abgleich${
+    `<b>${escapeHtml(betrieb.kurz)} · Chef</b> <span class="muted small">· Stand vom letzten iPad-Abgleich${
       state?.updatedAt ? `: ${new Date(state.updatedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}` : " – noch keiner"
     }</span>` +
     // Sichtbare Version: Browser halten die Dateien bis zu 10 Minuten fest. Wenn nach einer Änderung
@@ -152,7 +155,7 @@ function renderShell() {
   store.href = "manager.html";
   store.textContent = "🗂 Store";
   store.title = "Store-Management – mit deinem Admin-PIN kannst du dort auch hinein";
-  actions.append(store, social, reload, logout);
+  actions.append(...(kann("storeManagement") ? [store] : []), ...(kann("social") ? [social] : []), reload, logout);
   head.append(title, actions);
   wrap.appendChild(head);
 
@@ -174,6 +177,7 @@ function renderShell() {
   let view;
   if (activeTab === "tasks") view = renderTasks(state, { onChanged });
   else if (activeTab === "bestand") view = renderBestand(state, { onChanged });
+  else if (activeTab === "verkauf") view = renderVerkauf(state, { onChanged });
   else if (activeTab === "bestellung") view = renderBestellung(state, { onChanged });
   else if (activeTab === "costs") view = renderCosts(state);
   else if (activeTab === "team") view = renderTeam(state, { onChanged });

@@ -6,8 +6,10 @@
 // Wege wie beim Chef (Warteschlangen an den iPad).
 // ============================================================================
 
-const LS_SESSION = "cafeapp_manager_session";
-const LS_URL = "cafeapp_manager_workerurl";
+import { speicherSchluessel } from "../betrieb.js";
+
+const LS_SESSION = speicherSchluessel("cafeapp_manager_session");
+const LS_URL = speicherSchluessel("cafeapp_manager_workerurl");
 
 let session = (() => {
   try {

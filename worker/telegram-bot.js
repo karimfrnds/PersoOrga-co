@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-18.2";
+const WORKER_VERSION = "2026-09-27.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -264,6 +264,10 @@ const EMPTY_STATE = {
   managerName: "",
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
+  // Pop-up-Betrieb: Produkte, Verkaufszahlen je Tag und der Backvorschlag vom iPad.
+  produkte: [],
+  verkaufTage: [],
+  backvorschlaege: [],
 };
 
 async function getState(env) {
@@ -326,6 +330,9 @@ async function getState(env) {
       managerPinHash: typeof parsed.managerPinHash === "string" ? parsed.managerPinHash : null,
       managerName: typeof parsed.managerName === "string" ? parsed.managerName : "",
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
+      produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
+      verkaufTage: Array.isArray(parsed.verkaufTage) ? parsed.verkaufTage : [],
+      backvorschlaege: Array.isArray(parsed.backvorschlaege) ? parsed.backvorschlaege : [],
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -4844,6 +4851,9 @@ async function handleState(request, env) {
     if (body.managerPinHash !== undefined) patch.managerPinHash = body.managerPinHash || null;
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
     if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
+    if (Array.isArray(body.produkte)) patch.produkte = body.produkte;
+    if (Array.isArray(body.verkaufTage)) patch.verkaufTage = body.verkaufTage.slice(-120);
+    if (Array.isArray(body.backvorschlaege)) patch.backvorschlaege = body.backvorschlaege;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;

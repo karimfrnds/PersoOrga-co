@@ -10,7 +10,10 @@
 // nächsten Abgleich ab und bleibt maßgeblich.
 // ============================================================================
 
-const LS_KEY = "cafeapp_chef_session";
+import { speicherSchluessel } from "../betrieb.js";
+
+const LS_KEY = speicherSchluessel("cafeapp_chef_session");
+const LS_URL = speicherSchluessel("cafeapp_chef_workerurl");
 
 function loadSession() {
   try {
@@ -28,11 +31,11 @@ function getSession() {
 
 /** Worker-URL wird einmal beim Einrichten hinterlegt und bleibt gespeichert. */
 function getWorkerUrl() {
-  return session?.workerUrl || localStorage.getItem("cafeapp_chef_workerurl") || "";
+  return session?.workerUrl || localStorage.getItem(LS_URL) || "";
 }
 
 function setWorkerUrl(url) {
-  localStorage.setItem("cafeapp_chef_workerurl", url.replace(/\/+$/, ""));
+  localStorage.setItem(LS_URL, url.replace(/\/+$/, ""));
 }
 
 function clearSession() {

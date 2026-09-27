@@ -2,6 +2,7 @@
 // pages/day.js – Tageserfassung: Schichten, Kassenabschluss, Stornos, Berechnung
 // ============================================================================
 import { store } from "../store.js";
+import { kann } from "../betrieb.js";
 import { computeDay, computeHours, ROLE_LABEL } from "../calc.js";
 import { euro, hours, dateDe, escapeHtml } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
@@ -264,6 +265,9 @@ function renderDay(dayId, navigate) {
     }
     frag.appendChild(shiftSection);
 
+    // ---- Verkauf (Pop-up) ----
+    if (kann("verkauf")) frag.appendChild(buildVerkaufSection(day, locked));
+
     // ---- Kassenabschluss ----
     const kbSection = document.createElement("section");
     kbSection.className = "card";
@@ -446,6 +450,126 @@ function renderDay(dayId, navigate) {
     frag.appendChild(deleteBtn);
 
     return frag;
+  }
+
+  /** Was an dem Tag hergestellt, verkauft und übrig geblieben ist.
+   *
+   * Der Umsatz kommt aus den Stückzahlen – eintragen muss man ihn trotzdem selbst (ein Knopf übernimmt
+   * ihn), denn die Kasse ist die Wahrheit, nicht die Schätzung. Und darunter steht die Frage, um die es
+   * abends wirklich geht: wie viel backen wir morgen?
+   */
+  function buildVerkaufSection(day, locked) {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>1b. Verkauf</h2><p class="muted small">Stückzahlen des Tages. „Übrig“ heißt: am Ende nicht verkauft.</p>`;
+    const produkte = store.getProdukte();
+    if (produkte.length === 0) {
+      card.innerHTML += `<p class="muted small">Noch keine Produkte angelegt (Admin → Produkte &amp; Schichten).</p>`;
+      return card;
+    }
+
+    const zahlFeld = (wert, onChange) => {
+      const i = document.createElement("input");
+      i.type = "number";
+      i.min = "0";
+      i.step = "1";
+      i.inputMode = "numeric";
+      i.value = wert === null || wert === undefined ? "" : wert;
+      i.disabled = locked;
+      i.placeholder = "–";
+      i.onchange = () => onChange(i.value);
+      return i;
+    };
+
+    const tabelle = document.createElement("div");
+    tabelle.className = "verkauf-liste";
+    for (const p of produkte) {
+      const v = store.getVerkauf(day.id, p.id);
+      const zeile = document.createElement("div");
+      zeile.className = "verkauf-zeile";
+      const name = document.createElement("div");
+      name.className = "verkauf-name";
+      name.innerHTML = `<b>${escapeHtml(p.name)}</b><span class="muted small">${euro(p.preis)}</span>`;
+      zeile.appendChild(name);
+
+      const felder = document.createElement("div");
+      felder.className = "verkauf-felder";
+      const feld = (label, node) => {
+        const l = document.createElement("label");
+        l.className = "field";
+        l.innerHTML = `<span>${label}</span>`;
+        l.appendChild(node);
+        return l;
+      };
+      if (p.gebacken) {
+        felder.appendChild(
+          feld("Gebacken", zahlFeld(v.gebacken, (wert) => {
+            store.setVerkauf(day.id, p.id, { ...v, gebacken: wert });
+            rerender();
+          }))
+        );
+      }
+      felder.appendChild(
+        feld("Verkauft", zahlFeld(v.verkauft, (wert) => {
+          store.setVerkauf(day.id, p.id, { ...v, verkauft: wert });
+          rerender();
+        }))
+      );
+      if (p.gebacken) {
+        felder.appendChild(
+          feld("Übrig", zahlFeld(v.uebrig, (wert) => {
+            store.setVerkauf(day.id, p.id, { ...v, uebrig: wert });
+            rerender();
+          }))
+        );
+      }
+      zeile.appendChild(felder);
+
+      // Stimmt die Rechnung? Gebacken = verkauft + übrig. Weicht es ab, fehlt etwas oder wurde
+      // verschenkt – das soll auffallen, solange man noch weiss, warum.
+      if (p.gebacken && v.gebacken !== null && v.verkauft !== null && v.uebrig !== null) {
+        const diff = v.gebacken - v.verkauft - v.uebrig;
+        if (diff !== 0) {
+          const hinweis = document.createElement("p");
+          hinweis.className = "muted small";
+          hinweis.textContent = `${Math.abs(diff)} ${Math.abs(diff) === 1 ? "Stück passt" : "Stück passen"} nicht: gebacken ${v.gebacken} = verkauft ${v.verkauft} + übrig ${v.uebrig} ${
+            diff > 0 ? "(fehlen)" : "(zu viel)"
+          }`;
+          zeile.appendChild(hinweis);
+        }
+      }
+      tabelle.appendChild(zeile);
+    }
+    card.appendChild(tabelle);
+
+    const summe = store.verkaufUmsatz(day.id);
+    const zeile = document.createElement("div");
+    zeile.className = "summary-line";
+    zeile.innerHTML = `<span>Umsatz aus den Stückzahlen</span><span><b>${euro(summe)}</b></span>`;
+    card.appendChild(zeile);
+    if (!locked && summe > 0 && Math.abs(summe - (Number(day.kassenabschluss.umsatzGesamt) || 0)) > 0.01) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-secondary";
+      btn.textContent = "Als Umsatz gesamt übernehmen";
+      btn.onclick = () => {
+        store.updateDay(day.id, { kassenabschluss: { ...day.kassenabschluss, umsatzGesamt: Math.round(summe * 100) / 100 } }, "Umsatz aus Verkauf übernommen");
+        rerender();
+      };
+      card.appendChild(btn);
+    }
+
+    // Vorschlag für den nächsten Tag – nur für das, was gebacken wird.
+    for (const p of produkte.filter((x) => x.gebacken)) {
+      const v = store.backvorschlag(p.id);
+      if (!v) continue;
+      const box = document.createElement("div");
+      box.className = "callout";
+      box.innerHTML = `🧁 <b>Morgen backen: ca. ${v.menge} ${escapeHtml(p.name)}</b><br/><span class="muted small">Aus ${v.grundlage} ${
+        v.wochentag ? (v.grundlage === 1 ? "gleichem Wochentag" : "gleichen Wochentagen") : v.grundlage === 1 ? "Tag" : "Tagen"
+      }${v.ausverkauft > 0 ? `, davon ${v.ausverkauft} ausverkauft (deshalb etwas mehr)` : ""}.</span>`;
+      card.appendChild(box);
+    }
+    return card;
   }
 
   function numberField(label, value, disabled, onChange) {

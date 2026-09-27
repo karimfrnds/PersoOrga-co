@@ -8,6 +8,7 @@
 // gerade im Dienst ist – so bleiben beide Seiten in Sync.
 // ============================================================================
 import { store } from "./store.js";
+import { kann } from "./betrieb.js";
 import { todayStr } from "./format.js";
 import { computeDay } from "./calc.js";
 
@@ -993,6 +994,23 @@ async function performTaskSync() {
     bestandZaehlungenApplied,
     bestandChangesApplied,
     bestandAbschluesse: store.getBestandAbschluesse(),
+    // Pop-up: Verkaufszahlen und der Backvorschlag für morgen. Gerechnet wird er auf dem iPad, damit die
+    // Regel an einer Stelle steht und Laptop und iPad nicht verschieden rechnen.
+    ...(kann("verkauf")
+      ? {
+          produkte: store.getProdukte(),
+          verkaufTage: store
+            .getDays()
+            .filter((d) => d.date >= isoDaysAgo(60))
+            .map((d) => ({ date: d.date, umsatz: d.kassenabschluss?.umsatzGesamt || 0, produkte: d.verkauf || [] }))
+            .filter((d) => d.produkte.length > 0),
+          backvorschlaege: store
+            .getProdukte()
+            .filter((p) => p.gebacken)
+            .map((p) => ({ produktId: p.id, ...(store.backvorschlag(p.id) || {}) }))
+            .filter((v) => v.menge),
+        }
+      : {}),
   });
 
   store.updateTaskInboxConfig({

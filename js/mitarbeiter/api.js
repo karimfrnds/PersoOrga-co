@@ -6,8 +6,10 @@
 // könnte man sonst die Löhne aller Kollegen lesen.
 // ============================================================================
 
-const LS_SESSION = "cafeapp_ma_session";
-const LS_URL = "cafeapp_ma_workerurl";
+import { speicherSchluessel } from "../betrieb.js";
+
+const LS_SESSION = speicherSchluessel("cafeapp_ma_session");
+const LS_URL = speicherSchluessel("cafeapp_ma_workerurl");
 
 let session = (() => {
   try {

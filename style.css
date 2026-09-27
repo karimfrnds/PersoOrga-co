@@ -1218,3 +1218,9 @@ input:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px
 .mg-blatt textarea, .mg-inhalt textarea { font-family: inherit; font-size: 16px; }
 .task-vom-chef { background: var(--orange-light); border-radius: 10px; }
 .klapp-unter { font-size: 16px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--gray-light); }
+
+/* Verkauf im Tagesabschluss (Pop-up): pro Produkt eine Zeile mit wenigen Zahlen. */
+.verkauf-liste { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+.verkauf-zeile { border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.verkauf-name { display: flex; flex-direction: column; }
+.verkauf-felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }

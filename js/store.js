@@ -3,9 +3,11 @@
 // ============================================================================
 
 import { todayStr, dateDe } from "./format.js";
+import { betrieb, kann } from "./betrieb.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
 
-const STORAGE_KEY = "cafeapp_v1";
+// Je Betrieb ein eigener Speicher: das Café und der Pop-up-Store teilen sich den Code, aber keine Daten.
+const STORAGE_KEY = betrieb.speicher;
 
 /** Rundet auf 2 Nachkommastellen (Mengen/Beträge), vermeidet Float-Reste wie 0.1+0.2=0.30000000000000004. */
 function round2(n) {
@@ -98,7 +100,9 @@ function defaultData() {
       // "mittel" braucht IMMER eine explizite Chef-Bestätigung, auch wenn sie automatisch fest wird.
       // Namen und Zeiten entsprechen dem Papier-Schichtplan des Cafés.
       // weekdayOverrides: abweichende Zeiten an einzelnen Wochentagen (0=Mo).
-      shiftSlots: {
+      // Im Pop-up sind die Zeiten im Admin änderbar (sie stehen am Anfang nie fest); im Café kommen sie
+      // aus dem Code und werden beim Laden immer neu gesetzt.
+      shiftSlots: betrieb.schichten || {
         service: [
           // Hieß bis 09/2026 "Service 1". Die ID bleibt, damit alle bisherigen Einträge weiter passen.
           { id: "frueh1", label: "Bar", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
@@ -117,6 +121,9 @@ function defaultData() {
           { id: "frueh2", label: "Küche 2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
         ],
       },
+      // Was verkauft wird (nur im Pop-up): { id, name, preis, gebacken }. "gebacken" heisst: davon wird
+      // morgens eine Menge hergestellt, es gibt also Backmenge, Verkauf und Rest.
+      produkte: betrieb.produkte || [],
       githubBackup: {
         enabled: false,
         owner: "", // GitHub-Nutzername/Organisation
@@ -334,6 +341,8 @@ function normalizeDay(d) {
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", schicht: "", bereich: "", time: "", phase: "", ...t })),
     // Wareneinsatz des Tages (Summe der verbrauchten Waren zum Einkaufspreis).
     materialkosten: Number(d.materialkosten) || 0,
+    // Was an dem Tag hergestellt, verkauft und übrig geblieben ist (Pop-up): [{produktId, gebacken, verkauft, uebrig}]
+    verkauf: Array.isArray(d.verkauf) ? d.verkauf : [],
   };
 }
 
@@ -350,7 +359,7 @@ const PREP_EINHEITEN = ["Behälter", "Schale", "Blech", "Beutel", "kg", "g", "Li
 
 /** Wer welchen Bestand zählt. Service und Bar teilen sich im Café die Theke – wer im Service steht,
  * füllt dort auch auf. Muss zu BESTAND_BEREICHE im Worker passen. */
-const BESTAND_BEREICHE = [
+const BESTAND_BEREICHE = betrieb.bestandBereiche || [
   { id: "kueche", label: "Küche", symbol: "🍳", rollen: ["kueche"] },
   { id: "bar", label: "Bar", symbol: "🍸", rollen: ["bar", "service"] },
   // Alles, was weder Küche noch Bar ist (Putzmittel, Servietten, To-go-Becher). Zählt die Store-Managerin.
@@ -424,7 +433,10 @@ function load() {
         taskInbox: { ...base.settings.taskInbox, ...(parsed.settings?.taskInbox ?? {}) },
         reservation: { ...base.settings.reservation, ...(parsed.settings?.reservation ?? {}) },
         event: migrateEventSettings({ ...base.settings.event, ...(parsed.settings?.event ?? {}) }, base.settings.event),
-        shiftSlots: base.settings.shiftSlots, // rein code-gesteuert (keine Bearbeiten-UI) -> immer aktuelle Definition, nie aus localStorage "einfrieren"
+        // Im Café rein code-gesteuert (keine Bearbeiten-UI) -> immer die aktuelle Definition, nie aus
+        // localStorage "einfrieren". Im Pop-up gehören die Zeiten dem Betrieb und werden gespeichert.
+        shiftSlots: kann("schichtenEditierbar") ? parsed.settings?.shiftSlots ?? base.settings.shiftSlots : base.settings.shiftSlots,
+        produkte: Array.isArray(parsed.settings?.produkte) ? parsed.settings.produkte : base.settings.produkte,
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
       notifications: parsed.notifications ?? base.notifications,
@@ -781,6 +793,7 @@ export const store = {
       appliedShiftTemplateIds: [],
       tasks: [],
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
+      verkauf: [],
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
       closedAt: null,
@@ -945,6 +958,37 @@ export const store = {
     if (!dateStr) return all;
     const wd = weekdayIndexOfDate(dateStr);
     return all.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(wd)).map((s) => slotForDate(s, dateStr));
+  },
+  /** Schichten des Betriebs ändern (nur wo sie änderbar sind, also im Pop-up).
+   *
+   * Die ID wird aus der Anfangszeit gebildet (frueh/mittel/spaet + Nummer): daran hängt, zu welcher
+   * Schicht-Gruppe eine Aufgabe gehört. Eine zufällige ID wäre für die Aufgaben-Zuordnung wertlos.
+   */
+  setShiftSlots(liste) {
+    if (!kann("schichtenEditierbar")) return null;
+    const zaehler = { frueh: 0, mittel: 0, spaet: 0 };
+    const sauber = (Array.isArray(liste) ? liste : [])
+      .filter((s) => String(s?.label || "").trim() && /^\d{2}:\d{2}$/.test(s?.from || "") && /^\d{2}:\d{2}$/.test(s?.to || ""))
+      .sort((a, b) => a.from.localeCompare(b.from))
+      .map((s) => {
+        const gruppe = s.from < "11:00" ? "frueh" : s.from < "15:00" ? "mittel" : "spaet";
+        zaehler[gruppe]++;
+        // Eine bestehende Schicht behält ihre ID – sonst verlören alle Einteilungen ihren Bezug.
+        const id = s.id || `${gruppe}${zaehler[gruppe]}`;
+        const wochentage = Array.isArray(s.allowedWeekdays) ? s.allowedWeekdays.map(Number).filter((n) => n >= 0 && n <= 6) : [];
+        return {
+          id,
+          label: String(s.label).trim().slice(0, 40),
+          from: s.from,
+          to: s.to,
+          ...(wochentage.length > 0 && wochentage.length < 7 ? { allowedWeekdays: wochentage } : {}),
+        };
+      });
+    // Doppelte IDs wären ein stiller Datenfehler (zwei Schichten, eine Zuteilung).
+    const gesehen = new Set();
+    data.settings.shiftSlots = { ...data.settings.shiftSlots, service: sauber.filter((s) => !gesehen.has(s.id) && gesehen.add(s.id)) };
+    persist();
+    return data.settings.shiftSlots.service;
   },
   getAvailability(dayId, employeeId) {
     const d = this.getDay(dayId);
@@ -2213,6 +2257,80 @@ export const store = {
     d.stornos = d.stornos.filter((s) => s.id !== stornoId);
     this.logAudit(dayId, "Storno entfernt", stornoId);
     persist();
+  },
+
+  // ---- Verkauf (Pop-up): Backmenge, Verkauf, Rest ----
+  //
+  // Drei Zahlen pro Produkt und Tag. Daraus kommt die Frage heraus, die im Pop-up jeden Abend gestellt
+  // wird: wie viel backen wir morgen? Wer nur den Umsatz kennt, weiss nicht, ob abends nichts mehr da war
+  // (Umsatz verschenkt) oder zwanzig Schnecken in den Müll gingen.
+  getProdukte() {
+    return data.settings.produkte || [];
+  },
+  setProdukte(liste) {
+    data.settings.produkte = (Array.isArray(liste) ? liste : []).map((p) => ({
+      id: p.id || uid(),
+      name: String(p.name || "").trim(),
+      preis: Math.max(0, Number(p.preis) || 0),
+      gebacken: !!p.gebacken,
+    }));
+    persist();
+    return data.settings.produkte;
+  },
+  /** Die Zahlen eines Tages für ein Produkt setzen. Leer gelassene Felder bleiben leer (null), damit
+   * "nicht eingetragen" und "null Stück" unterscheidbar bleiben. */
+  setVerkauf(dayId, produktId, werte) {
+    const d = this.getDay(dayId);
+    if (!d) return null;
+    if (!Array.isArray(d.verkauf)) d.verkauf = [];
+    const zahl = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v))));
+    const i = d.verkauf.findIndex((v) => v.produktId === produktId);
+    const eintrag = { produktId, gebacken: zahl(werte.gebacken), verkauft: zahl(werte.verkauft), uebrig: zahl(werte.uebrig) };
+    if (i >= 0) d.verkauf[i] = { ...d.verkauf[i], ...eintrag };
+    else d.verkauf.push(eintrag);
+    persist();
+    return eintrag;
+  },
+  getVerkauf(dayId, produktId) {
+    const d = this.getDay(dayId);
+    return (d?.verkauf || []).find((v) => v.produktId === produktId) || { produktId, gebacken: null, verkauft: null, uebrig: null };
+  },
+  /** Umsatz aus den eingetragenen Stückzahlen. */
+  verkaufUmsatz(dayId) {
+    const d = this.getDay(dayId);
+    if (!d) return 0;
+    const preise = new Map(this.getProdukte().map((p) => [p.id, p.preis]));
+    return (d.verkauf || []).reduce((summe, v) => summe + (v.verkauft || 0) * (preise.get(v.produktId) || 0), 0);
+  },
+  /** Verkaufszahlen der letzten Tage für ein Produkt, neueste zuerst. */
+  verkaufsVerlauf(produktId, tage = 28) {
+    const ab = addDaysISOStore(todayStr(), -tage);
+    return this.getDays()
+      .filter((d) => d.date >= ab && d.date <= todayStr())
+      .map((d) => ({ date: d.date, ...((d.verkauf || []).find((v) => v.produktId === produktId) || {}) }))
+      .filter((z) => z.verkauft !== null && z.verkauft !== undefined);
+  },
+  /** Wie viel sollte am dateStr hergestellt werden?
+   *
+   * Grundlage sind dieselben Wochentage der letzten Wochen – ein Samstag sagt mehr über den nächsten
+   * Samstag als der Mittwoch davor. Gibt es davon noch zu wenig (der Pop-up läuft erst an), zählen die
+   * letzten Tage insgesamt. War an einem Tag nichts mehr übrig, war die Nachfrage grösser als der Verkauf:
+   * solche Tage zählen mit einem Aufschlag, sonst lernt das System die Ausverkauf-Grenze als Bedarf.
+   */
+  backvorschlag(produktId, dateStr = addDaysISOStore(todayStr(), 1)) {
+    const verlauf = this.verkaufsVerlauf(produktId, 56);
+    if (verlauf.length === 0) return null;
+    const wd = weekdayIndexOfDate(dateStr);
+    const gleicheTage = verlauf.filter((z) => weekdayIndexOfDate(z.date) === wd);
+    const grundlage = gleicheTage.length >= 2 ? gleicheTage.slice(-4) : verlauf.slice(-7);
+    const werte = grundlage.map((z) => (z.uebrig === 0 ? z.verkauft * 1.15 : z.verkauft));
+    const schnitt = werte.reduce((a, b) => a + b, 0) / werte.length;
+    return {
+      menge: Math.max(1, Math.ceil(schnitt / 5) * 5),
+      grundlage: grundlage.length,
+      wochentag: gleicheTage.length >= 2,
+      ausverkauft: grundlage.filter((z) => z.uebrig === 0).length,
+    };
   },
 
   // ---- Küche: Vorbereitungen und Rezepte ----

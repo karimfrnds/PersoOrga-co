@@ -2,6 +2,7 @@
 // pages/employees.js – Mitarbeiterverwaltung
 // ============================================================================
 import { store } from "../store.js";
+import { betrieb, kann } from "../betrieb.js";
 import { ROLE_LABEL } from "../calc.js";
 
 import { euro, escapeHtml } from "../format.js";
@@ -163,11 +164,11 @@ function renderEmployees() {
       <div class="dialog">
         <h2>${isEdit ? "Mitarbeiter bearbeiten" : "Neuer Mitarbeiter"}</h2>
         <label class="field"><span>Name</span><input type="text" id="f-name" value="${emp ? escapeHtml(emp.name) : ""}" /></label>
-        <label class="field"><span>Rolle</span>
+        <label class="field" style="display:${betrieb.rollen.length > 1 ? "block" : "none"}"><span>Rolle</span>
           <select id="f-role">
-            <option value="service" ${emp?.role === "service" ? "selected" : ""}>Service</option>
-            <option value="kueche" ${emp?.role === "kueche" ? "selected" : ""}>Küche</option>
-            <option value="bar" ${emp?.role === "bar" ? "selected" : ""}>Bar</option>
+            ${betrieb.rollen
+              .map((r) => `<option value="${r}" ${(emp?.role || betrieb.rollen[0]) === r ? "selected" : ""}>${ROLE_LABEL[r]}</option>`)
+              .join("")}
           </select>
         </label>
         <label class="field"><span>Stundenlohn (€)</span><input type="number" step="0.01" min="0" id="f-wage" value="${emp ? emp.hourlyWage : 12.82}" /></label>
@@ -176,7 +177,13 @@ function renderEmployees() {
         <label class="field" id="f-limit-wrap" style="display:${emp?.isMinijob ? "block" : "none"}">
           <span>Minijob-Grenze pro Monat (€)</span><input type="number" step="1" min="0" id="f-limit" value="${emp ? emp.minijobLimit : 556}" />
         </label>
-        <label class="field-checkbox"><input type="checkbox" id="f-store" ${emp?.istStoreManagerin ? "checked" : ""} /> Store-Managerin (sieht beim Zählen Küche, Bar und Divers)</label>
+        ${
+          kann("storeManagement")
+            ? `<label class="field-checkbox"><input type="checkbox" id="f-store" ${
+                emp?.istStoreManagerin ? "checked" : ""
+              } /> Store-Managerin (sieht beim Zählen Küche, Bar und Divers)</label>`
+            : ""
+        }
         <div class="field">
           <span>Feste Schichten</span>
           <p class="muted small">Wer immer dieselben Tage arbeitet, trägt sich nicht jede Woche neu ein –
@@ -237,7 +244,7 @@ function renderEmployees() {
     rolleSel.onchange = zeichneFest;
     // Die Store-Managerin arbeitet Mo–Fr in ihrer eigenen Schicht. Beim Setzen des Hakens werden diese Tage
     // vorbelegt – aber nur, wo noch nichts steht, und sichtbar, damit man es vor dem Speichern sieht.
-    overlay.querySelector("#f-store").onchange = (e) => {
+    if (overlay.querySelector("#f-store")) overlay.querySelector("#f-store").onchange = (e) => {
       if (!e.target.checked) return;
       const storeSlot = store.getShiftSlotsForRole(rolleSel.value).find((sl) => sl.nurFest);
       if (!storeSlot) return;
@@ -268,7 +275,7 @@ function renderEmployees() {
         pin: pinRaw || null,
         isMinijob: overlay.querySelector("#f-minijob").checked,
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
-        istStoreManagerin: overlay.querySelector("#f-store").checked,
+        istStoreManagerin: !!overlay.querySelector("#f-store")?.checked,
       };
       const feste = [...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId }));
       if (isEdit) {

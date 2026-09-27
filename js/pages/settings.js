@@ -5,6 +5,7 @@
 // erst an Trinkgeld-Verteilung und GitHub-Backup vorbeischauen.
 // ============================================================================
 import { store } from "../store.js";
+import { kann } from "../betrieb.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
 import { confirmDialog, alertDialog, promptDialog } from "../dialog.js";
 import { performBackup } from "../backup.js";
@@ -317,7 +318,8 @@ function renderSettings() {
     }
     managerCard.appendChild(mReihe);
 
-    return [pinCard, socialCard, managerCard];
+    // Zugänge nur dort, wo es die Bereiche gibt.
+    return [pinCard, ...(kann("social") ? [socialCard] : []), ...(kann("storeManagement") ? [managerCard] : [])];
   }
 
   // ---------------------------------------------------------------------

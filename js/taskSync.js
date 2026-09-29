@@ -1002,7 +1002,13 @@ async function performTaskSync() {
           verkaufTage: store
             .getDays()
             .filter((d) => d.date >= isoDaysAgo(60))
-            .map((d) => ({ date: d.date, umsatz: d.kassenabschluss?.umsatzGesamt || 0, produkte: d.verkauf || [] }))
+            .map((d) => ({
+              date: d.date,
+              umsatz: d.kassenabschluss?.umsatzGesamt || 0,
+              ware: d.materialkosten || 0,
+              notiz: d.tagesNotiz || "",
+              produkte: d.verkauf || [],
+            }))
             .filter((d) => d.produkte.length > 0),
           backvorschlaege: store
             .getProdukte()

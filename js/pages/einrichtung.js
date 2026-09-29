@@ -240,13 +240,20 @@ function renderEinrichtung(wechsleTab) {
   // ---------------------------------------------------------------------
   function buildProdukte(s) {
     const produkte = store.getProdukte();
-    const card = karte(3, "Produkte", s.produkte, "Was verkauft wird und was es kostet. Daraus rechnet der Tagesabschluss den Umsatz.");
+    const card = karte(
+      3,
+      "Produkte",
+      s.produkte,
+      "Was verkauft wird und was es kostet. Daraus rechnet der Tagesabschluss den Umsatz – und mit den Warenkosten je Stück auch, was unterm Strich bleibt."
+    );
     const liste = document.createElement("div");
     liste.className = "mg-liste";
     for (const p of produkte) {
       const zeile = document.createElement("div");
       zeile.className = "summary-line";
-      zeile.innerHTML = `<span><b>${escapeHtml(p.name)}</b>${p.gebacken ? ' <span class="muted small">· wird gebacken</span>' : ""}</span><span>${euro(p.preis)}</span>`;
+      zeile.innerHTML = `<span><b>${escapeHtml(p.name)}</b>${p.gebacken ? ' <span class="muted small">· wird gebacken</span>' : ""}</span><span>${euro(
+        p.preis
+      )} <span class="muted small">${p.kosten ? `− ${euro(p.kosten)} Ware` : "· keine Warenkosten hinterlegt"}</span></span>`;
       liste.appendChild(zeile);
     }
     if (produkte.length === 0) liste.innerHTML = `<p class="muted small">Noch kein Produkt angelegt.</p>`;

@@ -47,8 +47,9 @@ function renderPopupAdmin() {
     for (const p of produkte) {
       const row = document.createElement("div");
       row.className = "task-row";
+      const marge = p.kosten ? ` · Ware ${euro(p.kosten)} → ${euro(p.preis - p.kosten)} bleiben` : " · keine Kosten hinterlegt";
       row.innerHTML = `<div class="task-row-text"><span><b>${escapeHtml(p.name)}</b></span>
-        <span class="muted small task-row-meta">${euro(p.preis)}${p.gebacken ? " · wird gebacken" : ""}</span></div>`;
+        <span class="muted small task-row-meta">${euro(p.preis)}${marge}${p.gebacken ? " · wird gebacken" : ""}</span></div>`;
       const akt = document.createElement("div");
       akt.className = "employee-actions";
       const aendern = document.createElement("button");
@@ -99,11 +100,17 @@ function renderPopupAdmin() {
     };
     const name = Object.assign(document.createElement("input"), { type: "text", value: vorhanden?.name || "", placeholder: "z.B. Zimtschnecke" });
     const preis = Object.assign(document.createElement("input"), { type: "number", step: "0.1", min: "0", value: vorhanden ? vorhanden.preis : "" });
+    const kosten = Object.assign(document.createElement("input"), { type: "number", step: "0.01", min: "0", value: vorhanden?.kosten ? vorhanden.kosten : "" });
     const gebacken = Object.assign(document.createElement("input"), { type: "checkbox", checked: vorhanden ? !!vorhanden.gebacken : false });
     const gebackenZeile = document.createElement("label");
     gebackenZeile.className = "field-checkbox";
     gebackenZeile.append(gebacken, document.createTextNode(" Wird gebacken (Backmenge und Rest werden erfasst)"));
-    box.append(feld("Name", name), feld("Preis (€)", preis), gebackenZeile);
+    box.append(
+      feld("Name", name),
+      feld("Preis (€)", preis),
+      feld("Ware je Stück (€)", kosten, "Was dich ein Stück an Zutaten, Becher und Bohnen kostet. Leer lassen, wenn du es nicht weisst – dann wird auch keine Marge behauptet."),
+      gebackenZeile
+    );
 
     const akt = document.createElement("div");
     akt.className = "dialog-actions";
@@ -117,7 +124,13 @@ function renderPopupAdmin() {
     speichern.onclick = async () => {
       if (!name.value.trim()) return alertDialog("Bitte einen Namen eintragen.");
       const alle = store.getProdukte();
-      const neu = { id: vorhanden?.id, name: name.value.trim(), preis: Number(preis.value) || 0, gebacken: gebacken.checked };
+      const neu = {
+        id: vorhanden?.id,
+        name: name.value.trim(),
+        preis: Number(preis.value) || 0,
+        kosten: Number(kosten.value) || 0,
+        gebacken: gebacken.checked,
+      };
       store.setProdukte(vorhanden ? alle.map((p) => (p.id === vorhanden.id ? neu : p)) : [...alle, neu]);
       overlay.remove();
       rerender();

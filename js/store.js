@@ -281,6 +281,33 @@ function ratePhase(text) {
 function uhrzeitJetzt() {
   return new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
+/** Um wie viel lag die Nachfrage über dem, was verkauft wurde?
+ *
+ * War abends noch etwas da, war die Nachfrage gedeckt: Faktor 1. War nichts mehr übrig, wurde
+ * irgendwann jemand weggeschickt – wie viele, weiss niemand, aber WANN es alle war, sagt einiges.
+ * Um 13:00 bei Laden bis 19:00 ausverkauft heisst: ein Drittel des Tages stand nichts mehr da.
+ *
+ * Aufgeschlagen wird nur die Hälfte dieser Restzeit, gedeckelt bei +50 %. Linear hochzurechnen waere
+ * falsch: ein Zimtschnecken-Stand verkauft morgens am meisten, die letzte Stunde trägt wenig. Lieber
+ * zwei Tage hintereinander etwas zu wenig backen als einmal 40 Stück wegwerfen.
+ * Ohne Uhrzeit bleibt es beim pauschalen Aufschlag von 15 % – wie vor der Uhrzeit-Erfassung.
+ */
+function ausverkaufAufschlag(z, zeiten) {
+  if (z.uebrig !== 0) return 1;
+  if (!z.ausverkauftUm || !zeiten) return 1.15;
+  const auf = minutenAusUhrzeit(zeiten.von);
+  const zu = minutenAusUhrzeit(zeiten.bis);
+  const alle = minutenAusUhrzeit(z.ausverkauftUm);
+  if (!(zu > auf) || alle <= auf || alle >= zu) return 1.15;
+  const restAnteil = (zu - alle) / (zu - auf);
+  return Math.min(1.5, 1 + restAnteil * 0.5);
+}
+
+function uhrzeitAusMinuten(m) {
+  const g = Math.max(0, Math.min(24 * 60 - 1, Math.round(m)));
+  return `${String(Math.floor(g / 60)).padStart(2, "0")}:${String(g % 60).padStart(2, "0")}`;
+}
+
 function minutenAusUhrzeit(hhmm) {
   const [h, m] = String(hhmm || "0:0").split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
@@ -342,8 +369,12 @@ function normalizeDay(d) {
     tasks: (d.tasks || []).map((t) => ({ priority: "normal", schicht: "", bereich: "", time: "", phase: "", ...t })),
     // Wareneinsatz des Tages (Summe der verbrauchten Waren zum Einkaufspreis).
     materialkosten: Number(d.materialkosten) || 0,
-    // Was an dem Tag hergestellt, verkauft und übrig geblieben ist (Pop-up): [{produktId, gebacken, verkauft, uebrig}]
+    // Was an dem Tag hergestellt, verkauft und übrig geblieben ist (Pop-up):
+    // [{produktId, gebacken, verkauft, uebrig, ausverkauftUm}]
     verkauf: Array.isArray(d.verkauf) ? d.verkauf : [],
+    // Eine Zeile zum Tag: Wetter, Ereignis, was sonst die Zahlen erklärt. Ohne sie lügt jeder
+    // Wochentags-Schnitt, sobald ein Tag aus dem Rahmen fällt ("Samstag ist schwach" – es hat geregnet).
+    tagesNotiz: String(d.tagesNotiz || ""),
   };
 }
 
@@ -886,6 +917,7 @@ export const store = {
       tasks: [],
       kassenabschluss: { umsatzGesamt: 0, umsatzBar: 0, umsatz7: 0, umsatz19: 0, trinkgeldKarte: 0, trinkgeldBar: 0 },
       verkauf: [],
+      tagesNotiz: "",
       stornos: [],
       auditLog: [{ timestamp: new Date().toISOString(), action: "erstellt", detail: `Tag ${dateStr} angelegt` }],
       closedAt: null,
@@ -2364,8 +2396,18 @@ export const store = {
       id: p.id || uid(),
       name: String(p.name || "").trim(),
       preis: Math.max(0, Number(p.preis) || 0),
+      // Was ein Stück an Ware kostet (Zutaten, Becher, Bohnen). 0 = nicht hinterlegt, dann wird auch
+      // keine Marge behauptet – eine ausgedachte Zahl ist schlimmer als gar keine.
+      kosten: Math.max(0, Number(p.kosten) || 0),
       gebacken: !!p.gebacken,
     }));
+    // Ändert sich ein Kostensatz, stimmt der Wareneinsatz der alten Tage nicht mehr. Nur dort, wo es
+    // überhaupt Verkaufszahlen gibt – im Café kommt die Zahl aus dem Kassen-Export und bleibt.
+    if (kann("verkauf")) {
+      for (const d of data.days) {
+        if ((d.verkauf || []).length > 0) d.materialkosten = this.wareneinsatz(d.id).summe;
+      }
+    }
     persist();
     return data.settings.produkte;
   },
@@ -2378,14 +2420,63 @@ export const store = {
     const zahl = (v) => (v === "" || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v))));
     const i = d.verkauf.findIndex((v) => v.produktId === produktId);
     const eintrag = { produktId, gebacken: zahl(werte.gebacken), verkauft: zahl(werte.verkauft), uebrig: zahl(werte.uebrig) };
+    // Wann es alle war. Nur sinnvoll, wenn auch wirklich nichts übrig blieb – sonst waere es eine
+    // Uhrzeit ohne Ereignis, und der Backvorschlag würde daraus einen Mangel lesen, den es nicht gab.
+    const uhr = /^\d{2}:\d{2}$/.test(werte.ausverkauftUm || "") ? werte.ausverkauftUm : null;
+    eintrag.ausverkauftUm = eintrag.uebrig === 0 ? uhr : null;
     if (i >= 0) d.verkauf[i] = { ...d.verkauf[i], ...eintrag };
     else d.verkauf.push(eintrag);
+    // Der Wareneinsatz des Tages hängt an diesen Zahlen. Hier nachziehen und nicht beim Anzeigen:
+    // die Kostenrechnung am Laptop liest ihn vom Tag, und beim Zeichnen zu schreiben hiesse, dass
+    // ein blosser Blick auf einen alten Tag ihn verändert.
+    d.materialkosten = this.wareneinsatz(dayId).summe;
     persist();
     return eintrag;
   },
   getVerkauf(dayId, produktId) {
     const d = this.getDay(dayId);
-    return (d?.verkauf || []).find((v) => v.produktId === produktId) || { produktId, gebacken: null, verkauft: null, uebrig: null };
+    return (d?.verkauf || []).find((v) => v.produktId === produktId) || { produktId, gebacken: null, verkauft: null, uebrig: null, ausverkauftUm: null };
+  },
+  /** Eine Zeile zum Tag: Wetter, Ereignis, was die Zahlen sonst erklärt. */
+  setTagesNotiz(dayId, text) {
+    const d = this.getDay(dayId);
+    if (!d) return null;
+    d.tagesNotiz = String(text || "").slice(0, 300);
+    persist();
+    return d.tagesNotiz;
+  },
+  /** Wann hat der Laden an diesem Tag auf? Frühester Anfang und spätestes Ende der Schichten.
+   * Näher kommt man ohne eigene Öffnungszeiten nicht heran, und für "wie früh war es alle?" reicht es. */
+  ladenZeiten(dateStr = todayStr()) {
+    const slots = betrieb.rollen.flatMap((r) => this.getShiftSlotsForRole(r, dateStr));
+    if (slots.length === 0) return null;
+    const von = slots.map((x) => x.from).sort()[0];
+    const bis = slots.map((x) => x.to).sort().slice(-1)[0];
+    return minutenAusUhrzeit(bis) > minutenAusUhrzeit(von) ? { von, bis } : null;
+  },
+  /** Wareneinsatz eines Tages: was die hergestellte Menge an Ware gekostet hat.
+   *
+   * Gerechnet wird auf die GEBACKENE Menge, nicht auf die verkaufte – bezahlt ist auch, was abends in
+   * die Tonne geht. Genau das ist ja die Zahl, die ein Pop-up wissen will. Produkte ohne hinterlegte
+   * Kosten zaehlen nicht mit, und die Anzahl steht daneben, damit niemand eine Lücke für eine Null hält.
+   */
+  wareneinsatz(dayId) {
+    const d = this.getDay(dayId);
+    if (!d) return { summe: 0, ohneKosten: 0 };
+    const produkte = new Map(this.getProdukte().map((p) => [p.id, p]));
+    let summe = 0;
+    let ohneKosten = 0;
+    for (const v of d.verkauf || []) {
+      const p = produkte.get(v.produktId);
+      const menge = v.gebacken ?? v.verkauft;
+      if (!p || menge === null || menge === undefined) continue;
+      if (!p.kosten) {
+        ohneKosten += 1;
+        continue;
+      }
+      summe += menge * p.kosten;
+    }
+    return { summe: Math.round(summe * 100) / 100, ohneKosten };
   },
   /** Umsatz aus den eingetragenen Stückzahlen. */
   verkaufUmsatz(dayId) {
@@ -2415,13 +2506,20 @@ export const store = {
     const wd = weekdayIndexOfDate(dateStr);
     const gleicheTage = verlauf.filter((z) => weekdayIndexOfDate(z.date) === wd);
     const grundlage = gleicheTage.length >= 2 ? gleicheTage.slice(-4) : verlauf.slice(-7);
-    const werte = grundlage.map((z) => (z.uebrig === 0 ? z.verkauft * 1.15 : z.verkauft));
+    const werte = grundlage.map((z) => z.verkauft * ausverkaufAufschlag(z, this.ladenZeiten(z.date)));
     const schnitt = werte.reduce((a, b) => a + b, 0) / werte.length;
+    const leer = grundlage.filter((z) => z.uebrig === 0);
+    const mitUhr = leer.filter((z) => z.ausverkauftUm);
     return {
       menge: Math.max(1, Math.ceil(schnitt / 5) * 5),
       grundlage: grundlage.length,
       wochentag: gleicheTage.length >= 2,
-      ausverkauft: grundlage.filter((z) => z.uebrig === 0).length,
+      ausverkauft: leer.length,
+      // Wann es im Schnitt alle war. Steht im Vorschlag dabei, weil es die Menge erklärt: "3×
+      // ausverkauft" sagt wenig, "3× ausverkauft, im Schnitt um 13:40" sagt alles.
+      ausverkauftUm: mitUhr.length
+        ? uhrzeitAusMinuten(Math.round(mitUhr.reduce((a, z) => a + minutenAusUhrzeit(z.ausverkauftUm), 0) / mitUhr.length))
+        : null,
     };
   },
 

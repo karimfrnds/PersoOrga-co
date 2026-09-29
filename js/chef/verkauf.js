@@ -45,7 +45,7 @@ function renderVerkauf(state) {
       zeile.className = "mg-kennzahl";
       zeile.innerHTML = `<b>${v.menge} ${escapeHtml(p?.name || "")}</b> <span class="muted small">aus ${v.grundlage} ${
         v.wochentag ? (v.grundlage === 1 ? "gleichem Wochentag" : "gleichen Wochentagen") : v.grundlage === 1 ? "Tag" : "Tagen"
-      }${v.ausverkauft ? `, ${v.ausverkauft}× ausverkauft` : ""}</span>`;
+      }${v.ausverkauft ? `, ${v.ausverkauft}× ausverkauft${v.ausverkauftUm ? ` (im Schnitt um ${escapeHtml(v.ausverkauftUm)} Uhr)` : ""}` : ""}</span>`;
       vorschlag.appendChild(zeile);
     }
   }
@@ -66,9 +66,17 @@ function renderVerkauf(state) {
 
     const card = document.createElement("section");
     card.className = "card";
+    // Marge nur, wenn Kosten hinterlegt sind. Gerechnet auf die gebackene Menge – bezahlt ist auch,
+    // was abends in die Tonne geht.
+    const hergestellt = p.gebacken ? gebacken : verkauft;
+    const db = p.kosten ? verkauft * p.preis - hergestellt * p.kosten : null;
     card.innerHTML = `<h2>${escapeHtml(p.name)}</h2>
       <p class="muted small">${zeilen.length} Tage · ${verkauft} verkauft · Umsatz ${euro(verkauft * p.preis)}${
-        p.gebacken ? ` · ${uebrig} übrig (${gebacken ? Math.round((uebrig / gebacken) * 100) : 0} % von ${gebacken} gebacken, ${euro(uebrig * p.preis)} nicht verkauft)` : ""
+        db === null ? "" : ` · <b>Deckungsbeitrag ${euro(db)}</b> (nach ${euro(hergestellt * p.kosten)} Ware)`
+      }${
+        p.gebacken ? ` · ${uebrig} übrig (${gebacken ? Math.round((uebrig / gebacken) * 100) : 0} % von ${gebacken} gebacken, ${euro(uebrig * p.preis)} nicht verkauft${
+          p.kosten ? `, ${euro(uebrig * p.kosten)} weggeworfene Ware` : ""
+        })` : ""
       }</p>`;
 
     // Je Wochentag: das ist die Zahl, nach der man backt.
@@ -104,7 +112,11 @@ function renderVerkauf(state) {
     for (const z of zeilen.slice(0, 21)) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${escapeHtml(dateDe(z.date))}</td>${p.gebacken ? `<td>${zahl(z.gebacken)}</td>` : ""}<td><b>${zahl(z.verkauft)}</b></td>${
-        p.gebacken ? `<td class="${z.uebrig === 0 ? "res-warn" : ""}">${z.uebrig === 0 ? "ausverkauft" : zahl(z.uebrig)}</td>` : ""
+        p.gebacken
+          ? `<td class="${z.uebrig === 0 ? "res-warn" : ""}">${
+              z.uebrig === 0 ? (z.ausverkauftUm ? `ausverkauft ${escapeHtml(z.ausverkauftUm)}` : "ausverkauft") : zahl(z.uebrig)
+            }</td>`
+          : ""
       }<td>${euro((z.verkauft || 0) * p.preis)}</td>`;
       tbody.appendChild(tr);
     }
@@ -122,14 +134,19 @@ function renderVerkauf(state) {
   scroll.style.overflowX = "auto";
   const tabelle = document.createElement("table");
   tabelle.className = "calc-table";
-  tabelle.innerHTML = `<thead><tr><th>Tag</th>${produkte.map((p) => `<th>${escapeHtml(p.name)}</th>`).join("")}<th>Umsatz (Kasse)</th></tr></thead>`;
+  const mitWare = tage.some((t) => t.ware > 0);
+  tabelle.innerHTML = `<thead><tr><th>Tag</th>${produkte.map((p) => `<th>${escapeHtml(p.name)}</th>`).join("")}<th>Umsatz (Kasse)</th>${
+    mitWare ? "<th>Ware</th><th>Bleibt</th>" : ""
+  }<th>Notiz</th></tr></thead>`;
   const tbody = document.createElement("tbody");
   for (const t of tage.slice(0, 21)) {
     const tr = document.createElement("tr");
     tr.innerHTML =
       `<td>${escapeHtml(dateDe(t.date))}</td>` +
       produkte.map((p) => `<td>${zahl(t.produkte.find((x) => x.produktId === p.id)?.verkauft)}</td>`).join("") +
-      `<td>${euro(t.umsatz || 0)}</td>`;
+      `<td>${euro(t.umsatz || 0)}</td>` +
+      (mitWare ? `<td>${t.ware ? euro(t.ware) : "–"}</td><td>${t.ware ? euro((t.umsatz || 0) - t.ware) : "–"}</td>` : "") +
+      `<td class="muted small">${escapeHtml(t.notiz || "")}</td>`;
     tbody.appendChild(tr);
   }
   tabelle.appendChild(tbody);

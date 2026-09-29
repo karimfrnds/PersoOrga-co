@@ -266,7 +266,10 @@ function renderDay(dayId, navigate) {
     frag.appendChild(shiftSection);
 
     // ---- Verkauf (Pop-up) ----
-    if (kann("verkauf")) frag.appendChild(buildVerkaufSection(day, locked));
+    if (kann("verkauf")) {
+      frag.appendChild(buildVerkaufSection(day, locked));
+      frag.appendChild(buildTagesNotiz(day, locked));
+    }
 
     // ---- Kassenabschluss ----
     const kbSection = document.createElement("section");
@@ -458,6 +461,26 @@ function renderDay(dayId, navigate) {
    * ihn), denn die Kasse ist die Wahrheit, nicht die Schätzung. Und darunter steht die Frage, um die es
    * abends wirklich geht: wie viel backen wir morgen?
    */
+  /** Eine Zeile zum Tag. Ohne sie lügt jeder Wochentags-Schnitt, sobald ein Tag aus dem Rahmen fällt:
+   * "Samstag ist schwach" stimmt nicht, wenn es an zwei von drei Samstagen geregnet hat. */
+  function buildTagesNotiz(day, locked) {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>1c. Notiz zum Tag</h2>
+      <p class="muted small">Wetter, Ereignis, alles was die Zahlen erklärt – z.B. „Dauerregen“ oder
+      „Markt nebenan“. Steht später neben den Verkaufszahlen.</p>`;
+    const eingabe = document.createElement("input");
+    eingabe.type = "text";
+    eingabe.value = day.tagesNotiz || "";
+    eingabe.placeholder = "z.B. Dauerregen ab mittags";
+    eingabe.disabled = locked;
+    eingabe.maxLength = 300;
+    // onchange statt oninput: sonst speichert jeder Tastendruck, und der Tag hätte hundert Einträge.
+    eingabe.onchange = () => store.setTagesNotiz(day.id, eingabe.value);
+    card.appendChild(eingabe);
+    return card;
+  }
+
   function buildVerkaufSection(day, locked) {
     const card = document.createElement("section");
     card.className = "card";
@@ -523,6 +546,20 @@ function renderDay(dayId, navigate) {
           }))
         );
       }
+      // War nichts mehr übrig, ist die Frage nicht "ob", sondern "wann". Um 13:00 alle heisst backt mehr,
+      // um 18:30 alle heisst: hat gepasst. Deshalb erscheint das Feld erst, wenn übrig auf 0 steht.
+      if (p.gebacken && v.uebrig === 0) {
+        const uhr = document.createElement("input");
+        uhr.type = "time";
+        uhr.step = 300;
+        uhr.value = v.ausverkauftUm || "";
+        uhr.disabled = locked;
+        uhr.onchange = () => {
+          store.setVerkauf(day.id, p.id, { ...v, ausverkauftUm: uhr.value });
+          rerender();
+        };
+        felder.appendChild(feld("Ausverkauft um", uhr));
+      }
       zeile.appendChild(felder);
 
       // Stimmt die Rechnung? Gebacken = verkauft + übrig. Weicht es ab, fehlt etwas oder wurde
@@ -558,6 +595,28 @@ function renderDay(dayId, navigate) {
       card.appendChild(btn);
     }
 
+    // Was die Ware gekostet hat, und was unterm Strich übrig bleibt. Erst ab hinterlegten Kosten –
+    // ohne sie wäre die Marge eine ausgedachte Zahl, und die ist schlimmer als keine.
+    const ware = store.wareneinsatz(day.id);
+    if (ware.summe > 0) {
+      const w = document.createElement("div");
+      w.className = "summary-line";
+      w.innerHTML = `<span>− Wareneinsatz <span class="muted small">(gebackene Menge × Kosten je Stück)</span></span><span>${euro(ware.summe)}</span>`;
+      card.appendChild(w);
+      const db = document.createElement("div");
+      db.className = "summary-line summary-total";
+      db.innerHTML = `<span>Deckungsbeitrag <span class="muted small">(vor Lohn und Miete)</span></span><span><b>${euro(summe - ware.summe)}</b></span>`;
+      card.appendChild(db);
+    }
+    if (ware.ohneKosten > 0) {
+      const h = document.createElement("p");
+      h.className = "muted small";
+      h.textContent = `Bei ${ware.ohneKosten} ${
+        ware.ohneKosten === 1 ? "Produkt sind keine Kosten" : "Produkten sind keine Kosten"
+      } hinterlegt – ${ware.ohneKosten === 1 ? "es fehlt" : "sie fehlen"} im Wareneinsatz (Admin → Produkte & Schichten).`;
+      card.appendChild(h);
+    }
+
     // Vorschlag für den nächsten Tag – nur für das, was gebacken wird.
     for (const p of produkte.filter((x) => x.gebacken)) {
       const v = store.backvorschlag(p.id);
@@ -566,7 +625,11 @@ function renderDay(dayId, navigate) {
       box.className = "callout";
       box.innerHTML = `🧁 <b>Morgen backen: ca. ${v.menge} ${escapeHtml(p.name)}</b><br/><span class="muted small">Aus ${v.grundlage} ${
         v.wochentag ? (v.grundlage === 1 ? "gleichem Wochentag" : "gleichen Wochentagen") : v.grundlage === 1 ? "Tag" : "Tagen"
-      }${v.ausverkauft > 0 ? `, davon ${v.ausverkauft} ausverkauft (deshalb etwas mehr)` : ""}.</span>`;
+      }${
+        v.ausverkauft > 0
+          ? `, davon ${v.ausverkauft} ausverkauft${v.ausverkauftUm ? ` (im Schnitt um ${escapeHtml(v.ausverkauftUm)} Uhr)` : ""} – deshalb etwas mehr`
+          : ""
+      }.</span>`;
       card.appendChild(box);
     }
     return card;

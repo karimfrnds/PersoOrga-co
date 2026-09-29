@@ -52,6 +52,7 @@ function renderAdmin(navigate) {
     if (t.id === "events") return kann("events");
     if (t.id === "stock") return kann("bestellliste");
     if (t.id === "produkte" || t.id === "schichten") return kann("verkauf") || kann("schichtenEditierbar");
+    if (t.id === "beta") return kann("beta");
     return true;
   });
   if (!TABS.some((t) => t.id === activeTab)) activeTab = TABS[0].id;

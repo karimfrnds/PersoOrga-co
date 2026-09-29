@@ -797,20 +797,20 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-09-29",
-      "lastBackupAt": "2026-09-29T11:04:01.411Z",
-      "lastError": null
+      "lastBackupAt": "2026-09-29T14:14:55.320Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 806711f059f14210390cd6de07b7a5014dc15e02 but expected 498828d8c48bc2cd5ae4fef089420cd5cff2f74a\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-09-29T11:03:59.044Z",
+      "lastSyncAt": "2026-09-29T15:32:13.633Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "9fc632d2-77ff-4878-885c-bdd40e5b0642",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|julie|2026-09-29||hoch"
         },
         {
@@ -825,37 +825,37 @@
         },
         {
           "id": "d5d88014-77df-4685-82e2-097978c9f17d",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|timm|2026-09-29||hoch"
         },
         {
           "id": "a66135db-8cc3-47a5-bcc0-9f92e97a02ff",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|timm|2026-09-29||hoch"
         },
         {
           "id": "ca767459-48a5-4a3f-8278-ed1b24cd11e3",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|timm|2026-09-29||hoch"
         },
         {
           "id": "f5d015b6-e50e-4139-9ba9-7273b70de3ac",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|timm|2026-09-29||hoch"
         },
         {
           "id": "8ecbf271-de23-4a93-a297-6f3a2de0f579",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|timm|2026-09-29||hoch"
         },
         {
           "id": "5638dee7-1705-4604-9134-0f076b11798a",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|timm|2026-09-29||hoch"
         },
         {
           "id": "ab523289-47e3-4a88-9228-9b28153b6063",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|timm|2026-09-29||hoch"
         }
       ],
@@ -1524,7 +1524,6 @@
         "f5b6a172-8e9c-4239-8a5f-5a34af0e20a7"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|elli|2026-08-29T15:35:30.779Z",
         "2026-08-31|anna z.|2026-08-29T15:35:30.780Z",
         "2026-08-31|lilly|2026-08-29T15:35:30.780Z",
         "2026-08-31|maria|2026-08-29T15:35:30.784Z",
@@ -1823,7 +1822,8 @@
         "2026-10-26|anna z.|2026-09-29T09:42:23.272Z",
         "2026-10-26|kaya|2026-09-29T09:58:41.938Z",
         "2026-11-02|anna z.|2026-09-29T09:42:49.616Z",
-        "2026-11-02|kaya|2026-09-29T10:00:17.512Z"
+        "2026-11-02|kaya|2026-09-29T10:00:17.512Z",
+        "2026-10-26|nico|2026-09-29T15:17:13.028Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -2288,7 +2288,9 @@
         "3c26aa8b-b037-4600-a488-fb9e1a86d266",
         "8066224e-8d6b-49ff-a518-e40c8c683e2e",
         "239f20ac-d1d4-42ee-9460-edf8f9e04145",
-        "24a44924-7a49-4c0e-b86d-681de2f25c26"
+        "24a44924-7a49-4c0e-b86d-681de2f25c26",
+        "02c07277-5ec3-4200-bfaf-720b65779ac4",
+        "b8fd2897-77ea-40ce-a3c2-55c6f63e55d2"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -26079,27 +26081,35 @@
     {
       "id": "6a6cec09-01d7-4c4c-9dd4-20a0616217a7",
       "date": "2026-09-29",
-      "status": "offen",
+      "status": "abgeschlossen",
       "shifts": [
         {
           "source": "pin",
           "id": "3cad90c2-6cc4-41f0-9d80-835aab0bca76",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "from": "08:05",
-          "to": null,
+          "to": "16:16",
           "note": "",
           "clockInAt": "2026-09-29T06:05:25.159Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-09-29T14:16:44.268Z"
         },
         {
           "source": "pin",
           "id": "a520a78a-dcd0-4abe-a2a3-8a3923fe5fd2",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "from": "08:18",
-          "to": null,
+          "from": "08:23",
+          "to": "11:00",
           "note": "",
           "clockInAt": "2026-09-29T06:18:29.075Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-09-29T15:15:43.472Z"
+        },
+        {
+          "id": "1db37145-5f09-4389-89bd-c336edb26103",
+          "employeeId": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "from": "10:00",
+          "to": "18:00",
+          "note": "",
+          "source": "manual"
         }
       ],
       "plannedShifts": [
@@ -26184,9 +26194,9 @@
           "phase": "ende",
           "id": "9fc632d2-77ff-4878-885c-bdd40e5b0642",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "julie",
+          "doneAt": "2026-09-29T14:16:40.166Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -26235,9 +26245,9 @@
           "phase": "schicht",
           "id": "d5d88014-77df-4685-82e2-097978c9f17d",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:36.025Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -26252,9 +26262,9 @@
           "phase": "schicht",
           "id": "a66135db-8cc3-47a5-bcc0-9f92e97a02ff",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:36.337Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
@@ -26269,9 +26279,9 @@
           "phase": "schicht",
           "id": "ca767459-48a5-4a3f-8278-ed1b24cd11e3",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:36.754Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
@@ -26286,9 +26296,9 @@
           "phase": "schicht",
           "id": "f5d015b6-e50e-4139-9ba9-7273b70de3ac",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:37.038Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -26303,9 +26313,9 @@
           "phase": "ende",
           "id": "8ecbf271-de23-4a93-a297-6f3a2de0f579",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:38.705Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -26320,9 +26330,9 @@
           "phase": "ende",
           "id": "5638dee7-1705-4604-9134-0f076b11798a",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:38.487Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -26337,9 +26347,9 @@
           "phase": "ende",
           "id": "ab523289-47e3-4a88-9228-9b28153b6063",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-09-29T15:15:38.271Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -26348,12 +26358,12 @@
         }
       ],
       "kassenabschluss": {
-        "umsatzGesamt": 0,
-        "umsatzBar": 0,
-        "umsatz7": 0,
-        "umsatz19": 0,
-        "trinkgeldKarte": 0,
-        "trinkgeldBar": 0
+        "umsatzGesamt": 863.18,
+        "umsatzBar": 156.1,
+        "umsatz7": 411.9,
+        "umsatz19": 406.2,
+        "trinkgeldKarte": 45.08,
+        "trinkgeldBar": 34.92
       },
       "stornos": [],
       "auditLog": [
@@ -26371,9 +26381,84 @@
           "timestamp": "2026-09-29T06:18:29.076Z",
           "action": "eingestempelt",
           "detail": "timm um 08:18 Uhr"
+        },
+        {
+          "timestamp": "2026-09-29T14:16:44.268Z",
+          "action": "ausgestempelt",
+          "detail": "julie um 16:16 Uhr"
+        },
+        {
+          "timestamp": "2026-09-29T15:15:43.472Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 17:15 Uhr"
+        },
+        {
+          "timestamp": "2026-09-29T15:15:56.188Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"11:15\"}"
+        },
+        {
+          "timestamp": "2026-09-29T15:16:00.719Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"11:00\"}"
+        },
+        {
+          "timestamp": "2026-09-29T15:16:05.519Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:23\"}"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:21.989Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:28.603Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:34.137Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:40.139Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:52.388Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:17:54.894Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:23:14.720Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Bar geändert"
+        },
+        {
+          "timestamp": "2026-09-29T15:23:30.511Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-09-29T15:23:35.775Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"e85d1e90-3966-4a43-a1ef-5f131115fb90\"}"
+        },
+        {
+          "timestamp": "2026-09-29T15:25:31.703Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
         }
       ],
-      "closedAt": null,
+      "closedAt": "2026-09-29T15:25:31.703Z",
       "materialkosten": 0,
       "festeSchichtenAngewandt": [
         "40a95e02-bacb-4e1e-ae54-41d3e2714103",
@@ -28417,13 +28502,13 @@
           "submittedAt": "2026-09-26T06:29:01.547Z"
         },
         {
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "id": "ad494c61-0ec8-4a48-b4e0-2ff9d649f864",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet2"
           ],
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         }
@@ -28550,13 +28635,13 @@
           "submittedAt": "2026-09-26T06:28:53.795Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "548ce9ba-6d95-43b6-be3b-c16d26bf2cbc",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         }
@@ -28663,13 +28748,13 @@
           "submittedAt": "2026-09-27T05:56:32.506Z"
         },
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "id": "cce148b8-7bd2-416d-afba-13e3686ff025",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:42:07.664Z"
         }
@@ -29366,24 +29451,24 @@
           "submittedAt": "2026-09-26T06:28:53.795Z"
         },
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "id": "7905104d-5a74-4754-94dd-26cc7cb6a310",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:41:51.565Z"
         },
         {
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "id": "63259505-dddb-46ff-8c2d-c299e127ed25",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "frueh2"
           ],
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         }
@@ -29488,13 +29573,13 @@
           "submittedAt": "2026-09-25T05:53:34.460Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "98c7d8de-51e3-4624-88d1-de04866adc9f",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         }
@@ -29581,13 +29666,13 @@
           "submittedAt": "2026-09-27T05:56:32.506Z"
         },
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
           "id": "2d9b277e-79f0-456c-890f-e21c8341bd94",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         }
@@ -29662,24 +29747,24 @@
           "submittedAt": "2026-09-22T13:18:05.092Z"
         },
         {
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "id": "87b40ebf-80c1-4bc8-97c3-13658af74a65",
           "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
           "slotIds": [
             "spaet2"
           ],
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:12:44.964Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "6f2826f4-b4c6-4721-8e7f-a26ef2554455",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:41.938Z"
         }
@@ -29762,13 +29847,13 @@
           "submittedAt": "2026-09-26T05:46:46.453Z"
         },
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
           "id": "4e73fde9-5599-49c4-992d-5bb7cf7e8022",
           "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T09:12:44.964Z"
         }
@@ -29889,13 +29974,13 @@
           "submittedAt": "2026-09-26T06:29:01.547Z"
         },
         {
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "id": "3d8c53cb-b691-4785-bb53-8c726b4917dd",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet2"
           ],
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         }
@@ -30003,13 +30088,13 @@
           "submittedAt": "2026-09-27T05:56:32.506Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "03f83b41-e0af-4fad-aecd-c0bbd783b924",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         }
@@ -30273,6 +30358,14 @@
           "to": "23:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-29421e6c-e37a-4abe-90c3-592f6e4de717",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "15:30",
+          "to": "23:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -30286,6 +30379,17 @@
           ],
           "note": "",
           "submittedAt": "2026-09-28T08:25:05.959Z"
+        },
+        {
+          "id": "29421e6c-e37a-4abe-90c3-592f6e4de717",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "slotIds": [
+            "spaet1"
+          ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-09-29T15:17:13.028Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -30347,13 +30451,13 @@
           "submittedAt": "2026-09-28T08:25:39.550Z"
         },
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
           "id": "d4906911-4dd9-422e-bebc-6e7a8348761f",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T09:42:49.616Z"
         }
@@ -30492,13 +30596,13 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
           "id": "14a48b84-c310-4519-847e-6f3437a4501e",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T09:42:23.272Z"
         }
@@ -30523,7 +30627,8 @@
           "detail": "Tag 2026-11-01 angelegt"
         }
       ],
-      "closedAt": null
+      "closedAt": null,
+      "materialkosten": 0
     },
     {
       "id": "46f32c9e-5d42-4475-b7cc-aa88bb18e92f",
@@ -30542,13 +30647,13 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "2a259135-0763-4342-ace9-14416bbacef5",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T10:00:17.512Z"
         }
@@ -30573,7 +30678,8 @@
           "detail": "Tag 2026-11-04 angelegt"
         }
       ],
-      "closedAt": null
+      "closedAt": null,
+      "materialkosten": 0
     },
     {
       "id": "6183a9fc-5649-4109-a379-a532bca527a1",
@@ -30592,13 +30698,13 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "id": "f233fb12-d399-41dc-9bcf-f9dc2b3ab18a",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet2"
           ],
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T10:00:17.512Z"
         }
@@ -30623,7 +30729,8 @@
           "detail": "Tag 2026-11-05 angelegt"
         }
       ],
-      "closedAt": null
+      "closedAt": null,
+      "materialkosten": 0
     },
     {
       "id": "c442ff01-ec08-4986-9212-c75ff7b9229c",
@@ -30642,13 +30749,13 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
           "id": "7111ba8a-1396-4366-931b-51f4f266c24d",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "mittel"
           ],
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T10:00:17.512Z"
         }
@@ -30673,7 +30780,8 @@
           "detail": "Tag 2026-11-07 angelegt"
         }
       ],
-      "closedAt": null
+      "closedAt": null,
+      "materialkosten": 0
     }
   ],
   "notifications": [
@@ -34634,83 +34742,83 @@
       "reportedAt": "2026-09-29T08:47:47.476Z"
     },
     {
+      "art": "urlaub",
+      "note": "",
       "id": "857cfe52-a4ef-46e9-83b7-03e48e39432f",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-10-01",
-      "art": "urlaub",
-      "note": "",
       "reportedAt": "2026-09-29T11:03:58.571Z"
     },
     {
+      "art": "urlaub",
+      "note": "",
       "id": "93544a94-8333-4801-b60e-823de75b8e1e",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-10-02",
-      "art": "urlaub",
-      "note": "",
       "reportedAt": "2026-09-29T11:03:58.574Z"
     },
     {
+      "art": "urlaub",
+      "note": "",
       "id": "520440ae-1473-4041-a626-84424755156c",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-10-03",
-      "art": "urlaub",
-      "note": "",
       "reportedAt": "2026-09-29T11:03:58.576Z"
     },
     {
+      "art": "urlaub",
+      "note": "",
       "id": "7c6b7661-1412-42f8-90af-ef67d1c7ae57",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-10-04",
-      "art": "urlaub",
-      "note": "",
       "reportedAt": "2026-09-29T11:03:58.578Z"
     },
     {
+      "art": "urlaub",
+      "note": "",
       "id": "355e94a0-a296-4375-a3da-57fc6367fa40",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-09-29",
-      "art": "urlaub",
-      "note": "",
       "reportedAt": "2026-09-29T11:03:58.579Z"
     },
     {
+      "art": "urlaub",
+      "note": "Geschäftsreise",
       "id": "37a125c2-8bb1-453e-878a-e89c29e1d29c",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-11-02",
-      "art": "urlaub",
-      "note": "Geschäftsreise",
       "reportedAt": "2026-09-29T11:03:58.581Z"
     },
     {
+      "art": "urlaub",
+      "note": "Geschäftsreise",
       "id": "4a6360e7-e84f-45fe-9825-b51381ee15b3",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-11-03",
-      "art": "urlaub",
-      "note": "Geschäftsreise",
       "reportedAt": "2026-09-29T11:03:58.583Z"
     },
     {
+      "art": "urlaub",
+      "note": "Geschäftsreise",
       "id": "95478073-ace5-45bc-8bd6-3f246eff90bf",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-11-04",
-      "art": "urlaub",
-      "note": "Geschäftsreise",
       "reportedAt": "2026-09-29T11:03:58.585Z"
     },
     {
+      "art": "urlaub",
+      "note": "Geschäftsreise",
       "id": "15d99c13-4aa4-400c-bafc-28547a424a20",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-11-05",
-      "art": "urlaub",
-      "note": "Geschäftsreise",
       "reportedAt": "2026-09-29T11:03:58.587Z"
     },
     {
+      "art": "urlaub",
+      "note": "Geschäftsreise",
       "id": "ca45127f-4e40-49a4-be7f-d9accad55b2b",
       "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
       "date": "2026-10-12",
-      "art": "urlaub",
-      "note": "Geschäftsreise",
       "reportedAt": "2026-09-29T11:03:58.589Z"
     }
   ],
@@ -44024,6 +44132,48 @@
       "status": "offen",
       "source": "manuell",
       "createdAt": "2026-09-29T05:48:39.436Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "6a30a541-f45c-45e2-ae16-581b9e5d31fe",
+      "code": "TU9SK",
+      "date": "2026-10-04",
+      "time": "10:00",
+      "name": "Haupt",
+      "phone": "01626429298",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-09-29T14:14:53.125Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "63ec07ca-c740-4659-8861-ef1c40bd05a4",
+      "code": "Z8NHK",
+      "date": "2026-09-30",
+      "time": "10:00",
+      "name": "Johann Vogt",
+      "phone": "015735561157",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-09-29T14:14:53.131Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

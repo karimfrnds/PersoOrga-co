@@ -8,10 +8,11 @@
 // schließt sich dieses Fenster wieder, ohne auszustempeln, und man landet
 // wieder auf dem Leerlauf-Bildschirm.
 //
-// Offene Aufgaben halten niemanden mehr auf: wer gehen will, kann gehen. Vor
-// dem Ausstempeln kommt nur noch ein Hinweis, WAS noch offen ist und in
-// welchem Abschnitt. Ein Knopf, der sich nicht drücken lässt, erklärt nichts
-// und wird am Ende eines langen Tages nur umgangen.
+// Ausstempeln geht erst, wenn die eigenen Aufgaben erledigt sind – abgehakt
+// oder weitergegeben. Das ist der einzige Moment am Tag, an dem sicher jemand
+// hinschaut. Es geht dabei nur um die Aufgaben DIESER Person: was bei anderen
+// liegt oder niemandem zugeordnet ist, hält hier niemanden fest, sondern wird
+// beim Namen genannt.
 // ============================================================================
 import { store, AUFGABEN_PHASEN, PHASE_LABEL } from "../store.js";
 import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
@@ -423,9 +424,6 @@ function renderKiosk(navigate) {
     const zugeteilt = istStore ? meineAlle.filter((t) => t.source !== "template") : [];
     const nachPhase = store.aufgabenNachPhase(anzeige);
     const offenJe = (ph) => nachPhase[ph].filter((t) => !t.done);
-    // Für den Hinweis beim Ausstempeln zählt alles, was offen ist – nicht nur die Standard-Aufgaben.
-    const nachPhaseAlle = store.aufgabenNachPhase(meineAlle);
-    const offenAlleJe = (ph) => nachPhaseAlle[ph].filter((t) => !t.done);
     const faellig = meineAlle.filter((t) => !t.done && t.time && store.istFaellig(t));
 
     // Welcher Abschnitt steht offen?
@@ -590,39 +588,69 @@ function renderKiosk(navigate) {
 
     // ---- Ausstempeln ----
     //
-    // Offene Aufgaben halten niemanden fest. Ein Knopf, der sich nicht druecken laesst, sagt nicht, was
-    // fehlt, und wer wirklich gehen muss, stempelt dann eben gar nicht aus – dann fehlt am Ende die Zeit
-    // in der Abrechnung, und das ist schlimmer als eine liegen gebliebene Aufgabe. Stattdessen: ein
-    // Hinweis, der beim Namen nennt, welcher Abschnitt noch offen ist.
-    const offeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: offenAlleJe(ph).length })).filter((x) => x.offen > 0);
-    const offenGesamt = offeneAbschnitte.reduce((n, x) => n + x.offen, 0);
+    // Wer Schluss machen will, muss seine eigenen Aufgaben erledigt haben: abgehakt oder weitergegeben.
+    // Beim Ausstempeln schaut sicher jemand hin – später nicht mehr.
+    //
+    // Es geht dabei ausschliesslich um die Aufgaben dieser Person. Was noch bei anderen liegt oder
+    // niemandem zugeordnet ist, hält hier niemanden fest: sonst hängt das Schichtende der Frühschicht
+    // daran, dass die Spätschicht ihre Liste nicht macht – und wer dann trotzdem gehen muss, stempelt gar
+    // nicht aus. Dann fehlt die Zeit in der Abrechnung, und das ist schlimmer als ein offener Punkt.
+    const offeneEigene = mine.filter((t) => !t.done);
+    const eigeneNachPhase = store.aufgabenNachPhase(offeneEigene);
+    const eigeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: eigeneNachPhase[ph].length })).filter((x) => x.offen > 0);
+    // Der Knopf darf nur dorthin führen, wo die Aufgabe wirklich in einem Abschnitt steht.
+    const sprungPhase = eigeneAbschnitte.find((x) => eigeneNachPhase[x.ph].some((t) => anzeige.includes(t)))?.ph || null;
+    // Was niemandem zugeordnet ist, wird nur genannt.
+    const offeneOhneNamen = allgemein.filter((t) => !t.done).length;
     const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
     const wouldBeLast = otherOpenShifts.length === 0;
-
-    if (offenGesamt > 0) {
-      const hint = document.createElement("p");
-      hint.className = "callout callout-warn";
-      hint.innerHTML =
-        `<b>Achtung: ${offenGesamt} ${offenGesamt === 1 ? "Aufgabe ist" : "Aufgaben sind"} noch offen.</b><br>` +
-        offeneAbschnitte.map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen}`).join(" · ");
-      wrap.appendChild(hint);
-    }
 
     const endBtn = document.createElement("button");
     endBtn.className = "btn btn-primary btn-huge";
     endBtn.textContent = "🚪 Schicht beenden";
+
+    if (offeneEigene.length > 0) {
+      const hint = document.createElement("div");
+      hint.className = "callout callout-warn kiosk-ende-hinweis";
+      hint.innerHTML =
+        `<b>Noch ${offeneEigene.length} ${offeneEigene.length === 1 ? "eigene Aufgabe" : "eigene Aufgaben"} offen.</b><br>` +
+        eigeneAbschnitte.map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen}`).join(" · ") +
+        `<span class="kiosk-ende-erklaerung small">Abhaken – oder mit „↪ Weitergeben“ an jemand anderen oder auf morgen schieben.
+        Danach kannst du Schluss machen.</span>`;
+      if (sprungPhase) {
+        const hin = document.createElement("button");
+        hin.type = "button";
+        hin.className = "btn btn-secondary";
+        hin.textContent = "Zu den offenen Aufgaben";
+        hin.onclick = () => {
+          offenePhase = sprungPhase;
+          rerender();
+        };
+        hint.appendChild(hin);
+      }
+      wrap.appendChild(hint);
+      endBtn.disabled = true;
+    }
+
     endBtn.onclick = async () => {
-      if (offenGesamt > 0) {
-        const zeilen = offeneAbschnitte
-          .map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen} ${x.offen === 1 ? "Aufgabe" : "Aufgaben"}`)
-          .join("<br>");
+      // Sicherheitsnetz: zwischen Zeichnen und Tippen kann jemand etwas zugeteilt oder wieder aufgemacht haben.
+      const jetztOffen = (store.getDay(day.id)?.tasks || []).filter((t) => t.assignedTo === emp.id && !t.done).length;
+      if (jetztOffen > 0) {
+        await alertDialog("Es sind noch eigene Aufgaben offen. Bitte abhaken oder weitergeben – dann geht das Ausstempeln.", {
+          title: "Noch nicht fertig",
+        });
+        rerender();
+        return;
+      }
+      if (offeneOhneNamen > 0) {
         const weiter = await confirmDialog(
-          `Es ${offenGesamt === 1 ? "ist noch eine Aufgabe" : `sind noch ${offenGesamt} Aufgaben`} offen:<br><br>${zeilen}<br><br>` +
-            "Du kannst trotzdem Schluss machen. Offenes bleibt stehen und der Chef sieht es im Tagesabschluss.",
-          { title: "Noch offene Aufgaben", okLabel: "Trotzdem beenden", cancelLabel: "Zurück zu den Aufgaben" }
+          `Deine Aufgaben sind erledigt. Im Laden ${
+            offeneOhneNamen === 1 ? "ist noch eine Aufgabe" : `sind noch ${offeneOhneNamen} Aufgaben`
+          } offen, die niemandem fest zugeordnet ${offeneOhneNamen === 1 ? "ist" : "sind"}.<br><br>` +
+            "Du kannst Schluss machen – der Chef sieht das Offene im Tagesabschluss.",
+          { title: "Im Laden noch offen", okLabel: "Schicht beenden", cancelLabel: "Nochmal ansehen" }
         );
         if (!weiter) {
-          offenePhase = offeneAbschnitte[0].ph; // den ersten offenen Abschnitt gleich aufklappen
           rerender();
           return;
         }

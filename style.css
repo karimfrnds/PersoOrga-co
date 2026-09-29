@@ -154,6 +154,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   margin: 0 0 10px;
 }
 
+/* Der Hinweis ueber dem Beenden-Knopf: Ueberschrift fett, Erklaerung darunter ruhig. Faerbt man den
+   ganzen Kasten fett-orange, liest man ihn als einen Block und uebersieht, was zu tun ist. */
+.kiosk-ende-hinweis { margin-bottom: 10px; }
+.kiosk-ende-hinweis .kiosk-ende-erklaerung { display: block; font-weight: 400; margin-top: 6px; opacity: 0.85; }
+.kiosk-ende-hinweis .btn { margin-top: 10px; }
+
 .empty-state {
   text-align: center;
   color: var(--gray);

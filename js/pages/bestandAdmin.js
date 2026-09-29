@@ -8,7 +8,7 @@
 // ============================================================================
 import { store } from "../store.js";
 import { escapeHtml } from "../format.js";
-import { openPrepForm, zahlText, einheitText, wannText } from "./kueche.js";
+import { openPrepForm, zahlText, einheitText, wannText, werZaehltText } from "./kueche.js";
 
 function renderBestandAdmin() {
   const container = document.createElement("div");
@@ -21,14 +21,18 @@ function renderBestandAdmin() {
 
   function build() {
     const frag = document.createElement("div");
+    // Wer welchen Bereich zählt, steht in der Betriebs-Beschreibung – im Pop-up heissen die Bereiche
+    // anders als im Café, und ein fest getippter Satz waere dort schlicht falsch.
+    const werZaehlt = escapeHtml(werZaehltText());
+    const beispiel = store.BESTAND_BEREICHE[0];
     frag.innerHTML = `
       <h1>Soll-Bestand</h1>
       <p class="muted">Welche Artikel gezählt werden und was mindestens da sein soll. Gezählt wird im
-      persönlichen Fenster am iPad und am Handy: <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service,
-      <b>Divers</b> von der Store-Managerin – sie sieht alle drei.</p>
+      persönlichen Fenster am iPad und am Handy: ${werZaehlt}.</p>
       <p class="muted small">Einen festen Zähltag legst du unter <b>Aufgaben</b> an: Standard-Aufgabe, z.B.
-      „Bar zählen“ für Dienstag, und bei „Mit Bestand verknüpft“ die Bar wählen. Dann steht am Dienstag
-      „Heute wird gezählt“ – und die Aufgabe hakt sich ab, sobald jemand die Zählung abschließt.</p>`;
+      „${escapeHtml(beispiel?.label || "Bar")} zählen“ für Dienstag, und bei „Mit Bestand verknüpft“
+      ${escapeHtml(beispiel?.label || "die Bar")} wählen. Dann steht am Dienstag „Heute wird gezählt“ – und die
+      Aufgabe hakt sich ab, sobald jemand die Zählung abschließt.</p>`;
 
     for (const b of store.BESTAND_BEREICHE) frag.appendChild(buildBereich(b));
     return frag;

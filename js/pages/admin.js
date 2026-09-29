@@ -19,6 +19,7 @@ import { renderSettings } from "./settings.js";
 import { renderExport } from "./exportpage.js";
 import { renderHours } from "./hours.js";
 import { renderBeta } from "./beta.js";
+import { renderEinrichtung } from "./einrichtung.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { isUnlocked, unlockDirect, lock } from "../adminAuth.js";
 import { todayStr } from "../format.js";
@@ -32,6 +33,7 @@ function renderAdmin(navigate) {
   let lockError = "";
 
   const ALLE_TABS = [
+    { id: "einrichtung", label: "🚀 Einrichtung", render: () => renderEinrichtung(wechsleTab) },
     { id: "days", label: "Tage", render: () => renderAdminDays(navigate) },
     { id: "employees", label: "Mitarbeiter", render: () => renderEmployees() },
     { id: "tasks", label: "Aufgaben", render: () => renderTasksAdmin() },
@@ -53,9 +55,20 @@ function renderAdmin(navigate) {
     if (t.id === "stock") return kann("bestellliste");
     if (t.id === "produkte" || t.id === "schichten") return kann("verkauf") || kann("schichtenEditierbar");
     if (t.id === "beta") return kann("beta");
+    if (t.id === "einrichtung") return kann("einrichtung");
     return true;
   });
   if (!TABS.some((t) => t.id === activeTab)) activeTab = TABS[0].id;
+  // Ein Betrieb, in dem noch niemand angelegt ist, hat nur eine sinnvolle erste Seite.
+  if (kann("einrichtung") && store.getEmployees(true).length === 0) activeTab = "einrichtung";
+
+  /** Aus einem Tab heraus in einen anderen springen (die Einrichtung verweist auf die Fachseiten). */
+  function wechsleTab(id) {
+    if (!TABS.some((t) => t.id === id)) return;
+    activeTab = id;
+    window.scrollTo(0, 0);
+    rerender();
+  }
 
   function rerender() {
     container.innerHTML = "";

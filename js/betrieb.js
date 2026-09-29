@@ -35,6 +35,7 @@ const BETRIEBE = {
       kennzahlen: true, // Umsatz, Umschlag, Wareneinsatz
       schichtenEditierbar: false, // Schichtzeiten stehen im Code
       beta: true, // Testbereich im Admin (Wochenplan-CSV)
+      einrichtung: false, // laeuft seit Jahren – nichts mehr einzurichten
     },
     rollen: ["service", "kueche", "bar"],
     produkte: [],
@@ -57,6 +58,7 @@ const BETRIEBE = {
       kennzahlen: true,
       schichtenEditierbar: true,
       beta: false, // im Pop-up nichts zum Ausprobieren – der Laden laeuft drei Monate
+      einrichtung: true, // ein neuer Betrieb startet bei null und braucht einen Startpunkt
     },
     // Ein Pop-up-Team ist klein und macht alles: eine Rolle genügt, und sie hält den Schichtplan einfach.
     rollen: ["service"],

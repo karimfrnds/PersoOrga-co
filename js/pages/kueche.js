@@ -20,6 +20,7 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
+import { betrieb } from "../betrieb.js";
 
 const STATUS = {
   leer: { label: "leer", klasse: "bestand-leer", rang: 0 },
@@ -505,6 +506,17 @@ function buildPrepRow(p, z, zeichneFuss, onChange) {
   return row;
 }
 
+/** Wer zählt welchen Bereich? Kommt aus der Betriebs-Beschreibung, nicht aus einem festen Satz: im
+ * Pop-up heissen die Bereiche anders als im Café. Doppelpunkt statt "von …", sonst steht da
+ * "Küche von Küche". Rollen, die es in diesem Betrieb nicht gibt, werden weggelassen. */
+const ROLLEN_WORT = { service: "Service", kueche: "Küchen-Team", bar: "Bar" };
+function werZaehltText() {
+  return store.BESTAND_BEREICHE.map((b) => {
+    const wer = b.rollen.filter((r) => betrieb.rollen.includes(r)).map((r) => ROLLEN_WORT[r] || r);
+    return `${b.symbol} ${b.label}: ${wer.length ? wer.join(" und ") : "Store-Managerin"}`;
+  }).join(" · ");
+}
+
 /** Artikel anlegen oder ändern – im Admin-Bereich. Welche Artikel die Leute sehen und was das Soll ist,
  * entscheidet der Chef. */
 function openPrepForm(vorhanden, { onChange, bereich = "kueche" } = {}) {
@@ -526,7 +538,7 @@ function openPrepForm(vorhanden, { onChange, bereich = "kueche" } = {}) {
 
   box.appendChild(feld("Artikel", name));
   const reihe0 = el("div", "res-form-row");
-  reihe0.append(feld("Wer zählt?", bereichSel, "Küche: Küchen-Team · Bar: Bar und Service · Divers: Store-Managerin. Die Store-Managerin sieht alle drei."));
+  reihe0.append(feld("Wer zählt?", bereichSel, werZaehltText()));
   box.appendChild(reihe0);
   const reihe = el("div", "res-form-row");
   reihe.append(feld("Soll (mindestens)", soll), feld("Einheit", einheit));
@@ -912,4 +924,4 @@ function ausText(block) {
   return r;
 }
 
-export { buildBestandKarten, buildKuecheKarte, buildRezepteKarte, openPrepForm, zahlText, einheitText, wannText, leseRezepte };
+export { buildBestandKarten, buildKuecheKarte, buildRezepteKarte, openPrepForm, zahlText, einheitText, wannText, leseRezepte, werZaehltText };

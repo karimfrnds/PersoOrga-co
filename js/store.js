@@ -376,8 +376,9 @@ function normalizePrep(v) {
     id: v?.id || uid(),
     name: String(v?.name || "").trim(),
     einheit: String(v?.einheit || "Behälter"),
-    // Küche oder Bar. Alles aus der Zeit vor der Bar war Küche.
-    bereich: BESTAND_IDS.includes(v?.bereich) ? v.bereich : "kueche",
+    // Küche, Bar oder Divers – im Pop-up Theke oder Lager. Alles aus der Zeit vor der Bar war Küche,
+    // und ein unbekannter Bereich landet im ersten dieses Betriebs: sonst waere der Artikel unsichtbar.
+    bereich: BESTAND_IDS.includes(v?.bereich) ? v.bereich : BESTAND_IDS[0],
     soll: Math.max(0, Number(v?.soll) || 0),
     notiz: String(v?.notiz || ""),
     rezeptId: v?.rezeptId || null,

@@ -8,9 +8,9 @@ import { store } from "../store.js";
 import { kann } from "../betrieb.js";
 import { ROLES, ROLE_LABEL } from "../calc.js";
 import { confirmDialog, alertDialog, promptDialog } from "../dialog.js";
-import { performBackup } from "../backup.js";
+import { performBackup, listBackups, fetchBackup } from "../backup.js";
 import { performTaskSync } from "../taskSync.js";
-import { dateDe, todayStr } from "../format.js";
+import { dateDe, todayStr, escapeHtml } from "../format.js";
 
 function renderSettings() {
   const container = document.createElement("div");
@@ -412,6 +412,13 @@ function renderSettings() {
       rerender();
     };
     autoBackupCard.appendChild(testBtn);
+
+    // Wiederherstellen: ohne diesen Weg nützt die beste Sicherung nichts, wenn es drauf ankommt.
+    const zurueckBtn = document.createElement("button");
+    zurueckBtn.className = "btn btn-link";
+    zurueckBtn.textContent = "Sicherungen ansehen / wiederherstellen";
+    zurueckBtn.onclick = () => openBackupListe();
+    autoBackupCard.appendChild(zurueckBtn);
     cards.push(autoBackupCard);
 
     // Telegram-Aufgaben abgleichen (eigener Cloudflare Worker + KV-Speicher, unabhängig von GitHub)
@@ -551,6 +558,93 @@ function renderSettings() {
     cards.push(backupCard);
 
     return cards;
+  }
+
+  /** Die vorhandenen Sicherungen zeigen und eine davon einspielen.
+   *
+   * Vor dem Einspielen wird der aktuelle Stand als Datei heruntergeladen – wer eine Sicherung von gestern
+   * einspielt, verliert sonst alles von heute, ohne es zurückholen zu können. */
+  async function openBackupListe() {
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const box = document.createElement("div");
+    box.className = "dialog";
+    box.innerHTML = `<h2>Sicherungen</h2><p class="muted small">Lade…</p>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    let liste;
+    try {
+      liste = await listBackups();
+    } catch (e) {
+      box.innerHTML = `<h2>Sicherungen</h2><div class="callout callout-warn">⚠ ${e.message}</div>`;
+      const zu = document.createElement("button");
+      zu.className = "btn btn-secondary";
+      zu.textContent = "Schließen";
+      zu.onclick = () => overlay.remove();
+      box.appendChild(zu);
+      return;
+    }
+
+    box.innerHTML = `<h2>Sicherungen</h2><p class="muted small">Neueste zuerst. Beim Einspielen wird der jetzige Stand vorher als Datei gesichert.</p>`;
+    const l = document.createElement("div");
+    l.className = "picker-list";
+    for (const b of liste.slice(0, 30)) {
+      const btn = document.createElement("button");
+      btn.className = "picker-row";
+      btn.innerHTML = `<span class="picker-name">${escapeHtml(dateDe(b.datum))}</span><span class="muted small">${b.groesseKB} KB</span>`;
+      btn.onclick = () => openBackupEinspielen(b, overlay);
+      l.appendChild(btn);
+    }
+    if (liste.length === 0) l.innerHTML = `<p class="muted small">Noch keine Sicherung vorhanden.</p>`;
+    box.appendChild(l);
+    const zu = document.createElement("button");
+    zu.className = "btn btn-secondary";
+    zu.textContent = "Schließen";
+    zu.onclick = () => overlay.remove();
+    box.appendChild(zu);
+  }
+
+  async function openBackupEinspielen(datei, listeOverlay) {
+    let text;
+    try {
+      text = await fetchBackup(datei);
+    } catch (e) {
+      await alertDialog("Konnte die Sicherung nicht laden: " + e.message, { title: "Fehler" });
+      return;
+    }
+    let inhalt;
+    try {
+      inhalt = JSON.parse(text);
+    } catch {
+      await alertDialog("Diese Sicherung lässt sich nicht lesen.", { title: "Fehler" });
+      return;
+    }
+    const jetzt = JSON.parse(store.exportJSON());
+    const zeile = (was, alt, neu) => `${was}: <b>${neu}</b> (jetzt ${alt})`;
+    const ok = await confirmDialog(
+      `Sicherung vom <b>${dateDe(datei.datum)}</b> einspielen? Der jetzige Stand wird dadurch <b>vollständig ersetzt</b>.<br><br>` +
+        [
+          zeile("Tage", (jetzt.days || []).length, (inhalt.days || []).length),
+          zeile("Reservierungen", (jetzt.reservations || []).length, (inhalt.reservations || []).length),
+          zeile("Mitarbeiter", (jetzt.employees || []).length, (inhalt.employees || []).length),
+        ].join("<br>") +
+        `<br><br>Der jetzige Stand wird vorher als Datei heruntergeladen.`,
+      { title: "Wiederherstellen", danger: true, okLabel: "Einspielen" }
+    );
+    if (!ok) return;
+
+    const blob = new Blob([store.exportJSON()], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `stand-vor-wiederherstellung-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    store.importJSON(text);
+    listeOverlay?.remove();
+    await alertDialog("Sicherung eingespielt. Die App wird neu geladen.");
+    location.reload();
   }
 
   // ---------------------------------------------------------------------

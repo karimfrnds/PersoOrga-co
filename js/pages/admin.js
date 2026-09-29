@@ -4,6 +4,7 @@
 // ein Schutz gegen versehentliche Änderungen auf einem gemeinsam genutzten Gerät.
 // ============================================================================
 import { store } from "../store.js";
+import { backupStatus } from "../backup.js";
 import { kann } from "../betrieb.js";
 import { renderAdminDays } from "./adminDays.js";
 import { renderEmployees } from "./employees.js";
@@ -187,6 +188,13 @@ function renderAdmin(navigate) {
       const w = document.createElement("div");
       w.className = "callout callout-warn";
       w.innerHTML = `⚠ Letztes automatisches Backup fehlgeschlagen: ${ghCfg.lastError} – bitte unter <b>Einstellungen</b> prüfen.`;
+      wrap.appendChild(w);
+    } else if (backupStatus().veraltet) {
+      const st = backupStatus();
+      w.className = "callout callout-warn";
+      w.innerHTML = `⚠ <b>Die letzte Sicherung ist ${
+        st.alterStunden === null ? "nie gelaufen" : `${Math.round(st.alterStunden)} Stunden alt`
+      }.</b> Geht am iPad etwas verloren, fehlt alles seitdem. Bitte unter <b>Einstellungen → Backup</b> nachsehen.`;
       wrap.appendChild(w);
     } else if (ghCfg.lastBackupDate !== todayStr()) {
       const w = document.createElement("div");

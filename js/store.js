@@ -130,6 +130,7 @@ function defaultData() {
         repo: "", // Repository-Name
         token: "", // Fine-grained Personal Access Token, nur "Contents: Read and write" für dieses eine Repo
         lastBackupDate: null, // YYYY-MM-DD des letzten erfolgreichen automatischen Backups
+        lastBackupAt: null, // Zeitpunkt der letzten erfolgreichen Sicherung (auch mehrmals am Tag)
         lastError: null, // Fehlermeldung des letzten fehlgeschlagenen Versuchs, für Warnhinweis im Admin
       },
       // Telegram-Aufgaben-Inbox: Abgleich mit dem Cloudflare Worker (worker/telegram-bot.js), der die
@@ -480,15 +481,84 @@ function load() {
       managerAufgaben: parsed.managerAufgaben ?? base.managerAufgaben,
     };
   } catch (e) {
-    console.error("Fehler beim Laden der Daten, starte mit leerer Datenbank.", e);
+    // NICHT mit einer leeren Datenbank weitermachen: der nächste Schreibvorgang würde den (womöglich
+    // noch reparierbaren) Stand endgültig überschreiben. Stattdessen den Rohtext beiseitelegen, das
+    // Speichern sperren und die Oberfläche das sagen lassen.
+    console.error("Daten ließen sich nicht lesen.", e);
+    try {
+      localStorage.setItem(`${STORAGE_KEY}__unlesbar_${Date.now()}`, raw);
+    } catch {}
+    ladeFehler = String(e.message || e);
+    schreibenErlaubt = false;
     return defaultData();
   }
 }
 
+// --- Schutz gegen veraltete Stände ---------------------------------------------------------------
+//
+// Alle Daten liegen als EIN Block im Browser-Speicher, und jedes Speichern schreibt den ganzen Block.
+// Ist die App zweimal offen (zweiter Tab, oder eine Seite, die iOS im Hintergrund eingefroren und später
+// wiederhergestellt hat), hält die zweite Ansicht einen Stand von früher – und ihr nächstes Speichern
+// macht alles zunichte, was seitdem passiert ist. Genau so sind am 18./19.09. ein Abend voller
+// Einstempelungen, Aufgaben und Online-Reservierungen verschwunden.
+//
+// Deshalb steht neben den Daten eine kleine Nummer (rev). Wer speichert, muss die Nummer haben, die
+// gerade gilt. Passt sie nicht, ist der eigene Stand veraltet: dann wird NICHT geschrieben, sondern neu
+// geladen. Eine gerade getippte Eingabe geht dabei verloren – ein Abend nicht mehr.
+const REV_KEY = `${STORAGE_KEY}__rev`;
+const meineKennung = Math.random().toString(36).slice(2, 10);
+let meineRev = 0;
+let schreibenErlaubt = true;
+let ladeFehler = null;
+let schreibFehler = null;
+let konfliktMelder = null;
+
+function leseRev() {
+  try {
+    const roh = localStorage.getItem(REV_KEY);
+    return roh ? JSON.parse(roh) : null;
+  } catch {
+    return null;
+  }
+}
+function schreibeRev(rev) {
+  localStorage.setItem(REV_KEY, JSON.stringify({ rev, wer: meineKennung, at: new Date().toISOString() }));
+}
+
 let data = load();
+meineRev = leseRev()?.rev || 0;
+
+/** Ist der Stand im Speicher neuer als unserer? Dann arbeiten wir mit veralteten Daten. */
+function istVeraltet() {
+  const jetzt = leseRev();
+  return !!jetzt && jetzt.rev !== meineRev;
+}
+
+function meldeKonflikt(grund) {
+  schreibenErlaubt = false;
+  if (konfliktMelder) konfliktMelder(grund);
+  else if (typeof location !== "undefined") location.reload();
+}
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if (!schreibenErlaubt) return;
+  // Vor jedem Schreiben prüfen, ob in der Zwischenzeit jemand anderes geschrieben hat.
+  if (istVeraltet()) {
+    meldeKonflikt("veraltet");
+    return;
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    meineRev += 1;
+    schreibeRev(meineRev);
+    schreibFehler = null;
+  } catch (e) {
+    // Speicher voll oder vom System gesperrt: Das darf nicht still passieren – sonst arbeitet man
+    // stundenlang weiter und beim nächsten Öffnen ist alles davon weg.
+    schreibFehler = String(e.message || e);
+    schreibenErlaubt = false;
+    if (konfliktMelder) konfliktMelder("schreibfehler");
+  }
 }
 
 einmaligeMigrationen();
@@ -644,6 +714,27 @@ function materializePlannedShiftsFromAvailability(d) {
 }
 
 export const store = {
+  // ---- Zustand des Speichers ----
+  /** Die Oberfläche meldet sich hier an, um bei einem veralteten Stand oder einem Schreibfehler zu
+   * reagieren (Hinweis zeigen, neu laden). */
+  aufSpeicherProblem(fn) {
+    konfliktMelder = fn;
+  },
+  speicherZustand() {
+    return {
+      ok: schreibenErlaubt && !ladeFehler && !schreibFehler,
+      ladeFehler,
+      schreibFehler,
+      rev: meineRev,
+      groesseKB: Math.round((localStorage.getItem(STORAGE_KEY) || "").length / 1024),
+    };
+  },
+  /** Prüft, ob inzwischen ein neuerer Stand im Speicher liegt (z.B. nachdem die Seite im Hintergrund
+   * war). true = diese Ansicht ist veraltet und sollte neu laden. */
+  istVeraltet() {
+    return istVeraltet();
+  },
+
   // ---- roh ----
   get data() {
     return data;

@@ -797,15 +797,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-09-30",
-      "lastBackupAt": "2026-09-30T13:33:29.813Z",
-      "lastError": null
+      "lastBackupAt": "2026-09-30T19:05:14.961Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 492b511242b138d8d3abb08f56dd333c9efb7c5f but expected 960c48dd7765ea4e818a3d0ea3803180987e4276\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-09-30T15:52:48.620Z",
+      "lastSyncAt": "2026-09-30T20:47:34.013Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -815,27 +815,27 @@
         },
         {
           "id": "65c6e2e3-2cad-4532-8d8d-912920a71510",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|maria|2026-09-30||hoch"
         },
         {
           "id": "47454471-0563-452d-a93f-86ede07aa362",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|maria|2026-09-30||hoch"
         },
         {
           "id": "db9aa059-fdad-4321-bb9f-324ba91eab71",
-          "done": false,
+          "done": true,
           "sig": "Akku Lampen innen anmachen|maria|2026-09-30||hoch"
         },
         {
           "id": "9242e520-d826-44be-9bd4-ecc229c1ea8c",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|maria|2026-09-30||hoch"
         },
         {
           "id": "f6d5a910-fe58-4468-80cd-0e6615ebfed8",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|maria|2026-09-30||hoch"
         },
         {
@@ -845,12 +845,12 @@
         },
         {
           "id": "6a4cf1cf-f472-4539-a4c6-4b23665bb43b",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|maria|2026-09-30||hoch"
         },
         {
           "id": "01606e82-16e5-4b19-8699-5b9e3e8ec849",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|maria|2026-09-30||hoch"
         },
         {
@@ -860,7 +860,7 @@
         },
         {
           "id": "1c96cc72-4bcb-4676-9e13-3b8388deadbc",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|maria|2026-09-30||hoch"
         },
         {
@@ -942,6 +942,16 @@
           "id": "ced24870-dd88-4300-b93e-0516cc94c8fc",
           "done": false,
           "sig": "Pfand einsortieren im Keller|nele|2026-09-30||normal"
+        },
+        {
+          "id": "80d69d70-3a99-4e4f-9be4-3dfdcc926117",
+          "done": false,
+          "sig": "Küchen Spülmaschine ausschalten vor Schichtende (Stopfen drinnen rausziehen, dann Tür zu und linken Knopf drücken)|maria|2026-09-30||normal"
+        },
+        {
+          "id": "8d16649b-7ff1-466f-b985-7b752629fc73",
+          "done": false,
+          "sig": "Eismaschine ausschalten und leer machen (Eis in einen Beutel füllen und in die Eistruhe)|maria|2026-09-30||normal"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -2382,7 +2392,8 @@
         "8682a5bc-a97d-44e4-82df-5d52eb001ac4",
         "c7e29267-24c5-45ea-a7da-db6e40046f82",
         "c65ef15a-51dd-4ab7-9828-bb1a63612a11",
-        "f0bf285e-f283-4f71-a1d9-6f5364ae0d2e"
+        "f0bf285e-f283-4f71-a1d9-6f5364ae0d2e",
+        "e61989a2-8f80-4f4c-af4b-0d211d03c506"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -26931,9 +26942,9 @@
           "phase": "beginn",
           "id": "65c6e2e3-2cad-4532-8d8d-912920a71510",
           "text": "Kerzen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:29.667Z",
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
@@ -26948,9 +26959,9 @@
           "phase": "beginn",
           "id": "47454471-0563-452d-a93f-86ede07aa362",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:30.215Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
@@ -26965,9 +26976,9 @@
           "phase": "beginn",
           "id": "db9aa059-fdad-4321-bb9f-324ba91eab71",
           "text": "Akku Lampen innen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:32.016Z",
           "source": "template",
           "templateId": "0fbe63fe-e5b5-4a9a-9883-886b3b58f423",
           "addedBy": null,
@@ -26982,9 +26993,9 @@
           "phase": "beginn",
           "id": "9242e520-d826-44be-9bd4-ecc229c1ea8c",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:32.831Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
@@ -26999,9 +27010,9 @@
           "phase": "beginn",
           "id": "f6d5a910-fe58-4468-80cd-0e6615ebfed8",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:33.981Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -27033,9 +27044,9 @@
           "phase": "schicht",
           "id": "6a4cf1cf-f472-4539-a4c6-4b23665bb43b",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:36.947Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -27050,9 +27061,9 @@
           "phase": "schicht",
           "id": "01606e82-16e5-4b19-8699-5b9e3e8ec849",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:05:36.230Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -27084,9 +27095,9 @@
           "phase": "ende",
           "id": "1c96cc72-4bcb-4676-9e13-3b8388deadbc",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-09-30T19:14:45.102Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -27364,6 +27375,34 @@
           "time": "",
           "phase": "ende",
           "bestandBereich": ""
+        },
+        {
+          "id": "80d69d70-3a99-4e4f-9be4-3dfdcc926117",
+          "text": "Küchen Spülmaschine ausschalten vor Schichtende (Stopfen drinnen rausziehen, dann Tür zu und linken Knopf drücken)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+          "priority": "normal",
+          "schicht": "",
+          "bereich": "",
+          "time": ""
+        },
+        {
+          "id": "8d16649b-7ff1-466f-b985-7b752629fc73",
+          "text": "Eismaschine ausschalten und leer machen (Eis in einen Beutel füllen und in die Eistruhe)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+          "priority": "normal",
+          "schicht": "",
+          "bereich": "",
+          "time": ""
         }
       ],
       "kassenabschluss": {
@@ -45191,6 +45230,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-09-30T13:33:27.269Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "2058c042-5925-4c92-9eab-a2c8ed410e3d",
+      "code": "AN6UX",
+      "date": "2026-10-03",
+      "time": "13:00",
+      "name": "Nele Bentz",
+      "phone": "015170074018",
+      "guests": 5,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-09-30T19:05:12.217Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

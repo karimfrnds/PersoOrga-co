@@ -784,15 +784,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-03",
-      "lastBackupAt": "2026-10-03T07:41:53.013Z",
-      "lastError": null
+      "lastBackupAt": "2026-10-03T10:58:46.076Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"Repository rule violations found\\n\\nTimed out validating the rule.\\n\\n\",\n  \"metadata\": {\n\n  },\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-update-file"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-03T10:18:29.094Z",
+      "lastSyncAt": "2026-10-03T13:57:30.077Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -912,7 +912,7 @@
         },
         {
           "id": "3f44a20a-95ab-4e92-a0f3-5dfaeb8ee9d5",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|anna z.|2026-10-03||hoch"
         },
         {
@@ -927,17 +927,17 @@
         },
         {
           "id": "bbe4c4f8-be4e-4959-b292-fbda992c0a60",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|anna z.|2026-10-03||hoch"
         },
         {
           "id": "524a33c0-73c0-4842-8861-728f6c380448",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|anna z.|2026-10-03||hoch"
         },
         {
           "id": "1a9adc7b-63f1-47ff-bc20-a8245d82db2c",
-          "done": false,
+          "done": true,
           "sig": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)|anna z.|2026-10-03||normal"
         },
         {
@@ -2419,7 +2419,8 @@
         "3eeed0cd-cc9d-42f3-8a6f-7fc190d9dc38",
         "cc1040f0-5feb-42ac-9d84-9610680cfb21",
         "21768f4e-26aa-4a8d-846d-cfa435e0acc1",
-        "90d7bc3b-08ab-48f0-8d6a-a20557c03781"
+        "90d7bc3b-08ab-48f0-8d6a-a20557c03781",
+        "f52c5f56-96c0-4b24-a4b9-83ee5574e3a9"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -32135,9 +32136,9 @@
         {
           "id": "3f44a20a-95ab-4e92-a0f3-5dfaeb8ee9d5",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-03T11:37:15.114Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -32186,9 +32187,9 @@
         {
           "id": "bbe4c4f8-be4e-4959-b292-fbda992c0a60",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-03T12:12:16.571Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -32203,9 +32204,9 @@
         {
           "id": "524a33c0-73c0-4842-8861-728f6c380448",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-03T11:37:39.663Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -32220,9 +32221,9 @@
         {
           "id": "1a9adc7b-63f1-47ff-bc20-a8245d82db2c",
           "text": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-03T12:07:12.690Z",
           "source": "template",
           "templateId": "cfcf0bfd-f732-4ca0-a45a-1c857eff983c",
           "addedBy": null,
@@ -41316,10 +41317,10 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-09-01T15:54:44.640Z",
-      "arrivedAt": null
+      "arrivedAt": "2026-10-03T11:05:34.597Z"
     },
     {
       "id": "45c81169-82e6-451f-9d03-23aeb4ba2f4f",
@@ -48053,12 +48054,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-09-30T13:33:27.260Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T11:04:53.681Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48120,10 +48121,10 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-09-30T19:05:12.217Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T11:04:58.530Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48613,7 +48614,7 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-02T11:58:59.771Z",
       "arrivedAt": "2026-10-03T08:52:38.332Z",
@@ -48703,10 +48704,10 @@
       "tableIds": [
         "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-02T21:25:43.381Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T13:56:10.571Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48815,11 +48816,13 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-03T08:15:50.546Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T13:56:11.470Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48975,7 +48978,7 @@
       "tableIds": [
         "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-03T08:54:24.330Z",
       "arrivedAt": "2026-10-03T08:54:24.340Z",
@@ -48995,11 +48998,13 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-03T09:08:39.724Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T13:56:11.087Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -49042,10 +49047,192 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-03T09:37:25.702Z",
       "arrivedAt": "2026-10-03T09:37:25.710Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "49faf49f-bd77-4666-aabb-11a1ead732d1",
+      "code": "62DYY",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "40330571-9be7-4544-8230-a2254d7a58ec"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:45.115Z",
+      "arrivedAt": "2026-10-03T10:59:45.122Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d82a29f9-4d0d-4f66-95bc-16ebacca0a58",
+      "code": "35JQE",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "02f09cc1-423a-4819-859c-b5442e699fb4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:50.650Z",
+      "arrivedAt": "2026-10-03T10:59:50.661Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8ad83121-e72b-49c9-9c6f-2ee821887624",
+      "code": "ELENJ",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "e1e4817b-bb80-46a9-9f02-2849583aeec2"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:52.416Z",
+      "arrivedAt": "2026-10-03T10:59:52.426Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "eb2e035c-69c6-45ce-a3c6-72e7241f961e",
+      "code": "CNA4D",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "f95936b5-8056-40f9-8574-90960f4cbbf9"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:54.115Z",
+      "arrivedAt": "2026-10-03T10:59:54.123Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "022d047b-210e-466f-a5df-17443b45006e",
+      "code": "3HD3R",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "1fe56110-0ae0-4e1b-b747-dd5892a9a5c8"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:55.765Z",
+      "arrivedAt": "2026-10-03T10:59:55.773Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "709a9f6e-f681-4b56-ac10-d7fd18c706d4",
+      "code": "ALP9E",
+      "date": "2026-10-03",
+      "time": "12:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "da1fdd40-63c7-458f-afb9-03874b815b27"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T10:59:57.282Z",
+      "arrivedAt": "2026-10-03T10:59:57.290Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "20c90749-154b-47dc-a0cb-40670464bdac",
+      "code": "DA2VX",
+      "date": "2026-10-03",
+      "time": "13:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4029057b-0fa7-484e-8bad-ba880accde56"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-03T11:25:41.064Z",
+      "arrivedAt": "2026-10-03T11:25:41.073Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "bc192629-118a-4703-875f-8c9ab96aaa56",
+      "code": "HJG4K",
+      "date": "2026-10-04",
+      "time": "11:30",
+      "name": "Annika Schuhmacher",
+      "phone": "017651500023",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-03T11:40:05.802Z",
+      "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

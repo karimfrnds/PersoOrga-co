@@ -784,15 +784,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-03",
-      "lastBackupAt": "2026-10-03T06:05:33.800Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a26e84cef8150448938be5a7328d00ed5f65f699 but expected a68c011c9836331d53c2f44071ddca95f7d4db03\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-03T07:41:53.013Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-03T07:40:29.965Z",
+      "lastSyncAt": "2026-10-03T10:18:29.094Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -904,6 +904,46 @@
           "id": "ffff05f5-cdda-4378-8d83-244db76c5a1a",
           "done": false,
           "sig": "Spülmaschine abpumpen und öffnen|george|2026-10-03||hoch"
+        },
+        {
+          "id": "f39a1d27-1ae0-4d01-aba0-64c10dd5bdf6",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "3f44a20a-95ab-4e92-a0f3-5dfaeb8ee9d5",
+          "done": false,
+          "sig": "Alles Besteck polieren und mind. 20 rollen|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "b082c616-f918-4059-86c5-27b43896ecf2",
+          "done": false,
+          "sig": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "7b040be4-a706-4510-8502-c2b9e68e11fc",
+          "done": false,
+          "sig": "Karten abwischen|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "bbe4c4f8-be4e-4959-b292-fbda992c0a60",
+          "done": false,
+          "sig": "Tische wischen nach Service|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "524a33c0-73c0-4842-8861-728f6c380448",
+          "done": false,
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|anna z.|2026-10-03||hoch"
+        },
+        {
+          "id": "1a9adc7b-63f1-47ff-bc20-a8245d82db2c",
+          "done": false,
+          "sig": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)|anna z.|2026-10-03||normal"
+        },
+        {
+          "id": "976a2bc5-0400-4b7c-ae5a-74450a149f91",
+          "done": false,
+          "sig": "Spülmaschine abpumpen und öffnen|anna z.|2026-10-03||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -2376,7 +2416,10 @@
         "42c8b537-58bf-474c-882f-eba6c220f3ec",
         "34e98a34-5f4a-47b4-a365-965de1e6a464",
         "e950b407-04df-4cfc-8c63-062659870b48",
-        "3eeed0cd-cc9d-42f3-8a6f-7fc190d9dc38"
+        "3eeed0cd-cc9d-42f3-8a6f-7fc190d9dc38",
+        "cc1040f0-5feb-42ac-9d84-9610680cfb21",
+        "21768f4e-26aa-4a8d-846d-cfa435e0acc1",
+        "90d7bc3b-08ab-48f0-8d6a-a20557c03781"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -31505,6 +31548,16 @@
           "source": "pin",
           "clockInAt": "2026-10-03T07:21:21.802Z",
           "clockOutAt": null
+        },
+        {
+          "id": "0c54122e-5fbe-4b6a-a449-c02731cdf64d",
+          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "from": "10:00",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-10-03T08:00:40.517Z",
+          "clockOutAt": null
         }
       ],
       "plannedShifts": [
@@ -31671,7 +31724,15 @@
         "a41c2a83-d45f-4266-b684-9238e4cb38d1:82d0b446-2787-44f0-9e95-fc517800a8a3",
         "a41c2a83-d45f-4266-b684-9238e4cb38d1:da31ad58-8e8f-4bf4-94b0-124669caacfd",
         "a41c2a83-d45f-4266-b684-9238e4cb38d1:ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
-        "a41c2a83-d45f-4266-b684-9238e4cb38d1:5b04fe9c-d1d6-43ce-8e84-340beccc5423"
+        "a41c2a83-d45f-4266-b684-9238e4cb38d1:5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:89265887-efed-4bf7-81d0-760f37b20fba",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:cfcf0bfd-f732-4ca0-a45a-1c857eff983c",
+        "351e6de4-2de9-405d-ba3a-235da86d7a7b:5b04fe9c-d1d6-43ce-8e84-340beccc5423"
       ],
       "tasks": [
         {
@@ -32053,6 +32114,142 @@
           "time": "",
           "phase": "ende",
           "bestandBereich": ""
+        },
+        {
+          "id": "f39a1d27-1ae0-4d01-aba0-64c10dd5bdf6",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "3f44a20a-95ab-4e92-a0f3-5dfaeb8ee9d5",
+          "text": "Alles Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "b082c616-f918-4059-86c5-27b43896ecf2",
+          "text": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "89265887-efed-4bf7-81d0-760f37b20fba",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "7b040be4-a706-4510-8502-c2b9e68e11fc",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "bbe4c4f8-be4e-4959-b292-fbda992c0a60",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "524a33c0-73c0-4842-8861-728f6c380448",
+          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "1a9adc7b-63f1-47ff-bc20-a8245d82db2c",
+          "text": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "cfcf0bfd-f732-4ca0-a45a-1c857eff983c",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "normal",
+          "schicht": "mittel",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "976a2bc5-0400-4b7c-ae5a-74450a149f91",
+          "text": "Spülmaschine abpumpen und öffnen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+          "addedBy": null,
+          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "priority": "hoch",
+          "schicht": "mittel",
+          "bereich": "",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
         }
       ],
       "kassenabschluss": {
@@ -32084,6 +32281,11 @@
           "timestamp": "2026-10-03T07:21:21.804Z",
           "action": "eingestempelt",
           "detail": "george um 09:21 Uhr"
+        },
+        {
+          "timestamp": "2026-10-03T08:00:40.519Z",
+          "action": "eingestempelt",
+          "detail": "anna z. um 10:00 Uhr"
         }
       ],
       "closedAt": null,
@@ -35827,7 +36029,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Sonntag, 27.09.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-15T13:43:01.387Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:45.400Z"
     },
     {
       "id": "05ada0eb-d9fb-4e66-b5ac-f6485ecef84c",
@@ -36128,7 +36330,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Samstag, 03.10.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-25T20:57:23.268Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:46.397Z"
     },
     {
       "id": "ecb05e67-9f76-40ea-b9ef-a73202ef4e51",
@@ -36170,7 +36372,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Samstag, 10.10.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-29T11:03:58.542Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:46.999Z"
     },
     {
       "id": "3f1da5ea-1842-460f-8936-18eadb26fd9b",
@@ -36191,7 +36393,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Samstag, 17.10.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-29T11:03:58.555Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:47.547Z"
     },
     {
       "id": "51bb5d1c-7522-40b9-8391-7e61e5a2d9d7",
@@ -36212,7 +36414,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Sonntag, 25.10.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-29T11:03:58.567Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:48.099Z"
     },
     {
       "id": "558ca3fb-9fbc-4565-8392-627914432b86",
@@ -36226,7 +36428,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "✅ Deine Schicht am Sonntag, 01.11.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-09-30T06:06:12.559Z",
-      "readAt": null
+      "readAt": "2026-10-03T08:00:48.715Z"
     },
     {
       "id": "deba0324-ed23-4154-a35c-06b3c226a3fe",
@@ -47662,10 +47864,10 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-09-28T10:22:35.037Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:52:48.180Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48034,10 +48236,10 @@
         "fbcdaf50-11ae-4faa-a413-7554074f2c73",
         "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-01T13:09:08.917Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:02:28.983Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48099,10 +48301,10 @@
       "tableIds": [
         "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-01T14:39:36.214Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:56:27.131Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48143,10 +48345,10 @@
       "tableIds": [
         "b3c94b18-b15b-49c6-a55b-5cc90ee7ffbe"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-01T19:38:24.255Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:36:31.648Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48250,10 +48452,10 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-02T07:40:16.080Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:05:26.750Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48409,12 +48611,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "e68472c1-9528-40df-8388-4067b8a5a969"
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-02T11:58:59.771Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:52:38.332Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48434,10 +48636,10 @@
       "tableIds": [
         "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-02T13:25:47.160Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T08:25:15.973Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48455,12 +48657,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+        "e68472c1-9528-40df-8388-4067b8a5a969"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-02T21:25:43.361Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-03T09:30:14.034Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48522,12 +48724,328 @@
       "area": "draussen",
       "note": "",
       "tableIds": [
-        "0541b9d2-8ca6-4780-b093-ab2f4ab4e5a2"
+        "02f09cc1-423a-4819-859c-b5442e699fb4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-02T21:25:43.388Z",
+      "arrivedAt": "2026-10-03T08:52:46.881Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "2650b55d-2150-4498-bbfb-d4eb6d186614",
+      "code": "G3AN4",
+      "date": "2026-10-03",
+      "time": "10:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:03:03.952Z",
+      "arrivedAt": "2026-10-03T08:03:03.961Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8935ffa2-78e6-457d-8acc-b53f7adc28d9",
+      "code": "L9WWE",
+      "date": "2026-10-03",
+      "time": "10:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:03:07.148Z",
+      "arrivedAt": "2026-10-03T08:03:07.156Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4ed69bfc-22b1-4214-8bac-8ebefe1ae816",
+      "code": "NZ4CR",
+      "date": "2026-10-03",
+      "time": "10:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:03:08.933Z",
+      "arrivedAt": "2026-10-03T08:03:08.941Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "bee8b126-6a2c-4837-b40e-c04c50197a5c",
+      "code": "MYVQ9",
+      "date": "2026-10-03",
+      "time": "13:45",
+      "name": "Maren sander",
+      "phone": "017697818654",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-03T08:15:50.546Z",
       "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "5dbfdba1-386d-4b46-926a-3fbfe0e5e208",
+      "code": "JC7DH",
+      "date": "2026-10-04",
+      "time": "11:00",
+      "name": "Franziska",
+      "phone": "1781331104",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-03T08:35:03.480Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "b32e94ac-d508-497d-8134-08ad6f6b8eeb",
+      "code": "LDVW9",
+      "date": "2026-10-03",
+      "time": "10:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "40330571-9be7-4544-8230-a2254d7a58ec"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:37:53.884Z",
+      "arrivedAt": "2026-10-03T08:37:53.892Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "c7ca076f-e7bb-44a1-b737-e38c3574f8ef",
+      "code": "XFP7Y",
+      "date": "2026-10-03",
+      "time": "10:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "ee53e083-bda8-461c-b0b8-d40eda82e871"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:37:55.563Z",
+      "arrivedAt": "2026-10-03T08:37:55.571Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "88f3c2e0-cc05-49e1-a133-0b0ae380c2e2",
+      "code": "UKPMX",
+      "date": "2026-10-03",
+      "time": "10:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "ee372ee6-9939-4ac9-805e-b50c1ddac810"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:37:59.880Z",
+      "arrivedAt": "2026-10-03T08:37:59.887Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "5948de1f-7a83-470f-8870-faa4867de435",
+      "code": "4ZTKC",
+      "date": "2026-10-03",
+      "time": "10:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "da1fdd40-63c7-458f-afb9-03874b815b27"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:38:03.295Z",
+      "arrivedAt": "2026-10-03T08:38:03.306Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "669ab2bb-a431-4af5-b5a2-0a8157534548",
+      "code": "9MNKN",
+      "date": "2026-10-03",
+      "time": "10:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "1fe56110-0ae0-4e1b-b747-dd5892a9a5c8"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:38:06.247Z",
+      "arrivedAt": "2026-10-03T08:38:06.257Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8a999076-7ece-4552-a0cf-1f132059b636",
+      "code": "3MQ7A",
+      "date": "2026-10-03",
+      "time": "10:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T08:54:24.330Z",
+      "arrivedAt": "2026-10-03T08:54:24.340Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "fc1564a0-b46b-4a2e-bdc2-4e54eb956db7",
+      "code": "243YK",
+      "date": "2026-10-03",
+      "time": "15:30",
+      "name": "Sera",
+      "phone": "01719472189",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-03T09:08:39.724Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4ebeac81-0884-458b-ad06-96029dbc5bf7",
+      "code": "V9LEQ",
+      "date": "2026-10-03",
+      "time": "11:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T09:27:41.178Z",
+      "arrivedAt": "2026-10-03T09:27:41.188Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "21583a12-636d-4498-91be-2512b1b8ed98",
+      "code": "R8EMU",
+      "date": "2026-10-03",
+      "time": "11:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-03T09:37:25.702Z",
+      "arrivedAt": "2026-10-03T09:37:25.710Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

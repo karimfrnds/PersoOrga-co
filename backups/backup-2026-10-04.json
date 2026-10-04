@@ -784,15 +784,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-04",
-      "lastBackupAt": "2026-10-04T05:54:18.858Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 174bcf914204e842d2c438eea5042a0841e64e6f but expected 9e3d7f588f2c54e18024927d2ab994113954897a\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-04T08:56:47.089Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-04T08:56:04.797Z",
+      "lastSyncAt": "2026-10-04T11:53:01.707Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -852,7 +852,7 @@
         },
         {
           "id": "7d19dc98-4aae-424d-ae18-ad78f434adc0",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|emma|2026-10-04||hoch"
         },
         {
@@ -902,22 +902,22 @@
         },
         {
           "id": "f1c05466-a36a-4e91-844c-e1155dedc2d0",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|kaya|2026-10-04||hoch"
         },
         {
           "id": "8a52bd45-2e13-4eda-9b64-60c49004768b",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|kaya|2026-10-04||hoch"
         },
         {
           "id": "5ef8b092-81b5-43cd-bc1f-459abdbe14cf",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|kaya|2026-10-04||hoch"
         },
         {
           "id": "96a84886-a2b4-406e-bad6-caf2332cf7a5",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|kaya|2026-10-04||hoch"
         },
         {
@@ -927,7 +927,7 @@
         },
         {
           "id": "e7d96fa9-c724-4701-ae9d-dce65d5b41e5",
-          "done": false,
+          "done": true,
           "sig": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)|kaya|2026-10-04||normal"
         },
         {
@@ -2418,7 +2418,8 @@
         "cbc79f4b-ddcd-4262-ad97-1a4941cc1cdb",
         "b046c202-05b1-4248-bc22-e20287e72102",
         "fd250931-d820-4cf1-9bda-d42bab18e48f",
-        "a84d04fd-cdaa-4c4a-bd9a-7ba4083c72d8"
+        "a84d04fd-cdaa-4c4a-bd9a-7ba4083c72d8",
+        "c664ed5b-6818-4dea-aae0-42b7115d750c"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -25542,11 +25543,11 @@
           "id": "b13d9b82-3478-49f9-8b58-2dfe591f355c",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "09:02",
-          "to": null,
+          "to": "12:16",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-04T07:02:33.908Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-04T10:16:00.249Z"
         },
         {
           "id": "78bb5e17-519d-413a-8b06-dfa1a478cb19",
@@ -25918,9 +25919,9 @@
         {
           "id": "7d19dc98-4aae-424d-ae18-ad78f434adc0",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "emma",
+          "doneAt": "2026-10-04T10:15:58.064Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -26088,9 +26089,9 @@
         {
           "id": "f1c05466-a36a-4e91-844c-e1155dedc2d0",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-04T11:36:34.436Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -26105,9 +26106,9 @@
         {
           "id": "8a52bd45-2e13-4eda-9b64-60c49004768b",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-04T11:29:22.569Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -26122,9 +26123,9 @@
         {
           "id": "5ef8b092-81b5-43cd-bc1f-459abdbe14cf",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-04T11:29:23.135Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -26139,9 +26140,9 @@
         {
           "id": "96a84886-a2b4-406e-bad6-caf2332cf7a5",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-04T11:36:36.720Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -26173,9 +26174,9 @@
         {
           "id": "e7d96fa9-c724-4701-ae9d-dce65d5b41e5",
           "text": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-04T11:36:50.254Z",
           "source": "template",
           "templateId": "cfcf0bfd-f732-4ca0-a45a-1c857eff983c",
           "addedBy": null,
@@ -26244,6 +26245,11 @@
           "timestamp": "2026-10-04T07:56:45.214Z",
           "action": "eingestempelt",
           "detail": "kaya um 09:56 Uhr"
+        },
+        {
+          "timestamp": "2026-10-04T10:16:00.249Z",
+          "action": "ausgestempelt",
+          "detail": "emma um 12:16 Uhr"
         }
       ],
       "closedAt": null,
@@ -48916,7 +48922,7 @@
       "id": "d0e87ff4-be50-4b8c-9845-22a67449e83a",
       "code": "ZGEQJ",
       "date": "2026-10-04",
-      "time": "12:00",
+      "time": "12:15",
       "name": "Christoph",
       "phone": "01712971412",
       "guests": 6,
@@ -48926,10 +48932,10 @@
         "57f6ff6b-f712-412b-baeb-47197e474b86",
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-09-27T14:52:29.959Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T10:01:15.916Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -48972,10 +48978,10 @@
       "tableIds": [
         "3e05549f-583e-450f-bfeb-76150d3b12e6"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-09-28T13:45:28.169Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T09:08:03.583Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -49123,10 +49129,10 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-09-30T06:06:12.565Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T10:01:22.581Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -49167,12 +49173,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-09-30T13:33:27.265Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T09:00:57.093Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -49227,7 +49233,7 @@
       "id": "349b55cb-3662-442d-8aca-e25751814257",
       "code": "YSQGH",
       "date": "2026-10-04",
-      "time": "15:00",
+      "time": "14:00",
       "name": "Kaya❤️",
       "phone": "01794960952",
       "guests": 3,
@@ -49370,12 +49376,12 @@
       "area": "egal",
       "note": "Bitte 2x Zimtschnecke reservieren 😍",
       "tableIds": [
-        "e68472c1-9528-40df-8388-4067b8a5a969"
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-01T14:06:36.544Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T10:12:41.882Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -49764,29 +49770,6 @@
       "cancelNotified": false
     },
     {
-      "id": "b1668aaf-d376-4599-8563-4106613ef06a",
-      "code": "ZCFWT",
-      "date": "2026-10-04",
-      "time": "10:00",
-      "name": "Kasim",
-      "phone": "015117309313",
-      "guests": 4,
-      "area": "egal",
-      "note": "",
-      "tableIds": [
-        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
-      ],
-      "status": "zugewiesen",
-      "source": "web",
-      "createdAt": "2026-10-02T21:25:43.372Z",
-      "arrivedAt": null,
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
       "id": "2440379c-c390-48f7-b7ae-3c85ff287d3f",
       "code": "DMR8V",
       "date": "2026-10-03",
@@ -49935,12 +49918,12 @@
       "area": "innen",
       "note": "",
       "tableIds": [
-        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+        "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-03T08:35:03.480Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T08:59:53.076Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -50458,10 +50441,10 @@
       "tableIds": [
         "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-04T05:54:16.353Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-04T09:13:05.035Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -50502,7 +50485,7 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-04T07:47:04.450Z",
       "arrivedAt": "2026-10-04T07:47:04.459Z",
@@ -50571,7 +50554,7 @@
       "tableIds": [
         "78a12192-9267-4bd1-b078-971afa5ac587"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-04T08:07:37.456Z",
       "arrivedAt": "2026-10-04T08:07:37.463Z",
@@ -50594,7 +50577,7 @@
       "tableIds": [
         "da1fdd40-63c7-458f-afb9-03874b815b27"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-04T08:35:34.724Z",
       "arrivedAt": "2026-10-04T08:35:34.734Z",
@@ -50663,7 +50646,7 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-04T08:35:47.904Z",
       "arrivedAt": "2026-10-04T08:35:47.915Z",
@@ -50686,10 +50669,491 @@
       "tableIds": [
         "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-04T08:46:05.307Z",
       "arrivedAt": "2026-10-04T08:46:05.316Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "e456ac72-1f4c-477e-a6a2-931f277d8412",
+      "code": "UE3KS",
+      "date": "2026-10-04",
+      "time": "11:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:01:02.028Z",
+      "arrivedAt": "2026-10-04T09:01:02.036Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "3a9e332e-b68c-4e4f-8681-a04cfac7cd19",
+      "code": "M8MLD",
+      "date": "2026-10-04",
+      "time": "11:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "40330571-9be7-4544-8230-a2254d7a58ec"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:11:46.104Z",
+      "arrivedAt": "2026-10-04T09:11:46.113Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "0cfa2191-caa7-47f0-bab2-054cf448eff9",
+      "code": "GY6SZ",
+      "date": "2026-10-04",
+      "time": "11:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:16:35.456Z",
+      "arrivedAt": "2026-10-04T09:16:35.466Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "55598757-8cbf-426b-b0fa-9d523620ed58",
+      "code": "2PX9Q",
+      "date": "2026-10-04",
+      "time": "11:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:17:05.154Z",
+      "arrivedAt": "2026-10-04T09:17:05.164Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "ec814dde-2a23-464f-9d5b-b86293c6a72e",
+      "code": "KLXED",
+      "date": "2026-10-04",
+      "time": "11:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "b3c94b18-b15b-49c6-a55b-5cc90ee7ffbe"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:29:48.602Z",
+      "arrivedAt": "2026-10-04T09:29:48.613Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "508c29da-2e1d-4527-8fdd-74f3d7bcb50d",
+      "code": "97JCA",
+      "date": "2026-10-04",
+      "time": "11:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "draussen",
+      "note": "",
+      "tableIds": [
+        "ee53e083-bda8-461c-b0b8-d40eda82e871"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:43:37.694Z",
+      "arrivedAt": "2026-10-04T09:43:37.702Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "e469dcec-12f0-4e0d-979c-8072dbbfdc2c",
+      "code": "WPWDR",
+      "date": "2026-10-04",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:50:14.717Z",
+      "arrivedAt": "2026-10-04T09:50:14.726Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "1e2df6a3-2329-4614-90b0-e79c7f93a736",
+      "code": "TWT6R",
+      "date": "2026-10-04",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T09:54:11.267Z",
+      "arrivedAt": "2026-10-04T09:54:11.275Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "40b34b22-f6ed-4729-a4be-6e96565e5aca",
+      "code": "NP4F2",
+      "date": "2026-10-04",
+      "time": "12:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-10-04T10:03:55.951Z",
+      "arrivedAt": "2026-10-04T10:03:55.960Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "99cb7778-6fe4-4505-8902-c5c95d66d1e2",
+      "code": "78RKM",
+      "date": "2026-10-04",
+      "time": "12:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T10:06:32.997Z",
+      "arrivedAt": "2026-10-04T10:06:33.004Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "62c59de5-9a23-4856-85f0-3f9c03328ddd",
+      "code": "FUGLN",
+      "date": "2026-10-04",
+      "time": "12:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T10:06:34.798Z",
+      "arrivedAt": "2026-10-04T10:06:34.808Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "eb648b41-1c45-45a6-94a8-5f704a0480dd",
+      "code": "V6SKJ",
+      "date": "2026-10-04",
+      "time": "12:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T10:06:41.764Z",
+      "arrivedAt": "2026-10-04T10:06:41.772Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "1aacf07b-e251-4458-97fe-87609a75515a",
+      "code": "6AMQ9",
+      "date": "2026-10-04",
+      "time": "13:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:01:59.434Z",
+      "arrivedAt": "2026-10-04T11:01:59.442Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "bf2ae4e1-0ab9-4915-a282-a43a3efae273",
+      "code": "LZ2YC",
+      "date": "2026-10-04",
+      "time": "13:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:15:49.683Z",
+      "arrivedAt": "2026-10-04T11:15:49.692Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "38221a73-b7ee-4c8e-9a6b-8572f4414776",
+      "code": "GJERS",
+      "date": "2026-10-04",
+      "time": "13:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:15:56.165Z",
+      "arrivedAt": "2026-10-04T11:15:56.175Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d125fdc1-3484-4272-9f02-b3e660892b49",
+      "code": "AA3J8",
+      "date": "2026-10-05",
+      "time": "10:00",
+      "name": "Nina",
+      "phone": "+491603726112",
+      "guests": 2,
+      "area": "egal",
+      "note": "Kinderwagen",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-04T11:28:01.358Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "3f714dc6-e323-476b-a2e3-d60c813779f0",
+      "code": "FSA4L",
+      "date": "2026-10-04",
+      "time": "13:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:36:10.373Z",
+      "arrivedAt": "2026-10-04T11:36:10.382Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "edc81bf9-742c-4e39-ac02-8c8f19cd21bc",
+      "code": "Q33XJ",
+      "date": "2026-10-04",
+      "time": "13:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:47:34.244Z",
+      "arrivedAt": "2026-10-04T11:47:34.254Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d1f929db-7933-4d70-a4be-c51f039a2788",
+      "code": "62VGQ",
+      "date": "2026-10-04",
+      "time": "13:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:47:36.893Z",
+      "arrivedAt": "2026-10-04T11:47:36.903Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "1286d539-7fef-42f9-ab85-a59176ee9acd",
+      "code": "A8HGH",
+      "date": "2026-10-04",
+      "time": "13:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:47:39.260Z",
+      "arrivedAt": "2026-10-04T11:47:39.269Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "bea3b87a-99cc-40e1-abd6-d0ebd8ad5130",
+      "code": "KSQCH",
+      "date": "2026-10-04",
+      "time": "13:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4029057b-0fa7-484e-8bad-ba880accde56"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-04T11:47:51.442Z",
+      "arrivedAt": "2026-10-04T11:47:51.450Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

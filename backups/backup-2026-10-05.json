@@ -784,7 +784,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-05",
-      "lastBackupAt": "2026-10-05T06:01:21.797Z",
+      "lastBackupAt": "2026-10-05T11:57:23.965Z",
       "lastError": null
     },
     "taskInbox": {
@@ -792,7 +792,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-05T06:29:32.381Z",
+      "lastSyncAt": "2026-10-05T14:11:02.007Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -802,37 +802,37 @@
         },
         {
           "id": "d4e1e3d9-fc27-4199-8648-f35e70a6032b",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|timm|2026-10-05||hoch"
         },
         {
           "id": "bc739ada-8d60-40b6-a406-4c2cb3dd055c",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|timm|2026-10-05||hoch"
         },
         {
           "id": "d41274ee-8084-4d70-9a42-77e75d8ce926",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|timm|2026-10-05||hoch"
         },
         {
           "id": "d9a4c378-573e-40bf-9055-5cdac147527e",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|timm|2026-10-05||hoch"
         },
         {
           "id": "4ee2e4e3-0140-41af-8070-a29f892c9951",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|timm|2026-10-05||hoch"
         },
         {
           "id": "91a87c60-9b7c-4637-a9af-8693aaeb6377",
-          "done": false,
+          "done": true,
           "sig": "Bestand zählen (Bar dinge im Keller und oben)|timm|2026-10-05||normal"
         },
         {
           "id": "c8c01bf7-dbd7-4295-96d7-e199585b4e1b",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|timm|2026-10-05||hoch"
         },
         {
@@ -1532,8 +1532,6 @@
         "53fc1c3d-c26f-42a3-81f8-cf1f8035e8b6"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|arianna|2026-08-29T15:37:08.206Z",
-        "2026-08-31|george|2026-08-29T15:37:08.218Z",
         "2026-08-31|kaya|2026-08-29T15:37:08.230Z",
         "2026-08-31|emma|2026-08-29T15:37:08.233Z",
         "2026-08-31|elli|2026-08-29T15:37:08.248Z",
@@ -1831,7 +1829,9 @@
         "2026-10-05|karim|2026-10-04T17:39:09.388Z",
         "2026-11-02|timm|2026-10-05T06:01:18.774Z",
         "2026-11-02|hanna|2026-10-05T06:01:18.774Z",
-        "2026-11-02|rotraut|2026-10-05T06:01:18.775Z"
+        "2026-11-02|rotraut|2026-10-05T06:01:18.775Z",
+        "2026-11-09|arianna|2026-10-05T08:07:09.367Z",
+        "2026-11-09|maria|2026-10-05T08:08:55.316Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -31067,10 +31067,10 @@
           "id": "ba4ba19a-1ccc-4338-841e-937c82ea1ebd",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "from": "08:01",
-          "to": null,
+          "to": "15:46",
           "note": "",
           "clockInAt": "2026-10-05T06:01:23.374Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-05T13:46:58.120Z"
         },
         {
           "source": "pin",
@@ -31207,9 +31207,9 @@
           "phase": "schicht",
           "id": "d41274ee-8084-4d70-9a42-77e75d8ce926",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-10-05T13:53:47.178Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -31224,9 +31224,9 @@
           "phase": "schicht",
           "id": "d9a4c378-573e-40bf-9055-5cdac147527e",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-10-05T13:53:47.476Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
@@ -31241,9 +31241,9 @@
           "phase": "schicht",
           "id": "4ee2e4e3-0140-41af-8070-a29f892c9951",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-10-05T13:53:47.928Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
@@ -31258,9 +31258,9 @@
           "phase": "schicht",
           "id": "91a87c60-9b7c-4637-a9af-8693aaeb6377",
           "text": "Bestand zählen (Bar dinge im Keller und oben)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-10-05T13:53:49.093Z",
           "source": "template",
           "templateId": "01374c05-2a56-4cc9-a68c-2dde7e7d87ef",
           "addedBy": null,
@@ -31275,9 +31275,9 @@
           "phase": "schicht",
           "id": "c8c01bf7-dbd7-4295-96d7-e199585b4e1b",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-10-05T13:53:48.277Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -31360,6 +31360,11 @@
           "timestamp": "2026-10-05T06:01:39.573Z",
           "action": "eingestempelt",
           "detail": "timm um 08:01 Uhr"
+        },
+        {
+          "timestamp": "2026-10-05T13:46:58.120Z",
+          "action": "ausgestempelt",
+          "detail": "hanna um 15:46 Uhr"
         }
       ],
       "closedAt": null,
@@ -36438,6 +36443,106 @@
         "b16d5f40-7062-41dc-8a3d-185a3b7fca5b"
       ],
       "materialkosten": 0
+    },
+    {
+      "id": "e72fee17-c699-472a-b432-040abfa5b626",
+      "date": "2026-11-11",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-071bfbbd-c7d2-4ac7-b90f-153f993d7ab0",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "18:00",
+          "to": "23:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "id": "071bfbbd-c7d2-4ac7-b90f-153f993d7ab0",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "slotIds": [
+            "spaet2"
+          ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-05T08:07:09.367Z"
+        }
+      ],
+      "appliedShiftTemplateIds": [],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "verkauf": [],
+      "tagesNotiz": "",
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-10-05T11:57:21.918Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-11-11 angelegt"
+        }
+      ],
+      "closedAt": null
+    },
+    {
+      "id": "9471701f-c359-4229-8308-25d5dbdd031d",
+      "date": "2026-11-14",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-62bbd2e5-a2f8-466f-a6ea-d6b2c646d7f5",
+          "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+          "from": "09:00",
+          "to": "17:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "id": "62bbd2e5-a2f8-466f-a6ea-d6b2c646d7f5",
+          "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+          "slotIds": [
+            "frueh2"
+          ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-05T08:08:55.316Z"
+        }
+      ],
+      "appliedShiftTemplateIds": [],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "verkauf": [],
+      "tagesNotiz": "",
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-10-05T11:57:21.923Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-11-14 angelegt"
+        }
+      ],
+      "closedAt": null
     }
   ],
   "notifications": [

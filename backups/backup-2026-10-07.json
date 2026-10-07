@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-07",
-      "lastBackupAt": "2026-10-07T19:08:11.126Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 29b8c401df43ec72e5d9ef276882c854f19717cb but expected 86c014d895e135be188b291f5626f29a45ca492b\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-07T23:15:31.153Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at bfcb999b831d7757735f0ad71a8cd99ada039993 but expected 29b8c401df43ec72e5d9ef276882c854f19717cb\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-07T21:57:15.816Z",
+      "lastSyncAt": "2026-10-07T23:24:45.637Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -994,42 +994,42 @@
         },
         {
           "id": "95a536cc-fa9b-4d66-be7d-b03f9ca5d704",
-          "done": false,
+          "done": true,
           "sig": "Leergut hochtragen|karim|2026-10-07||hoch"
         },
         {
           "id": "88c5af58-1c89-4141-9896-5450c633bb1c",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|karim|2026-10-07||hoch"
         },
         {
           "id": "ec15ec4f-44bf-44d6-93d8-0cf805300cb5",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|karim|2026-10-07||hoch"
         },
         {
           "id": "4fb38147-1a42-473f-a816-065673a35fff",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|karim|2026-10-07||hoch"
         },
         {
           "id": "c89006b3-c18d-4d8e-8a5e-e920bbef9cd7",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|karim|2026-10-07||hoch"
         },
         {
           "id": "cc7eb15c-684b-4ba6-9ee1-e06e19afe970",
-          "done": false,
+          "done": true,
           "sig": "Strahler und Akku Lampen laden am Schichtende|karim|2026-10-07||hoch"
         },
         {
           "id": "827e549f-68cf-48c4-87fe-25d0bf0aa673",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|karim|2026-10-07||hoch"
         },
         {
           "id": "66b0ec87-5d82-4768-9283-bdda456ebb62",
-          "done": false,
+          "done": true,
           "sig": "Pfand einsortieren im Keller|karim|2026-10-07||normal"
         },
         {
@@ -32597,7 +32597,7 @@
     {
       "id": "ecf2993d-ae77-433e-a28e-1a386bde8de6",
       "date": "2026-10-07",
-      "status": "offen",
+      "status": "abgeschlossen",
       "shifts": [
         {
           "source": "pin",
@@ -32638,16 +32638,6 @@
           "source": "pin",
           "clockInAt": "2026-10-07T13:36:27.536Z",
           "clockOutAt": "2026-10-07T21:25:53.830Z"
-        },
-        {
-          "id": "331237c9-a161-461b-9118-aec83a057fbe",
-          "employeeId": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
-          "from": "16:28",
-          "to": null,
-          "note": "",
-          "source": "pin",
-          "clockInAt": "2026-10-07T14:28:45.705Z",
-          "clockOutAt": null
         },
         {
           "id": "64d6a062-6df5-44d3-a5d1-839ef3b0555d",
@@ -33432,9 +33422,9 @@
         {
           "id": "95a536cc-fa9b-4d66-be7d-b03f9ca5d704",
           "text": "Leergut hochtragen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:40.566Z",
           "source": "template",
           "templateId": "0b9bd68f-d1fb-4648-9b82-f9ff71d2ff6b",
           "addedBy": null,
@@ -33449,9 +33439,9 @@
         {
           "id": "88c5af58-1c89-4141-9896-5450c633bb1c",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:40.827Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -33466,9 +33456,9 @@
         {
           "id": "ec15ec4f-44bf-44d6-93d8-0cf805300cb5",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:41.061Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -33483,9 +33473,9 @@
         {
           "id": "4fb38147-1a42-473f-a816-065673a35fff",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:42.294Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -33500,9 +33490,9 @@
         {
           "id": "c89006b3-c18d-4d8e-8a5e-e920bbef9cd7",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:42.543Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -33517,9 +33507,9 @@
         {
           "id": "cc7eb15c-684b-4ba6-9ee1-e06e19afe970",
           "text": "Strahler und Akku Lampen laden am Schichtende",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:42.827Z",
           "source": "template",
           "templateId": "59a93ddb-4690-49a6-ac97-24eb8efd698e",
           "addedBy": null,
@@ -33534,9 +33524,9 @@
         {
           "id": "827e549f-68cf-48c4-87fe-25d0bf0aa673",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:43.160Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -33551,9 +33541,9 @@
         {
           "id": "66b0ec87-5d82-4768-9283-bdda456ebb62",
           "text": "Pfand einsortieren im Keller",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "karim",
+          "doneAt": "2026-10-07T23:15:43.558Z",
           "source": "template",
           "templateId": "7ad218c5-8155-4fea-be78-8de7e4a9af53",
           "addedBy": null,
@@ -33788,11 +33778,11 @@
         }
       ],
       "kassenabschluss": {
-        "umsatzGesamt": 0,
-        "umsatzBar": 0,
-        "umsatz7": 0,
-        "umsatz19": 0,
-        "trinkgeldKarte": 0,
+        "umsatzGesamt": 1100.89,
+        "umsatzBar": 138.5,
+        "umsatz7": 432.34,
+        "umsatz19": 605.04,
+        "trinkgeldKarte": 63.51,
         "trinkgeldBar": 0
       },
       "stornos": [],
@@ -33856,9 +33846,49 @@
           "timestamp": "2026-10-07T21:25:53.830Z",
           "action": "ausgestempelt",
           "detail": "Leanna um 23:25 Uhr"
+        },
+        {
+          "timestamp": "2026-10-07T23:15:45.596Z",
+          "action": "ausgestempelt",
+          "detail": "karim um 01:15 Uhr"
+        },
+        {
+          "timestamp": "2026-10-07T23:16:00.910Z",
+          "action": "Schicht entfernt",
+          "detail": "331237c9-a161-461b-9118-aec83a057fbe"
+        },
+        {
+          "timestamp": "2026-10-07T23:16:15.229Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-10-07T23:16:28.226Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-10-07T23:16:40.226Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-10-07T23:16:49.826Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-10-07T23:17:10.543Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-10-07T23:24:19.812Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
         }
       ],
-      "closedAt": null,
+      "closedAt": "2026-10-07T23:24:19.812Z",
       "festeSchichtenAngewandt": [
         "40a95e02-bacb-4e1e-ae54-41d3e2714103",
         "b16d5f40-7062-41dc-8a3d-185a3b7fca5b"

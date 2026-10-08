@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-08",
-      "lastBackupAt": "2026-10-08T13:41:03.774Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 1c68cfe85e1035d176fe68e144f7e25b660ff36e but expected 73c119fd779c2f55a39e514557082ba7e017dd50\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-08T17:00:54.423Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 41c62cdb4882f24d2ec3e940b5c3373d3256287f but expected 1c68cfe85e1035d176fe68e144f7e25b660ff36e\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-08T14:08:32.253Z",
+      "lastSyncAt": "2026-10-08T19:00:39.241Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -924,37 +924,37 @@
         },
         {
           "id": "e4444f1c-3ad2-4f30-b3b7-ab0f7eeb9a28",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|nico|2026-10-08||hoch"
         },
         {
           "id": "0d546b98-4e79-4d24-80da-22afbbf04ed5",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|nico|2026-10-08||hoch"
         },
         {
           "id": "1f9a86eb-c696-4483-a82b-71ec8f009c5e",
-          "done": false,
+          "done": true,
           "sig": "Akku Lampen innen anmachen|nico|2026-10-08||hoch"
         },
         {
           "id": "27260448-4943-401d-b85c-70e901c5b8b3",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|nico|2026-10-08||hoch"
         },
         {
           "id": "dbc05dd0-380e-4db4-ab51-0c8b69e9d248",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|nico|2026-10-08||hoch"
         },
         {
           "id": "7292372f-fc6f-4c93-b247-03ef3103d4ad",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|nico|2026-10-08||hoch"
         },
         {
           "id": "ae24831a-e4d4-4382-bafd-c5f21dc290f9",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|nico|2026-10-08||hoch"
         },
         {
@@ -2513,7 +2513,9 @@
         "0436ccbf-2ded-40e0-8aee-818fc89baf4d",
         "10c1bf0c-a04f-4ba7-a353-3f033eae63e1",
         "3e0af9a1-fa9f-4ae5-9528-2f979c3b0183",
-        "93d907ef-8fd5-4d39-a941-3673093a49cf"
+        "93d907ef-8fd5-4d39-a941-3673093a49cf",
+        "16f9ab2a-deb4-4b14-ba47-64edc168912a",
+        "81f1a5d0-bf65-4727-b796-558162f6e96c"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -30472,9 +30474,9 @@
         {
           "id": "e4444f1c-3ad2-4f30-b3b7-ab0f7eeb9a28",
           "text": "Kerzen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:17.028Z",
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
@@ -30489,9 +30491,9 @@
         {
           "id": "0d546b98-4e79-4d24-80da-22afbbf04ed5",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:18.242Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
@@ -30506,9 +30508,9 @@
         {
           "id": "1f9a86eb-c696-4483-a82b-71ec8f009c5e",
           "text": "Akku Lampen innen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:18.710Z",
           "source": "template",
           "templateId": "0fbe63fe-e5b5-4a9a-9883-886b3b58f423",
           "addedBy": null,
@@ -30523,9 +30525,9 @@
         {
           "id": "27260448-4943-401d-b85c-70e901c5b8b3",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:19.327Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
@@ -30540,9 +30542,9 @@
         {
           "id": "dbc05dd0-380e-4db4-ab51-0c8b69e9d248",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:19.943Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -30557,9 +30559,9 @@
         {
           "id": "7292372f-fc6f-4c93-b247-03ef3103d4ad",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:21.344Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -30574,9 +30576,9 @@
         {
           "id": "ae24831a-e4d4-4382-bafd-c5f21dc290f9",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-10-08T17:02:22.092Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -54232,10 +54234,10 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-09-29T05:48:39.436Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-08T17:01:55.676Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -56813,10 +56815,10 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-07T19:08:08.643Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-08T17:01:46.545Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -56948,6 +56950,48 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-08T13:41:01.237Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4a938eaa-fdce-455f-9cb2-860821d295c9",
+      "code": "C3U47",
+      "date": "2026-10-24",
+      "time": "11:00",
+      "name": "Alena Fischer",
+      "phone": "015784456812",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-08T17:00:51.827Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "16a37e97-d0fe-4d3a-ba5f-60bf16c536c4",
+      "code": "LQJC8",
+      "date": "2026-10-09",
+      "time": "19:30",
+      "name": "Emilia Habanetz",
+      "phone": "‪+49 176 24564326‬",
+      "guests": 3,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-08T17:00:51.838Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

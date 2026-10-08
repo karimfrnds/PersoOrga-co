@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-08",
-      "lastBackupAt": "2026-10-08T06:27:47.902Z",
-      "lastError": null
+      "lastBackupAt": "2026-10-08T10:13:42.758Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 73c119fd779c2f55a39e514557082ba7e017dd50 but expected 655ff5786acfe1ff36ae61f9a894d846c87c6f7d\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-08T09:18:06.248Z",
+      "lastSyncAt": "2026-10-08T12:33:13.095Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -819,42 +819,42 @@
         },
         {
           "id": "d25beb61-ac16-47b9-9aeb-0964c4a46429",
-          "done": false,
+          "done": true,
           "sig": "Lieferung vorbereiten / entgegennehmen|lilly|2026-10-08||hoch"
         },
         {
           "id": "79a61bff-c2e7-451e-89f4-3d00c15eaa45",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|lilly|2026-10-08||hoch"
         },
         {
           "id": "7de6934a-b4fc-4968-8f4f-a94bc75180a3",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|lilly|2026-10-08||hoch"
         },
         {
           "id": "0b8796b4-56e1-46fd-bc0f-fe0773625021",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|lilly|2026-10-08||hoch"
         },
         {
           "id": "27a4ff41-9cfe-4fc1-b4d3-8683bce529f4",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|lilly|2026-10-08||hoch"
         },
         {
           "id": "537f3a31-3924-4c9f-bc2e-6af16e72fad4",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|lilly|2026-10-08||hoch"
         },
         {
           "id": "05d631e1-5252-4d6b-a61a-3d7b980a10e1",
           "done": false,
-          "sig": "Bestand zählen (Bar dinge im Keller und oben)|lilly|2026-10-08||normal"
+          "sig": "Bestand zählen (Bar dinge im Keller und oben)|karim|2026-10-08||normal"
         },
         {
           "id": "0388feda-f942-4ab4-a461-281e4cc3570c",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|lilly|2026-10-08||hoch"
         },
         {
@@ -874,58 +874,58 @@
         },
         {
           "id": "d96d3d1c-b4f4-4a47-b540-4d6ee8437539",
-          "done": false,
+          "done": true,
           "sig": "Lieferung vorbereiten / entgegennehmen|kaya|2026-10-08||hoch"
         },
         {
           "id": "5902f9b0-38df-4024-9c09-4a09e0daaca6",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|kaya|2026-10-08||hoch"
         },
         {
           "id": "8f2de8df-9220-4691-9972-6a602cbda97b",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|kaya|2026-10-08||hoch"
         },
         {
           "id": "d4a5de04-d074-4815-a425-24fad9395e7f",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|kaya|2026-10-08||hoch"
         },
         {
           "id": "9899116e-5cbc-448c-94a6-7f9736c2ab87",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|kaya|2026-10-08||hoch"
         },
         {
           "id": "26117a8d-d110-47d1-939b-22f3acc52722",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|kaya|2026-10-08||hoch"
         },
         {
           "id": "cdda9e22-6a79-4090-ab89-65cb8afcc17b",
           "done": false,
-          "sig": "Bestand zählen (Bar dinge im Keller und oben)|kaya|2026-10-08||normal"
+          "sig": "Bestand zählen (Bar dinge im Keller und oben)|karim|2026-10-08||normal"
         },
         {
           "id": "7059965f-4851-4f30-934c-6f157a3bda40",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|kaya|2026-10-08||hoch"
         },
         {
           "id": "028eb091-f50a-46dd-bdbb-a00fd40790c9",
           "done": false,
-          "sig": "Tische wischen nach Service|kaya|2026-10-08||hoch"
-        },
-        {
-          "id": "3f52ca11-3957-438f-9cf1-b50df89381ff",
-          "done": false,
-          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|kaya|2026-10-08||hoch"
+          "sig": "Tische wischen nach Service|karim|2026-10-08||hoch"
         },
         {
           "id": "1691fb31-924b-4317-8773-6be944ba4374",
           "done": false,
-          "sig": "Spülmaschine abpumpen und öffnen|kaya|2026-10-08||hoch"
+          "sig": "Spülmaschine abpumpen und öffnen|lilly|2026-10-08||hoch"
+        },
+        {
+          "id": "3f52ca11-3957-438f-9cf1-b50df89381ff",
+          "done": false,
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nele|2026-10-09||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -1616,7 +1616,6 @@
         "53fc1c3d-c26f-42a3-81f8-cf1f8035e8b6"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|arianna|2026-08-29T15:54:04.449Z",
         "2026-08-31|george|2026-08-29T15:54:04.452Z",
         "2026-08-31|kaya|2026-08-29T15:54:04.454Z",
         "2026-08-31|emma|2026-08-29T15:54:04.455Z",
@@ -1915,7 +1914,8 @@
         "2026-10-05|miguel|2026-10-07T17:44:40.358Z",
         "2026-11-02|rotraut|2026-10-08T06:27:44.753Z",
         "2026-11-02|julie|2026-10-08T06:27:44.753Z",
-        "2026-11-02|nico|2026-10-08T06:27:44.753Z"
+        "2026-11-02|nico|2026-10-08T06:27:44.753Z",
+        "2026-11-09|nico|2026-10-08T11:02:36.453Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -2446,7 +2446,8 @@
         "0e5cd7a4-a5a4-44b9-8b50-9e2672814773",
         "14e61df1-d8cb-4e4b-b2fd-edb43f70077d",
         "0436ccbf-2ded-40e0-8aee-818fc89baf4d",
-        "10c1bf0c-a04f-4ba7-a353-3f033eae63e1"
+        "10c1bf0c-a04f-4ba7-a353-3f033eae63e1",
+        "3e0af9a1-fa9f-4ae5-9528-2f979c3b0183"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -29848,14 +29849,14 @@
           "clockOutAt": null
         },
         {
+          "source": "pin",
           "id": "a5e71096-b45c-4667-8a85-2adf7a6b0d03",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "from": "09:35",
-          "to": null,
+          "to": "12:16",
           "note": "",
-          "source": "pin",
           "clockInAt": "2026-10-08T07:35:51.275Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-08T10:16:11.913Z"
         }
       ],
       "plannedShifts": [
@@ -30016,9 +30017,9 @@
           "phase": "beginn",
           "id": "d25beb61-ac16-47b9-9aeb-0964c4a46429",
           "text": "Lieferung vorbereiten / entgegennehmen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:55:56.007Z",
           "source": "template",
           "templateId": "317986b5-738a-4346-8675-29b61ab59b2b",
           "addedBy": null,
@@ -30033,9 +30034,9 @@
           "phase": "beginn",
           "id": "79a61bff-c2e7-451e-89f4-3d00c15eaa45",
           "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:55:57.055Z",
           "source": "template",
           "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
           "addedBy": null,
@@ -30050,9 +30051,9 @@
           "phase": "beginn",
           "id": "7de6934a-b4fc-4968-8f4f-a94bc75180a3",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:55:59.686Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -30067,9 +30068,9 @@
           "phase": "schicht",
           "id": "0b8796b4-56e1-46fd-bc0f-fe0773625021",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T12:27:34.705Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -30084,9 +30085,9 @@
           "phase": "schicht",
           "id": "27a4ff41-9cfe-4fc1-b4d3-8683bce529f4",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:56:02.537Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
@@ -30101,9 +30102,9 @@
           "phase": "schicht",
           "id": "537f3a31-3924-4c9f-bc2e-6af16e72fad4",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:56:04.470Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
@@ -30124,8 +30125,10 @@
           "source": "template",
           "templateId": "01374c05-2a56-4cc9-a68c-2dde7e7d87ef",
           "addedBy": null,
-          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
-          "bestandBereich": ""
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "bestandBereich": "",
+          "handoffFrom": "lilly",
+          "handoffAt": "2026-10-08T12:27:56.777Z"
         },
         {
           "priority": "hoch",
@@ -30135,9 +30138,9 @@
           "phase": "schicht",
           "id": "0388feda-f942-4ab4-a461-281e4cc3570c",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-08T10:56:06.588Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -30196,108 +30199,113 @@
           "bestandBereich": ""
         },
         {
-          "id": "d96d3d1c-b4f4-4a47-b540-4d6ee8437539",
-          "text": "Lieferung vorbereiten / entgegennehmen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "317986b5-738a-4346-8675-29b61ab59b2b",
-          "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
           "time": "",
           "phase": "beginn",
+          "id": "d96d3d1c-b4f4-4a47-b540-4d6ee8437539",
+          "text": "Lieferung vorbereiten / entgegennehmen",
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:09.785Z",
+          "source": "template",
+          "templateId": "317986b5-738a-4346-8675-29b61ab59b2b",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "bestandBereich": ""
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
           "id": "5902f9b0-38df-4024-9c09-4a09e0daaca6",
           "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:35.093Z",
           "source": "template",
           "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
           "addedBy": null,
           "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "8f2de8df-9220-4691-9972-6a602cbda97b",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:32.312Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
           "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
-          "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
+          "phase": "schicht",
           "id": "d4a5de04-d074-4815-a425-24fad9395e7f",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:37.295Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
           "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "9899116e-5cbc-448c-94a6-7f9736c2ab87",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:16:09.895Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
           "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "26117a8d-d110-47d1-939b-22f3acc52722",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:38.980Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
           "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
-          "priority": "hoch",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "cdda9e22-6a79-4090-ab89-65cb8afcc17b",
           "text": "Bestand zählen (Bar dinge im Keller und oben)",
           "done": false,
@@ -30306,32 +30314,34 @@
           "source": "template",
           "templateId": "01374c05-2a56-4cc9-a68c-2dde7e7d87ef",
           "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
-          "bestandBereich": ""
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "bestandBereich": "",
+          "handoffFrom": "lilly",
+          "handoffAt": "2026-10-08T12:28:15.595Z"
         },
         {
-          "id": "7059965f-4851-4f30-934c-6f157a3bda40",
-          "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
-          "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
+          "id": "7059965f-4851-4f30-934c-6f157a3bda40",
+          "text": "Karten abwischen",
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-08T10:14:39.847Z",
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "bestandBereich": ""
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
           "id": "028eb091-f50a-46dd-bdbb-a00fd40790c9",
           "text": "Tische wischen nach Service",
           "done": false,
@@ -30340,32 +30350,17 @@
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "ende",
-          "bestandBereich": ""
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "bestandBereich": "",
+          "handoffFrom": "kaya",
+          "handoffAt": "2026-10-08T10:15:34.542Z"
         },
         {
-          "id": "3f52ca11-3957-438f-9cf1-b50df89381ff",
-          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
-          "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "priority": "hoch",
           "schicht": "frueh",
-          "bereich": "service",
+          "bereich": "",
           "time": "",
           "phase": "ende",
-          "bestandBereich": ""
-        },
-        {
           "id": "1691fb31-924b-4317-8773-6be944ba4374",
           "text": "Spülmaschine abpumpen und öffnen",
           "done": false,
@@ -30374,13 +30369,10 @@
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
-          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": "",
-          "phase": "ende",
-          "bestandBereich": ""
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "bestandBereich": "",
+          "handoffFrom": "kaya",
+          "handoffAt": "2026-10-08T10:16:05.630Z"
         }
       ],
       "kassenabschluss": {
@@ -30412,6 +30404,11 @@
           "timestamp": "2026-10-08T07:35:51.276Z",
           "action": "eingestempelt",
           "detail": "kaya um 09:35 Uhr"
+        },
+        {
+          "timestamp": "2026-10-08T10:16:11.913Z",
+          "action": "ausgestempelt",
+          "detail": "kaya um 12:16 Uhr"
         }
       ],
       "closedAt": null,
@@ -35812,7 +35809,27 @@
         }
       ],
       "appliedShiftTemplateIds": [],
-      "tasks": [],
+      "tasks": [
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "3f52ca11-3957-438f-9cf1-b50df89381ff",
+          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "bestandBereich": "",
+          "handoffFrom": "kaya",
+          "handoffAt": "2026-10-08T10:15:54.914Z"
+        }
+      ],
       "kassenabschluss": {
         "umsatzGesamt": 0,
         "umsatzBar": 0,
@@ -40332,6 +40349,56 @@
         "b16d5f40-7062-41dc-8a3d-185a3b7fca5b"
       ],
       "materialkosten": 0
+    },
+    {
+      "id": "5e50f490-3948-4fc1-929c-3594508567bc",
+      "date": "2026-11-13",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-e673d460-20fc-4ead-b7ab-5525b47044e6",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "15:30",
+          "to": "23:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "id": "e673d460-20fc-4ead-b7ab-5525b47044e6",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "slotIds": [
+            "spaet1"
+          ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-08T11:02:36.453Z"
+        }
+      ],
+      "appliedShiftTemplateIds": [],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "verkauf": [],
+      "tagesNotiz": "",
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-10-08T11:03:36.655Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-11-13 angelegt"
+        }
+      ],
+      "closedAt": null
     }
   ],
   "notifications": [
@@ -53831,8 +53898,10 @@
       "guests": 7,
       "area": "draussen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-09-29T05:48:39.436Z",
       "arrivedAt": null,
@@ -56387,8 +56456,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T19:08:08.638Z",
       "arrivedAt": null,
@@ -56408,31 +56479,12 @@
       "guests": 3,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T19:08:08.643Z",
-      "arrivedAt": null,
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
-      "id": "d1d9284f-9cd1-49bd-a2dc-666bc638a3da",
-      "code": "FREZ9",
-      "date": "2026-10-08",
-      "time": "18:30",
-      "name": "Aylin Bakar",
-      "phone": "01739123364",
-      "guests": 3,
-      "area": "innen",
-      "note": "",
-      "tableIds": [],
-      "status": "offen",
-      "source": "web",
-      "createdAt": "2026-10-07T19:08:08.648Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
@@ -56523,6 +56575,27 @@
       "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-10-08T08:31:02.086Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "6ac2c79f-dace-4a4c-84dc-ccdd92ccc8ca",
+      "code": "YKL24",
+      "date": "2026-10-11",
+      "time": "11:00",
+      "name": "Ahmad Al Azzawi",
+      "phone": "017631185736",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-08T12:27:13.212Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
@@ -56652,9 +56725,9 @@
       "aktiv": true,
       "sort": 50,
       "bestand": {
-        "menge": 1,
-        "at": "2026-09-22T11:16:47.778Z",
-        "by": "timm"
+        "menge": 0,
+        "at": "2026-10-08T11:03:56.782Z",
+        "by": "lilly"
       },
       "verlauf": [
         {
@@ -56666,6 +56739,11 @@
           "menge": 1,
           "at": "2026-09-22T11:16:47.778Z",
           "by": "timm"
+        },
+        {
+          "menge": 0,
+          "at": "2026-10-08T11:03:56.782Z",
+          "by": "lilly"
         }
       ]
     },

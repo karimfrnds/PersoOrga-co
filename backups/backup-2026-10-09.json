@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-09",
-      "lastBackupAt": "2026-10-09T20:11:54.006Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a5235e853ad8945bf833faae8d074fb5096fe845 but expected 8735fef637f00a472022d3d13c94e4bba28cf8b9\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-09T23:43:35.606Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 1b7584deb19e3358371b8f4ab4b3a8b633764dde but expected a5235e853ad8945bf833faae8d074fb5096fe845\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-09T21:34:50.542Z",
+      "lastSyncAt": "2026-10-09T23:45:03.202Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -55833,8 +55833,10 @@
       "guests": 2,
       "area": "egal",
       "note": "Bei gutem Wetter gerne draußen sitzen",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-01T14:06:36.534Z",
       "arrivedAt": null,
@@ -55965,8 +55967,10 @@
       "guests": 4,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-02T04:41:54.600Z",
       "arrivedAt": null,
@@ -56007,8 +56011,10 @@
       "guests": 4,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-02T07:40:16.070Z",
       "arrivedAt": null,
@@ -57758,8 +57764,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "1fe56110-0ae0-4e1b-b747-dd5892a9a5c8"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-06T06:00:23.272Z",
       "arrivedAt": null,
@@ -57844,8 +57852,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T05:56:57.390Z",
       "arrivedAt": null,
@@ -57888,8 +57898,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T11:46:43.879Z",
       "arrivedAt": null,
@@ -57930,8 +57942,10 @@
       "guests": 4,
       "area": "draussen",
       "note": "Meinen Geburtstag nachfeiern.",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "4029057b-0fa7-484e-8bad-ba880accde56"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T11:46:43.892Z",
       "arrivedAt": null,
@@ -57951,8 +57965,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0541b9d2-8ca6-4780-b093-ab2f4ab4e5a2"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T11:46:43.897Z",
       "arrivedAt": null,
@@ -57972,8 +57988,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T11:46:43.902Z",
       "arrivedAt": null,
@@ -57993,8 +58011,10 @@
       "guests": 5,
       "area": "innen",
       "note": "Geburtstag",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T13:32:33.921Z",
       "arrivedAt": null,
@@ -58037,8 +58057,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-07T16:49:01.321Z",
       "arrivedAt": null,
@@ -58324,8 +58346,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-08T20:19:19.797Z",
       "arrivedAt": null,
@@ -58412,8 +58436,10 @@
       "guests": 4,
       "area": "egal",
       "note": "Bitte drinne 😊",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T08:15:02.879Z",
       "arrivedAt": null,
@@ -58433,8 +58459,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T08:15:02.884Z",
       "arrivedAt": null,
@@ -58678,8 +58706,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T08:31:37.138Z",
       "arrivedAt": null,
@@ -58699,8 +58729,10 @@
       "guests": 4,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T09:55:55.762Z",
       "arrivedAt": null,
@@ -58833,8 +58865,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b3c94b18-b15b-49c6-a55b-5cc90ee7ffbe"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T16:36:23.798Z",
       "arrivedAt": null,
@@ -58854,8 +58888,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T18:11:26.471Z",
       "arrivedAt": null,
@@ -58896,8 +58932,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-09T20:56:14.800Z",
       "arrivedAt": null,

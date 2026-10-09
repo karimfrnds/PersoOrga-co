@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-09",
-      "lastBackupAt": "2026-10-09T06:23:11.567Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at ae9abf616434201eae9d20469d1a9c8d521925bd but expected 9159b6b5fcdc028af694967436a38f29203c7bf3\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-09T09:55:58.870Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-09T08:36:07.936Z",
+      "lastSyncAt": "2026-10-09T10:11:14.337Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2392,7 +2392,8 @@
         "5d48374d-281e-41bb-be1f-2cdce70f7e3a",
         "2787a756-adb0-4984-85c9-a94d02fa472b",
         "9f0627cc-7e4f-4a02-bfdb-cfb425776c6f",
-        "19839b00-ffa9-4501-bf0f-c01eb1fa7530"
+        "19839b00-ffa9-4501-bf0f-c01eb1fa7530",
+        "a4463282-08ff-473e-aa1f-afd853c0b5c8"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -56232,10 +56233,10 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-03T22:24:52.453Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-09T09:56:08.776Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -57392,7 +57393,7 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
       "status": "zugewiesen",
       "source": "web",
@@ -57920,7 +57921,7 @@
       "tableIds": [
         "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-09T08:15:10.569Z",
       "arrivedAt": "2026-10-09T08:15:10.578Z",
@@ -57966,7 +57967,7 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-09T08:15:13.650Z",
       "arrivedAt": "2026-10-09T08:15:13.657Z",
@@ -58035,7 +58036,7 @@
       "tableIds": [
         "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-10-09T08:15:22.017Z",
       "arrivedAt": "2026-10-09T08:15:22.025Z",
@@ -58060,6 +58061,119 @@
       "source": "web",
       "createdAt": "2026-10-09T08:31:37.138Z",
       "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "5ceaeeca-7426-4454-8806-217637d9d24f",
+      "code": "HC8MM",
+      "date": "2026-10-10",
+      "time": "09:30",
+      "name": "Fiehn Linn Anna",
+      "phone": "15128953297",
+      "guests": 4,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-09T09:55:55.762Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "888ea2cb-0c5e-489d-956e-480208f3428f",
+      "code": "W9TJN",
+      "date": "2026-10-09",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-09T09:56:18.027Z",
+      "arrivedAt": "2026-10-09T09:56:18.036Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "6ab71dfd-41c5-44eb-be89-c8ae25f9127c",
+      "code": "JQWFV",
+      "date": "2026-10-09",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-09T10:05:51.361Z",
+      "arrivedAt": "2026-10-09T10:05:51.371Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "59cae41f-92fa-4508-8bfc-f8d0c74eb678",
+      "code": "Y6NAE",
+      "date": "2026-10-09",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-09T10:05:52.876Z",
+      "arrivedAt": "2026-10-09T10:05:52.887Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "acc5a5ae-e550-42e6-869b-b8e80054257c",
+      "code": "FNC26",
+      "date": "2026-10-09",
+      "time": "11:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-10-09T10:05:59.377Z",
+      "arrivedAt": "2026-10-09T10:05:59.389Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

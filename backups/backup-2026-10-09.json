@@ -796,7 +796,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-09",
-      "lastBackupAt": "2026-10-09T13:28:10.566Z",
+      "lastBackupAt": "2026-10-09T16:28:56.689Z",
       "lastError": null
     },
     "taskInbox": {
@@ -804,7 +804,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-09T16:03:00.204Z",
+      "lastSyncAt": "2026-10-09T19:02:31.420Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -894,37 +894,37 @@
         },
         {
           "id": "b6dc605d-c51c-4105-88d6-ae0b4ba3c958",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|nele|2026-10-09||hoch"
         },
         {
           "id": "f7338c9c-470f-4733-9c17-6f7f7a35c4f6",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|nele|2026-10-09||hoch"
         },
         {
           "id": "05c5649a-dc56-428b-a39d-5df7541acc2b",
-          "done": false,
+          "done": true,
           "sig": "Akku Lampen innen anmachen|nele|2026-10-09||hoch"
         },
         {
           "id": "f6886a0a-231f-4bbd-9ac4-dcb6ea8ccbfb",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|nele|2026-10-09||hoch"
         },
         {
           "id": "80c57fa7-931c-4da1-bdd4-dfe8ebf87473",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|nele|2026-10-09||hoch"
         },
         {
           "id": "2a8eef4c-2a5b-4ab4-9a7d-df120dde3416",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|nele|2026-10-09||hoch"
         },
         {
           "id": "d4fcf859-8513-4d32-85b9-95f08bcebadf",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|nele|2026-10-09||hoch"
         },
         {
@@ -2499,7 +2499,9 @@
         "9f0627cc-7e4f-4a02-bfdb-cfb425776c6f",
         "19839b00-ffa9-4501-bf0f-c01eb1fa7530",
         "a4463282-08ff-473e-aa1f-afd853c0b5c8",
-        "2524d79e-aac6-44ab-a762-3f993057ed1c"
+        "2524d79e-aac6-44ab-a762-3f993057ed1c",
+        "afbc8e3f-012b-4238-8553-08ea4cea9487",
+        "e7780b49-48c9-4505-a9e0-7812646ce568"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -36687,7 +36689,7 @@
         {
           "id": "4f8770d2-afb0-4fb9-a4fc-59ecd0c27579",
           "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
-          "from": "15:46",
+          "from": "15:30",
           "to": null,
           "note": "",
           "source": "pin",
@@ -37075,9 +37077,9 @@
         {
           "id": "b6dc605d-c51c-4105-88d6-ae0b4ba3c958",
           "text": "Kerzen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:34:41.276Z",
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
@@ -37092,9 +37094,9 @@
         {
           "id": "f7338c9c-470f-4733-9c17-6f7f7a35c4f6",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:34:41.818Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
@@ -37109,9 +37111,9 @@
         {
           "id": "05c5649a-dc56-428b-a39d-5df7541acc2b",
           "text": "Akku Lampen innen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:35:55.652Z",
           "source": "template",
           "templateId": "0fbe63fe-e5b5-4a9a-9883-886b3b58f423",
           "addedBy": null,
@@ -37126,9 +37128,9 @@
         {
           "id": "f6886a0a-231f-4bbd-9ac4-dcb6ea8ccbfb",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:37:49.234Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
@@ -37143,9 +37145,9 @@
         {
           "id": "80c57fa7-931c-4da1-bdd4-dfe8ebf87473",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:35:59.238Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -37160,9 +37162,9 @@
         {
           "id": "2a8eef4c-2a5b-4ab4-9a7d-df120dde3416",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T18:59:40.985Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -37177,9 +37179,9 @@
         {
           "id": "d4fcf859-8513-4d32-85b9-95f08bcebadf",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nele",
+          "doneAt": "2026-10-09T17:37:59.283Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -37311,6 +37313,16 @@
           "timestamp": "2026-10-09T13:46:18.041Z",
           "action": "eingestempelt",
           "detail": "nele um 15:46 Uhr"
+        },
+        {
+          "timestamp": "2026-10-09T18:57:53.095Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"15:37\"}"
+        },
+        {
+          "timestamp": "2026-10-09T18:57:56.472Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"15:30\"}"
         }
       ],
       "closedAt": null,
@@ -57963,12 +57975,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-07T16:50:31.089Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-09T16:33:07.608Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -58252,7 +58264,7 @@
       "tableIds": [
         "3e05549f-583e-450f-bfeb-76150d3b12e6"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-09T06:23:08.301Z",
       "arrivedAt": "2026-10-09T13:39:51.424Z",
@@ -58275,10 +58287,10 @@
       "tableIds": [
         "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-09T07:04:58.688Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-09T17:06:38.886Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -58720,6 +58732,48 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-09T13:41:29.773Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "1ae51b55-9df0-4298-bafa-5b023257b4df",
+      "code": "FQ4QZ",
+      "date": "2026-10-10",
+      "time": "10:30",
+      "name": "Lara",
+      "phone": "+4917642657626",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-09T16:36:23.798Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "2bc733a3-212f-482a-9c06-04899b7b43cf",
+      "code": "9RD2H",
+      "date": "2026-10-10",
+      "time": "20:00",
+      "name": "Lynn",
+      "phone": "+4917645631070",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-09T18:11:26.471Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

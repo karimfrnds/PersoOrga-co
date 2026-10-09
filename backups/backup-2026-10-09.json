@@ -796,8 +796,8 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-09",
-      "lastBackupAt": "2026-10-09T23:43:35.606Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 1b7584deb19e3358371b8f4ab4b3a8b633764dde but expected a5235e853ad8945bf833faae8d074fb5096fe845\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-09T23:46:20.065Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,

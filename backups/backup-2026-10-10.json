@@ -796,7 +796,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-10",
-      "lastBackupAt": "2026-10-10T08:57:59.685Z",
+      "lastBackupAt": "2026-10-10T12:00:09.865Z",
       "lastError": null
     },
     "taskInbox": {
@@ -804,7 +804,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-10T11:58:59.728Z",
+      "lastSyncAt": "2026-10-10T14:56:52.093Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -821,11 +821,6 @@
           "id": "f7acf404-0e2e-419f-bce9-dc675eb5ef2a",
           "done": false,
           "sig": "Pfand einsortieren im Keller|karim|2026-10-10||normal"
-        },
-        {
-          "id": "5b3d1d29-a0c8-40bc-9ded-2e5ee364fc69",
-          "done": false,
-          "sig": "Spülmaschine abpumpen und öffnen|elli|2026-10-10||hoch"
         },
         {
           "id": "18b565d9-4016-4f19-9717-edad67fb34d3",
@@ -920,26 +915,26 @@
         {
           "id": "b91b9b33-dc78-4fac-89f2-9c83de98674b",
           "done": false,
-          "sig": "Spülmaschine abpumpen und öffnen|livia|2026-10-10||hoch"
+          "sig": "Spülmaschine abpumpen und öffnen|miguel|2026-10-10||hoch"
         },
         {
           "id": "40aca663-df5f-4ce6-8dca-155f4880343a",
           "done": false,
-          "sig": "Spülmaschine abpumpen und öffnen|emma|2026-10-10||hoch"
+          "sig": "Spülmaschine abpumpen und öffnen|miguel|2026-10-10||hoch"
         },
         {
           "id": "4b266783-a60f-415b-8b60-b3a104fbec05",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|anna z.|2026-10-10||hoch"
         },
         {
           "id": "4e5917dd-334a-4050-89e7-cc4acba27145",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|anna z.|2026-10-10||hoch"
         },
         {
           "id": "ab5d5d16-e90c-45e8-a622-dbbd6c169d7c",
-          "done": false,
+          "done": true,
           "sig": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen|anna z.|2026-10-10||hoch"
         },
         {
@@ -954,18 +949,23 @@
         },
         {
           "id": "a3b73124-2ad6-4a01-b169-4229f35d52e7",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|anna z.|2026-10-10||hoch"
         },
         {
           "id": "0042b8bb-e87b-46a9-858a-1eb303f488f7",
-          "done": false,
+          "done": true,
           "sig": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)|anna z.|2026-10-10||normal"
         },
         {
           "id": "08f5aa17-d390-4dad-8207-88d66d34a522",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|anna z.|2026-10-10||hoch"
+        },
+        {
+          "id": "5b3d1d29-a0c8-40bc-9ded-2e5ee364fc69",
+          "done": false,
+          "sig": "Spülmaschine abpumpen und öffnen|nico|2026-10-11||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -2512,7 +2512,8 @@
         "f97b2a92-3eb7-483f-8d4b-64ed3fcadb04",
         "8c8f8970-90a6-4a47-a33a-b22af89ec3e6",
         "8b4034f1-28ae-4456-ab5d-87cf69dfd931",
-        "abbc731c-efd9-48d7-894d-9a27e81a1f63"
+        "abbc731c-efd9-48d7-894d-9a27e81a1f63",
+        "e48e0f1f-0dd6-47c4-9536-6dbc73b3a6a5"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -39704,11 +39705,11 @@
           "id": "fdf3fd0c-bc31-4e0b-8517-4bb9e9578458",
           "employeeId": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
           "from": "07:56",
-          "to": null,
+          "to": "15:47",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-10T05:56:05.556Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-10T13:47:16.827Z"
         },
         {
           "id": "d7c28bda-3b94-4e40-9209-052724054cbb",
@@ -39734,31 +39735,31 @@
           "id": "e10d4aa9-8fcd-4480-8e42-1dac0acf3fc3",
           "employeeId": "db01632c-e6c2-461a-adf1-f56b3656a945",
           "from": "09:54",
-          "to": null,
+          "to": "16:54",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-10T07:54:52.032Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-10T14:54:36.407Z"
         },
         {
           "id": "ec3d90df-299b-411a-9737-5bc02a2c80b8",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "09:59",
-          "to": null,
+          "to": "16:53",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-10T07:59:43.251Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-10T14:53:43.009Z"
         },
         {
           "id": "497f1c6d-0741-46bf-bc4c-acb6504f9ff4",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "from": "10:09",
-          "to": null,
+          "to": "14:59",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-10T08:09:22.430Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-10T12:59:41.748Z"
         }
       ],
       "plannedShifts": [
@@ -39976,23 +39977,6 @@
           "bestandBereich": "",
           "handoffFrom": "nele",
           "handoffAt": "2026-10-09T20:41:37.711Z"
-        },
-        {
-          "id": "5b3d1d29-a0c8-40bc-9ded-2e5ee364fc69",
-          "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
-          "addedBy": null,
-          "assignedTo": "d1a4bd38-67d5-4893-b81f-bb5c6400559b",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": "",
-          "phase": "ende",
-          "bestandBereich": ""
         },
         {
           "id": "18b565d9-4016-4f19-9717-edad67fb34d3",
@@ -40309,13 +40293,15 @@
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
-          "assignedTo": "db01632c-e6c2-461a-adf1-f56b3656a945",
+          "assignedTo": "aa526cd0-d564-4b79-8f8b-dc3a7196d836",
           "priority": "hoch",
           "schicht": "mittel",
           "bereich": "",
           "time": "",
           "phase": "ende",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "livia",
+          "handoffAt": "2026-10-10T14:54:33.859Z"
         },
         {
           "id": "40aca663-df5f-4ce6-8dca-155f4880343a",
@@ -40326,20 +40312,22 @@
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
-          "assignedTo": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "assignedTo": "aa526cd0-d564-4b79-8f8b-dc3a7196d836",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
           "time": "",
           "phase": "ende",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "emma",
+          "handoffAt": "2026-10-10T14:53:37.955Z"
         },
         {
           "id": "4b266783-a60f-415b-8b60-b3a104fbec05",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:59:35.045Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -40354,9 +40342,9 @@
         {
           "id": "4e5917dd-334a-4050-89e7-cc4acba27145",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:58:56.796Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -40371,9 +40359,9 @@
         {
           "id": "ab5d5d16-e90c-45e8-a622-dbbd6c169d7c",
           "text": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:59:36.345Z",
           "source": "template",
           "templateId": "89265887-efed-4bf7-81d0-760f37b20fba",
           "addedBy": null,
@@ -40422,9 +40410,9 @@
         {
           "id": "a3b73124-2ad6-4a01-b169-4229f35d52e7",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:39:34.907Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -40439,9 +40427,9 @@
         {
           "id": "0042b8bb-e87b-46a9-858a-1eb303f488f7",
           "text": "Schichtende Mittelschicht: 1. Auffüllen (Handpapier, Besteckservietten, Strohhalme, Zucker, Kekse, Kühlschränke, Schubladen, To Go Sachen, Mittelregal im Gang) 2. Aufräumen (Ausenbereich, Tische, Kissen alles ordentlich machen, Geschirr, Besteck, Kaffeetassen, Gläser, Toiletten, Keller, Lager, alles aufräumen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:39:33.299Z",
           "source": "template",
           "templateId": "cfcf0bfd-f732-4ca0-a45a-1c857eff983c",
           "addedBy": null,
@@ -40456,9 +40444,9 @@
         {
           "id": "08f5aa17-d390-4dad-8207-88d66d34a522",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T12:59:29.762Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -40515,6 +40503,26 @@
           "timestamp": "2026-10-10T08:09:22.431Z",
           "action": "eingestempelt",
           "detail": "anna z. um 10:09 Uhr"
+        },
+        {
+          "timestamp": "2026-10-10T12:59:41.748Z",
+          "action": "ausgestempelt",
+          "detail": "anna z. um 14:59 Uhr"
+        },
+        {
+          "timestamp": "2026-10-10T13:47:16.827Z",
+          "action": "ausgestempelt",
+          "detail": "elli um 15:47 Uhr"
+        },
+        {
+          "timestamp": "2026-10-10T14:53:43.009Z",
+          "action": "ausgestempelt",
+          "detail": "emma um 16:53 Uhr"
+        },
+        {
+          "timestamp": "2026-10-10T14:54:36.407Z",
+          "action": "ausgestempelt",
+          "detail": "livia um 16:54 Uhr"
         }
       ],
       "closedAt": null,
@@ -40648,7 +40656,27 @@
         }
       ],
       "appliedShiftTemplateIds": [],
-      "tasks": [],
+      "tasks": [
+        {
+          "id": "5b3d1d29-a0c8-40bc-9ded-2e5ee364fc69",
+          "text": "Spülmaschine abpumpen und öffnen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+          "addedBy": null,
+          "assignedTo": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": "",
+          "handoffFrom": "elli",
+          "handoffAt": "2026-10-10T13:47:15.973Z"
+        }
+      ],
       "kassenabschluss": {
         "umsatzGesamt": 0,
         "umsatzBar": 0,
@@ -60137,6 +60165,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-10T10:57:57.664Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "64f72f0d-de14-4bd6-9c80-e67691ad472b",
+      "code": "DQ4FK",
+      "date": "2026-10-11",
+      "time": "09:30",
+      "name": "Simon Häusermann",
+      "phone": "+41793389020",
+      "guests": 2,
+      "area": "egal",
+      "note": "Gerne das Ecktischchen links wenn möglich.",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-10T12:03:29.423Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

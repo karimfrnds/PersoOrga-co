@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-10",
-      "lastBackupAt": "2026-10-10T05:56:04.984Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at ec998cb163e3d976ec1c7622c4b4e7afba0c47c6 but expected 07b935a8dc973a042ee0627a2802f5a011061c7c\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-10T08:57:59.685Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-10T08:57:07.233Z",
+      "lastSyncAt": "2026-10-10T11:58:59.728Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -944,12 +944,12 @@
         },
         {
           "id": "6e63e436-e4a4-4596-8634-abdf4d8317a7",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|anna z.|2026-10-10||hoch"
         },
         {
           "id": "e1edeacc-655f-4886-a78d-c1d96eec0dfd",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|anna z.|2026-10-10||hoch"
         },
         {
@@ -2511,7 +2511,8 @@
         "eb05aaaf-1ca5-4b25-b919-ea34989618d4",
         "f97b2a92-3eb7-483f-8d4b-64ed3fcadb04",
         "8c8f8970-90a6-4a47-a33a-b22af89ec3e6",
-        "8b4034f1-28ae-4456-ab5d-87cf69dfd931"
+        "8b4034f1-28ae-4456-ab5d-87cf69dfd931",
+        "abbc731c-efd9-48d7-894d-9a27e81a1f63"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -40387,9 +40388,9 @@
         {
           "id": "6e63e436-e4a4-4596-8634-abdf4d8317a7",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T11:56:39.337Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -40404,9 +40405,9 @@
         {
           "id": "e1edeacc-655f-4886-a78d-c1d96eec0dfd",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-10-10T11:56:44.185Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -57128,10 +57129,10 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-02T07:40:16.070Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-10T11:08:03.924Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -59553,10 +59554,10 @@
       "tableIds": [
         "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-09T08:15:02.879Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-10T09:04:47.959Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -59823,10 +59824,10 @@
       "tableIds": [
         "e68472c1-9528-40df-8388-4067b8a5a969"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-09T08:31:37.138Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-10T11:08:01.578Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -60115,6 +60116,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-10T08:41:17.729Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "7b789f84-43a3-439f-9888-60dc812a484c",
+      "code": "3Y6YZ",
+      "date": "2026-10-10",
+      "time": "15:30",
+      "name": "Sara",
+      "phone": "017665029845",
+      "guests": 4,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-10T10:57:57.664Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

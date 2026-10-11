@@ -796,7 +796,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-11",
-      "lastBackupAt": "2026-10-11T12:51:00.874Z",
+      "lastBackupAt": "2026-10-11T15:54:58.314Z",
       "lastError": null
     },
     "taskInbox": {
@@ -804,7 +804,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-11T15:54:34.352Z",
+      "lastSyncAt": "2026-10-11T16:31:30.774Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -41481,7 +41481,7 @@
     {
       "id": "02f9d8bc-efb7-4429-8cbb-e03085c520ae",
       "date": "2026-10-11",
-      "status": "offen",
+      "status": "abgeschlossen",
       "shifts": [
         {
           "id": "c191662d-c977-4e65-ac49-d954e7285651",
@@ -42257,9 +42257,14 @@
           "timestamp": "2026-10-11T15:53:19.467Z",
           "action": "ausgestempelt",
           "detail": "lilly um 17:53 Uhr"
+        },
+        {
+          "timestamp": "2026-10-11T16:00:41.225Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
         }
       ],
-      "closedAt": null,
+      "closedAt": "2026-10-11T16:00:41.224Z",
       "materialkosten": 0,
       "festeSchichtenAngewandt": [
         "b22e3ff2-5d27-4c9b-8187-acc3366cbe14"

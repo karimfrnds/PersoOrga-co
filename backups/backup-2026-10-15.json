@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-15",
-      "lastBackupAt": "2026-10-15T06:07:59.322Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 77fcc88de8369d60d7b6928443013dfe82788fb9 but expected 158131544cd1ba25868331112df2ccade9d3a69f\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-15T07:26:57.679Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-15T07:26:43.377Z",
+      "lastSyncAt": "2026-10-15T10:20:59.262Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2471,7 +2471,8 @@
         "50561b38-7550-431c-989a-743b6fe54a27",
         "6fdba0ef-ab02-4d1b-a50c-45d0c2a97e53",
         "0f1045a7-d6e5-4def-a7de-388880fa901d",
-        "a37e04b8-cf55-4269-95eb-8eb91e475739"
+        "a37e04b8-cf55-4269-95eb-8eb91e475739",
+        "90d53798-84eb-4713-88e5-a2d900512e70"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -67040,6 +67041,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-14T17:06:58.335Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "b5cbb5f2-c68a-4e3b-b756-aaf03b1701fd",
+      "code": "739EN",
+      "date": "2026-10-17",
+      "time": "10:00",
+      "name": "Kirsten Kutzner",
+      "phone": "01776158525",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-15T10:19:28.999Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

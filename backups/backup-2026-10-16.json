@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-16",
-      "lastBackupAt": "2026-10-16T05:55:32.103Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 556c855f79c81a6980d82b1f48ae8f6a523ec29e but expected 0e9cf6e5b9736a8e35dc6e56813053d80a465ddb\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-16T08:59:30.299Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 432a31fe0ae0e8f147df6d7179921631c4082a6e but expected 556c855f79c81a6980d82b1f48ae8f6a523ec29e\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-16T08:14:49.152Z",
+      "lastSyncAt": "2026-10-16T09:08:02.099Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2462,7 +2462,8 @@
         "3d874f25-0e89-4b01-9d71-ff9d39f17788",
         "9ca77f0d-7f99-4dc6-ad2b-62e153d5199f",
         "912a33e4-35a6-4064-9d62-9cb71df81b06",
-        "6cd44c6f-afec-4592-817b-0080dd4f6ce1"
+        "6cd44c6f-afec-4592-817b-0080dd4f6ce1",
+        "f9a3759f-edcb-4611-adac-66b7413340b9"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -68877,6 +68878,27 @@
       "source": "walkin",
       "createdAt": "2026-10-16T08:01:03.117Z",
       "arrivedAt": "2026-10-16T08:01:03.129Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "13ed7bdf-2d7e-449e-9a80-636d7798b559",
+      "code": "K5F2H",
+      "date": "2026-10-18",
+      "time": "09:45",
+      "name": "Polat",
+      "phone": "01799433695",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-16T08:59:27.813Z",
+      "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

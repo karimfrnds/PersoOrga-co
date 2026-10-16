@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-16",
-      "lastBackupAt": "2026-10-16T13:28:42.759Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a41f182f8708000652b8143c7f810d6746ae371c but expected 432a31fe0ae0e8f147df6d7179921631c4082a6e\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-16T16:52:47.900Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 1a4c7b5071fcdadec162fb2fe89d91a3a36da16d but expected a41f182f8708000652b8143c7f810d6746ae371c\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-16T16:10:23.342Z",
+      "lastSyncAt": "2026-10-16T18:28:18.722Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -854,37 +854,37 @@
         },
         {
           "id": "5e2f3f19-63c6-4a65-983d-ba776a911435",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|kaya|2026-10-16||hoch"
         },
         {
           "id": "dec3507a-1287-4dcb-a558-fc6e5aefb505",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|kaya|2026-10-16||hoch"
         },
         {
           "id": "dd3e1f40-ebcd-436e-b7a9-0ef37cf690d2",
-          "done": false,
+          "done": true,
           "sig": "Akku Lampen innen anmachen|kaya|2026-10-16||hoch"
         },
         {
           "id": "3ad1a1a5-3d76-4b17-a42a-f88a37df066a",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|kaya|2026-10-16||hoch"
         },
         {
           "id": "23d2c7b4-bc22-42fe-8833-2feb4e77328c",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|kaya|2026-10-16||hoch"
         },
         {
           "id": "212160eb-fd65-49bb-aaba-107e5c9f3334",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|kaya|2026-10-16||hoch"
         },
         {
           "id": "a4e940a2-b6df-44eb-9eea-348da2a30e16",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|kaya|2026-10-16||hoch"
         },
         {
@@ -919,7 +919,7 @@
         },
         {
           "id": "8aa7221d-4648-46e7-b04d-5e9ccf77ca8c",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|arianna|2026-10-16||hoch"
         },
         {
@@ -929,17 +929,17 @@
         },
         {
           "id": "f0b14a75-5485-4d2e-a76f-3f5315152e58",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|arianna|2026-10-16||hoch"
         },
         {
           "id": "4798ef23-0250-4163-bea4-e743c963c6c4",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|arianna|2026-10-16||hoch"
         },
         {
           "id": "2ef42253-1a1b-47a4-b5ac-2dbb561d1ce0",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|arianna|2026-10-16||hoch"
         },
         {
@@ -42441,9 +42441,9 @@
         {
           "id": "5e2f3f19-63c6-4a65-983d-ba776a911435",
           "text": "Kerzen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:54.255Z",
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
@@ -42458,9 +42458,9 @@
         {
           "id": "dec3507a-1287-4dcb-a558-fc6e5aefb505",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:54.503Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
@@ -42475,9 +42475,9 @@
         {
           "id": "dd3e1f40-ebcd-436e-b7a9-0ef37cf690d2",
           "text": "Akku Lampen innen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:55.054Z",
           "source": "template",
           "templateId": "0fbe63fe-e5b5-4a9a-9883-886b3b58f423",
           "addedBy": null,
@@ -42492,9 +42492,9 @@
         {
           "id": "3ad1a1a5-3d76-4b17-a42a-f88a37df066a",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:55.805Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
@@ -42509,9 +42509,9 @@
         {
           "id": "23d2c7b4-bc22-42fe-8833-2feb4e77328c",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:56.237Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -42526,9 +42526,9 @@
         {
           "id": "212160eb-fd65-49bb-aaba-107e5c9f3334",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:58.426Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -42543,9 +42543,9 @@
         {
           "id": "a4e940a2-b6df-44eb-9eea-348da2a30e16",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "kaya",
+          "doneAt": "2026-10-16T17:04:58.655Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -42662,9 +42662,9 @@
         {
           "id": "8aa7221d-4648-46e7-b04d-5e9ccf77ca8c",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-16T16:52:46.867Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
@@ -42696,9 +42696,9 @@
         {
           "id": "f0b14a75-5485-4d2e-a76f-3f5315152e58",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-16T16:56:00.901Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
@@ -42713,9 +42713,9 @@
         {
           "id": "4798ef23-0250-4163-bea4-e743c963c6c4",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-16T18:10:37.562Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
@@ -42730,9 +42730,9 @@
         {
           "id": "2ef42253-1a1b-47a4-b5ac-2dbb561d1ce0",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-16T18:10:19.780Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,

@@ -796,20 +796,20 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-17",
-      "lastBackupAt": "2026-10-17T12:57:48.210Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at dae351ca49e55fe997785fc59268eba8f0ed13c4 but expected a1a701f3c91e6bb27d02746a7a5452d909f309c6\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-17T18:56:46.981Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-17T15:41:07.026Z",
+      "lastSyncAt": "2026-10-17T19:22:02.853Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "37db3629-1d43-469d-b439-9798f7ea4108",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|arianna|2026-10-17||hoch"
         },
         {
@@ -2520,7 +2520,12 @@
         "aa8670c0-3a31-4fa1-9c46-6466ad4e71ce",
         "fdc35f45-ae42-4bce-b9c7-6a9355e3548e",
         "a28963e1-a965-4e60-92e6-91115a1c1602",
-        "7f7aa500-d222-4d92-97e5-14388016f91a"
+        "7f7aa500-d222-4d92-97e5-14388016f91a",
+        "15274de3-ce2a-49dc-8aba-466f7ee094bb",
+        "89446a74-bce7-4fe6-9dba-6c0af7c26ee4",
+        "64c224a3-80e8-4a66-8d4f-96f07ef689ee",
+        "b78ae0d1-0972-49f2-8d54-d27da347fdf4",
+        "3d6f98c0-2233-4ee0-bf04-ec457b9524a9"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -48013,7 +48018,7 @@
     {
       "id": "37f06d73-eff6-4a70-b443-4bda080b9f7d",
       "date": "2026-10-17",
-      "status": "offen",
+      "status": "abgeschlossen",
       "shifts": [
         {
           "source": "pin",
@@ -48034,6 +48039,14 @@
           "note": "",
           "clockInAt": "2026-10-17T06:45:22.706Z",
           "clockOutAt": "2026-10-17T15:33:26.815Z"
+        },
+        {
+          "id": "a9ee41e2-c011-4a77-9eee-917fa500a2bd",
+          "employeeId": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "from": "17:00",
+          "to": "23:00",
+          "note": "",
+          "source": "manual"
         }
       ],
       "plannedShifts": [
@@ -48182,9 +48195,9 @@
           "phase": "ende",
           "id": "37db3629-1d43-469d-b439-9798f7ea4108",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "Admin",
+          "doneAt": "2026-10-17T19:16:58.092Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -48435,11 +48448,11 @@
         }
       ],
       "kassenabschluss": {
-        "umsatzGesamt": 0,
-        "umsatzBar": 0,
-        "umsatz7": 0,
-        "umsatz19": 0,
-        "trinkgeldKarte": 0,
+        "umsatzGesamt": 2154.71,
+        "umsatzBar": 114.5,
+        "umsatz7": 1104.22,
+        "umsatz19": 908.34,
+        "trinkgeldKarte": 142.15,
         "trinkgeldBar": 0
       },
       "stornos": [],
@@ -48468,9 +48481,59 @@
           "timestamp": "2026-10-17T15:33:26.815Z",
           "action": "ausgestempelt",
           "detail": "kaya um 17:33 Uhr"
+        },
+        {
+          "timestamp": "2026-10-17T19:17:12.716Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-10-17T19:17:22.333Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-10-17T19:17:34.750Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-10-17T19:17:41.815Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-10-17T19:17:50.532Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
+        },
+        {
+          "timestamp": "2026-10-17T19:19:51.504Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-10-17T19:19:55.934Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"e85d1e90-3966-4a43-a1ef-5f131115fb90\"}"
+        },
+        {
+          "timestamp": "2026-10-17T19:19:59.679Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"17:00\"}"
+        },
+        {
+          "timestamp": "2026-10-17T19:20:04.295Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"23:00\"}"
+        },
+        {
+          "timestamp": "2026-10-17T19:21:56.580Z",
+          "action": "abgeschlossen",
+          "detail": "Tag wurde abgeschlossen"
         }
       ],
-      "closedAt": null,
+      "closedAt": "2026-10-17T19:21:56.580Z",
       "materialkosten": 0,
       "festeSchichtenAngewandt": [
         "b22e3ff2-5d27-4c9b-8187-acc3366cbe14"
@@ -58898,8 +58961,10 @@
       "guests": 6,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-09-01T15:55:20.522Z",
       "arrivedAt": null
@@ -64695,8 +64760,10 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-09-25T12:44:28.293Z",
       "arrivedAt": null,
@@ -65521,8 +65588,11 @@
       "guests": 8,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73",
+        "4029057b-0fa7-484e-8bad-ba880accde56"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-09-29T05:46:08.171Z",
       "arrivedAt": null,
@@ -67684,8 +67754,10 @@
       "guests": 5,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-05T06:01:19.555Z",
       "arrivedAt": null,
@@ -70199,8 +70271,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-14T17:06:58.335Z",
       "arrivedAt": null,
@@ -70308,8 +70382,10 @@
       "guests": 4,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-15T16:25:08.461Z",
       "arrivedAt": null,
@@ -70352,8 +70428,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-15T20:36:10.585Z",
       "arrivedAt": null,
@@ -70511,8 +70589,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-16T08:59:27.813Z",
       "arrivedAt": null,
@@ -71104,8 +71184,11 @@
       "guests": 7,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86",
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-17T12:38:06.036Z",
       "arrivedAt": null,
@@ -71148,10 +71231,122 @@
       "guests": 2,
       "area": "egal",
       "note": "",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
+      "source": "web",
+      "createdAt": "2026-10-17T15:38:06.656Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "0aab1c59-7ed8-44b3-b6f3-0d178a878f60",
+      "code": "UDAVD",
+      "date": "2026-10-25",
+      "time": "10:00",
+      "name": "Janika Seitz",
+      "phone": "015732639445",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
       "tableIds": [],
       "status": "offen",
       "source": "web",
-      "createdAt": "2026-10-17T15:38:06.656Z",
+      "createdAt": "2026-10-17T18:56:45.092Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8ac9ae58-dd63-45c4-b860-12ce1fd4aa4c",
+      "code": "9UU7P",
+      "date": "2026-10-25",
+      "time": "09:30",
+      "name": "Janika Seitz",
+      "phone": "015732639445",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-17T18:56:45.102Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "aed9976f-6774-4466-b112-602dcd75045d",
+      "code": "7EYJP",
+      "date": "2026-10-18",
+      "time": "10:15",
+      "name": "Lena Schneider",
+      "phone": "01751914378",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "a6379e08-9663-4e63-9e8c-f6cf5d7c7bed",
+        "78a12192-9267-4bd1-b078-971afa5ac587"
+      ],
+      "status": "zugewiesen",
+      "source": "web",
+      "createdAt": "2026-10-17T18:56:45.109Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "f1ba99da-1c53-4772-8ad2-12150c7f80c8",
+      "code": "5KWWK",
+      "date": "2026-10-24",
+      "time": "09:00",
+      "name": "Koch Olga",
+      "phone": "01634666271",
+      "guests": 6,
+      "area": "innen",
+      "note": "1 kinderstuhl bitte",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-17T18:56:45.117Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "36545741-fd54-4bab-950d-e34dfe7018ad",
+      "code": "D7DU7",
+      "date": "2026-10-18",
+      "time": "10:15",
+      "name": "Rawa",
+      "phone": "015738198259",
+      "guests": 3,
+      "area": "egal",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "zugewiesen",
+      "source": "web",
+      "createdAt": "2026-10-17T18:56:45.123Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

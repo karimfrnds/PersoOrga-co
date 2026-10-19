@@ -796,15 +796,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-19",
-      "lastBackupAt": "2026-10-19T05:59:28.493Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 29c4a8946e66d5a562a5060759007d88579af868 but expected f6d7c0ac3f2360e4383952f05c09303a94213604\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-19T09:11:56.801Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-19T08:14:51.521Z",
+      "lastSyncAt": "2026-10-19T10:38:19.262Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2511,7 +2511,8 @@
         "4d0aa62e-e84c-44b0-a057-47b268edd8fc",
         "3b11bff6-386e-433e-8422-b89466dc898e",
         "ea978086-fad9-4962-af7e-0aa46f99c5e0",
-        "6ef8a3f8-909d-4de0-b329-ccf9e5b30ea0"
+        "6ef8a3f8-909d-4de0-b329-ccf9e5b30ea0",
+        "664f190b-4cb2-43a6-8e1d-722be2f5e899"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -73364,6 +73365,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-19T07:58:35.390Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "ae12af05-8ae7-4440-b39d-561fed39804f",
+      "code": "S32EW",
+      "date": "2026-10-20",
+      "time": "10:30",
+      "name": "Amelie",
+      "phone": "015902473012",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-19T09:11:53.778Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

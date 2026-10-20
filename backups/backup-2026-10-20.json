@@ -796,7 +796,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-20",
-      "lastBackupAt": "2026-10-20T05:52:44.965Z",
+      "lastBackupAt": "2026-10-20T11:52:49.088Z",
       "lastError": null
     },
     "taskInbox": {
@@ -804,17 +804,17 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-20T07:39:55.795Z",
+      "lastSyncAt": "2026-10-20T13:33:02.065Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "82d64066-3eb1-4239-8b76-4391b643b5f5",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|timm|2026-10-20||hoch"
         },
         {
           "id": "aaee1aa4-6ecc-4f46-8b2a-4c0cc7042752",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|timm|2026-10-20||hoch"
         },
         {
@@ -824,17 +824,17 @@
         },
         {
           "id": "59a7d9da-972b-45d5-be2a-d8f5ca49bf75",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|timm|2026-10-20||hoch"
         },
         {
           "id": "e0021187-f9d4-4058-9517-77e7efbcf2ce",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|timm|2026-10-20||hoch"
         },
         {
           "id": "0b6daa5f-ff59-443f-9a93-523b6b75d882",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|timm|2026-10-20||hoch"
         },
         {
@@ -854,7 +854,7 @@
         },
         {
           "id": "a84e86e1-69b7-4d01-b7d8-bf3f6cfb8208",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|julie|2026-10-20||hoch"
         }
       ],
@@ -2493,7 +2493,9 @@
         "73991d43-ae85-469a-9238-b7efdb42ac96",
         "9394553e-2978-40e9-b839-a218a360fcb8",
         "a1f2c0de-9da1-497b-b814-61b9fa83a021",
-        "fc1ed7a9-d678-4dc7-85ee-e01c32937fd0"
+        "fc1ed7a9-d678-4dc7-85ee-e01c32937fd0",
+        "5868e9ad-d7f7-4eeb-a5a0-940655a67d38",
+        "1d5ac759-42ee-4804-9e59-ae6b8adf486c"
       ],
       "appliedRecipeChangeIds": [
         "893cd856-1424-4904-80e4-6d7169f569a7",
@@ -48497,10 +48499,10 @@
           "id": "2421e3c9-4710-449d-800b-f04adf2683ca",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "from": "07:59",
-          "to": null,
+          "to": "15:31",
           "note": "",
           "clockInAt": "2026-10-20T05:59:46.304Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-20T13:31:38.615Z"
         }
       ],
       "plannedShifts": [
@@ -48738,9 +48740,9 @@
           "phase": "ende",
           "id": "a84e86e1-69b7-4d01-b7d8-bf3f6cfb8208",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "julie",
+          "doneAt": "2026-10-20T13:31:35.499Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -48772,6 +48774,11 @@
           "timestamp": "2026-10-20T05:59:46.304Z",
           "action": "eingestempelt",
           "detail": "julie um 07:59 Uhr"
+        },
+        {
+          "timestamp": "2026-10-20T13:31:38.616Z",
+          "action": "ausgestempelt",
+          "detail": "julie um 15:31 Uhr"
         }
       ],
       "closedAt": null,
@@ -74078,6 +74085,48 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-10-20T05:52:40.746Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4fbebc41-d90a-413c-8ecc-f6878c38f4f0",
+      "code": "RAZPL",
+      "date": "2026-10-22",
+      "time": "10:45",
+      "name": "Ronja Sickmüller",
+      "phone": "017662268861",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-20T11:52:46.066Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "3b036b07-4765-49fc-8738-9590f7bee380",
+      "code": "Y5ZSK",
+      "date": "2026-11-08",
+      "time": "10:30",
+      "name": "Alina Andorfer",
+      "phone": "+4915174454830",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-10-20T11:52:46.078Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

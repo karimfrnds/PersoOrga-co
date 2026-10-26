@@ -1,7 +1,7 @@
 // ============================================================================
 // betrieb.js – Welcher Betrieb läuft hier?
 //
-// Dieselbe App bedient zwei Betriebe: das Café (frnds) und den Pop-up-Store mit Zimtschnecken. Beide
+// Dieselbe App bedient zwei Betriebe: das Café (frnds) und Rolla Costa mit Zimtschnecken. Beide
 // brauchen dasselbe Grundgerüst – Einstempeln, Aufgaben, Bestand, Schichtplan – aber nicht denselben
 // Zuschnitt: ein Pop-up hat keine Tische, keine Reservierungen und keinen Bingo-Abend, dafür Backmengen.
 //
@@ -43,9 +43,11 @@ const BETRIEBE = {
   },
 
   popup: {
+    // Heisst im Code weiter "popup" – daran haengen der Speicher auf dem Geraet, die Sitzungen und die
+    // Adressen der Seiten. Den Namen ändert man, die ID nicht: sonst findet das Tablet seine Daten nicht mehr.
     id: "popup",
-    name: "Pop-up Store",
-    kurz: "🧁 Pop-up",
+    name: "Rolla Costa",
+    kurz: "🧁 Rolla Costa",
     speicher: "popupapp_v1",
     funktionen: {
       reservierungen: false,

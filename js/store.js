@@ -173,6 +173,9 @@ function defaultData() {
         appliedPublicationIds: [],
         // IDs der Online-Reservierungen von der Website, die schon übernommen wurden.
         appliedReservationIds: [],
+        // IDs der Stempel- und Produktions-Ereignisse vom Küchen-Tablet, die schon übernommen wurden.
+        appliedSchichtEreignisIds: [],
+        appliedProduktionsEreignisIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -1132,6 +1135,51 @@ export const store = {
     this.logAudit(dayId, "ausgestempelt", `${this.getEmployee(s.employeeId)?.name || s.employeeId} um ${s.to} Uhr`);
     persist();
     return s;
+  },
+
+  // ---- Stempeln vom Küchen-Tablet ----
+  //
+  // Dasselbe wie clockIn/clockOut, aber mit einer MITGEGEBENEN Uhrzeit. Das Küchen-Tablet reicht seinen
+  // Wunsch über den Worker ein; abgeholt wird er, wenn das Haupt-Tablet das nächste Mal abgleicht – das
+  // kann 90 Sekunden später sein oder, wenn das WLAN hängt, eine halbe Stunde. Gelten muss die Zeit, zu
+  // der jemand tatsächlich gekommen oder gegangen ist, sonst bezahlt die Abrechnung Wartezeit mit.
+  clockInAm(employeeId, atIso) {
+    const at = new Date(atIso);
+    if (Number.isNaN(at.getTime())) return null;
+    const dateStr = localDateOf(at.toISOString());
+    const d = this.getOrCreateDayByDate(dateStr);
+    if (d.status !== "offen") return null; // ein abgeschlossener Tag wird nicht nachträglich verändert
+    const offen = d.shifts.find((x) => x.employeeId === employeeId && x.source === "pin" && !x.clockOutAt);
+    if (offen) return offen;
+    // source bleibt "pin": daran hängt überall, ob eine Schicht eine echte gestempelte ist (im Gegensatz
+    // zu einer vom Admin nachgetragenen). Woher sie kam, steht in "geraet" – das ist eine Information
+    // für den Menschen, keine für die Abrechnung.
+    const sh = { id: uid(), employeeId, from: hhmmLocal(at), to: null, note: "", source: "pin", geraet: "kueche", clockInAt: at.toISOString(), clockOutAt: null };
+    d.shifts.push(sh);
+    this.logAudit(d.id, "eingestempelt", `${this.getEmployee(employeeId)?.name || employeeId} um ${sh.from} Uhr (Küchen-Tablet)`);
+    persist();
+    this.ergaenzeSchichtaufgaben(employeeId, dateStr);
+    if (this.getEmployee(employeeId)?.role === "kueche") {
+      this.ergaenzeProduktionsAuftraege(dateStr, this.getSchichtGruppeFuer(employeeId, dateStr));
+    }
+    return sh;
+  },
+  clockOutAm(employeeId, atIso) {
+    const at = new Date(atIso);
+    if (Number.isNaN(at.getTime())) return null;
+    // Die offene Schicht kann von gestern sein (Nachtschicht, oder die Warteschlange hing). Deshalb
+    // nicht nur heute suchen, sondern die jüngste offene überhaupt.
+    const kandidaten = this.getDays()
+      .filter((d) => d.status === "offen")
+      .flatMap((d) => d.shifts.filter((x) => x.employeeId === employeeId && x.source === "pin" && !x.clockOutAt).map((x) => ({ d, x })))
+      .sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
+    if (kandidaten.length === 0) return null;
+    const { d, x } = kandidaten[0];
+    x.clockOutAt = at.toISOString();
+    x.to = hhmmLocal(at);
+    this.logAudit(d.id, "ausgestempelt", `${this.getEmployee(employeeId)?.name || employeeId} um ${x.to} Uhr (Küchen-Tablet)`);
+    persist();
+    return x;
   },
 
   // ---- Geplante Schichten (Wochenplan/CSV/Telegram-Bot) – reine Planung, zählt NICHT als gearbeitete Zeit ----

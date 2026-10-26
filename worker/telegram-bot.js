@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-09-27.1";
+const WORKER_VERSION = "2026-10-26.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -264,6 +264,19 @@ const EMPTY_STATE = {
   managerName: "",
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
+  // --- Produktionsküche ---
+  // Die Küche steht in einem anderen Raum als das Haupt-Tablet und hat ein eigenes. Es hält bewusst
+  // KEINE eigenen Daten: zwei Geräte mit je eigener Kopie waren schon einmal der Grund, warum ein
+  // abgeschlossener Tag verschwunden ist. Also derselbe Weg wie beim Handy – lesen, was das Tablet
+  // geschickt hat, und Wünsche in eine Warteschlange legen, die das Tablet abarbeitet.
+  produktionsProdukte: [], // [{id,name,einheit,soll,gebinde,haltbarkeitTage,standardBehaelterId,rezeptId,ist}]
+  behaelter: [], // [{id,name,groesse,ort,belegtMit}]
+  produktionsAuftraege: [], // nur die offenen
+  offeneChargen: [], // [{id,produktId,menge,einheit,behaelterId,ort,vonName,am,mhd}]
+  rezepte: [], // [{id,name,ergibt,zutaten[],schritte[],notiz}]
+  produktionsEreignisse: [], // Warteschlange vom Küchen-Tablet
+  schichtEreignisse: [], // Ein- und Ausstempeln vom Küchen-Tablet: [{id,kind:"in"|"out",employeeName,at}]
+  offeneSchichten: [], // wer laut Haupt-Tablet gerade im Dienst ist: [{employeeName, from}]
   // Pop-up-Betrieb: Produkte, Verkaufszahlen je Tag und der Backvorschlag vom iPad.
   produkte: [],
   verkaufTage: [],
@@ -331,6 +344,14 @@ async function getState(env) {
       managerName: typeof parsed.managerName === "string" ? parsed.managerName : "",
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
+      produktionsProdukte: Array.isArray(parsed.produktionsProdukte) ? parsed.produktionsProdukte : [],
+      behaelter: Array.isArray(parsed.behaelter) ? parsed.behaelter : [],
+      produktionsAuftraege: Array.isArray(parsed.produktionsAuftraege) ? parsed.produktionsAuftraege : [],
+      offeneChargen: Array.isArray(parsed.offeneChargen) ? parsed.offeneChargen : [],
+      rezepte: Array.isArray(parsed.rezepte) ? parsed.rezepte : [],
+      produktionsEreignisse: Array.isArray(parsed.produktionsEreignisse) ? parsed.produktionsEreignisse : [],
+      schichtEreignisse: Array.isArray(parsed.schichtEreignisse) ? parsed.schichtEreignisse : [],
+      offeneSchichten: Array.isArray(parsed.offeneSchichten) ? parsed.offeneSchichten : [],
       verkaufTage: Array.isArray(parsed.verkaufTage) ? parsed.verkaufTage : [],
       backvorschlaege: Array.isArray(parsed.backvorschlaege) ? parsed.backvorschlaege : [],
     };
@@ -2157,6 +2178,194 @@ async function handleMeBestand(request, env) {
   }
   await patchState(env, patch);
   return jsonResponse({ ok: true, gespeichert: werte.length });
+}
+
+// ============================================================================
+// Produktionsküche: das Tablet im anderen Raum.
+//
+// Es hält keine eigenen Daten. Es liest, was das Haupt-Tablet geschickt hat, und legt alles, was
+// jemand dort tut, in eine Warteschlange, die das Haupt-Tablet abarbeitet. Zwei Geräte mit je eigener
+// Kopie derselben Daten waren schon einmal der Grund, warum ein abgeschlossener Tag verschwunden ist.
+//
+// Angemeldet wird sich wie am Handy: eigener PIN, eigene Sitzung. Auf einem Gerät, an dem fünf Leute
+// vorbeikommen, meldet man sich danach wieder ab – das macht die Oberfläche von selbst.
+// ============================================================================
+
+/** Welche Rolle hat diese Person laut Haupt-Tablet? */
+function rolleVon(state, name) {
+  const needle = String(name || "").trim().toLowerCase();
+  const treffer = (state.employeeRoles || []).find((e) => String(e.name || "").trim().toLowerCase() === needle);
+  return treffer ? treffer.role : "";
+}
+
+/** Nur die Küche kommt hier rein. Nicht durch eine ausgeblendete Schaltfläche, sondern weil der
+ * Endpunkt sonst nichts herausgibt. */
+async function requireKueche(request, env) {
+  const guard = await requireSession(request, env, "employee");
+  if (guard.error) return guard;
+  const state = await getState(env);
+  if (rolleVon(state, guard.session.name) !== "kueche") {
+    return { error: jsonResponse({ error: "Dieser Bereich ist für die Küche." }, 403) };
+  }
+  return { session: guard.session, state };
+}
+
+/** Alles, was das Küchen-Tablet braucht – in einer Antwort, weil es im WLAN einer Küche steht. */
+async function handleKuecheOverview(request, env) {
+  const guard = await requireKueche(request, env);
+  if (guard.error) return guard.error;
+  const { session, state } = guard;
+  const heute = todayBerlin();
+  const name = session.name;
+  const needle = name.trim().toLowerCase();
+
+  const meine = (state.offeneSchichten || []).find((s) => String(s.employeeName || "").trim().toLowerCase() === needle) || null;
+  // Was gerade in der Warteschlange liegt, zählt schon mit: sonst tippt jemand "eingestempelt" und sieht
+  // 90 Sekunden lang weiter "nicht im Dienst".
+  const eigeneEreignisse = (state.schichtEreignisse || []).filter((e) => String(e.employeeName || "").trim().toLowerCase() === needle);
+  const letztes = eigeneEreignisse.length > 0 ? eigeneEreignisse[eigeneEreignisse.length - 1] : null;
+  const imDienst = letztes ? letztes.kind === "in" : !!meine;
+
+  return jsonResponse({
+    name,
+    imDienst,
+    seit: meine ? meine.from : letztes && letztes.kind === "in" ? String(letztes.at).slice(11, 16) : null,
+    wartet: !!letztes && !meine && letztes.kind === "in",
+    datum: heute,
+    produkte: state.produktionsProdukte || [],
+    behaelter: state.behaelter || [],
+    auftraege: (state.produktionsAuftraege || []).filter((a) => !a.zugewiesenAn || String(a.zugewiesenName || "").trim().toLowerCase() === needle),
+    chargen: state.offeneChargen || [],
+    rezepte: state.rezepte || [],
+    aufgaben: (state.tasks || []).filter((t) => !t.assignedToName || String(t.assignedToName).trim().toLowerCase() === needle),
+    notizen: (state.kuechenNotizen || []).filter((n) => !n.erledigtAm),
+    updatedAt: state.updatedAt || null,
+  });
+}
+
+/** Ein- und Ausstempeln vom Küchen-Tablet.
+ *
+ * Das Haupt-Tablet bleibt die maßgebliche Instanz – es rechnet Stunden und Löhne. Hier entsteht nur
+ * der Wunsch mit einem Zeitstempel. Dass der Zeitstempel VON HIER kommt und nicht vom Abarbeiten, ist
+ * der Punkt: steht das Haupt-Tablet 20 Minuten im Flugmodus, soll trotzdem die Uhrzeit gelten, zu der
+ * jemand tatsächlich gegangen ist.
+ */
+async function handleKuecheClock(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireKueche(request, env);
+  if (guard.error) return guard.error;
+  const { session, state } = guard;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const kind = body?.kind === "out" ? "out" : "in";
+  const name = session.name;
+  const needle = name.trim().toLowerCase();
+  const eigene = (state.schichtEreignisse || []).filter((e) => String(e.employeeName || "").trim().toLowerCase() === needle);
+  const letztes = eigene.length > 0 ? eigene[eigene.length - 1] : null;
+  const imDienst = letztes ? letztes.kind === "in" : (state.offeneSchichten || []).some((s) => String(s.employeeName || "").trim().toLowerCase() === needle);
+  if (kind === "in" && imDienst) return jsonResponse({ error: "Du bist schon eingestempelt." }, 400);
+  if (kind === "out" && !imDienst) return jsonResponse({ error: "Du bist gar nicht eingestempelt." }, 400);
+
+  const at = new Date().toISOString();
+  await patchState(env, {
+    schichtEreignisse: [...(state.schichtEreignisse || []), { id: crypto.randomUUID(), kind, employeeName: name, at }].slice(-300),
+  });
+  return jsonResponse({ ok: true, kind, at });
+}
+
+/** Was in der Küche passiert: produziert, Behälter leer, Auftrag gestrichen. */
+async function handleKuecheProduktion(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireKueche(request, env);
+  if (guard.error) return guard.error;
+  const { session, state } = guard;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const name = session.name;
+  const at = new Date().toISOString();
+  const kind = String(body?.kind || "");
+  let eintrag = null;
+
+  if (kind === "charge") {
+    const produkt = (state.produktionsProdukte || []).find((p) => String(p.id) === String(body?.produktId));
+    if (!produkt) return jsonResponse({ error: "Dieses Produkt gibt es hier nicht." }, 400);
+    const menge = Number(String(body?.menge ?? "").replace(",", "."));
+    if (!Number.isFinite(menge) || menge <= 0) return jsonResponse({ error: "Bitte eine Menge grösser als null." }, 400);
+    const behaelterId = body?.behaelterId ? String(body.behaelterId) : null;
+    if (behaelterId && !(state.behaelter || []).some((b) => String(b.id) === behaelterId)) {
+      return jsonResponse({ error: "Diesen Behälter gibt es hier nicht." }, 400);
+    }
+    eintrag = {
+      id: crypto.randomUUID(),
+      kind,
+      produktId: String(produkt.id),
+      menge,
+      behaelterId,
+      ort: String(body?.ort || "").slice(0, 120),
+      notiz: String(body?.notiz || "").slice(0, 200),
+      auftragId: body?.auftragId ? String(body.auftragId) : null,
+      employeeName: name,
+      at,
+    };
+  } else if (kind === "leer") {
+    const chargeId = String(body?.chargeId || "");
+    if (!(state.offeneChargen || []).some((c) => String(c.id) === chargeId)) {
+      return jsonResponse({ error: "Diese Charge ist hier nicht (mehr) offen." }, 400);
+    }
+    eintrag = { id: crypto.randomUUID(), kind, chargeId, employeeName: name, at };
+  } else if (kind === "auftrag-weg") {
+    const auftragId = String(body?.auftragId || "");
+    if (!(state.produktionsAuftraege || []).some((a) => String(a.id) === auftragId)) {
+      return jsonResponse({ error: "Diesen Auftrag gibt es nicht mehr." }, 400);
+    }
+    eintrag = { id: crypto.randomUUID(), kind, auftragId, employeeName: name, at };
+  } else {
+    return jsonResponse({ error: "Unbekannte Art." }, 400);
+  }
+
+  // Vorschau: das Tablet soll seine eigene Eingabe sofort sehen und nicht 90 Sekunden warten, bis das
+  // Haupt-Tablet sie abgeholt und zurückgeschickt hat.
+  const patch = { produktionsEreignisse: [...(state.produktionsEreignisse || []), eintrag].slice(-400) };
+  if (kind === "charge") {
+    const produkt = (state.produktionsProdukte || []).find((p) => String(p.id) === eintrag.produktId);
+    patch.offeneChargen = [
+      ...(state.offeneChargen || []),
+      {
+        id: eintrag.id,
+        produktId: eintrag.produktId,
+        menge: eintrag.menge,
+        einheit: produkt?.einheit || "",
+        behaelterId: eintrag.behaelterId,
+        ort: eintrag.ort,
+        vonName: name,
+        am: at,
+        mhd: produkt?.haltbarkeitTage > 0 ? plusTage(todayBerlin(), produkt.haltbarkeitTage) : "",
+      },
+    ].slice(-500);
+    if (eintrag.auftragId) patch.produktionsAuftraege = (state.produktionsAuftraege || []).filter((a) => String(a.id) !== eintrag.auftragId);
+  } else if (kind === "leer") {
+    patch.offeneChargen = (state.offeneChargen || []).filter((c) => String(c.id) !== eintrag.chargeId);
+  } else if (kind === "auftrag-weg") {
+    patch.produktionsAuftraege = (state.produktionsAuftraege || []).filter((a) => String(a.id) !== eintrag.auftragId);
+  }
+  await patchState(env, patch);
+  return jsonResponse({ ok: true });
+}
+
+/** Datum plus Tage, als YYYY-MM-DD. */
+function plusTage(dateStr, tage) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + Number(tage || 0));
+  return dt.toISOString().slice(0, 10);
 }
 
 /** Artikel und Soll vom Laptop. Wie überall: Wunsch in die Warteschlange, sofort als Vorschau sichtbar. */
@@ -4852,6 +5061,12 @@ async function handleState(request, env) {
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
     if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
     if (Array.isArray(body.produkte)) patch.produkte = body.produkte;
+    if (Array.isArray(body.produktionsProdukte)) patch.produktionsProdukte = body.produktionsProdukte;
+    if (Array.isArray(body.behaelter)) patch.behaelter = body.behaelter;
+    if (Array.isArray(body.produktionsAuftraege)) patch.produktionsAuftraege = body.produktionsAuftraege;
+    if (Array.isArray(body.offeneChargen)) patch.offeneChargen = body.offeneChargen.slice(-500);
+    if (Array.isArray(body.rezepte)) patch.rezepte = body.rezepte;
+    if (Array.isArray(body.offeneSchichten)) patch.offeneSchichten = body.offeneSchichten;
     if (Array.isArray(body.verkaufTage)) patch.verkaufTage = body.verkaufTage.slice(-120);
     if (Array.isArray(body.backvorschlaege)) patch.backvorschlaege = body.backvorschlaege;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
@@ -5234,7 +5449,8 @@ export default {
       url.pathname.startsWith("/me/") ||
       url.pathname.startsWith("/admin/") ||
       url.pathname.startsWith("/social/") ||
-      url.pathname.startsWith("/manager/")
+      url.pathname.startsWith("/manager/") ||
+      url.pathname.startsWith("/kueche/")
     ) {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
@@ -5243,6 +5459,9 @@ export default {
       if (url.pathname === "/me/sick" || url.pathname === "/me/absence") return handleMeSick(request, env);
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
+      if (url.pathname === "/kueche/overview") return handleKuecheOverview(request, env);
+      if (url.pathname === "/kueche/clock") return handleKuecheClock(request, env);
+      if (url.pathname === "/kueche/produktion") return handleKuecheProduktion(request, env);
       if (url.pathname === "/admin/bestand") return handleAdminBestand(request, env);
       if (url.pathname === "/manager/overview") return handleManagerOverview(request, env);
       if (url.pathname === "/manager/aufgabe") return handleManagerAufgabe(request, env);

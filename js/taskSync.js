@@ -730,6 +730,78 @@ async function performTaskSync() {
     store.updateTaskInboxConfig({ appliedBestandZaehlungIds: [...appliedBestandZaehlungIds].slice(-500) });
   }
 
+  // ---------------------------------------------------------------------
+  // Produktionsküche: was am Küchen-Tablet passiert ist.
+  //
+  // Zwei Warteschlangen, beide nach demselben Muster wie die Bestandszählungen: jedes Ereignis wird
+  // genau einmal angewendet, gemerkt über eine Liste von IDs. Bewusst nicht über Zeitstempel – der
+  // hängt daran, dass die Uhren von Tablet und Server zusammenpassen.
+  // ---------------------------------------------------------------------
+  const schichtEreignisseApplied = [];
+  const produktionsEreignisseApplied = [];
+  if (kann("produktion")) {
+    const appliedSchichtIds = new Set(cfg.appliedSchichtEreignisIds || []);
+    for (const e of Array.isArray(remote.schichtEreignisse) ? remote.schichtEreignisse : []) {
+      if (!e.id) continue;
+      schichtEreignisseApplied.push(e.id);
+      if (appliedSchichtIds.has(e.id)) continue;
+      appliedSchichtIds.add(e.id);
+      const emp = employees.find((x) => x.name.trim().toLowerCase() === String(e.employeeName || "").trim().toLowerCase());
+      if (!emp) {
+        syncWarnings.push(`Küche: "${e.employeeName}" gibt es hier nicht – Stempeln verworfen.`);
+        continue;
+      }
+      // Die Uhrzeit kommt VOM TABLET, nicht von jetzt: wird die Warteschlange erst 20 Minuten später
+      // abgeholt, soll trotzdem die Zeit gelten, zu der die Person tatsächlich gegangen ist.
+      if (e.kind === "in") store.clockInAm(emp.id, e.at);
+      else store.clockOutAm(emp.id, e.at);
+    }
+    if (schichtEreignisseApplied.length > 0) {
+      store.updateTaskInboxConfig({ appliedSchichtEreignisIds: [...appliedSchichtIds].slice(-500) });
+    }
+
+    const appliedProdIds = new Set(cfg.appliedProduktionsEreignisIds || []);
+    let behaelterGeleert = false;
+    for (const e of Array.isArray(remote.produktionsEreignisse) ? remote.produktionsEreignisse : []) {
+      if (!e.id) continue;
+      produktionsEreignisseApplied.push(e.id);
+      if (appliedProdIds.has(e.id)) continue;
+      appliedProdIds.add(e.id);
+      const emp = employees.find((x) => x.name.trim().toLowerCase() === String(e.employeeName || "").trim().toLowerCase());
+      if (e.kind === "charge") {
+        // Die ID des Ereignisses wird die ID der Charge. Damit ist das Anwenden auch dann folgenlos
+        // wiederholbar, wenn die Merkliste einmal verloren ginge.
+        if (store.getChargen({}).some((c) => c.id === e.id)) continue;
+        const daten = {
+          id: e.id,
+          produktId: e.produktId,
+          menge: e.menge,
+          behaelterId: e.behaelterId || null,
+          ort: e.ort || "",
+          notiz: e.notiz || "",
+          vonId: emp?.id || null,
+          vonName: e.employeeName || "",
+          am: e.at,
+        };
+        const auftrag = e.auftragId ? store.getProduktionsAuftrag(e.auftragId) : null;
+        if (auftrag && auftrag.status === "offen") store.erledigeProduktionsAuftrag(auftrag.id, daten);
+        else if (!store.addCharge(daten)) syncWarnings.push(`Küche: Produktion von ${e.employeeName} konnte nicht übernommen werden.`);
+      } else if (e.kind === "leer") {
+        if (store.chargeLeer(e.chargeId, e.employeeName || "", e.at)) behaelterGeleert = true;
+      } else if (e.kind === "auftrag-weg") {
+        const a = store.getProduktionsAuftrag(e.auftragId);
+        if (a && a.status === "offen") store.updateProduktionsAuftrag(a.id, { status: "abgebrochen", erledigtAm: e.at });
+      }
+    }
+    if (produktionsEreignisseApplied.length > 0) {
+      store.updateTaskInboxConfig({ appliedProduktionsEreignisIds: [...appliedProdIds].slice(-500) });
+    }
+    // Ein leer gemeldeter Behälter ist der Moment, in dem wirklich etwas fehlt – dann soll der Auftrag
+    // sofort dastehen und nicht erst beim nächsten Einstempeln. Ein gestrichener Auftrag löst das
+    // bewusst NICHT aus: sonst stünde er 90 Sekunden später wieder da und das Streichen wäre sinnlos.
+    if (behaelterGeleert) store.ergaenzeProduktionsAuftraege();
+  }
+
   // Verfügbarkeiten, die Mitarbeiter über ihr HANDY eingetragen haben -> lokal übernehmen.
   // Ohne diesen Schritt landen sie zwar in der Cloud (der Chef sieht sie am Laptop), das iPad erfährt aber
   // nie davon: die Person sähe ihre eigene Eingabe im Kiosk nicht und die Ausgrau-/Kaskaden-Logik liefe nie.
@@ -996,6 +1068,55 @@ async function performTaskSync() {
     bestandAbschluesse: store.getBestandAbschluesse(),
     // Pop-up: Verkaufszahlen und der Backvorschlag für morgen. Gerechnet wird er auf dem iPad, damit die
     // Regel an einer Stelle steht und Laptop und iPad nicht verschieden rechnen.
+    // Produktionsküche: das Tablet im anderen Raum liest das hier und schreibt nichts selbst.
+    ...(kann("produktion")
+      ? {
+          produktionsProdukte: store
+            .getPreps(true)
+            .filter((p) => p.produzierbar)
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              einheit: p.einheit,
+              soll: p.soll,
+              gebinde: p.gebinde,
+              haltbarkeitTage: p.haltbarkeitTage,
+              standardBehaelterId: p.standardBehaelterId,
+              rezeptId: p.rezeptId,
+              notiz: p.notiz,
+              ist: store.istMenge(p.id) || 0,
+            })),
+          behaelter: store.getBehaelter(true).map((b) => ({ id: b.id, name: b.name, groesse: b.groesse, ort: b.ort })),
+          produktionsAuftraege: store.getProduktionsAuftraege({ nurOffen: true }).map((a) => ({
+            id: a.id,
+            produktId: a.produktId,
+            menge: a.menge,
+            einheit: a.einheit,
+            fuerDatum: a.fuerDatum,
+            schichtGruppe: a.schichtGruppe,
+            zugewiesenAn: a.zugewiesenAn,
+            zugewiesenName: a.zugewiesenAn ? store.getEmployee(a.zugewiesenAn)?.name || "" : "",
+            quelle: a.quelle,
+          })),
+          offeneChargen: store.offeneChargen().map((c) => ({
+            id: c.id,
+            produktId: c.produktId,
+            menge: c.menge,
+            einheit: c.einheit,
+            behaelterId: c.behaelterId,
+            ort: c.ort,
+            vonName: c.vonName,
+            am: c.am,
+            mhd: c.mhd,
+          })),
+          rezepte: store.getRecipes().map((r) => ({ id: r.id, name: r.name, ergibt: r.ergibt, zutaten: r.zutaten, schritte: r.schritte, notiz: r.notiz })),
+          // Wer gerade im Dienst ist – damit das Küchen-Tablet nicht behauptet, jemand sei draußen,
+          // der sich am Haupt-Tablet eingestempelt hat.
+          offeneSchichten: store.getOpenShiftsToday().map((sh) => ({ employeeName: store.getEmployee(sh.employeeId)?.name || "", from: sh.from })),
+          schichtEreignisseApplied,
+          produktionsEreignisseApplied,
+        }
+      : {}),
     ...(kann("verkauf")
       ? {
           produkte: store.getProdukte(),

@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-26.1";
+const WORKER_VERSION = "2026-10-26.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -262,6 +262,8 @@ const EMPTY_STATE = {
   // gelesen, und Fotos darin würden jede davon langsam machen.
   managerPinHash: null,
   managerName: "",
+  // Zugang des Küchen-Tablets. Gehört dem GERÄT und erlaubt nur den Leerlauf-Bildschirm.
+  kuechenPinHash: null,
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
   // --- Produktionsküche ---
@@ -342,6 +344,7 @@ async function getState(env) {
       bestandAbschluesse: Array.isArray(parsed.bestandAbschluesse) ? parsed.bestandAbschluesse : [],
       managerPinHash: typeof parsed.managerPinHash === "string" ? parsed.managerPinHash : null,
       managerName: typeof parsed.managerName === "string" ? parsed.managerName : "",
+      kuechenPinHash: typeof parsed.kuechenPinHash === "string" ? parsed.kuechenPinHash : null,
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
       produktionsProdukte: Array.isArray(parsed.produktionsProdukte) ? parsed.produktionsProdukte : [],
@@ -461,6 +464,14 @@ async function requireSession(request, env, role) {
   // role darf auch eine Liste sein: der Social-Bereich steht dem Chef UND der Betreuung offen.
   const erlaubt = Array.isArray(role) ? role : [role];
   if (!erlaubt.includes(session.role)) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
+  if (session.role === "kuechenstation") {
+    // Ein entzogener oder geänderter Zugang gilt sofort, nicht erst, wenn die Sitzung abläuft.
+    const state = await getState(env);
+    if (!state.kuechenPinHash || !sameHash(session.zugang || "", state.kuechenPinHash)) {
+      await env.TASKS_KV.delete(`session:${token}`);
+      return { error: jsonResponse({ error: "Der Zugang wurde geändert. Bitte am Tablet neu einrichten." }, 401) };
+    }
+  }
   if (session.role === "manager") {
     // Ein entzogener oder geänderter Zugang gilt sofort – nicht erst, wenn die Sitzung in 30 Tagen abläuft.
     const state = await getState(env);
@@ -1869,6 +1880,11 @@ async function handleAuthLogin(request, env) {
     // Gastdaten. Der Hash wandert mit in die Sitzung: wird der PIN geändert oder der Zugang entzogen,
     // endet jede offene Sitzung damit (siehe requireSession).
     session = { role: "manager", name: state.managerName || "Store-Management", zugang: state.managerPinHash };
+  } else if (state.kuechenPinHash && sameHash(hash, state.kuechenPinHash)) {
+    // Das Küchen-Tablet selbst. Es darf genau eines: den Leerlauf-Bildschirm zeigen – wer im Dienst ist
+    // und was ansteht. Keine Löhne, keine Stunden, kein Stempeln. Dafür tippt jede Person ihren
+    // eigenen PIN, genau wie am Haupt-Tablet.
+    session = { role: "kuechenstation", name: "Küchen-Tablet", zugang: state.kuechenPinHash };
   } else {
     const match = (state.authPins || []).find((p) => sameHash(hash, p.pinHash));
     if (match) session = { role: "employee", name: match.name };
@@ -2239,6 +2255,41 @@ async function handleKuecheOverview(request, env) {
     rezepte: state.rezepte || [],
     aufgaben: (state.tasks || []).filter((t) => !t.assignedToName || String(t.assignedToName).trim().toLowerCase() === needle),
     notizen: (state.kuechenNotizen || []).filter((n) => !n.erledigtAm),
+    updatedAt: state.updatedAt || null,
+  });
+}
+
+/** Der Leerlauf-Bildschirm der Stempelstation.
+ *
+ * Bewusst ohne jede persönliche Zahl: wer im Dienst ist und seit wann, und was in der Küche ansteht.
+ * Das sieht ohnehin jeder, der den Raum betritt. Stunden, Löhne und eigene Aufgaben gibt es erst,
+ * wenn jemand seinen eigenen PIN tippt.
+ */
+async function handleKuecheStation(request, env) {
+  const guard = await requireSession(request, env, "kuechenstation");
+  if (guard.error) return guard.error;
+  const state = await getState(env);
+  const heute = todayBerlin();
+
+  // Wer gerade im Dienst ist: der Stand vom Haupt-Tablet plus das, was hier noch in der Warteschlange
+  // liegt. Sonst stünde jemand 90 Sekunden lang nicht auf der Liste, der gerade eingestempelt hat.
+  const imDienst = new Map();
+  for (const sh of state.offeneSchichten || []) {
+    imDienst.set(String(sh.employeeName || "").trim().toLowerCase(), { name: sh.employeeName, seit: sh.from });
+  }
+  for (const e of state.schichtEreignisse || []) {
+    const key = String(e.employeeName || "").trim().toLowerCase();
+    if (e.kind === "in") imDienst.set(key, { name: e.employeeName, seit: String(e.at).slice(11, 16), wartet: true });
+    else imDienst.delete(key);
+  }
+
+  const offeneChargen = state.offeneChargen || [];
+  return jsonResponse({
+    datum: heute,
+    imDienst: [...imDienst.values()],
+    auftraegeOffen: (state.produktionsAuftraege || []).length,
+    abgelaufen: offeneChargen.filter((c) => c.mhd && c.mhd < heute).length,
+    notizen: (state.kuechenNotizen || []).filter((n) => !n.erledigtAm).length,
     updatedAt: state.updatedAt || null,
   });
 }
@@ -3040,7 +3091,7 @@ async function handleSocialConfig(request, env) {
 async function handleAdminOverview(request, env) {
   const guard = await requireSession(request, env, "boss");
   if (guard.error) return guard.error;
-  const { authPins, adminPinHash, socialPinHash, managerPinHash, conversationHistory, ...safe } = await getState(env);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash, conversationHistory, ...safe } = await getState(env);
   const bereich = await getManagerBereich(env);
   return jsonResponse({ ...safe, managerZugang: !!managerPinHash, managerAufgaben: bereich.aufgaben });
 }
@@ -5058,6 +5109,8 @@ async function handleState(request, env) {
     if (body.socialPinHash !== undefined) patch.socialPinHash = body.socialPinHash || null;
     // Genauso für das Store-Management: null entzieht den Zugang.
     if (body.managerPinHash !== undefined) patch.managerPinHash = body.managerPinHash || null;
+    // null statt "weglassen", damit sich ein einmal vergebener Zugang auch wieder entziehen lässt.
+    if (body.kuechenPinHash !== undefined) patch.kuechenPinHash = body.kuechenPinHash || null;
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
     if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
     if (Array.isArray(body.produkte)) patch.produkte = body.produkte;
@@ -5459,6 +5512,7 @@ export default {
       if (url.pathname === "/me/sick" || url.pathname === "/me/absence") return handleMeSick(request, env);
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
+      if (url.pathname === "/kueche/station") return handleKuecheStation(request, env);
       if (url.pathname === "/kueche/overview") return handleKuecheOverview(request, env);
       if (url.pathname === "/kueche/clock") return handleKuecheClock(request, env);
       if (url.pathname === "/kueche/produktion") return handleKuecheProduktion(request, env);

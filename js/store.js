@@ -45,6 +45,10 @@ function defaultData() {
       // Zugang für die Store-Managerin: eigener PIN und der Name, unter dem sie angezeigt wird. Sie kommt
       // an Bestand, Aufgaben, Team und Schichtplan – nicht an Löhne, Umsätze oder Reservierungen.
       managerPin: null,
+      // Zugang des Küchen-Tablets. Kein persönlicher PIN: er gehört dem GERÄT und sorgt nur dafür,
+      // dass der Leerlauf-Bildschirm zeigen darf, wer im Dienst ist. Gestempelt wird weiterhin mit dem
+      // eigenen PIN.
+      kuechenPin: null,
       managerName: "",
       // Aufgaben-Vorlagen, werden beim Anlegen eines Tages nach day.tasks kopiert – aber nur die, die an
       // diesem Wochentag gelten. { id, text, weekdays[], schicht, bereich, time, priority }
@@ -907,7 +911,7 @@ export const store = {
     if (data.settings.adminPin === p) return true;
     // Auch die Zugangs-PINs: beim Anmelden gewinnt der Zugang, und die Person käme mit ihrem eigenen PIN
     // nie mehr in ihre Mitarbeiter-Ansicht.
-    if (data.settings.socialPin === p || data.settings.managerPin === p) return true;
+    if (data.settings.socialPin === p || data.settings.managerPin === p || data.settings.kuechenPin === p) return true;
     return data.employees.some((e) => e.active && e.id !== excludingEmployeeId && e.pin === p);
   },
   /** Findet den aktiven Mitarbeiter zu einem eingegebenen PIN (fürs Ein-/Ausstempeln am Kiosk). */
@@ -965,6 +969,16 @@ export const store = {
   },
   hasManagerPin() {
     return !!data.settings.managerPin;
+  },
+  hasKuechenPin() {
+    return !!data.settings.kuechenPin;
+  },
+  /** Zugang des Küchen-Tablets setzen, oder mit leerem PIN entziehen. */
+  setKuechenZugang(pin) {
+    const p = String(pin || "").trim();
+    data.settings.kuechenPin = p || null;
+    persist();
+    return data.settings.kuechenPin;
   },
   /** PIN (und Name) für das Store-Management setzen, oder mit leerem PIN den Zugang entziehen. */
   setManagerZugang(pin, name) {

@@ -47,7 +47,9 @@ async function buildAuthPinsPayload(cfg, employees) {
   const socialPinHash = socialPin ? await hashPin(cfg.workerSecret, String(socialPin)) : null;
   const managerPin = store.getSettings().managerPin;
   const managerPinHash = managerPin ? await hashPin(cfg.workerSecret, String(managerPin)) : null;
-  return { authPins, adminPinHash, socialPinHash, managerPinHash };
+  const kuechenPin = store.getSettings().kuechenPin;
+  const kuechenPinHash = kuechenPin ? await hashPin(cfg.workerSecret, String(kuechenPin)) : null;
+  return { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash };
 }
 
 function mondayOf(dateStr) {
@@ -1011,7 +1013,7 @@ async function performTaskSync() {
   }));
   const eventConfig = store.getEventSettings();
 
-  const { authPins, adminPinHash, socialPinHash, managerPinHash } = await buildAuthPinsPayload(cfg, employees);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
   // alleBestaende: die Store-Managerin zählt Küche, Bar und Divers – der Worker muss das wissen, sonst
@@ -1035,6 +1037,7 @@ async function performTaskSync() {
     adminPinHash,
     socialPinHash,
     managerPinHash,
+    kuechenPinHash,
     managerName: store.getSettings().managerName || "",
     // Was die Küche der nächsten Schicht mitgibt ("Gurken fehlen") – die Store-Managerin bestellt danach.
     kuechenNotizen: store.getKuechenNotizen(),

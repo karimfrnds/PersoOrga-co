@@ -1,33 +1,52 @@
 // ============================================================================
 // kueche/api.js – Verbindung des Küchen-Tablets zum Worker.
 //
-// Zwei Unterschiede zum Handy, beide folgen daraus, dass hier ein GETEILTES Gerät steht:
+// Hier gibt es ZWEI Anmeldungen, und der Unterschied ist der ganze Punkt:
 //
-//   Die Sitzung überlebt das Neuladen NICHT. Auf dem Handy bleibt man angemeldet, weil es einem selbst
-//   gehört. In der Küche kommen fünf Leute vorbei – wer als Letztes dran war, darf nicht die Person
-//   sein, auf deren Namen die nächste Schicht gebucht wird.
+//   DAS GERÄT meldet sich einmal an, mit dem Zugang des Küchen-Tablets, und bleibt angemeldet. Nur
+//   deshalb kann der Leerlauf-Bildschirm überhaupt zeigen, wer im Dienst ist – ohne das müsste sich
+//   erst jemand anmelden, damit das Tablet etwas anzeigt, und dann wäre es keine Stempelstation.
 //
-//   Die Adresse des Workers bleibt dagegen schon gespeichert: die trägt man einmal ein, nicht fünfmal
-//   am Tag.
+//   DIE PERSON meldet sich mit ihrem eigenen PIN an, wenn sie ihr Fenster öffnet, und ist wieder weg,
+//   sobald sie "Zurück" tippt. Auf einem Gerät, an dem fünf Leute vorbeikommen, darf die letzte Person
+//   nicht die sein, auf deren Namen die nächste Schicht gebucht wird.
+//
+// Deshalb überlebt nur die Geräte-Anmeldung das Neuladen, die persönliche nicht.
 // ============================================================================
 import { speicherSchluessel } from "../betrieb.js";
 
 const LS_URL = speicherSchluessel("cafeapp_kueche_workerurl");
+const LS_GERAET = speicherSchluessel("cafeapp_kueche_geraet");
 
-let session = null; // bewusst nur im Speicher, nicht in localStorage
+let geraet = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(LS_GERAET)) || null;
+  } catch {
+    return null;
+  }
+})();
+let person = null; // bewusst nur im Speicher
 
-const getSession = () => session;
+const getGeraet = () => geraet;
+const getPerson = () => person;
 const getWorkerUrl = () => localStorage.getItem(LS_URL) || "";
 const setWorkerUrl = (url) => localStorage.setItem(LS_URL, String(url).trim().replace(/\/+$/, ""));
-const clearSession = () => {
-  session = null;
+
+function clearGeraet() {
+  geraet = null;
+  try {
+    localStorage.removeItem(LS_GERAET);
+  } catch {}
+}
+const clearPerson = () => {
+  person = null;
 };
 
-async function call(path, { method = "GET", body } = {}) {
+async function call(path, token, { method = "GET", body } = {}) {
   const base = getWorkerUrl();
   if (!base) throw new Error("Adresse noch nicht eingetragen.");
   const headers = {};
-  if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   let res;
@@ -37,9 +56,9 @@ async function call(path, { method = "GET", body } = {}) {
     throw new Error("Keine Verbindung. Hängt das WLAN?");
   }
   if (res.status === 401) {
-    clearSession();
-    const e = new Error("Die Anmeldung ist abgelaufen. Bitte PIN neu eingeben.");
+    const e = new Error("Die Anmeldung ist abgelaufen.");
     e.abgemeldet = true;
+    // Welche der beiden abgelaufen ist, weiss nur der Aufrufer – hier wird nichts geraten.
     throw e;
   }
   const data = await res.json().catch(() => ({}));
@@ -47,7 +66,8 @@ async function call(path, { method = "GET", body } = {}) {
   return data;
 }
 
-async function login(pin) {
+/** Rohe Anmeldung. Gibt zurück, welche Art von Zugang der PIN ist. */
+async function anmelden(pin) {
   const base = getWorkerUrl();
   if (!base) throw new Error("Adresse noch nicht eingetragen.");
   let res;
@@ -58,17 +78,49 @@ async function login(pin) {
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "PIN nicht erkannt.");
-  if (data.role !== "employee") throw new Error("Das ist kein Mitarbeiter-PIN.");
-  session = { token: data.token, name: data.name };
-  return session;
+  return data;
 }
 
-const getOverview = () => call("/kueche/overview");
-/** kind: "in" | "out" */
-const stempeln = (kind) => call("/kueche/clock", { method: "POST", body: { kind } });
-/** Produktion eintragen. auftragId optional – dann gilt der Auftrag als erledigt. */
-const sendeCharge = (daten) => call("/kueche/produktion", { method: "POST", body: { kind: "charge", ...daten } });
-const sendeLeer = (chargeId) => call("/kueche/produktion", { method: "POST", body: { kind: "leer", chargeId } });
-const sendeAuftragWeg = (auftragId) => call("/kueche/produktion", { method: "POST", body: { kind: "auftrag-weg", auftragId } });
+/** Das Gerät einrichten – einmalig, mit dem Zugang des Küchen-Tablets. */
+async function geraetAnmelden(pin) {
+  const data = await anmelden(pin);
+  if (data.role !== "kuechenstation") throw new Error("Das ist nicht der Zugang des Küchen-Tablets.");
+  geraet = { token: data.token };
+  try {
+    localStorage.setItem(LS_GERAET, JSON.stringify(geraet));
+  } catch {}
+  return geraet;
+}
 
-export { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOverview, stempeln, sendeCharge, sendeLeer, sendeAuftragWeg };
+/** Eine Person öffnet ihr Fenster. */
+async function personAnmelden(pin) {
+  const data = await anmelden(pin);
+  if (data.role !== "employee") throw new Error("Das ist kein Mitarbeiter-PIN.");
+  person = { token: data.token, name: data.name };
+  return person;
+}
+
+const getStation = () => call("/kueche/station", geraet?.token);
+const getOverview = () => call("/kueche/overview", person?.token);
+/** kind: "in" | "out" */
+const stempeln = (kind) => call("/kueche/clock", person?.token, { method: "POST", body: { kind } });
+const sendeCharge = (daten) => call("/kueche/produktion", person?.token, { method: "POST", body: { kind: "charge", ...daten } });
+const sendeLeer = (chargeId) => call("/kueche/produktion", person?.token, { method: "POST", body: { kind: "leer", chargeId } });
+const sendeAuftragWeg = (auftragId) => call("/kueche/produktion", person?.token, { method: "POST", body: { kind: "auftrag-weg", auftragId } });
+
+export {
+  getGeraet,
+  getPerson,
+  clearGeraet,
+  clearPerson,
+  getWorkerUrl,
+  setWorkerUrl,
+  geraetAnmelden,
+  personAnmelden,
+  getStation,
+  getOverview,
+  stempeln,
+  sendeCharge,
+  sendeLeer,
+  sendeAuftragWeg,
+};

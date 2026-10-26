@@ -30,7 +30,20 @@ function renderSettings() {
 
     const GROUPS = [
       { id: "abrechnung", icon: "💰", label: "Abrechnung", hint: "Trinkgeld-Verteilung, Rundung, Lohnnebenkosten, Auszahlung", build: buildAbrechnungCards },
-      { id: "sicherheit", icon: "🔒", label: "Sicherheit", hint: "Admin-PIN, Zugänge Social Media und Store-Management", build: buildSicherheitCards },
+      // Der Hinweis nennt nur, was es in diesem Betrieb auch gibt – sonst sucht jemand bei Rolla Costa
+      // nach einem Social-Zugang, den es dort nie gab.
+      {
+        id: "sicherheit",
+        icon: "🔒",
+        label: "Sicherheit",
+        hint: [
+          "Admin-PIN",
+          ...(kann("social") ? ["Zugang Social Media"] : []),
+          ...(kann("storeManagement") ? ["Zugang Store-Management"] : []),
+          ...(kann("produktion") ? ["Zugang Küchen-Tablet"] : []),
+        ].join(", "),
+        build: buildSicherheitCards,
+      },
       { id: "backup", icon: "☁️", label: "Backup & Synchronisation", hint: "GitHub-Backup, Telegram-Aufgaben, manuelle Sicherung", build: buildBackupCards },
       { id: "hinweise", icon: "ℹ️", label: "Hinweise", hint: "Steuer & Recht", build: buildHinweiseCards },
     ];
@@ -318,8 +331,72 @@ function renderSettings() {
     }
     managerCard.appendChild(mReihe);
 
+    // --- Zugang des Küchen-Tablets ---
+    //
+    // Dieser PIN gehört dem GERÄT, nicht einer Person. Er sorgt nur dafür, dass der Leerlauf-Bildschirm
+    // zeigen darf, wer gerade im Dienst ist – gestempelt wird weiterhin mit dem eigenen PIN. Ohne ihn
+    // müsste sich jemand anmelden, damit das Tablet überhaupt etwas anzeigen kann, und dann wäre es
+    // keine Stempelstation mehr.
+    const kuecheCard = document.createElement("section");
+    kuecheCard.className = "card";
+    kuecheCard.innerHTML = `<h2>Zugang Küchen-Tablet</h2>
+      <p class="muted small">Einmalig am Tablet in der Produktionsküche einzugeben (<b>kueche.html</b>). Danach ist es
+      eine Stempelstation wie das Haupt-Tablet: PIN-Feld, wer im Dienst ist, eigenes Fenster.
+      Der PIN gehört dem Gerät – die Leute stempeln weiter mit ihrem eigenen.</p>`;
+    const kStand = document.createElement("p");
+    kStand.className = store.hasKuechenPin() ? "callout" : "muted small";
+    kStand.textContent = store.hasKuechenPin() ? "Zugang eingerichtet." : "Noch kein Zugang eingerichtet – das Küchen-Tablet kommt noch nicht rein.";
+    kuecheCard.appendChild(kStand);
+    const kReihe = document.createElement("div");
+    kReihe.className = "employee-actions";
+    const kSetzen = document.createElement("button");
+    kSetzen.className = "btn btn-secondary";
+    kSetzen.textContent = store.hasKuechenPin() ? "Ändern" : "Zugang einrichten";
+    kSetzen.onclick = async () => {
+      const pin = await promptDialog("Vier Ziffern oder mehr. Den tippt ihr einmal am Küchen-Tablet ein, danach nie wieder.", {
+        title: "PIN für das Küchen-Tablet",
+        type: "number",
+        okLabel: "Speichern",
+      });
+      if (pin === null) return;
+      const sauber = String(pin).trim();
+      if (sauber.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (sauber === String(store.getSettings().adminPin || "")) {
+        await alertDialog("Das ist dein Admin-PIN. Bitte einen anderen wählen.");
+        return;
+      }
+      if (sauber === String(store.getSettings().managerPin || "") || sauber === String(store.getSettings().socialPin || "") || store.findEmployeeByPin(sauber)) {
+        await alertDialog("Dieser PIN ist schon vergeben. Bitte einen eigenen wählen – sonst käme jemand an der falschen Stelle hinein.");
+        return;
+      }
+      store.setKuechenZugang(sauber);
+      rerender();
+      await alertDialog("Zugang eingerichtet. Er gilt, sobald sich das Tablet das nächste Mal abgeglichen hat (spätestens 90 Sekunden).");
+    };
+    kReihe.appendChild(kSetzen);
+    if (store.hasKuechenPin()) {
+      const kWeg = document.createElement("button");
+      kWeg.className = "btn btn-link";
+      kWeg.textContent = "Zugang entziehen";
+      kWeg.onclick = async () => {
+        if (!(await confirmDialog("Zugang entziehen? Das Küchen-Tablet zeigt danach nichts mehr an.", { danger: true, okLabel: "Entziehen" }))) return;
+        store.setKuechenZugang("");
+        rerender();
+      };
+      kReihe.appendChild(kWeg);
+    }
+    kuecheCard.appendChild(kReihe);
+
     // Zugänge nur dort, wo es die Bereiche gibt.
-    return [pinCard, ...(kann("social") ? [socialCard] : []), ...(kann("storeManagement") ? [managerCard] : [])];
+    return [
+      pinCard,
+      ...(kann("social") ? [socialCard] : []),
+      ...(kann("storeManagement") ? [managerCard] : []),
+      ...(kann("produktion") ? [kuecheCard] : []),
+    ];
   }
 
   // ---------------------------------------------------------------------

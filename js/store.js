@@ -213,6 +213,22 @@ function defaultData() {
     // in der Küche wird abgelesen, nicht gerechnet. { id, name, ergibt, zutaten[], schritte[], notiz,
     //                                                 updatedAt, updatedBy, quelle }
     recipes: [],
+    // --- Produktion (Produktionsküche) ---
+    // Behälter, in denen Produziertes landet. Eine gepflegte Liste statt freier Eingabe: sonst stehen
+    // "GN 1/1", "GN1/1" und "gn 1" nebeneinander und niemand findet mehr, wo etwas ist.
+    // { id, name, groesse, ort, aktiv, sort }
+    behaelter: [],
+    // Jede Produktion ist eine Charge: was, wie viel, von wem, wann, in welchem Behälter, wo.
+    // Daraus ergibt sich der Ist-Bestand (Summe der nicht leeren Chargen) – und damit die Frage,
+    // was die nächste Schicht produzieren muss. Niemand muss dafür zählen.
+    // { id, produktId, menge, einheit, behaelterId, ort, vonId, vonName, am, mhd,
+    //   leerAm, leerVon, auftragId, notiz }
+    chargen: [],
+    // Was produziert werden soll. Entsteht von selbst, wenn etwas unter das Soll fällt – oder der Chef
+    // bzw. die Küchenleitung legt ihn an und gibt ihn jemandem.
+    // { id, produktId, menge, einheit, fuerDatum, schichtGruppe, zugewiesenAn, quelle, status,
+    //   chargeIds[], erstelltAm, erledigtAm }
+    produktionsAuftraege: [],
     // Was die Küche der nächsten Schicht mitgeben will: "Gurken fehlen", "Fritteuse macht Geräusche".
     // fuer = der Tag, für den es gilt. { id, text, fuer, von, at, erledigtAm, erledigtVon }
     kuechenNotizen: [],
@@ -415,9 +431,82 @@ function normalizePrep(v) {
     rezeptId: v?.rezeptId || null,
     aktiv: v?.aktiv === undefined ? true : !!v.aktiv,
     sort: Number(v?.sort) || 0,
+    // --- Produktion ---
+    // Wird das hier selbst hergestellt? Dann kommt der Ist-Bestand aus den Chargen und nicht aus einer
+    // gezählten Zahl, und das System legt von selbst Produktionsaufträge an, wenn es unter Soll fällt.
+    produzierbar: !!v?.produzierbar,
+    // Wie lange es haelt, in Tagen. 0 = nicht hinterlegt, dann gibt es kein MHD und keine Warnung.
+    haltbarkeitTage: Math.max(0, Math.round(Number(v?.haltbarkeitTage) || 0)),
+    // In welchen Portionen produziert wird (ein 5-Liter-Eimer). Ein Auftrag wird darauf aufgerundet –
+    // "2,4 Liter Sauce ansetzen" waere eine Anweisung, die niemand ausfuehrt.
+    gebinde: Math.max(0, Number(v?.gebinde) || 0),
+    standardBehaelterId: v?.standardBehaelterId || null,
     bestand,
     // Nur die letzten Zaehlungen: mehr braucht niemand, und die Liste soll nicht unbegrenzt wachsen.
     verlauf: Array.isArray(v?.verlauf) ? v.verlauf.slice(-30) : [],
+  };
+}
+
+/** Ein Behälter: wo Produziertes landet. groesse ist frei ("10 L", "GN 1/1") – gerechnet wird damit
+ * nichts, sie steht nur da, damit man weiss, was man holt. */
+function normalizeBehaelter(v) {
+  return {
+    id: v?.id || uid(),
+    name: String(v?.name || "").trim(),
+    groesse: String(v?.groesse || "").trim(),
+    // Wo er normalerweise steht. Beim Produzieren vorausgefüllt, aber überschreibbar – Behälter wandern.
+    ort: String(v?.ort || "").trim(),
+    aktiv: v?.aktiv === undefined ? true : !!v.aktiv,
+    sort: Number(v?.sort) || 0,
+  };
+}
+
+/** Eine Charge: eine Produktion, ein Behälter, ein Zeitpunkt, eine Person.
+ *
+ * leerAm ist der zweite wichtige Zeitpunkt. Solange er fehlt, zählt die Charge zum Bestand; ist er
+ * gesetzt, ist der Behälter aufgebraucht. Daran hängt alles: der Ist-Bestand, die Frage, was produziert
+ * werden muss, und die Rückverfolgung "wer hat das wann gemacht".
+ */
+function normalizeCharge(v) {
+  const menge = Number(v?.menge);
+  return {
+    id: v?.id || uid(),
+    produktId: v?.produktId || null,
+    menge: Number.isFinite(menge) ? Math.max(0, menge) : 0,
+    einheit: String(v?.einheit || ""),
+    behaelterId: v?.behaelterId || null,
+    ort: String(v?.ort || ""),
+    vonId: v?.vonId || null,
+    vonName: String(v?.vonName || ""),
+    am: v?.am || new Date().toISOString(),
+    // Mindesthaltbarkeit als Datum, aus der Haltbarkeit des Produkts gerechnet. Leer = nicht hinterlegt.
+    mhd: /^\d{4}-\d{2}-\d{2}$/.test(v?.mhd || "") ? v.mhd : "",
+    leerAm: v?.leerAm || null,
+    leerVon: String(v?.leerVon || ""),
+    auftragId: v?.auftragId || null,
+    notiz: String(v?.notiz || ""),
+  };
+}
+
+const AUFTRAG_STATUS = ["offen", "erledigt", "abgebrochen"];
+
+/** Ein Produktionsauftrag: was, wie viel, für wann, von wem zu machen.
+ * quelle sagt, woher er kommt – "system" ist der automatisch aus dem Soll entstandene. */
+function normalizeAuftrag(v) {
+  const menge = Number(v?.menge);
+  return {
+    id: v?.id || uid(),
+    produktId: v?.produktId || null,
+    menge: Number.isFinite(menge) ? Math.max(0, menge) : 0,
+    einheit: String(v?.einheit || ""),
+    fuerDatum: /^\d{4}-\d{2}-\d{2}$/.test(v?.fuerDatum || "") ? v.fuerDatum : todayStr(),
+    schichtGruppe: ["frueh", "mittel", "spaet"].includes(v?.schichtGruppe) ? v.schichtGruppe : "",
+    zugewiesenAn: v?.zugewiesenAn || null,
+    quelle: ["system", "chef", "kueche"].includes(v?.quelle) ? v.quelle : "chef",
+    status: AUFTRAG_STATUS.includes(v?.status) ? v.status : "offen",
+    chargeIds: Array.isArray(v?.chargeIds) ? v.chargeIds : [],
+    erstelltAm: v?.erstelltAm || new Date().toISOString(),
+    erledigtAm: v?.erledigtAm || null,
   };
 }
 
@@ -508,6 +597,9 @@ function load() {
       eventSignups: parsed.eventSignups ?? base.eventSignups,
       preps: (parsed.preps ?? base.preps).map(normalizePrep),
       recipes: (parsed.recipes ?? base.recipes).map(normalizeRecipe),
+      behaelter: (parsed.behaelter ?? base.behaelter).map(normalizeBehaelter),
+      chargen: (parsed.chargen ?? base.chargen).map(normalizeCharge),
+      produktionsAuftraege: (parsed.produktionsAuftraege ?? base.produktionsAuftraege).map(normalizeAuftrag),
       kuechenNotizen: parsed.kuechenNotizen ?? base.kuechenNotizen,
       bestandAbschluesse: parsed.bestandAbschluesse ?? base.bestandAbschluesse,
       managerAufgaben: parsed.managerAufgaben ?? base.managerAufgaben,
@@ -1021,6 +1113,11 @@ export const store = {
     // Erst jetzt, nachdem die Schicht steht: daraus ergibt sich, ob es die Frueh-, Mittel- oder
     // Spaetschicht ist – und damit, welche Standard-Aufgaben diese Person heute bekommt.
     this.ergaenzeSchichtaufgaben(employeeId, dateStr);
+    // Und in der Produktionsküche: was unter Soll liegt, steht ab jetzt als Auftrag auf der Liste.
+    // Niemand soll morgens erst in jeden Behälter schauen muessen.
+    if (this.getEmployee(employeeId)?.role === "kueche") {
+      this.ergaenzeProduktionsAuftraege(dateStr, this.getSchichtGruppeFuer(employeeId, dateStr));
+    }
     return { day: d, shift: s };
   },
   /** Mitarbeiter stempelt aus: schließt die offene Schicht mit der aktuellen Uhrzeit ab. */
@@ -2448,7 +2545,9 @@ export const store = {
   /** Wann hat der Laden an diesem Tag auf? Frühester Anfang und spätestes Ende der Schichten.
    * Näher kommt man ohne eigene Öffnungszeiten nicht heran, und für "wie früh war es alle?" reicht es. */
   ladenZeiten(dateStr = todayStr()) {
-    const slots = betrieb.rollen.flatMap((r) => this.getShiftSlotsForRole(r, dateStr));
+    // Nur die Schichten im Verkauf. Die Produktionsküche fängt frueher an, und hätte sie hier ein Wort
+    // mitzureden, waere "um 11:30 ausverkauft" plötzlich später am Tag, als es tatsächlich war.
+    const slots = this.getShiftSlotsForRole(betrieb.rollen[0], dateStr);
     if (slots.length === 0) return null;
     const von = slots.map((x) => x.from).sort()[0];
     const bis = slots.map((x) => x.to).sort().slice(-1)[0];
@@ -2647,11 +2746,243 @@ export const store = {
   },
   /** "leer" | "knapp" | "ok" | "unbekannt" – "unbekannt" heisst: seit dem Anlegen nie gezaehlt. */
   prepStatus(p) {
+    // Was selbst produziert wird, zählt niemand: der Bestand ist die Summe der nicht leeren Behälter.
+    if (p?.produzierbar) {
+      const ist = this.istMenge(p.id);
+      if (ist <= 0) return "leer";
+      if (p.soll > 0 && ist < p.soll) return "knapp";
+      return "ok";
+    }
     if (!p?.bestand) return "unbekannt";
     if (p.bestand.menge <= 0) return "leer";
     if (p.soll > 0 && p.bestand.menge < p.soll) return "knapp";
     return "ok";
   },
+  /** Wie viel ist da? Bei Produktionsprodukten aus den offenen Chargen, sonst die gezählte Zahl.
+   * null heisst "nicht bekannt" – das ist etwas anderes als 0. */
+  istMenge(prepId) {
+    const p = this.getPrep(prepId);
+    if (!p) return null;
+    if (!p.produzierbar) return p.bestand ? p.bestand.menge : null;
+    return Math.round(this.verfuegbareChargen(prepId).reduce((n, c) => n + c.menge, 0) * 100) / 100;
+  },
+  /** Was tatsächlich noch benutzt werden darf: voll UND nicht abgelaufen.
+   *
+   * Ein abgelaufener Behälter steht zwar noch da, ist aber keine Ware mehr. Wuerde er mitzählen, saehe
+   * der Bestand gedeckt aus und niemand wuerde nachproduzieren – bis morgens jemand den Deckel aufmacht.
+   * Er bleibt in offeneChargen(), denn er belegt ja weiterhin den Behälter.
+   */
+  verfuegbareChargen(produktId = null) {
+    const heute = todayStr();
+    return this.offeneChargen(produktId).filter((c) => !c.mhd || c.mhd >= heute);
+  },
+  /** Steht da, taugt aber nichts mehr. Das ist die Liste, die weggeworfen gehört. */
+  abgelaufeneChargen(produktId = null) {
+    const heute = todayStr();
+    return this.offeneChargen(produktId).filter((c) => c.mhd && c.mhd < heute);
+  },
+
+  // ---- Produktion: Behälter ----
+  getBehaelter(nurAktive = true) {
+    return data.behaelter
+      .filter((b) => !nurAktive || b.aktiv)
+      .sort((a, b) => (a.sort || 0) - (b.sort || 0) || a.name.localeCompare(b.name));
+  },
+  getBehaelterById(id) {
+    return data.behaelter.find((b) => b.id === id) || null;
+  },
+  addBehaelter(v) {
+    const b = normalizeBehaelter({ ...v, sort: v?.sort ?? (data.behaelter.length + 1) * 10 });
+    if (!b.name) return null;
+    data.behaelter.push(b);
+    persist();
+    return b;
+  },
+  updateBehaelter(id, patch) {
+    const i = data.behaelter.findIndex((b) => b.id === id);
+    if (i < 0) return null;
+    data.behaelter[i] = normalizeBehaelter({ ...data.behaelter[i], ...patch, id });
+    persist();
+    return data.behaelter[i];
+  },
+  removeBehaelter(id) {
+    // Ein Behälter, in dem noch etwas steht, verschwindet nicht – sonst waere die Charge heimatlos.
+    if (this.offeneChargen().some((c) => c.behaelterId === id)) return this.updateBehaelter(id, { aktiv: false });
+    data.behaelter = data.behaelter.filter((b) => b.id !== id);
+    persist();
+    return null;
+  },
+  /** Welcher Behälter ist gerade frei? Frei heisst: keine offene Charge darin. */
+  freieBehaelter() {
+    const belegt = new Set(this.offeneChargen().map((c) => c.behaelterId).filter(Boolean));
+    return this.getBehaelter(true).filter((b) => !belegt.has(b.id));
+  },
+  /** Was steht gerade in diesem Behälter? null, wenn er frei ist. */
+  inhaltVon(behaelterId) {
+    return this.offeneChargen().find((c) => c.behaelterId === behaelterId) || null;
+  },
+
+  // ---- Produktion: Chargen ----
+  /** Alle Chargen, neueste zuerst. */
+  getChargen({ produktId = null, nurOffen = false, seitTagen = null } = {}) {
+    const ab = seitTagen === null ? null : addDaysISOStore(todayStr(), -seitTagen);
+    return data.chargen
+      .filter((c) => !produktId || c.produktId === produktId)
+      .filter((c) => !nurOffen || !c.leerAm)
+      .filter((c) => !ab || (c.am || "").slice(0, 10) >= ab)
+      .sort((a, b) => String(b.am).localeCompare(String(a.am)));
+  },
+  offeneChargen(produktId = null) {
+    return this.getChargen({ produktId, nurOffen: true });
+  },
+  /** Eine Produktion eintragen. Das MHD kommt aus der Haltbarkeit des Produkts – danach fragt niemand
+   * gern zweimal, und falsch gerechnet wird es dabei auch nicht. */
+  addCharge(v) {
+    const p = this.getPrep(v?.produktId);
+    if (!p) return null;
+    const menge = Number(String(v?.menge ?? "").replace(",", "."));
+    if (!Number.isFinite(menge) || menge <= 0) return null;
+    const am = v?.am || new Date().toISOString();
+    const behaelter = v?.behaelterId ? this.getBehaelterById(v.behaelterId) : null;
+    const c = normalizeCharge({
+      ...v,
+      menge,
+      am,
+      einheit: v?.einheit || p.einheit,
+      ort: v?.ort || behaelter?.ort || "",
+      mhd: v?.mhd || (p.haltbarkeitTage > 0 ? addDaysISOStore(String(am).slice(0, 10), p.haltbarkeitTage) : ""),
+    });
+    data.chargen.push(c);
+    // Nicht unbegrenzt wachsen lassen: die Rückverfolgung braucht Monate, nicht Jahre.
+    if (data.chargen.length > 4000) data.chargen = data.chargen.slice(-4000);
+    persist();
+    return c;
+  },
+  /** Behälter aufgebraucht. Ab hier zählt die Charge nicht mehr zum Bestand – und genau das löst
+   * später den nächsten Produktionsauftrag aus. */
+  chargeLeer(id, vonName, at = null) {
+    const c = data.chargen.find((x) => x.id === id);
+    if (!c || c.leerAm) return null;
+    c.leerAm = at || new Date().toISOString();
+    c.leerVon = String(vonName || "");
+    persist();
+    return c;
+  },
+  /** Doch nicht leer (verklickt). */
+  chargeWiederOffen(id) {
+    const c = data.chargen.find((x) => x.id === id);
+    if (!c) return null;
+    c.leerAm = null;
+    c.leerVon = "";
+    persist();
+    return c;
+  },
+  removeCharge(id) {
+    data.chargen = data.chargen.filter((c) => c.id !== id);
+    persist();
+  },
+  /** Chargen, die ablaufen oder abgelaufen sind. tage = wie weit nach vorn geschaut wird. */
+  ablaufendeChargen(tage = 2) {
+    const grenze = addDaysISOStore(todayStr(), tage);
+    return this.offeneChargen()
+      .filter((c) => c.mhd && c.mhd <= grenze)
+      .sort((a, b) => a.mhd.localeCompare(b.mhd));
+  },
+  // ---- Produktion: Aufträge ----
+  //
+  // Der Kern der Sache: niemand soll morgens überlegen müssen, was heute angesetzt werden muss. Das
+  // System vergleicht, was da ist, mit dem Soll und schreibt der Schicht hin, was fehlt.
+  getProduktionsAuftraege({ datum = null, nurOffen = false, fuerPerson = null } = {}) {
+    return data.produktionsAuftraege
+      .filter((a) => !datum || a.fuerDatum === datum)
+      .filter((a) => !nurOffen || a.status === "offen")
+      // Ein Auftrag ohne Namen gilt für jeden in der Küche; einer mit Namen nur für die Person.
+      .filter((a) => !fuerPerson || !a.zugewiesenAn || a.zugewiesenAn === fuerPerson)
+      .sort((a, b) => a.fuerDatum.localeCompare(b.fuerDatum) || String(a.erstelltAm).localeCompare(String(b.erstelltAm)));
+  },
+  getProduktionsAuftrag(id) {
+    return data.produktionsAuftraege.find((a) => a.id === id) || null;
+  },
+  addProduktionsAuftrag(v) {
+    const p = this.getPrep(v?.produktId);
+    if (!p) return null;
+    const a = normalizeAuftrag({ ...v, einheit: v?.einheit || p.einheit });
+    if (a.menge <= 0) return null;
+    data.produktionsAuftraege.push(a);
+    persist();
+    return a;
+  },
+  updateProduktionsAuftrag(id, patch) {
+    const i = data.produktionsAuftraege.findIndex((a) => a.id === id);
+    if (i < 0) return null;
+    data.produktionsAuftraege[i] = normalizeAuftrag({ ...data.produktionsAuftraege[i], ...patch, id });
+    persist();
+    return data.produktionsAuftraege[i];
+  },
+  removeProduktionsAuftrag(id) {
+    data.produktionsAuftraege = data.produktionsAuftraege.filter((a) => a.id !== id);
+    persist();
+  },
+  /** Auftrag erledigen: die Produktion wird als Charge eingetragen und der Auftrag damit verbunden.
+   * Ein Arbeitsgang, eine Eingabe – wer fertig ist, will nicht an zwei Stellen etwas abhaken. */
+  erledigeProduktionsAuftrag(id, chargeDaten) {
+    const a = this.getProduktionsAuftrag(id);
+    if (!a) return null;
+    const c = this.addCharge({ ...chargeDaten, produktId: a.produktId, auftragId: a.id });
+    if (!c) return null;
+    a.chargeIds = [...a.chargeIds, c.id];
+    a.status = "erledigt";
+    a.erledigtAm = c.am;
+    persist();
+    return { auftrag: a, charge: c };
+  },
+
+  /** Was fehlt gerade? Für jedes Produktionsprodukt: wie viel da ist, wie viel da sein soll, was schon
+   * beauftragt ist – und was danach noch fehlt. */
+  produktionsBedarf() {
+    const offeneAuftraege = this.getProduktionsAuftraege({ nurOffen: true });
+    return this.getPreps(true)
+      .filter((p) => p.produzierbar && p.soll > 0)
+      .map((p) => {
+        const ist = this.istMenge(p.id) || 0;
+        const beauftragt = offeneAuftraege.filter((a) => a.produktId === p.id).reduce((n, a) => n + a.menge, 0);
+        const fehlt = Math.round((p.soll - ist - beauftragt) * 100) / 100;
+        return { prep: p, ist, soll: p.soll, beauftragt, fehlt };
+      });
+  },
+
+  /** Die Automatik: für alles, was unter Soll liegt und noch nicht beauftragt ist, einen Auftrag anlegen.
+   *
+   * Läuft bei jedem Einstempeln und beim Öffnen der App. Dass sie mehrfach laufen kann, ist Absicht und
+   * muss folgenlos bleiben: gezählt wird deshalb gegen Ist PLUS schon offene Aufträge. Erst wenn beides
+   * zusammen das Soll nicht deckt, entsteht etwas Neues – sonst stünde nach drei Schichtwechseln
+   * dieselbe Sauce dreimal auf der Liste.
+   */
+  ergaenzeProduktionsAuftraege(dateStr = todayStr(), schichtGruppe = "") {
+    if (!kann("produktion")) return [];
+    const neue = [];
+    for (const b of this.produktionsBedarf()) {
+      if (b.fehlt <= 0) continue;
+      // Auf volle Gebinde aufrunden: "2,4 Liter ansetzen" ist keine Anweisung, die jemand ausführt.
+      const menge = b.prep.gebinde > 0 ? Math.ceil(b.fehlt / b.prep.gebinde) * b.prep.gebinde : Math.ceil(b.fehlt * 10) / 10;
+      const a = this.addProduktionsAuftrag({
+        produktId: b.prep.id,
+        menge,
+        einheit: b.prep.einheit,
+        fuerDatum: dateStr,
+        schichtGruppe,
+        quelle: "system",
+      });
+      if (a) neue.push(a);
+    }
+    return neue;
+  },
+
+  /** Wer hat was produziert? Für die Rückverfolgung – je Produkt, neueste zuerst. */
+  produktionsVerlauf(produktId, tage = 30) {
+    return this.getChargen({ produktId, seitTagen: tage });
+  },
+
   /** Wie alt ist die Zaehlung, in Stunden? null, wenn nie gezaehlt. */
   prepAlterStunden(p) {
     if (!p?.bestand?.at) return null;
@@ -3096,6 +3427,9 @@ export const store = {
       eventSignups: parsed.eventSignups ?? [],
       preps: (parsed.preps ?? []).map(normalizePrep),
       recipes: (parsed.recipes ?? []).map(normalizeRecipe),
+      behaelter: (parsed.behaelter ?? []).map(normalizeBehaelter),
+      chargen: (parsed.chargen ?? []).map(normalizeCharge),
+      produktionsAuftraege: (parsed.produktionsAuftraege ?? []).map(normalizeAuftrag),
       kuechenNotizen: parsed.kuechenNotizen ?? [],
       bestandAbschluesse: parsed.bestandAbschluesse ?? [],
     };

@@ -20,6 +20,7 @@ import { renderExport } from "./exportpage.js";
 import { renderHours } from "./hours.js";
 import { renderBeta } from "./beta.js";
 import { renderEinrichtung } from "./einrichtung.js";
+import { renderProduktionAdmin } from "./produktionAdmin.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { isUnlocked, unlockDirect, lock } from "../adminAuth.js";
 import { todayStr } from "../format.js";
@@ -40,6 +41,7 @@ function renderAdmin(navigate) {
     { id: "planning", label: "Schichtplanung", render: () => renderShiftPlanningAdmin() },
     { id: "stock", label: "Vorräte", render: () => renderStockAdmin() },
     { id: "sollbestand", label: "Soll-Bestand", render: () => renderBestandAdmin() },
+    { id: "produktion", label: "👨‍🍳 Produktion", render: () => renderProduktionAdmin() },
     { id: "produkte", label: "Produkte & Schichten", render: () => renderPopupAdmin() },
     { id: "tables", label: "Tische", render: () => renderTablesAdmin() },
     { id: "events", label: "🎱 Bingo", render: () => renderEvents() },
@@ -56,6 +58,7 @@ function renderAdmin(navigate) {
     if (t.id === "produkte" || t.id === "schichten") return kann("verkauf") || kann("schichtenEditierbar");
     if (t.id === "beta") return kann("beta");
     if (t.id === "einrichtung") return kann("einrichtung");
+    if (t.id === "produktion") return kann("produktion");
     return true;
   });
   if (!TABS.some((t) => t.id === activeTab)) activeTab = TABS[0].id;

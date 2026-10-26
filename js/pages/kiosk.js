@@ -20,6 +20,8 @@ import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, toggleManagerAufgabe } from "../taskSync.js";
 import { alertDialog, confirmDialog } from "../dialog.js";
 import { buildBestandKarten } from "./kueche.js";
+import { buildProduktionsKarten } from "./produktion.js";
+import { kann } from "../betrieb.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
@@ -529,6 +531,13 @@ function renderKiosk(navigate) {
     // Ihre eigenen Aufgaben aus der Store-App (und was der Chef ihr dort gibt) stehen darüber, als eigene Karte.
     if (istStore) wrap.appendChild(buildManagerAufgabenKarte());
     wrap.appendChild(tasksCard);
+
+    // ---- Produktion (nur Küche) ----
+    // Steht über dem Bestand: "was soll ich machen" ist in der Produktionsküche die erste Frage nach
+    // dem Einstempeln, noch vor "was ist da".
+    if (kann("produktion") && emp.role === "kueche") {
+      for (const karte of buildProduktionsKarten(emp, { onChange: rerender })) wrap.appendChild(karte);
+    }
 
     // ---- Bestand (Küche: mit Hinweisen und Rezepten; Bar und Service: der Bar-Bestand) ----
     // Direkt hier statt auf einer eigenen Seite: das ist die erste Frage nach dem Einstempeln.

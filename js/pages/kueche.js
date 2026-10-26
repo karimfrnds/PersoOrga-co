@@ -20,7 +20,7 @@
 import { store } from "../store.js";
 import { escapeHtml, todayStr } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
-import { betrieb } from "../betrieb.js";
+import { betrieb, kann } from "../betrieb.js";
 
 const STATUS = {
   leer: { label: "leer", klasse: "bestand-leer", rang: 0 },
@@ -154,17 +154,30 @@ function buildBestandKarten(emp, { onChange }) {
     karten.push(buildRezepteKarte(emp, { onChange }));
     return karten;
   }
-  for (const b of store.bestandBereicheFuer(emp)) {
+  const bereiche = store.bestandBereicheFuer(emp);
+  for (const b of bereiche) {
     if (b.id === "kueche") {
       karten.push(buildKuecheKarte(emp, { onChange }));
       karten.push(buildRezepteKarte(emp, { onChange }));
-    } else if (store.getPreps(true, b.id).length > 0) {
+    } else if (store.getPreps(true, b.id).some((p) => !p.produzierbar)) {
+      // Was selbst produziert wird, steht nicht hier: dort wird nicht gezählt, sondern produziert.
+      // Dafür gibt es die Produktions-Karte.
       const z = zustandFuer(emp);
       const card = el("section", "card");
       card.appendChild(el("h2", null, `${b.symbol} ${b.label}`));
       card.appendChild(klappBestand(emp, { ...b, label: "Bestand", symbol: "📦" }, z, onChange, () => buildBestandAbschnitt(emp, b.id, z, onChange, false), b.id));
       karten.push(card);
     }
+  }
+  // Ein Betrieb kann eine Küche haben, ohne einen Bestandsbereich "kueche" zu führen (die Produktions-
+  // küche zählt nichts, sie produziert). Hinweise und Rezepte braucht sie trotzdem.
+  if (kann("kueche") && emp.role === "kueche" && !bereiche.some((b) => b.id === "kueche")) {
+    const z = zustandFuer(emp);
+    const card = el("section", "card");
+    card.appendChild(el("h2", null, "🍳 Küche"));
+    card.appendChild(buildNotizen(emp, z, onChange));
+    karten.push(card);
+    karten.push(buildRezepteKarte(emp, { onChange }));
   }
   return karten;
 }

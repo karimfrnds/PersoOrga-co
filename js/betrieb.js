@@ -28,6 +28,7 @@ const BETRIEBE = {
       tische: true,
       events: true, // Bingo-Abend
       kueche: true, // Küchen-Karte mit Hinweisen und Rezepten
+      produktion: false, // im Café wird gezählt, nicht chargenweise produziert
       bestellliste: true, // Vorräte/Lieferanten + Bestellliste am Laptop
       social: true,
       storeManagement: true,
@@ -50,8 +51,9 @@ const BETRIEBE = {
       reservierungen: false,
       tische: false,
       events: false,
-      kueche: false,
-      bestellliste: false,
+      kueche: true, // Produktionsküche: Rezepte und Hinweise an die nächste Schicht
+      produktion: true, // Chargen, Behälter und automatische Produktionsaufträge
+      bestellliste: true, // was eingekauft werden muss – getrennt von dem, was selbst produziert wird
       social: false,
       storeManagement: false,
       verkauf: true,
@@ -60,8 +62,9 @@ const BETRIEBE = {
       beta: false, // im Pop-up nichts zum Ausprobieren – der Laden laeuft drei Monate
       einrichtung: true, // ein neuer Betrieb startet bei null und braucht einen Startpunkt
     },
-    // Ein Pop-up-Team ist klein und macht alles: eine Rolle genügt, und sie hält den Schichtplan einfach.
-    rollen: ["service"],
+    // Verkauf und Produktionsküche sind zwei verschiedene Arbeitsplätze mit zwei verschiedenen Listen –
+    // wer in der Küche steht, will nicht die Theken-Aufgaben sehen und umgekehrt.
+    rollen: ["service", "kueche"],
     // Die drei Sachen, die verkauft werden. Preise ändert man im Admin.
     produkte: [
       { id: "zimtschnecke", name: "Zimtschnecke", preis: 4.5, gebacken: true },
@@ -71,8 +74,13 @@ const BETRIEBE = {
     // Zwei Bestände: was vorne an der Theke steht und was im Lager liegt. Zählen darf beides jeder –
     // im Pop-up steht selten mehr als eine Person.
     bestandBereiche: [
-      { id: "theke", label: "Theke", symbol: "🧁", rollen: ["service", "kueche", "bar"] },
-      { id: "lager", label: "Lager", symbol: "📦", rollen: ["service", "kueche", "bar"] },
+      { id: "theke", label: "Theke", symbol: "🧁", rollen: ["service"] },
+      // Eingekaufte Ware – Mehl, Butter, Becher. Zählen beide: der Verkauf sieht, was vorne fehlt, die
+      // Küche, was zum Produzieren fehlt.
+      { id: "lager", label: "Lager", symbol: "📦", rollen: ["service", "kueche"] },
+      // Was selbst hergestellt wird. Hier wird nicht gezählt, sondern produziert: der Bestand ist die
+      // Summe der nicht leeren Behälter.
+      { id: "produktion", label: "Produktion", symbol: "👨‍🍳", rollen: ["kueche"] },
     ],
     // Startpunkt für die Schichten. Im Pop-up sind sie im Admin änderbar – die Zeiten stehen am Anfang
     // nie fest, und dafür jedes Mal den Code zu ändern wäre albern.
@@ -81,7 +89,12 @@ const BETRIEBE = {
         { id: "frueh1", label: "Früh", from: "07:30", to: "13:30" },
         { id: "spaet1", label: "Spät", from: "13:00", to: "19:00" },
       ],
-      kueche: [],
+      // Die Produktionsküche fängt frueher an als der Verkauf – was morgens in der Auslage liegt,
+      // muss vorher gemacht sein. Änderbar im Admin wie die anderen.
+      kueche: [
+        { id: "frueh1", label: "Produktion früh", from: "06:00", to: "12:00" },
+        { id: "spaet1", label: "Produktion spät", from: "12:00", to: "18:00" },
+      ],
     },
   },
 };

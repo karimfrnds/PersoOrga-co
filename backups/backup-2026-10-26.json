@@ -796,20 +796,20 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-26",
-      "lastBackupAt": "2026-10-26T07:00:16.832Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 70925f9b5272f5138016a7981b8c4359928a9139 but expected 62b49994d33dc8ee4188392fd45b5bda056738aa\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-26T12:03:58.438Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-26T09:58:22.717Z",
+      "lastSyncAt": "2026-10-26T14:38:31.720Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "bb5b92eb-7f0a-4a2d-aa7e-8d723c661057",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|hanna|2026-10-26||hoch"
         },
         {
@@ -1586,7 +1586,6 @@
         "13c19c3f-d8f3-4874-b32d-bcdb4a9ca468"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|timm|2026-08-29T17:13:10.256Z",
         "2026-08-31|arianna|2026-08-29T17:13:10.259Z",
         "2026-08-31|george|2026-08-29T17:13:10.263Z",
         "2026-08-31|kaya|2026-08-29T17:13:10.267Z",
@@ -1885,7 +1884,8 @@
         "2026-11-16|lilly|2026-10-24T06:50:14.221Z",
         "2026-11-16|lilly|2026-10-25T07:41:19.480Z",
         "2026-11-23|timm|2026-10-26T07:00:13.872Z",
-        "2026-11-23|rotraut|2026-10-26T07:00:13.872Z"
+        "2026-11-23|rotraut|2026-10-26T07:00:13.872Z",
+        "2026-11-30|nico|2026-10-26T12:45:10.823Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -58381,10 +58381,10 @@
           "id": "385f0d5d-34e7-4c28-8419-7cb3bad19ba5",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "from": "08:00",
-          "to": null,
+          "to": "15:35",
           "note": "",
           "clockInAt": "2026-10-26T07:00:16.891Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-26T14:35:44.020Z"
         },
         {
           "source": "pin",
@@ -58480,9 +58480,9 @@
           "phase": "ende",
           "id": "bb5b92eb-7f0a-4a2d-aa7e-8d723c661057",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "hanna",
+          "doneAt": "2026-10-26T14:35:40.954Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -58685,6 +58685,11 @@
           "timestamp": "2026-10-26T07:04:30.046Z",
           "action": "eingestempelt",
           "detail": "timm um 08:04 Uhr"
+        },
+        {
+          "timestamp": "2026-10-26T14:35:44.020Z",
+          "action": "ausgestempelt",
+          "detail": "hanna um 15:35 Uhr"
         }
       ],
       "closedAt": null,
@@ -61864,6 +61869,56 @@
       ],
       "closedAt": null,
       "materialkosten": 0
+    },
+    {
+      "id": "e0320651-b006-4afc-8112-3ddb809218eb",
+      "date": "2026-12-04",
+      "status": "offen",
+      "shifts": [],
+      "plannedShifts": [
+        {
+          "id": "avail-4827a59c-4dd5-44a4-84a8-5273a6d4bf61",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "from": "15:30",
+          "to": "23:00",
+          "note": "",
+          "bossConfirmed": true
+        }
+      ],
+      "availability": [
+        {
+          "id": "4827a59c-4dd5-44a4-84a8-5273a6d4bf61",
+          "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
+          "slotIds": [
+            "spaet1"
+          ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-26T12:45:10.823Z"
+        }
+      ],
+      "appliedShiftTemplateIds": [],
+      "tasks": [],
+      "kassenabschluss": {
+        "umsatzGesamt": 0,
+        "umsatzBar": 0,
+        "umsatz7": 0,
+        "umsatz19": 0,
+        "trinkgeldKarte": 0,
+        "trinkgeldBar": 0
+      },
+      "verkauf": [],
+      "tagesNotiz": "",
+      "stornos": [],
+      "auditLog": [
+        {
+          "timestamp": "2026-10-26T14:35:29.989Z",
+          "action": "erstellt",
+          "detail": "Tag 2026-12-04 angelegt"
+        }
+      ],
+      "closedAt": null
     }
   ],
   "notifications": [

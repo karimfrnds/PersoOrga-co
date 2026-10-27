@@ -8,7 +8,7 @@
 // Anmeldung mit PIN über einen Ziffernblock, wie am iPad im Café – kein Passwortfeld mit Tastatur.
 // ============================================================================
 import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getOverview } from "./api.js";
-import { el, text, knopf, toast } from "./ui.js";
+import { el, text, knopf, toast, escapeHtml } from "./ui.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { renderHeute } from "./heute.js";
 import { renderBestand } from "./bestand.js";
@@ -16,18 +16,23 @@ import { renderAufgaben } from "./aufgaben.js";
 import { renderTeam } from "./team.js";
 import { renderPlan } from "./plan.js";
 import { renderMeins } from "./meins.js";
+import { renderProduktion } from "./produktion.js";
+import { betrieb, kann } from "../betrieb.js";
 
-const APP_VERSION = "2026-09-29.1";
+const APP_VERSION = "2026-10-27.3";
 const outlet = document.getElementById("outlet");
 
-const TABS = [
+const ALLE_TABS = [
   { id: "heute", symbol: "🏠", label: "Heute", render: renderHeute },
+  { id: "produktion", symbol: "👨‍🍳", label: "Produktion", render: renderProduktion },
   { id: "bestand", symbol: "📦", label: "Bestand", render: renderBestand },
   { id: "aufgaben", symbol: "✅", label: "Aufgaben", render: renderAufgaben },
   { id: "team", symbol: "👥", label: "Team", render: renderTeam },
   { id: "plan", symbol: "📅", label: "Plan", render: renderPlan },
   { id: "meins", symbol: "🗒", label: "Meins", render: renderMeins },
 ];
+// Die Produktion steht nur dort, wo es sie gibt – ein leerer Tab ist schlimmer als keiner.
+const TABS = ALLE_TABS.filter((t) => t.id !== "produktion" || kann("produktion"));
 
 const LS_TAB = "cafeapp_manager_tab";
 let aktiverTab = (() => {
@@ -49,7 +54,16 @@ function show(node) {
 // ---------------------------------------------------------------------
 function renderLogin(meldung) {
   const wrap = el("div", "page mg-login");
-  wrap.appendChild(el("div", "mg-login-kopf", `<div class="mg-login-logo">🗂</div><h1>Store-Management</h1><p class="muted">frnds Café &amp; Kitchen</p>`));
+  // Beschriftung aus dem Betrieb: bei Rolla Costa meldet sich hier die Küchenleitung an, nicht das
+  // Store-Management – und ein Kopf, der etwas anderes behauptet, verwirrt genau einmal zu oft.
+  const istKueche = kann("produktion");
+  wrap.appendChild(
+    el(
+      "div",
+      "mg-login-kopf",
+      `<div class="mg-login-logo">${istKueche ? "👨‍🍳" : "🗂"}</div><h1>${istKueche ? "Küchenleitung" : "Store-Management"}</h1><p class="muted">${escapeHtml(betrieb.name)}</p>`
+    )
+  );
 
   const card = el("section", "card");
   let urlInput = null;
@@ -114,7 +128,9 @@ function renderShell() {
 
   const kopf = el("header", "mg-kopf");
   const titel = el("div", "mg-kopf-titel");
-  titel.appendChild(text("b", null, session?.role === "boss" ? "🗂 Store · Chef-Ansicht" : "🗂 frnds Store"));
+  const symbol = kann("produktion") ? "👨‍🍳" : "🗂";
+  const bereich = kann("produktion") ? "Küche" : "Store";
+  titel.appendChild(text("b", null, session?.role === "boss" ? `${symbol} ${bereich} · Chef-Ansicht` : `${symbol} ${daten.name || bereich}`));
   titel.appendChild(
     text(
       "span",
@@ -158,7 +174,7 @@ function zaehler(tabId) {
   if (tabId === "bestand") {
     return (daten.bestand || []).filter((a) => a.aktiv !== false && a.menge !== null && a.menge !== undefined && a.soll > 0 && a.menge < a.soll).length;
   }
-  if (tabId === "meins" && getSession()?.role === "manager") {
+  if (tabId === "meins" && getSession()?.role !== "boss") {
     return (daten.aufgaben || []).filter((a) => a.von === "chef" && a.art !== "wiederkehrend" && !a.erledigtAm).length;
   }
   return 0;

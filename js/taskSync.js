@@ -835,6 +835,13 @@ async function performTaskSync() {
         } else if (!store.getBehaelterById(e.id)) {
           store.addBehaelter({ ...felder, id: e.id });
         }
+      } else if (e.art === "rezept") {
+        const felder = { name: e.name, ergibt: e.ergibt, zutaten: e.zutaten, schritte: e.schritte, notiz: e.notiz, updatedBy: e.von, updatedAt: e.at };
+        if (e.rezeptId) {
+          if (!store.updateRecipe(e.rezeptId, felder)) syncWarnings.push(`Küche: Rezept „${e.name}“ gibt es hier nicht mehr.`);
+        } else if (!store.getRecipes().some((r) => r.id === e.id)) {
+          store.addRecipe({ ...felder, id: e.id });
+        }
       } else if (e.art === "auftrag") {
         const fuer = e.employeeName ? employees.find((x) => x.name.trim().toLowerCase() === String(e.employeeName).trim().toLowerCase()) : null;
         store.addProduktionsAuftrag({ produktId: e.produktId, menge: e.menge, quelle: "kueche", zugewiesenAn: fuer?.id || null });

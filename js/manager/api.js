@@ -63,7 +63,9 @@ async function login(pin) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Anmeldung fehlgeschlagen.");
   // Der Chef darf auch hinein (er gibt ihr hier Aufgaben), alle anderen Zugänge nicht.
-  if (data.role !== "manager" && data.role !== "boss") throw new Error("Mit diesem PIN geht es hier nicht hinein.");
+  // Drei Zugänge, ein Bereich: der Chef sieht alles mit, die Store-Managerin und die Küchenleitung
+  // bekommen dieselbe Oberfläche mit den Tabs, die zu ihnen gehören.
+  if (!["manager", "boss", "kuechenleitung"].includes(data.role)) throw new Error("Mit diesem PIN geht es hier nicht hinein.");
   session = { token: data.token, role: data.role, name: data.name };
   localStorage.setItem(LS_SESSION, JSON.stringify(session));
   return session;
@@ -78,6 +80,8 @@ const sendMessage = (body) => call("/admin/message", { method: "POST", body });
 const decideShift = (employeeName, date, slotLabel, decision, note = "") =>
   call("/admin/shift-decision", { method: "POST", body: { employeeName, date, slotLabel, decision, note } });
 const publishWeek = (weekStart, action = "publish") => call("/admin/publish-week", { method: "POST", body: { weekStart, action } });
+/** Stammdaten der Produktion: art = "produkt" | "behaelter" | "rezept" | "auftrag". */
+const stammAction = (body) => call("/kueche/stamm", { method: "POST", body });
 const aufgabeAction = (body) => call("/manager/aufgabe", { method: "POST", body });
 const notizAction = (body) => call("/manager/notiz", { method: "POST", body });
 const fotoHochladen = (dataUrl) => call("/manager/foto", { method: "POST", body: { dataUrl } });
@@ -98,6 +102,7 @@ export {
   decideShift,
   publishWeek,
   aufgabeAction,
+  stammAction,
   notizAction,
   fotoHochladen,
   fotoLaden,

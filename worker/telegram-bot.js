@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-27.2";
+const WORKER_VERSION = "2026-10-27.3";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -2471,6 +2471,27 @@ async function handleKuecheStamm(request, env) {
       ort: String(body?.ort || "").slice(0, 120),
       aktiv: body?.aktiv !== false,
     };
+  } else if (art === "rezept") {
+    const name = String(body?.name || "").trim();
+    const id = body?.id ? String(body.id) : null;
+    if (!id && !name) return jsonResponse({ error: "Bitte einen Namen eintragen." }, 400);
+    // Zutaten und Schritte bleiben freie Zeilen, keine gerechnete Liste: in der Küche wird abgelesen,
+    // nicht gerechnet. Das war beim Rezept-Modell von Anfang an so und bleibt es.
+    const zeilen = (x) =>
+      (Array.isArray(x) ? x : String(x || "").split("\n"))
+        .map((z) => String(z).trim())
+        .filter(Boolean)
+        .slice(0, 100);
+    eintrag = {
+      id: crypto.randomUUID(),
+      art,
+      rezeptId: id,
+      name,
+      ergibt: String(body?.ergibt || "").slice(0, 80),
+      zutaten: zeilen(body?.zutaten),
+      schritte: zeilen(body?.schritte),
+      notiz: String(body?.notiz || "").slice(0, 500),
+    };
   } else if (art === "auftrag") {
     // Die Küchenleitung legt selbst einen Auftrag an ("heute extra 4 Blech").
     const produktId = String(body?.produktId || "");
@@ -2511,6 +2532,18 @@ async function handleKuecheStamm(request, env) {
     patch.produktionsProdukte = eintrag.produktId
       ? (state.produktionsProdukte || []).map((p) => (String(p.id) === eintrag.produktId ? { ...p, ...vorschau } : p))
       : [...(state.produktionsProdukte || []), vorschau];
+  } else if (art === "rezept") {
+    const vorschau = {
+      id: eintrag.rezeptId || eintrag.id,
+      name: eintrag.name,
+      ergibt: eintrag.ergibt,
+      zutaten: eintrag.zutaten,
+      schritte: eintrag.schritte,
+      notiz: eintrag.notiz,
+    };
+    patch.rezepte = eintrag.rezeptId
+      ? (state.rezepte || []).map((r) => (String(r.id) === eintrag.rezeptId ? { ...r, ...vorschau } : r))
+      : [...(state.rezepte || []), vorschau];
   } else if (art === "auftrag") {
     const p = (state.produktionsProdukte || []).find((x) => String(x.id) === eintrag.produktId);
     patch.produktionsAuftraege = [
@@ -2657,7 +2690,7 @@ function plusTage(dateStr, tage) {
 
 /** Artikel und Soll vom Laptop. Wie überall: Wunsch in die Warteschlange, sofort als Vorschau sichtbar. */
 async function handleAdminBestand(request, env) {
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
   let body;
@@ -2725,7 +2758,7 @@ async function putManagerBereich(env, b) {
 }
 
 async function handleManagerOverview(request, env) {
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   const state = await getState(env);
   const heute = todayBerlin();
@@ -2734,7 +2767,10 @@ async function handleManagerOverview(request, env) {
 
   return jsonResponse({
     rolle: guard.session.role,
-    name: guard.session.role === "manager" ? guard.session.name : state.managerName || "Store-Management",
+    name:
+      guard.session.role === "manager" || guard.session.role === "kuechenleitung"
+        ? guard.session.name
+        : state.managerName || "Store-Management",
     heute,
     updatedAt: state.updatedAt,
     // Bestand und was die Küche meldet – Grundlage fürs Bestellen.
@@ -2761,7 +2797,15 @@ async function handleManagerOverview(request, env) {
     shiftsInService: state.shiftsInService || [],
     aufgaben: bereich.aufgaben,
     // Notizen sind ihr eigener Bereich – der Chef sieht nur die Aufgaben, die er ihr gibt.
-    notizen: guard.session.role === "manager" ? bereich.notizen : [],
+    notizen: guard.session.role === "boss" ? [] : bereich.notizen,
+    // Produktion – nur dort, wo es sie gibt. Gerechnet wurde alles auf dem Haupt-Tablet.
+    produktionsProdukte: state.produktionsProdukte || [],
+    behaelter: state.behaelter || [],
+    produktionsAuftraege: state.produktionsAuftraege || [],
+    offeneChargen: state.offeneChargen || [],
+    chargenVerlauf: state.chargenVerlauf || [],
+    rezepte: state.rezepte || [],
+    verbrauch: state.verbrauch || [],
   });
 }
 
@@ -2772,7 +2816,7 @@ const MANAGER_PRIO = ["normal", "hoch"];
  * abgehakt – "erledigt" heißt bei einer Putzroutine ja nicht "für immer". */
 async function handleManagerAufgabe(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -3498,7 +3542,7 @@ function findSlotDefinition(state, employeeName, slotLabel) {
  * Telegram-Bot nutzt – der iPad übernimmt ihn beim nächsten Abgleich und bleibt die maßgebliche Instanz. */
 async function handleAdminShiftDecision(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -3549,7 +3593,7 @@ async function handleAdminShiftDecision(request, env) {
  * Instanz, würde die Freigabe sonst aber beim nächsten Abgleich wieder überschreiben. */
 async function handleAdminPublishWeek(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -4168,7 +4212,7 @@ function stockVorschau(stock, e) {
  * beidseitig abgeglichen, anders als Vorraete oder Rezepte.
  */
 async function handleAdminTask(request, env) {
-  const { session, error } = await requireSession(request, env, ["boss", "manager"]);
+  const { session, error } = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (error) return error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
 
@@ -4230,7 +4274,7 @@ async function handleAdminTask(request, env) {
  * dasteht, wird die Aenderung zusaetzlich sofort auf der Worker-Kopie nachgebildet.
  */
 async function handleAdminTaskTemplate(request, env) {
-  const { error } = await requireSession(request, env, ["boss", "manager"]);
+  const { error } = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (error) return error;
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
 
@@ -4291,7 +4335,7 @@ function vorlagenVorschau(vorlagen, e) {
 
 async function handleAdminEmployee(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   let body;
   try {
@@ -4329,7 +4373,7 @@ async function handleAdminEmployee(request, env) {
 /** Freie Nachricht an eine Person (oder alle) – landet im Postfach der Handy-Ansicht. */
 async function handleAdminMessage(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
-  const guard = await requireSession(request, env, ["boss", "manager"]);
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
   if (guard.error) return guard.error;
   let body;
   try {

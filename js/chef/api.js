@@ -87,6 +87,8 @@ async function login(pin) {
   return session;
 }
 
+/** Wochenrueckblick. neu=true rechnet ihn sofort neu, sonst kommt der gespeicherte Stand. */
+const berichtLaden = (neu = false) => request("/bericht", neu ? { method: "POST" } : {});
 const getOverview = () => request("/admin/overview");
 
 const decideShift = (employeeName, date, slotLabel, decision, note) =>
@@ -136,4 +138,5 @@ export {
   managerAufgabeAction,
   employeeAction,
   sendMessage,
+  berichtLaden,
 };

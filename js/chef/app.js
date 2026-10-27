@@ -15,6 +15,7 @@ import { renderForecast } from "./forecast.js";
 import { escapeHtml, todayStr } from "../format.js";
 import { betrieb, kann } from "../betrieb.js";
 import { renderVerkauf } from "./verkauf.js";
+import { renderBericht } from "./bericht.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
@@ -23,6 +24,7 @@ const APP_VERSION = "2026-10-27.3";
 const outlet = document.getElementById("outlet");
 
 const TABS = [
+  { id: "bericht", label: "🧠 Wochenrückblick" },
   { id: "planning", label: "📅 Schichtplanung" },
   { id: "tasks", label: "📋 Aufgaben" },
   { id: "bestand", label: "🧮 Bestand" },
@@ -175,7 +177,8 @@ function renderShell() {
 
   const onChanged = () => loadAndRender();
   let view;
-  if (activeTab === "tasks") view = renderTasks(state, { onChanged });
+  if (activeTab === "bericht") view = renderBericht(state);
+  else if (activeTab === "tasks") view = renderTasks(state, { onChanged });
   else if (activeTab === "bestand") view = renderBestand(state, { onChanged });
   else if (activeTab === "verkauf") view = renderVerkauf(state, { onChanged });
   else if (activeTab === "bestellung") view = renderBestellung(state, { onChanged });

@@ -37,10 +37,13 @@ const ABWESENHEIT_ARTEN = {
   sonstiges: { label: "Sonstiges", symbol: "📌" },
 };
 // Zentrale Modell-Wahl für alle Claude-Aufrufe (Nachrichten verstehen, Fotos/PDFs auswerten, freie Fragen
-// beantworten) – an einer Stelle austauschbar. Sonnet 5 versteht Nuancen/komplexere Formulierungen spürbar
-// besser als Haiku, kostet aber etwa das Doppelte pro Nachricht (bei diesem Nachrichtenvolumen weiterhin
-// im Cent-Bereich pro Monat).
-const AI_MODEL = "claude-sonnet-5";
+// beantworten) – an einer Stelle austauschbar. Sonnet versteht Nuancen und schief formulierte Nachrichten
+// spürbar besser als Haiku und kostet bei diesem Nachrichtenvolumen weiterhin Cent-Betraege im Monat.
+const AI_MODEL = "claude-sonnet-5-5";
+// Die Wochen-Auswertung ist die eigentliche Denkarbeit und laeuft einmal pro Woche statt hundertmal am
+// Tag. Dafuer lohnt das groessere Modell: ein paar Cent im Monat gegen eine Auswertung, die Muster
+// findet statt Zahlen vorzulesen.
+const AI_MODEL_ANALYSE = "claude-opus-5-5";
 const STATE_KEY = "state";
 const MORNING_HOUR = 8; // Europe/Berlin, Ortszeit
 const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
@@ -2283,6 +2286,139 @@ async function handleKuecheOverview(request, env) {
   });
 }
 
+// ============================================================================
+// Wochenbericht
+//
+// Die Regel, an der hier alles haengt: ZAHLEN KOMMEN AUS DEM CODE, die DEUTUNG vom Modell. Eine
+// Bestandszahl, die sich eine KI ausgedacht hat, waere schlimmer als gar keine Auswertung – man
+// wuerde danach bestellen.
+//
+// Der Bericht wird gerechnet, gespeichert und dann erst gedeutet. Faellt die KI aus (kein Schluessel,
+// Netz weg, Modell antwortet nicht), stehen die Zahlen trotzdem da. Sie sind der wertvolle Teil.
+// ============================================================================
+const BERICHT_KEY = "wochenbericht";
+
+/** Die Zahlen der letzten sieben Tage, verglichen mit den sieben davor. */
+function berichtsZahlen(state) {
+  const heute = todayBerlin();
+  const ab = plusTage(heute, -7);
+  const davorAb = plusTage(heute, -14);
+  const fin = state.financials || [];
+  const summe = (von, bis) => {
+    const rows = fin.filter((r) => r.date >= von && r.date < bis);
+    return {
+      tage: rows.length,
+      umsatz: round2(rows.reduce((n, r) => n + (Number(r.umsatzGesamt) || 0), 0)),
+      lohn: round2(rows.reduce((n, r) => n + (Number(r.totalLohn) || 0), 0)),
+      stunden: round2(rows.reduce((n, r) => n + (Number(r.totalHours) || 0), 0)),
+      waren: round2(rows.reduce((n, r) => n + (Number(r.materialkosten) || 0), 0)),
+    };
+  };
+  const woche = summe(ab, heute);
+  const davor = summe(davorAb, ab);
+  const quote = (w) => (w.umsatz > 0 ? Math.round((w.lohn / w.umsatz) * 1000) / 10 : null);
+
+  // Verkauf je Produkt, diese Woche gegen die Woche davor.
+  const verkauf = (von, bis) => {
+    const map = {};
+    for (const t of state.verkaufTage || []) {
+      if (!(t.date >= von && t.date < bis)) continue;
+      for (const p of t.produkte || []) {
+        const name = (state.produkte || []).find((x) => String(x.id) === String(p.produktId))?.name || p.produktId;
+        map[name] = map[name] || { verkauft: 0, gebacken: 0, uebrig: 0 };
+        map[name].verkauft += p.verkauft || 0;
+        map[name].gebacken += p.gebacken || 0;
+        map[name].uebrig += p.uebrig || 0;
+      }
+    }
+    return map;
+  };
+
+  return {
+    von: ab,
+    bis: heute,
+    woche: { ...woche, lohnquote: quote(woche) },
+    davor: { ...davor, lohnquote: quote(davor) },
+    verkaufWoche: verkauf(ab, heute),
+    verkaufDavor: verkauf(davorAb, ab),
+    produktion: toolGetProduktion(state, { tage: 7 }),
+    verbrauch: toolGetVerbrauch(state),
+    notizen: (state.employeeNotifications || []).filter((n) => String(n.createdAt || "").slice(0, 10) >= ab).length,
+  };
+}
+
+/** Die Deutung. Bekommt NUR die oben gerechneten Zahlen und darf keine eigenen erfinden. */
+async function berichtsDeutung(env, zahlen) {
+  if (!env.ANTHROPIC_API_KEY) return null;
+  const prompt = `Du bist die Auswertung eines kleinen Gastro-Betriebs und schreibst dem Inhaber den Wochenrückblick.
+
+Hier sind die Zahlen der letzten sieben Tage, dazu die sieben Tage davor zum Vergleich:
+
+${JSON.stringify(zahlen, null, 1)}
+
+Schreib auf Deutsch, in der Du-Form, höchstens 180 Wörter:
+1. Ein Satz, wie die Woche gelaufen ist.
+2. Zwei bis vier Beobachtungen als Aufzählung mit "- ". Nur, was aus DIESEN Zahlen hervorgeht.
+3. Darunter "Was ich machen würde:" und ein bis zwei konkrete Vorschläge.
+
+Harte Regeln:
+- Erfinde KEINE Zahl. Steht etwas nicht oben, gibt es dazu nichts zu sagen.
+- Wo proTag oder reichweiteTage null ist, wurde zu selten gezählt. Das benennen, nicht schätzen.
+- Bei weniger als sieben erfassten Tagen sag, dass die Woche unvollständig ist.
+- Keine Finanz-, Steuer- oder Rechtsberatung. Nüchtern, kein Werbeton, keine Einleitung.`;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: AI_MODEL_ANALYSE,
+        max_tokens: 1200,
+        output_config: { effort: "high" },
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return null;
+    return (data.content || []).find((b) => b.type === "text")?.text?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Bericht erzeugen und ablegen. Die Zahlen werden auch dann gespeichert, wenn die Deutung ausfällt. */
+async function erzeugeWochenbericht(env) {
+  const state = await getState(env);
+  const zahlen = berichtsZahlen(state);
+  const text = await berichtsDeutung(env, zahlen);
+  const bericht = { erstelltAm: new Date().toISOString(), zahlen, text, modell: text ? AI_MODEL_ANALYSE : null };
+  await env.TASKS_KV.put(BERICHT_KEY, JSON.stringify(bericht));
+  return bericht;
+}
+
+/** Den Bericht holen – und neu rechnen, wenn er älter als ein Tag ist oder noch keiner da war.
+ * POST erzwingt das Neurechnen ("Jetzt aktualisieren"). */
+async function handleBericht(request, env) {
+  const guard = await requireSession(request, env, ["boss", "manager", "kuechenleitung"]);
+  if (guard.error) return guard.error;
+  const roh = await env.TASKS_KV.get(BERICHT_KEY);
+  let bericht = null;
+  try {
+    bericht = roh ? JSON.parse(roh) : null;
+  } catch {
+    bericht = null;
+  }
+  const alt = !bericht || Date.now() - new Date(bericht.erstelltAm).getTime() > 24 * 3600 * 1000;
+  if (request.method === "POST" || alt) {
+    try {
+      bericht = await erzeugeWochenbericht(env);
+    } catch (e) {
+      if (!bericht) return jsonResponse({ error: String(e.message || e) }, 500);
+    }
+  }
+  return jsonResponse(bericht || { erstelltAm: null, zahlen: null, text: null });
+}
+
 /** Der Leerlauf-Bildschirm der Stempelstation.
  *
  * Bewusst ohne jede persönliche Zahl: wer im Dienst ist und seit wann, und was in der Küche ansteht.
@@ -3838,7 +3974,9 @@ Bestimme die Absicht der Nachricht:
 - "add_reservation": der Chef will eine Reservierung ANLEGEN, z.B. "reservier morgen 19 Uhr einen Tisch für 4 auf Schmidt", "Freitag 18:30 Tisch für 2, Frau Klein, 0176 123456", "trag bitte eine Reservierung ein: Sonntag 12 Uhr, 6 Personen, draußen, Geburtstag". Jede Reservierung als eigener Eintrag in reservations_to_add. Fehlt die Personenzahl, 2 annehmen. Fehlt Datum oder Uhrzeit, NICHT raten – dann "other" nehmen, damit nachgefragt wird.
 - "ask_anything": eine Frage, Bitte um Einschätzung/Vergleich/Erklärung oder etwas Analytisches, das sich mit den vorhandenen Daten beantworten lässt, aber zu keiner der obigen festen Aktionen passt (z.B. "wieso war der Umschlag diese Woche schlechter", "vergleich diesen Monat mit letztem", "was denkst du, sollten wir mehr Personal am Wochenende einplanen", offene Rückfragen zu einer vorherigen Antwort). Auch nutzen, wenn eine der festen Aktionen zwar thematisch passen würde, die Frage aber offensichtlich mehr Kontext/Begründung will als die feste Antwort liefert.
 - "other": wirklich nichts davon, z.B. Small Talk, Test-Nachricht, oder komplett unverständlich.
-Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.`;
+Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_delete bzw. task_ids_to_complete übernehmen, nur bei eindeutigen Treffern.
+
+Antworte AUSSCHLIESSLICH über das Werkzeug handle_message – nie mit freiem Text. Passt nichts, nimm action "other".`;
 
   // Letzte Nachrichten als Kontext mitgeben, damit Rückfragen ("und Timm?") richtig aufgelöst werden.
   const history = (state.conversationHistory || []).slice(-6).map((h) => ({ role: h.role, content: h.text }));
@@ -3854,7 +3992,10 @@ Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_del
       max_tokens: 1536,
       system,
       tools: [tool],
-      tool_choice: { type: "tool", name: "handle_message" },
+      // Frueher wurde das Werkzeug erzwungen. Aktuelle Modelle weisen das mit Fehler 400 ab; die
+      // Anweisung steht deshalb im System-Text, und unten faengt ein Rueckfall ab, wenn doch einmal
+      // nur Text zurueckkommt.
+      tool_choice: { type: "auto" },
       messages: [...history, { role: "user", content: text }],
     }),
   });
@@ -3864,7 +4005,10 @@ Bei "delete" und "complete" die [id] exakt aus der Liste oben in task_ids_to_del
   }
   const data = await res.json();
   const toolUse = (data.content || []).find((b) => b.type === "tool_use");
-  if (!toolUse?.input?.action) throw new Error("Keine verwertbare Antwort erhalten");
+  // Ohne erzwungene Werkzeugwahl kann statt eines Aufrufs auch blosser Text zurueckkommen. Dann ist die
+  // Nachricht offenbar eine freie Frage – die beantwortet der agentische Weg ohnehin besser, als hier
+  // einen Fehler zu werfen und den Chef mit "Keine verwertbare Antwort" stehen zu lassen.
+  if (!toolUse?.input?.action) return { action: "ask_anything" };
   return toolUse.input;
 }
 
@@ -4003,7 +4147,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
       // wirkt dann wie "nichts erkannt".
       max_tokens: 8192,
       tools: [tool],
-      tool_choice: { type: "tool", name: "extract_stock_document" },
+      tool_choice: { type: "auto" },
       messages: [
         {
           role: "user",
@@ -4013,7 +4157,7 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
               type: "text",
               text: `Heute ist ${today} (Europe/Berlin). Das ist ein SumUp-Verkaufs-/Kassenbericht eines Cafés (Foto oder PDF, ggf. mehrseitig): er zeigt die verkauften Produkte mit Stückzahl.${
                 caption ? ` Nachricht des Chefs dazu: "${caption}".` : ""
-              } Extrahiere ALLE Positionen von JEDER Seite, auch bei langen Listen. Lies den Verkaufspreis je Stück mit; ist keiner erkennbar, lass das Feld weg statt zu raten.`,
+              } Extrahiere ALLE Positionen von JEDER Seite, auch bei langen Listen. Lies den Verkaufspreis je Stück mit; ist keiner erkennbar, lass das Feld weg statt zu raten. Antworte ausschliesslich über das Werkzeug extract_stock_document.`,
             },
           ],
         },
@@ -4026,7 +4170,12 @@ async function extractStockDocument(env, imageBase64, mimeType, caption, today) 
   }
   const data = await res.json();
   const toolUse = (data.content || []).find((b) => b.type === "tool_use");
-  if (!toolUse?.input) throw new Error("Konnte den Beleg nicht auswerten.");
+  if (!toolUse?.input) {
+    // Hier ist ein Rueckfall sinnlos: wer einen Beleg schickt, will die Positionen daraus. Lieber
+    // ehrlich sagen, dass nichts erkannt wurde, als eine leere Liste als Ergebnis auszugeben.
+    const text = (data.content || []).find((b) => b.type === "text")?.text;
+    throw new Error(text ? `Konnte den Beleg nicht auswerten: ${text.slice(0, 200)}` : "Konnte den Beleg nicht auswerten.");
+  }
   return toolUse.input;
 }
 
@@ -4691,6 +4840,24 @@ const ASK_TOOLS = [
     },
   },
   {
+    name: "get_produktion",
+    description:
+      "Produktionskueche: was selbst hergestellt wird, wie viel davon gerade da ist, was in den letzten Wochen produziert wurde, wie viel davon nach Ablauf weggeworfen wurde (Ausschuss), und wer es gemacht hat. Nur in Betrieben mit eigener Produktion vorhanden.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tage: { type: "number", description: "Wie weit zurueck geschaut wird, in Tagen. Ohne Angabe: 30." },
+        produkt: { type: "string", description: "Optional: nur dieses Produkt (Name enthaelt)." },
+      },
+    },
+  },
+  {
+    name: "get_verbrauch",
+    description:
+      "Wie viel von den eingekauften Artikeln am Tag weggeht, wie lange der Bestand noch reicht, und wie viel je 100 verkaufte Stueck draufgeht. Gerechnet aus den Zaehlungen. Artikel mit proTag=null sind NICHT berechenbar – dort wurde zu selten gezaehlt oder es lag eine Lieferung dazwischen; das ist dann ehrlich zu sagen statt zu schaetzen.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "get_stock_movements",
     description: "Per SumUp-Verkaufsbericht erfasste Verkäufe, mit Datum, Produkt und Anzahl.",
     input_schema: {
@@ -4854,6 +5021,81 @@ function toolGetEmployeeNotes(state, input) {
   return { count: notes.length, notes: notes.slice(-limit).map((n) => ({ date: n.date, name: n.employeeName, text: n.text })) };
 }
 
+/** Produktion: was hergestellt wurde, was davon in die Tonne ging, wer es gemacht hat.
+ *
+ * Alle Zahlen kommen aus den Chargen, die das Haupt-Tablet geschickt hat. Nichts davon wird hier
+ * geschaetzt – das Modell soll deuten duerfen, aber nie rechnen. */
+function toolGetProduktion(state, input = {}) {
+  const produkte = state.produktionsProdukte || [];
+  if (produkte.length === 0) return { hinweis: "Dieser Betrieb hat keine eigene Produktion." };
+  const heute = todayBerlin();
+  const tage = Math.max(1, Math.min(180, Number(input.tage) || 30));
+  const ab = plusTage(heute, -tage);
+  const filter = String(input.produkt || "").trim().toLowerCase();
+  const verlauf = (state.chargenVerlauf || []).filter((c) => String(c.am || "").slice(0, 10) >= ab);
+  const offen = state.offeneChargen || [];
+
+  const zeilen = produkte
+    .filter((p) => !filter || String(p.name || "").toLowerCase().includes(filter))
+    .map((p) => {
+      const meine = verlauf.filter((c) => String(c.produktId) === String(p.id));
+      const produziert = meine.reduce((n, c) => n + Number(c.menge || 0), 0);
+      // Ausschuss: als leer gemeldet, nachdem das MHD schon vorbei war – also weggeworfen statt benutzt.
+      const weg = meine
+        .filter((c) => c.leerAm && c.mhd && String(c.leerAm).slice(0, 10) > c.mhd)
+        .reduce((n, c) => n + Number(c.menge || 0), 0);
+      const da = offen
+        .filter((c) => String(c.produktId) === String(p.id) && (!c.mhd || c.mhd >= heute))
+        .reduce((n, c) => n + Number(c.menge || 0), 0);
+      return {
+        name: p.name,
+        einheit: p.einheit,
+        soll: p.soll,
+        da: round2(da),
+        unterSoll: p.soll > 0 && da < p.soll,
+        produziert: round2(produziert),
+        ausschuss: round2(weg),
+        ausschussProzent: produziert > 0 ? Math.round((weg / produziert) * 100) : 0,
+        chargen: meine.length,
+      };
+    });
+
+  const proPerson = {};
+  for (const c of verlauf) {
+    const name = String(c.vonName || "").trim();
+    if (name) proPerson[name] = (proPerson[name] || 0) + 1;
+  }
+  return {
+    zeitraum: { von: ab, bis: heute, tage },
+    produkte: zeilen,
+    chargenJePerson: proPerson,
+    offeneAuftraege: (state.produktionsAuftraege || []).length,
+    abgelaufenJetzt: offen.filter((c) => c.mhd && c.mhd < heute).length,
+  };
+}
+
+/** Verbrauch und Reichweite der eingekauften Ware. proTag=null heisst NICHT berechenbar – das muss so
+ * weitergegeben werden, damit niemand eine Zahl erfindet, wo keine gemessen wurde. */
+function toolGetVerbrauch(state) {
+  const alle = (state.verbrauch || []).filter((v) => !v.produzierbar);
+  if (alle.length === 0) return { hinweis: "Noch keine Verbrauchszahlen – dafuer braucht es je Artikel zwei Zaehlungen ueber mindestens drei Tage." };
+  return {
+    hinweis:
+      "proTag und reichweite sind null, wo zu selten gezaehlt wurde oder eine Lieferung dazwischen lag. Diese Artikel NICHT schaetzen, sondern als unbekannt benennen.",
+    artikel: alle.map((v) => ({
+      name: v.name,
+      einheit: v.einheit,
+      da: v.ist,
+      soll: v.soll,
+      proTag: v.proTag,
+      reichweiteTage: v.reichweite,
+      jeHundertVerkaufte: v.jeHundert,
+      gemesseneTage: v.tageGemessen,
+      lieferungenImZeitraum: v.lieferungen,
+    })),
+  };
+}
+
 function toolGetStockMovements(state, input) {
   const from = /^\d{4}-\d{2}-\d{2}$/.test(input?.from) ? input.from : "";
   const to = /^\d{4}-\d{2}-\d{2}$/.test(input?.to) ? input.to : "";
@@ -4953,6 +5195,8 @@ function executeAskTool(state, name, input) {
   if (name === "get_shift_plan") return toolGetShiftPlan(state, input);
   if (name === "get_employees") return toolGetEmployees(state);
   if (name === "get_employee_notes") return toolGetEmployeeNotes(state, input);
+  if (name === "get_produktion") return toolGetProduktion(state, input);
+  if (name === "get_verbrauch") return toolGetVerbrauch(state);
   if (name === "get_stock_movements") return toolGetStockMovements(state, input);
   if (name === "get_reservations") return toolGetReservations(state, input);
   return { error: "Unbekanntes Werkzeug." };
@@ -5787,7 +6031,8 @@ export default {
       url.pathname.startsWith("/admin/") ||
       url.pathname.startsWith("/social/") ||
       url.pathname.startsWith("/manager/") ||
-      url.pathname.startsWith("/kueche/")
+      url.pathname.startsWith("/kueche/") ||
+      url.pathname === "/bericht"
     ) {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
       if (url.pathname === "/auth/login") return handleAuthLogin(request, env);
@@ -5796,6 +6041,7 @@ export default {
       if (url.pathname === "/me/sick" || url.pathname === "/me/absence") return handleMeSick(request, env);
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
+      if (url.pathname === "/bericht") return handleBericht(request, env);
       if (url.pathname === "/kueche/station") return handleKuecheStation(request, env);
       if (url.pathname === "/kueche/hub") return handleKuecheHub(request, env);
       if (url.pathname === "/kueche/stamm") return handleKuecheStamm(request, env);

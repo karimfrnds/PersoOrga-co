@@ -1161,6 +1161,9 @@ async function performTaskSync() {
             mhd: c.mhd,
           })),
           rezepte: store.getRecipes().map((r) => ({ id: r.id, name: r.name, ergibt: r.ergibt, zutaten: r.zutaten, schritte: r.schritte, notiz: r.notiz })),
+          // Verbrauch und Reichweite – gerechnet HIER, einmal, und von allen gelesen. Wer dieselbe
+          // Rechnung an drei Stellen noch einmal aufschreibt, bekommt irgendwann drei Antworten.
+          verbrauch: store.verbrauchsUebersicht(null, 60),
           // Historie für die Auswertung im Küchen-Hub: was wurde produziert, von wem, was wurde
           // aufgebraucht, was lief ab. Bewusst getrennt von offeneChargen – das ist der Arbeitsstand,
           // das hier die Geschichte. Zwei Jobs, zwei Listen.

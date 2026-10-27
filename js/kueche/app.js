@@ -34,7 +34,7 @@ import {
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 
-const APP_VERSION = "2026-10-27.1";
+const APP_VERSION = "2026-10-27.2";
 const outlet = document.getElementById("outlet");
 
 // Wie lange ein persönliches Fenster offen bleiben darf, ohne dass jemand es anfasst. Danach zurück in
@@ -804,6 +804,51 @@ function renderHub() {
   else beh.appendChild(bListe);
   if (hub.darfPflegen) beh.appendChild(knopf("＋ Behälter", "btn btn-primary", () => openBehaelterForm(null)));
   inhalt.appendChild(beh);
+
+  // --- Verbrauch und Reichweite ---
+  //
+  // Die Zahl, nach der man bestellt. Sie kommt aus den Zählungen: zwischen zwei Zählungen liegt der
+  // Verbrauch. Wo zu wenig gezählt wurde, steht das auch dort – geraten wird nicht.
+  // Selbst Hergestelltes steht in seiner eigenen Karte – hier geht es um das, was eingekauft wird.
+  const verb = (hub.verbrauch || []).filter((v) => !v.produzierbar);
+  if (verb.length > 0) {
+    const vk = el("section", "card");
+    vk.appendChild(el("h2", null, "📉 Verbrauch und Reichweite"));
+    vk.appendChild(el("p", "muted small", "Aus den Zählungen gerechnet. Wurde zwischendurch geliefert, bleibt der Abschnitt aussen vor – lieber eine Zahl aus wenigen gemessenen Tagen als eine geschätzte."));
+    const scrollBox = el("div");
+    scrollBox.style.overflowX = "auto";
+    const tabelle = document.createElement("table");
+    tabelle.className = "calc-table";
+    tabelle.innerHTML = `<thead><tr><th>Artikel</th><th>Da</th><th>Pro Tag</th><th>Reicht noch</th><th>Je 100 Stück</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    for (const v of verb) {
+      const knapp = v.reichweite !== null && v.reichweite <= 3;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td><b>${escapeHtml(v.name)}</b></td>` +
+        `<td>${v.ist === null ? "–" : zahlText(v.ist)} ${escapeHtml(v.einheit || "")}</td>` +
+        `<td>${v.proTag === null ? '<span class="muted small">noch zu wenig gezählt</span>' : zahlText(v.proTag)}</td>` +
+        `<td class="${knapp ? "res-warn" : ""}">${
+          v.reichweite === null ? "–" : v.reichweite === 0 ? "<b>heute leer</b>" : `${v.reichweite} ${v.reichweite === 1 ? "Tag" : "Tage"}`
+        }</td>` +
+        `<td class="muted small">${v.jeHundert === null ? "–" : zahlText(v.jeHundert)}</td>`;
+      tbody.appendChild(tr);
+    }
+    tabelle.appendChild(tbody);
+    scrollBox.appendChild(tabelle);
+    vk.appendChild(scrollBox);
+    const ohne = verb.filter((v) => v.proTag === null).length;
+    if (ohne > 0) {
+      vk.appendChild(
+        el(
+          "p",
+          "muted small",
+          `Bei ${ohne} ${ohne === 1 ? "Artikel" : "Artikeln"} reichen die Zählungen noch nicht. Zwei Zählungen über mindestens drei Tage, dann steht hier eine Zahl.`
+        )
+      );
+    }
+    inhalt.appendChild(vk);
+  }
 
   // --- Wer hat was gemacht ---
   if ((hub.personen || []).length > 0) {

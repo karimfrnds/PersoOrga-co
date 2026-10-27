@@ -3063,6 +3063,145 @@ export const store = {
     return this.getChargen({ produktId, seitTagen: tage });
   },
 
+  // ---- Verbrauch ----
+  //
+  // Die Frage "wie viel geht eigentlich weg?" lässt sich schon heute beantworten, ohne dass irgendwer
+  // etwas Neues eintippt: zwischen zwei Zählungen desselben Artikels liegt der Verbrauch.
+  //
+  // Mit einer Einschränkung, die ernst genommen werden muss: ist der Bestand GESTIEGEN, wurde dazwischen
+  // geliefert. Wie viel in derselben Zeit verbraucht wurde, weiss dann niemand – die Liefermenge ist
+  // nirgends erfasst. Solche Abschnitte werden übersprungen, nicht geschätzt. Lieber eine Rate aus vier
+  // gemessenen Tagen als eine aus zehn erfundenen.
+  //
+  // Gerechnet wird über die SUMMEN (Gesamtmenge geteilt durch Gesamtzeit), nicht als Mittel einzelner
+  // Raten. Sonst macht eine Korrektur-Zählung zwanzig Minuten nach der ersten aus 2 kg in 20 Minuten
+  // eine Rate von 144 kg am Tag und reisst den Schnitt mit sich.
+  verbrauchsIntervalle(prepId, tage = 60) {
+    const p = this.getPrep(prepId);
+    if (!p) return { intervalle: [], lieferungen: 0 };
+    const ab = addDaysISOStore(todayStr(), -tage);
+    const reihe = (p.verlauf || [])
+      .filter((v) => String(v.at || "").slice(0, 10) >= ab)
+      .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const intervalle = [];
+    let lieferungen = 0;
+    for (let i = 1; i < reihe.length; i++) {
+      const vorher = reihe[i - 1];
+      const jetzt = reihe[i];
+      const stunden = (new Date(jetzt.at).getTime() - new Date(vorher.at).getTime()) / 3600000;
+      if (!(stunden > 0)) continue; // zwei Zählungen im selben Moment sagen nichts über Verbrauch
+      if (jetzt.menge > vorher.menge) {
+        lieferungen += 1;
+        continue;
+      }
+      intervalle.push({ von: vorher.at, bis: jetzt.at, menge: vorher.menge - jetzt.menge, stunden });
+    }
+    return { intervalle, lieferungen };
+  },
+
+  /** Wie viel geht am Tag weg? proTag ist null, solange zu wenig gemessen wurde – eine Rate aus einem
+   * einzigen Zwei-Stunden-Abschnitt wäre eine Zahl ohne Deckung. */
+  verbrauch(prepId, tage = 60) {
+    const { intervalle, lieferungen } = this.verbrauchsIntervalle(prepId, tage);
+    const menge = intervalle.reduce((n, i) => n + i.menge, 0);
+    const stunden = intervalle.reduce((n, i) => n + i.stunden, 0);
+    const tageGemessen = stunden / 24;
+    // Mindestens zwei Abschnitte und drei gemessene Tage, sonst ist es Zufall und keine Rate.
+    const belastbar = intervalle.length >= 2 && tageGemessen >= 3 && menge > 0;
+    return {
+      menge: Math.round(menge * 100) / 100,
+      tageGemessen: Math.round(tageGemessen * 10) / 10,
+      proTag: belastbar ? Math.round((menge / tageGemessen) * 100) / 100 : null,
+      intervalle: intervalle.length,
+      lieferungen,
+      belastbar,
+    };
+  },
+
+  /** Wie lange reicht das noch, in ganzen Tagen? null, wenn der Verbrauch nicht belastbar ist. */
+  reichweite(prepId, tage = 60) {
+    const v = this.verbrauch(prepId, tage);
+    const ist = this.istMenge(prepId);
+    if (!v.proTag || ist === null || ist === undefined) return null;
+    return Math.floor(ist / v.proTag);
+  },
+
+  /** Verkaufte Stück in einem Zeitfenster. Verkaufszahlen hängen an ganzen Tagen, der Zeitraum nicht –
+   * ein angebrochener Tag zählt deshalb anteilig nach seinen Stunden. */
+  verkaufteStueckZwischen(vonIso, bisIso) {
+    const von = new Date(vonIso).getTime();
+    const bis = new Date(bisIso).getTime();
+    if (!(bis > von)) return 0;
+    let summe = 0;
+    for (const d of this.getDays()) {
+      const stueck = (d.verkauf || []).reduce((n, v) => n + (v.verkauft || 0), 0);
+      if (stueck === 0) continue;
+      const tagVon = new Date(`${d.date}T00:00:00`).getTime();
+      const tagBis = tagVon + 86400000;
+      const ueberlappung = Math.min(bis, tagBis) - Math.max(von, tagVon);
+      if (ueberlappung > 0) summe += stueck * (ueberlappung / 86400000);
+    }
+    return summe;
+  },
+
+  /** Wie viel geht je 100 verkaufte Stück drauf? Die Zahl, an der man sieht, ob ein Artikel am Geschäft
+   * hängt oder einfach wegkommt. null, solange zu wenig gemessen wurde. */
+  verbrauchJeVerkauf(prepId, tage = 60) {
+    const { intervalle } = this.verbrauchsIntervalle(prepId, tage);
+    if (intervalle.length < 2) return null;
+    const menge = intervalle.reduce((n, i) => n + i.menge, 0);
+    const verkauft = intervalle.reduce((n, i) => n + this.verkaufteStueckZwischen(i.von, i.bis), 0);
+    if (!(verkauft >= 20) || !(menge > 0)) return null; // unter 20 Stück ist es Rauschen
+    return Math.round((menge / verkauft) * 100 * 100) / 100;
+  },
+
+  /** Was bis zu einem Datum noch gebraucht wird, über das hinaus, was da ist.
+   * 0 heisst: reicht. null heisst: nicht berechenbar.
+   *
+   * Gerechnet wird bis zum ENDE des Tages: wer fragt "wie viel brauche ich bis Freitag", will den
+   * Freitag überstehen, nicht Freitag früh vor der leeren Kiste stehen. */
+  bedarfBis(prepId, dateStr) {
+    const v = this.verbrauch(prepId);
+    const ist = this.istMenge(prepId);
+    if (!v.proTag || ist === null || ist === undefined) return null;
+    const tage = Math.max(0, (new Date(`${dateStr}T23:59:59`).getTime() - Date.now()) / 86400000);
+    return Math.max(0, Math.round((v.proTag * tage - ist) * 100) / 100);
+  },
+
+  /** Verbrauch und Reichweite für alle Artikel eines Bereichs – die Grundlage fürs Bestellen. */
+  verbrauchsUebersicht(bereich = null, tage = 60) {
+    return this.getPreps(true, bereich)
+      .map((p) => {
+        const v = this.verbrauch(p.id, tage);
+        return {
+          id: p.id,
+          name: p.name,
+          bereich: p.bereich,
+          // Wird es selbst hergestellt? Dann gehört es nicht auf eine Bestell-Liste – man bestellt
+          // keinen Teig, man macht ihn. Am Namen des Bereichs lässt sich das nicht festmachen, der
+          // heisst in jedem Betrieb anders.
+          produzierbar: !!p.produzierbar,
+          einheit: p.einheit,
+          soll: p.soll,
+          ist: this.istMenge(p.id),
+          proTag: v.proTag,
+          tageGemessen: v.tageGemessen,
+          intervalle: v.intervalle,
+          lieferungen: v.lieferungen,
+          reichweite: this.reichweite(p.id, tage),
+          jeHundert: this.verbrauchJeVerkauf(p.id, tage),
+        };
+      })
+      .sort((a, b) => {
+        // Was zuerst leer ist, steht oben. Unberechenbares ans Ende – nicht dazwischen, wo es aussähe,
+        // als sei es dringend.
+        if (a.reichweite === null && b.reichweite === null) return a.name.localeCompare(b.name);
+        if (a.reichweite === null) return 1;
+        if (b.reichweite === null) return -1;
+        return a.reichweite - b.reichweite;
+      });
+  },
+
   /** Wie alt ist die Zaehlung, in Stunden? null, wenn nie gezaehlt. */
   prepAlterStunden(p) {
     if (!p?.bestand?.at) return null;

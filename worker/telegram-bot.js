@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-27.1";
+const WORKER_VERSION = "2026-10-27.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -268,6 +268,7 @@ const EMPTY_STATE = {
   kuechenleitungPinHash: null,
   kuechenleitungName: "",
   chargenVerlauf: [], // Historie für die Auswertung (60 Tage), getrennt vom Arbeitsstand offeneChargen
+  verbrauch: [], // Verbrauch und Reichweite je Artikel, gerechnet auf dem Haupt-Tablet
   produktionsStammChanges: [], // Warteschlange: Änderungen an Produkten/Behältern aus der Küche
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
@@ -353,6 +354,7 @@ async function getState(env) {
       kuechenleitungPinHash: typeof parsed.kuechenleitungPinHash === "string" ? parsed.kuechenleitungPinHash : null,
       kuechenleitungName: typeof parsed.kuechenleitungName === "string" ? parsed.kuechenleitungName : "",
       chargenVerlauf: Array.isArray(parsed.chargenVerlauf) ? parsed.chargenVerlauf : [],
+      verbrauch: Array.isArray(parsed.verbrauch) ? parsed.verbrauch : [],
       produktionsStammChanges: Array.isArray(parsed.produktionsStammChanges) ? parsed.produktionsStammChanges : [],
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
@@ -2410,6 +2412,7 @@ async function handleKuecheHub(request, env) {
     personen: [...proPerson.values()].map((e) => ({ name: e.name, chargen: e.chargen, produkte: e.produkte.size })).sort((a, b) => b.chargen - a.chargen),
     proTag: [...proTag.entries()].map(([datum, anzahl]) => ({ datum, anzahl })).sort((a, b) => a.datum.localeCompare(b.datum)),
     rezepte: (state.rezepte || []).map((r) => ({ id: r.id, name: r.name })),
+    verbrauch: state.verbrauch || [],
     updatedAt: state.updatedAt || null,
   });
 }
@@ -5347,6 +5350,7 @@ async function handleState(request, env) {
     if (body.kuechenleitungPinHash !== undefined) patch.kuechenleitungPinHash = body.kuechenleitungPinHash || null;
     if (typeof body.kuechenleitungName === "string") patch.kuechenleitungName = body.kuechenleitungName;
     if (Array.isArray(body.chargenVerlauf)) patch.chargenVerlauf = body.chargenVerlauf.slice(-2000);
+    if (Array.isArray(body.verbrauch)) patch.verbrauch = body.verbrauch;
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
     if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
     if (Array.isArray(body.produkte)) patch.produkte = body.produkte;

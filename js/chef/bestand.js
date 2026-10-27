@@ -7,12 +7,19 @@
 // ============================================================================
 import { escapeHtml } from "../format.js";
 import { bestandAction } from "./api.js";
+import { betrieb } from "../betrieb.js";
 
-const BEREICHE = [
-  { id: "kueche", label: "Küche", symbol: "🍳", wer: "Küchen-Team" },
-  { id: "bar", label: "Bar", symbol: "🍸", wer: "Bar und Service" },
-  { id: "divers", label: "Divers", symbol: "🧺", wer: "Store-Managerin" },
-];
+// Welche Bereiche es gibt, steht im Betrieb – nicht hier. Fest getippt waren es Küche, Bar und Divers;
+// bei Rolla Costa heissen sie Theke, Lager und Produktion, und die Liste wäre leer geblieben.
+const ROLLEN_WORT = { service: "Service", kueche: "Küchen-Team", bar: "Bar" };
+const BEREICHE = (betrieb.bestandBereiche || [
+  { id: "kueche", label: "Küche", symbol: "🍳", rollen: ["kueche"] },
+  { id: "bar", label: "Bar", symbol: "🍸", rollen: ["bar", "service"] },
+  { id: "divers", label: "Divers", symbol: "🧺", rollen: [] },
+]).map((b) => ({
+  ...b,
+  wer: (b.rollen || []).filter((r) => betrieb.rollen.includes(r)).map((r) => ROLLEN_WORT[r] || r).join(" und ") || "Store-Managerin",
+}));
 // Muss zu PREP_EINHEITEN in js/store.js passen.
 const EINHEITEN = ["Stück", "Flaschen", "Packungen", "Kisten", "Liter", "kg", "g", "Behälter", "Schale", "Blech", "Beutel", "Portionen"];
 
@@ -42,11 +49,13 @@ function renderBestand(state, { onChanged }) {
 
   function build() {
     const frag = document.createElement("div");
+    // Wer welchen Bereich zählt, kommt aus dem Betrieb – fest getippt stünde bei Rolla Costa ein Satz
+    // über Küche, Bar und Divers, die es dort nicht gibt.
+    const werZaehlt = BEREICHE.map((b) => `<b>${escapeHtml(b.label)}</b> von ${escapeHtml(b.wer)}`).join(", ");
     frag.innerHTML = `
       <h1>🧮 Bestand</h1>
       <p class="muted">Du legst fest, welche Artikel gezählt werden und was mindestens da sein soll. Gezählt
-      wird am Handy und im persönlichen Fenster am iPad – <b>Küche</b> vom Küchen-Team, <b>Bar</b> von Bar und Service,
-      <b>Divers</b> von der Store-Managerin (sie sieht alle drei).</p>`;
+      wird am Handy und im persönlichen Fenster am Tablet – ${werZaehlt}.</p>`;
 
     const vorlagen = (state.taskTemplates || []).filter((t) => t.bestandBereich);
     const tipp = document.createElement("p");
@@ -57,8 +66,74 @@ function renderBestand(state, { onChanged }) {
         : `Noch kein fester Zähltag. Unter <b>📋 Aufgaben</b> eine Standard-Aufgabe anlegen, z.B. „Bar zählen“ für Dienstag, und bei „Mit Bestand verknüpft“ die Bar wählen.`;
     frag.appendChild(tipp);
 
+    const bestellen = buildBestellen();
+    if (bestellen) frag.appendChild(bestellen);
     for (const b of BEREICHE) frag.appendChild(buildBereich(b));
     return frag;
+  }
+
+  /** Was zuerst leer ist – die Reihenfolge, in der man bestellt.
+   *
+   * Gerechnet wird auf dem iPad aus den Zählungen: zwischen zwei Zählungen liegt der Verbrauch. Wurde
+   * dazwischen geliefert, bleibt der Abschnitt aussen vor, denn die Liefermenge steht nirgends. Darum
+   * gibt es Artikel ohne Zahl – die stehen unten und behaupten nichts. */
+  function buildBestellen() {
+    // Selbst Hergestelltes gehört nicht auf die Bestell-Liste: man bestellt keinen Teig, man macht ihn.
+    const alle = (state.verbrauch || []).filter((v) => !v.produzierbar && v.ist !== null && v.ist !== undefined);
+    if (alle.length === 0) return null;
+    const mitZahl = alle.filter((v) => v.reichweite !== null);
+    const ohneZahl = alle.filter((v) => v.reichweite === null);
+
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>📉 Reicht noch</h2>
+      <p class="muted small">Aus den Zählungen gerechnet – was zuerst leer ist, steht oben. Zeiträume mit
+      einer Lieferung dazwischen bleiben aussen vor: wie viel geliefert wurde, steht nirgends, und eine
+      geschätzte Zahl wäre hier schlimmer als keine.</p>`;
+
+    if (mitZahl.length === 0) {
+      card.appendChild(
+        Object.assign(document.createElement("p"), {
+          className: "muted small",
+          textContent: "Noch keine belastbaren Zahlen. Dafür braucht es je Artikel zwei Zählungen über mindestens drei Tage.",
+        })
+      );
+      return card;
+    }
+
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    const tabelle = document.createElement("table");
+    tabelle.className = "calc-table";
+    tabelle.innerHTML = `<thead><tr><th>Artikel</th><th>Bereich</th><th>Da</th><th>Pro Tag</th><th>Reicht noch</th><th>Je 100 Stück</th><th>Gemessen</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    for (const v of mitZahl.slice(0, 25)) {
+      const bereich = BEREICHE.find((b) => b.id === v.bereich);
+      const dringend = v.reichweite <= 3;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td><b>${escapeHtml(v.name)}</b></td>` +
+        `<td class="muted small">${escapeHtml(bereich ? `${bereich.symbol} ${bereich.label}` : v.bereich || "")}</td>` +
+        `<td>${zahl(v.ist)} ${escapeHtml(v.einheit || "")}</td>` +
+        `<td>${zahl(v.proTag)}</td>` +
+        `<td class="${dringend ? "res-warn" : ""}">${v.reichweite === 0 ? "<b>heute leer</b>" : `${v.reichweite} ${v.reichweite === 1 ? "Tag" : "Tage"}`}</td>` +
+        `<td class="muted small">${v.jeHundert === null ? "–" : zahl(v.jeHundert)}</td>` +
+        `<td class="muted small">${zahl(v.tageGemessen)} Tage${v.lieferungen > 0 ? ` · ${v.lieferungen}× geliefert` : ""}</td>`;
+      tbody.appendChild(tr);
+    }
+    tabelle.appendChild(tbody);
+    scroll.appendChild(tabelle);
+    card.appendChild(scroll);
+
+    if (ohneZahl.length > 0) {
+      card.appendChild(
+        Object.assign(document.createElement("p"), {
+          className: "muted small",
+          textContent: `Ohne belastbare Zahl: ${ohneZahl.map((v) => v.name).join(", ")}. Zwei Zählungen über mindestens drei Tage, dann steht hier etwas.`,
+        })
+      );
+    }
+    return card;
   }
 
   function tageText(weekdays) {

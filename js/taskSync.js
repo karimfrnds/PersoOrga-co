@@ -49,7 +49,9 @@ async function buildAuthPinsPayload(cfg, employees) {
   const managerPinHash = managerPin ? await hashPin(cfg.workerSecret, String(managerPin)) : null;
   const kuechenPin = store.getSettings().kuechenPin;
   const kuechenPinHash = kuechenPin ? await hashPin(cfg.workerSecret, String(kuechenPin)) : null;
-  return { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash };
+  const leitungPin = store.getSettings().kuechenleitungPin;
+  const kuechenleitungPinHash = leitungPin ? await hashPin(cfg.workerSecret, String(leitungPin)) : null;
+  return { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash, kuechenleitungPinHash };
 }
 
 function mondayOf(dateStr) {
@@ -741,6 +743,7 @@ async function performTaskSync() {
   // ---------------------------------------------------------------------
   const schichtEreignisseApplied = [];
   const produktionsEreignisseApplied = [];
+  const produktionsStammApplied = [];
   if (kann("produktion")) {
     const appliedSchichtIds = new Set(cfg.appliedSchichtEreignisIds || []);
     for (const e of Array.isArray(remote.schichtEreignisse) ? remote.schichtEreignisse : []) {
@@ -798,6 +801,49 @@ async function performTaskSync() {
     if (produktionsEreignisseApplied.length > 0) {
       store.updateTaskInboxConfig({ appliedProduktionsEreignisIds: [...appliedProdIds].slice(-500) });
     }
+    // Stammdaten, die die Küchenleitung am Küchen-Tablet gepflegt hat. Wie überall gilt: Wunsch in die
+    // Warteschlange, das Haupt-Tablet bleibt die maßgebliche Instanz.
+    const appliedStammIds = new Set(cfg.appliedProduktionsStammIds || []);
+    for (const e of Array.isArray(remote.produktionsStammChanges) ? remote.produktionsStammChanges : []) {
+      if (!e.id) continue;
+      produktionsStammApplied.push(e.id);
+      if (appliedStammIds.has(e.id)) continue;
+      appliedStammIds.add(e.id);
+      if (e.art === "produkt") {
+        const felder = {
+          name: e.name,
+          einheit: e.einheit,
+          soll: e.soll,
+          gebinde: e.gebinde,
+          haltbarkeitTage: e.haltbarkeitTage,
+          standardBehaelterId: e.standardBehaelterId,
+          rezeptId: e.rezeptId,
+          notiz: e.notiz,
+          aktiv: e.aktiv,
+        };
+        if (e.produktId) {
+          if (!store.updatePrep(e.produktId, felder)) syncWarnings.push(`Küche: „${e.name}“ gibt es hier nicht mehr, Änderung verworfen.`);
+        } else if (!store.getPrep(e.id)) {
+          // Die ID des Wunsches wird die ID des Produkts. Damit zeigt das Küchen-Tablet schon vor dem
+          // Abgleich dieselbe ID an wie hinterher – wer es gleich wieder ändert, trifft dasselbe Ding.
+          store.addPrep({ ...felder, id: e.id, bereich: "produktion", produzierbar: true });
+        }
+      } else if (e.art === "behaelter") {
+        const felder = { name: e.name, groesse: e.groesse, ort: e.ort, aktiv: e.aktiv };
+        if (e.behaelterId) {
+          if (!store.updateBehaelter(e.behaelterId, felder)) syncWarnings.push(`Küche: Behälter „${e.name}“ gibt es hier nicht mehr.`);
+        } else if (!store.getBehaelterById(e.id)) {
+          store.addBehaelter({ ...felder, id: e.id });
+        }
+      } else if (e.art === "auftrag") {
+        const fuer = e.employeeName ? employees.find((x) => x.name.trim().toLowerCase() === String(e.employeeName).trim().toLowerCase()) : null;
+        store.addProduktionsAuftrag({ produktId: e.produktId, menge: e.menge, quelle: "kueche", zugewiesenAn: fuer?.id || null });
+      }
+    }
+    if (produktionsStammApplied.length > 0) {
+      store.updateTaskInboxConfig({ appliedProduktionsStammIds: [...appliedStammIds].slice(-500) });
+    }
+
     // Ein leer gemeldeter Behälter ist der Moment, in dem wirklich etwas fehlt – dann soll der Auftrag
     // sofort dastehen und nicht erst beim nächsten Einstempeln. Ein gestrichener Auftrag löst das
     // bewusst NICHT aus: sonst stünde er 90 Sekunden später wieder da und das Streichen wäre sinnlos.
@@ -1013,7 +1059,7 @@ async function performTaskSync() {
   }));
   const eventConfig = store.getEventSettings();
 
-  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash } = await buildAuthPinsPayload(cfg, employees);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash, kuechenleitungPinHash } = await buildAuthPinsPayload(cfg, employees);
   // Rollen und Schicht-Definitionen mitschicken, damit die Laptop-Ansicht weiß, welche Schichten es für
   // wen überhaupt gibt (die Definitionen sind code-gesteuert und leben sonst nur hier im Store).
   // alleBestaende: die Store-Managerin zählt Küche, Bar und Divers – der Worker muss das wissen, sonst
@@ -1038,6 +1084,8 @@ async function performTaskSync() {
     socialPinHash,
     managerPinHash,
     kuechenPinHash,
+    kuechenleitungPinHash,
+    kuechenleitungName: store.getSettings().kuechenleitungName || "",
     managerName: store.getSettings().managerName || "",
     // Was die Küche der nächsten Schicht mitgibt ("Gurken fehlen") – die Store-Managerin bestellt danach.
     kuechenNotizen: store.getKuechenNotizen(),
@@ -1113,11 +1161,25 @@ async function performTaskSync() {
             mhd: c.mhd,
           })),
           rezepte: store.getRecipes().map((r) => ({ id: r.id, name: r.name, ergibt: r.ergibt, zutaten: r.zutaten, schritte: r.schritte, notiz: r.notiz })),
+          // Historie für die Auswertung im Küchen-Hub: was wurde produziert, von wem, was wurde
+          // aufgebraucht, was lief ab. Bewusst getrennt von offeneChargen – das ist der Arbeitsstand,
+          // das hier die Geschichte. Zwei Jobs, zwei Listen.
+          chargenVerlauf: store.getChargen({ seitTagen: 60 }).map((c) => ({
+            id: c.id,
+            produktId: c.produktId,
+            menge: c.menge,
+            einheit: c.einheit,
+            vonName: c.vonName,
+            am: c.am,
+            mhd: c.mhd,
+            leerAm: c.leerAm,
+          })),
           // Wer gerade im Dienst ist – damit das Küchen-Tablet nicht behauptet, jemand sei draußen,
           // der sich am Haupt-Tablet eingestempelt hat.
           offeneSchichten: store.getOpenShiftsToday().map((sh) => ({ employeeName: store.getEmployee(sh.employeeId)?.name || "", from: sh.from })),
           schichtEreignisseApplied,
           produktionsEreignisseApplied,
+          produktionsStammApplied,
         }
       : {}),
     ...(kann("verkauf")

@@ -23,6 +23,8 @@ import {
   geraetAnmelden,
   personAnmelden,
   getStation,
+  getHub,
+  sendeStamm,
   getOverview,
   stempeln,
   sendeCharge,
@@ -32,7 +34,7 @@ import {
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 
-const APP_VERSION = "2026-10-26.2";
+const APP_VERSION = "2026-10-27.1";
 const outlet = document.getElementById("outlet");
 
 // Wie lange ein persönliches Fenster offen bleiben darf, ohne dass jemand es anfasst. Danach zurück in
@@ -42,9 +44,10 @@ const FENSTER_ZU_NACH_MS = 3 * 60 * 1000;
 const LEERLAUF_ABGLEICH_MS = 30 * 1000;
 const FENSTER_ABGLEICH_MS = 60 * 1000;
 
-let ansicht = "leerlauf"; // "leerlauf" | "fenster"
+let ansicht = "leerlauf"; // "leerlauf" | "fenster" | "hub"
 let station = null; // Daten des Leerlaufs
 let daten = null; // Daten des persönlichen Fensters
+let hub = null; // Auswertung der Küche (Geräte-Zugang reicht)
 let reiter = "auftraege"; // "auftraege" | "bestand" | "rezepte"
 let pin = "";
 let fehler = "";
@@ -206,6 +209,21 @@ function renderLeerlauf() {
   }
   wrap.appendChild(card);
 
+  // Der Hub ist ohne persönliche Anmeldung erreichbar: wer vorbeigeht, soll sehen, wie es steht.
+  // Das sieht ohnehin jeder, der den Raum betritt – Stunden und Löhne stehen hier nicht drin.
+  wrap.appendChild(
+    knopf("📊 Übersicht der Küche", "btn btn-secondary", async () => {
+      try {
+        hub = await getHub(false);
+        ansicht = "hub";
+        window.scrollTo(0, 0);
+        zeichneJetzt();
+      } catch (e) {
+        await zeigeFehler(e);
+      }
+    })
+  );
+
   wrap.appendChild(el("p", "muted small", `Küchen-Tablet · ${APP_VERSION}${station?.updatedAt ? ` · Stand ${uhr(station.updatedAt)}` : ""}`));
   show(wrap);
 }
@@ -228,6 +246,14 @@ async function absendenPin() {
   try {
     const p = await personAnmelden(eingabe);
     fehler = "";
+    if (p.rolle === "kuechenleitung") {
+      // Die Küchenleitung stempelt hier nicht ein – sie pflegt. Direkt in den Hub, mit Pflege-Rechten.
+      hub = await getHub(true);
+      ansicht = "hub";
+      zeichneJetzt();
+      starteTimer();
+      return;
+    }
     daten = await getOverview();
     if (daten.imDienst) {
       // Schon im Dienst: direkt ins Fenster, wie am Haupt-Tablet.
@@ -658,6 +684,281 @@ function buildNotizen() {
 }
 
 // =====================================================================
+// Der Hub: wie es in der Küche steht
+//
+// Erreichbar ohne persönliche Anmeldung. Die Küchenleitung sieht dasselbe und kann zusätzlich pflegen.
+// Gerechnet wird alles im Worker, nicht hier und schon gar nicht von einem Modell: eine Zahl, die sich
+// jemand ausgedacht hat, wäre schlimmer als gar keine Auswertung.
+// =====================================================================
+function renderHub() {
+  const scroll = window.scrollY;
+  const wrap = el("div");
+  const kopf = el("div", "page");
+  kopf.appendChild(
+    knopf("← Zurück", "btn btn-link", () => {
+      hub = null;
+      zurueckInDenLeerlauf();
+    })
+  );
+  kopf.appendChild(el("h1", null, "📊 Übersicht der Küche"));
+  kopf.appendChild(
+    el("p", "muted", hub.darfPflegen ? `Angemeldet als ${escapeHtml(hub.name)} – du kannst hier pflegen.` : "Zum Ändern mit dem PIN der Küchenleitung anmelden.")
+  );
+  if (flash) {
+    kopf.appendChild(el("div", "callout", escapeHtml(flash)));
+    flash = null;
+  }
+  wrap.appendChild(kopf);
+
+  const inhalt = el("div", "page");
+
+  // --- Was jetzt ansteht ---
+  const jetzt = el("section", "card");
+  jetzt.appendChild(el("h2", null, "Jetzt"));
+  const unterSoll = (hub.produkte || []).filter((p) => p.unterSoll);
+  const zeilen = [
+    `${hub.auftraegeOffen} ${hub.auftraegeOffen === 1 ? "Auftrag" : "Aufträge"} offen`,
+    `${unterSoll.length} ${unterSoll.length === 1 ? "Produkt" : "Produkte"} unter Soll`,
+    `${(hub.ablaufend || []).length} ${(hub.ablaufend || []).length === 1 ? "Behälter läuft ab" : "Behälter laufen ab"}`,
+  ];
+  jetzt.appendChild(el("p", (hub.ablaufend || []).length > 0 || unterSoll.length > 0 ? "callout callout-warn" : "callout", escapeHtml(zeilen.join(" · "))));
+  if ((hub.ablaufend || []).length > 0) {
+    const liste = el("div", "mg-liste");
+    for (const a of hub.ablaufend.slice(0, 8)) {
+      const hin = a.mhd < hub.datum ? "abgelaufen" : a.mhd === hub.datum ? "heute" : `bis ${dateDe(a.mhd)}`;
+      liste.appendChild(
+        el(
+          "div",
+          "summary-line",
+          `<span>${escapeHtml(a.produkt)} <span class="muted small">${escapeHtml(a.behaelter || "ohne Behälter")}</span></span><span class="${
+            a.mhd < hub.datum ? "res-warn" : ""
+          }">${escapeHtml(hin)}</span>`
+        )
+      );
+    }
+    jetzt.appendChild(liste);
+  }
+  inhalt.appendChild(jetzt);
+
+  // --- Je Produkt: Bestand, Produktion, Ausschuss ---
+  const prod = el("section", "card");
+  prod.appendChild(el("h2", null, "Produkte"));
+  prod.appendChild(el("p", "muted small", "Was da ist, was in den letzten Wochen produziert wurde, und was davon in die Tonne ging."));
+  if ((hub.produkte || []).length === 0) {
+    prod.appendChild(el("p", "muted small", "Noch kein Produktionsprodukt angelegt."));
+  } else {
+    const scrollBox = el("div");
+    scrollBox.style.overflowX = "auto";
+    const tabelle = document.createElement("table");
+    tabelle.className = "calc-table";
+    tabelle.innerHTML = `<thead><tr><th>Produkt</th><th>Ist / Soll</th><th>7 Tage</th><th>30 Tage</th><th>Ausschuss</th>${
+      hub.darfPflegen ? "<th></th>" : ""
+    }</tr></thead>`;
+    const tbody = document.createElement("tbody");
+    for (const p of hub.produkte) {
+      const tr = document.createElement("tr");
+      // Ausschuss ab 10 % ist der Punkt, an dem das Soll zu hoch steht – das soll ins Auge fallen.
+      const hoch = p.ausschussAnteil >= 10;
+      tr.innerHTML =
+        `<td><b>${escapeHtml(p.name)}</b></td>` +
+        `<td class="${p.unterSoll ? "res-warn" : ""}">${zahlText(p.ist)} / ${zahlText(p.soll)} ${escapeHtml(p.einheit || "")}</td>` +
+        `<td>${zahlText(p.produziert7)}</td>` +
+        `<td>${zahlText(p.produziert30)}</td>` +
+        `<td class="${hoch ? "res-warn" : ""}">${p.ausschuss30 > 0 ? `${zahlText(p.ausschuss30)} (${p.ausschussAnteil} %)` : "–"}</td>`;
+      if (hub.darfPflegen) {
+        const td = document.createElement("td");
+        td.appendChild(knopf("Ändern", "btn btn-secondary", () => openProduktForm(p)));
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    tabelle.appendChild(tbody);
+    scrollBox.appendChild(tabelle);
+    prod.appendChild(scrollBox);
+  }
+  if (hub.darfPflegen) {
+    prod.appendChild(knopf("＋ Produkt", "btn btn-primary", () => openProduktForm(null)));
+    prod.appendChild(knopf("＋ Auftrag geben", "btn btn-secondary", () => openAuftragForm()));
+  }
+  inhalt.appendChild(prod);
+
+  // --- Behälter ---
+  const beh = el("section", "card");
+  beh.appendChild(el("h2", null, "Behälter"));
+  const bListe = el("div", "task-list");
+  for (const b of hub.behaelter || []) {
+    const row = el("div", "task-row");
+    row.appendChild(
+      el(
+        "div",
+        "task-row-text",
+        `<span><b>${escapeHtml(b.name)}</b></span><span class="muted small task-row-meta">${escapeHtml(
+          [b.groesse, b.ort].filter(Boolean).join(" · ") || "ohne Angabe"
+        )}${b.belegtMit ? ` · <b>belegt: ${escapeHtml(b.belegtMit)}</b>` : " · frei"}</span>`
+      )
+    );
+    if (hub.darfPflegen) row.appendChild(knopf("Ändern", "btn btn-secondary", () => openBehaelterForm(b)));
+    bListe.appendChild(row);
+  }
+  if ((hub.behaelter || []).length === 0) beh.appendChild(el("p", "muted small", "Noch kein Behälter angelegt."));
+  else beh.appendChild(bListe);
+  if (hub.darfPflegen) beh.appendChild(knopf("＋ Behälter", "btn btn-primary", () => openBehaelterForm(null)));
+  inhalt.appendChild(beh);
+
+  // --- Wer hat was gemacht ---
+  if ((hub.personen || []).length > 0) {
+    const pers = el("section", "card");
+    pers.appendChild(el("h2", null, "Letzte 30 Tage"));
+    const liste = el("div", "mg-liste");
+    for (const p of hub.personen) {
+      liste.appendChild(
+        el(
+          "div",
+          "summary-line",
+          `<span>${escapeHtml(p.name)}</span><span>${p.chargen} ${p.chargen === 1 ? "Charge" : "Chargen"} <span class="muted small">· ${p.produkte} ${
+            p.produkte === 1 ? "Produkt" : "Produkte"
+          }</span></span>`
+        )
+      );
+    }
+    pers.appendChild(liste);
+    inhalt.appendChild(pers);
+  }
+
+  wrap.appendChild(inhalt);
+  show(wrap);
+  window.scrollTo(0, scroll);
+}
+
+/** Kleines Formular-Gerüst für die Pflege.
+ *
+ * `felderBauen` baut die Felder in den Kasten und gibt zurück, wie man sie ausliest: entweder die
+ * fertigen Daten oder eine Meldung, warum es so nicht geht. Damit bleibt jedes Formular ein Stück
+ * Code statt zweier, die sich über eine Hilfsvariable verständigen. */
+function stammForm(titel, felderBauen) {
+  const overlay = el("div", "overlay");
+  const box = el("div", "dialog");
+  box.appendChild(el("h2", null, titel));
+  const feld = (label, node, hinweis) => {
+    const l = el("label", "field", `<span>${label}</span>`);
+    l.appendChild(node);
+    if (hinweis) l.appendChild(el("p", "muted small", hinweis));
+    return l;
+  };
+  const lesen = felderBauen(box, feld);
+  const akt = el("div", "dialog-actions");
+  akt.appendChild(knopf("Abbrechen", "btn btn-secondary", () => overlay.remove()));
+  const ok = knopf("Speichern", "btn btn-primary", async () => {
+    const { daten, fehler: warum } = lesen();
+    if (!daten) return meldung(warum);
+    ok.disabled = true;
+    if (await pflege(daten)) overlay.remove();
+    else ok.disabled = false;
+  });
+  akt.appendChild(ok);
+  box.appendChild(akt);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+const textFeld = (wert, platzhalter = "") => Object.assign(document.createElement("input"), { type: "text", value: wert ?? "", placeholder: platzhalter });
+const kommaFeld = (wert, platzhalter = "") => {
+  const i = textFeld(wert ? zahlText(wert) : "", platzhalter);
+  i.inputMode = "decimal";
+  return i;
+};
+const auswahlFeld = (paare, wert) => {
+  const sel = document.createElement("select");
+  for (const [v, t] of paare) {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = t;
+    if (String(v) === String(wert)) o.selected = true;
+    sel.appendChild(o);
+  }
+  return sel;
+};
+const zahlAus = (f) => Number(String(f.value).replace(",", ".")) || 0;
+
+async function pflege(daten) {
+  try {
+    await sendeStamm(daten);
+    flash = "Gespeichert. Das Haupt-Tablet übernimmt es beim nächsten Abgleich.";
+    hub = await getHub(true);
+    zeichneJetzt();
+    return true;
+  } catch (e) {
+    await zeigeFehler(e);
+    return false;
+  }
+}
+
+function openProduktForm(vorhanden) {
+  stammForm(vorhanden ? "Produkt ändern" : "Neues Produktionsprodukt", (box, feld) => {
+    const name = textFeld(vorhanden?.name, "z.B. Zimtschnecken-Teig");
+    const einheit = textFeld(vorhanden?.einheit || "Blech", "Blech, Liter, kg …");
+    const soll = kommaFeld(vorhanden?.soll, "z.B. 4");
+    const gebinde = kommaFeld(vorhanden?.gebinde, "z.B. 1");
+    const haltbar = kommaFeld(vorhanden?.haltbarkeitTage, "z.B. 3");
+    const rezept = auswahlFeld([["", "– kein Rezept –"], ...(hub.rezepte || []).map((r) => [r.id, r.name])], "");
+    box.appendChild(feld("Produkt", name));
+    const r1 = el("div", "res-form-row");
+    r1.append(feld("Soll (immer da)", soll), feld("Einheit", einheit));
+    box.appendChild(r1);
+    const r2 = el("div", "res-form-row");
+    r2.append(feld("Gebinde", gebinde, "Portion, in der produziert wird."), feld("Haltbar (Tage)", haltbar, "0 = kein MHD."));
+    box.appendChild(r2);
+    box.appendChild(feld("Rezept", rezept));
+    return () =>
+      name.value.trim()
+        ? {
+            daten: {
+              art: "produkt",
+              id: vorhanden?.produktId || null,
+              name: name.value.trim(),
+              einheit: einheit.value.trim(),
+              soll: zahlAus(soll),
+              gebinde: zahlAus(gebinde),
+              haltbarkeitTage: Math.round(zahlAus(haltbar)),
+              rezeptId: rezept.value || null,
+            },
+          }
+        : { daten: null, fehler: "Bitte einen Namen eintragen." };
+  });
+}
+
+function openBehaelterForm(vorhanden) {
+  stammForm(vorhanden ? "Behälter ändern" : "Neuer Behälter", (box, feld) => {
+    const name = textFeld(vorhanden?.name, "z.B. GN 1/1 – 3");
+    const groesse = textFeld(vorhanden?.groesse, "z.B. 10 L");
+    const ort = textFeld(vorhanden?.ort, "z.B. Kühlhaus, Regal 2");
+    box.appendChild(feld("Name", name, "Eindeutig und am Behälter lesbar – beschrifte ihn genauso."));
+    const r = el("div", "res-form-row");
+    r.append(feld("Grösse", groesse), feld("Steht normalerweise", ort));
+    box.appendChild(r);
+    return () =>
+      name.value.trim()
+        ? { daten: { art: "behaelter", id: vorhanden?.id || null, name: name.value.trim(), groesse: groesse.value.trim(), ort: ort.value.trim() } }
+        : { daten: null, fehler: "Bitte einen Namen eintragen." };
+  });
+}
+
+function openAuftragForm() {
+  stammForm("Auftrag geben", (box, feld) => {
+    const produkt = auswahlFeld((hub.produkte || []).map((p) => [p.produktId, p.name]), (hub.produkte || [])[0]?.produktId);
+    const menge = kommaFeld("", "z.B. 4");
+    const fuer = textFeld("", "Name, oder leer für die ganze Küche");
+    box.appendChild(feld("Was", produkt));
+    box.appendChild(feld("Wie viel", menge));
+    box.appendChild(feld("Für wen", fuer, "Leer heisst: gilt für jeden in der Küche."));
+    return () =>
+      zahlAus(menge) > 0
+        ? { daten: { art: "auftrag", produktId: produkt.value, menge: zahlAus(menge), fuer: fuer.value.trim() } }
+        : { daten: null, fehler: "Bitte eine Menge grösser als null eintragen." };
+  });
+}
+
+// =====================================================================
 // Dialoge
 // =====================================================================
 function meldung(text) {
@@ -726,12 +1027,14 @@ async function zeigeFehler(e) {
 // =====================================================================
 function zeichneJetzt() {
   if (ansicht === "fenster" && daten) renderFenster();
+  else if (ansicht === "hub" && hub) renderHub();
   else renderLeerlauf();
 }
 
 function zurueckInDenLeerlauf() {
   clearPerson();
   daten = null;
+  hub = null;
   begruesst = null;
   pin = "";
   fehler = "";
@@ -781,14 +1084,15 @@ function starteTimer() {
   const takt = ansicht === "fenster" ? FENSTER_ABGLEICH_MS : LEERLAUF_ABGLEICH_MS;
   timer = setInterval(() => {
     if (document.querySelector(".overlay")) return; // nicht neu zeichnen, während jemand tippt
-    if (ansicht === "fenster") {
+    if (ansicht === "fenster" || ansicht === "hub") {
       if (Date.now() - letzteBeruehrung > FENSTER_ZU_NACH_MS) {
         // NUR das Fenster schliessen, nicht ausstempeln: wer in der Küche steht, arbeitet weiter.
-        flash = "Fenster geschlossen – du bist weiter eingestempelt.";
+        flash = ansicht === "hub" ? "Übersicht geschlossen." : "Fenster geschlossen – du bist weiter eingestempelt.";
         zurueckInDenLeerlauf();
         return;
       }
-      ladeFenster().catch(() => {});
+      if (ansicht === "hub") getHub(!!hub?.darfPflegen).then((d) => { hub = d; zeichneJetzt(); }).catch(() => {});
+      else ladeFenster().catch(() => {});
     } else {
       // Im Leerlauf nicht neu zeichnen, während jemand gerade einen PIN tippt.
       if (pin.length > 0 || begruesst) return;

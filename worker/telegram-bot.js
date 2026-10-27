@@ -47,7 +47,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-26.2";
+const WORKER_VERSION = "2026-10-27.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -264,6 +264,11 @@ const EMPTY_STATE = {
   managerName: "",
   // Zugang des Küchen-Tablets. Gehört dem GERÄT und erlaubt nur den Leerlauf-Bildschirm.
   kuechenPinHash: null,
+  // Zugang der Küchenleitung: darf die Stammdaten der Produktion pflegen, sonst nichts.
+  kuechenleitungPinHash: null,
+  kuechenleitungName: "",
+  chargenVerlauf: [], // Historie für die Auswertung (60 Tage), getrennt vom Arbeitsstand offeneChargen
+  produktionsStammChanges: [], // Warteschlange: Änderungen an Produkten/Behältern aus der Küche
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
   // --- Produktionsküche ---
@@ -345,6 +350,10 @@ async function getState(env) {
       managerPinHash: typeof parsed.managerPinHash === "string" ? parsed.managerPinHash : null,
       managerName: typeof parsed.managerName === "string" ? parsed.managerName : "",
       kuechenPinHash: typeof parsed.kuechenPinHash === "string" ? parsed.kuechenPinHash : null,
+      kuechenleitungPinHash: typeof parsed.kuechenleitungPinHash === "string" ? parsed.kuechenleitungPinHash : null,
+      kuechenleitungName: typeof parsed.kuechenleitungName === "string" ? parsed.kuechenleitungName : "",
+      chargenVerlauf: Array.isArray(parsed.chargenVerlauf) ? parsed.chargenVerlauf : [],
+      produktionsStammChanges: Array.isArray(parsed.produktionsStammChanges) ? parsed.produktionsStammChanges : [],
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
       produktionsProdukte: Array.isArray(parsed.produktionsProdukte) ? parsed.produktionsProdukte : [],
@@ -464,6 +473,15 @@ async function requireSession(request, env, role) {
   // role darf auch eine Liste sein: der Social-Bereich steht dem Chef UND der Betreuung offen.
   const erlaubt = Array.isArray(role) ? role : [role];
   if (!erlaubt.includes(session.role)) return { error: jsonResponse({ error: "Keine Berechtigung." }, 403) };
+  if (session.role === "kuechenleitung") {
+    // Ein entzogener Zugang gilt sofort, nicht erst, wenn die Sitzung abläuft.
+    const state = await getState(env);
+    if (!state.kuechenleitungPinHash || !sameHash(session.zugang || "", state.kuechenleitungPinHash)) {
+      await env.TASKS_KV.delete(`session:${token}`);
+      return { error: jsonResponse({ error: "Der Zugang wurde geändert. Bitte neu anmelden." }, 401) };
+    }
+    session.name = state.kuechenleitungName || session.name;
+  }
   if (session.role === "kuechenstation") {
     // Ein entzogener oder geänderter Zugang gilt sofort, nicht erst, wenn die Sitzung abläuft.
     const state = await getState(env);
@@ -1885,6 +1903,10 @@ async function handleAuthLogin(request, env) {
     // und was ansteht. Keine Löhne, keine Stunden, kein Stempeln. Dafür tippt jede Person ihren
     // eigenen PIN, genau wie am Haupt-Tablet.
     session = { role: "kuechenstation", name: "Küchen-Tablet", zugang: state.kuechenPinHash };
+  } else if (state.kuechenleitungPinHash && sameHash(hash, state.kuechenleitungPinHash)) {
+    // Küchenleitung: Stammdaten der Produktion pflegen. Keine Löhne, keine Umsätze, keine Stunden –
+    // nicht durch eine ausgeblendete Schaltfläche, sondern weil kein Endpunkt sie ihr gibt.
+    session = { role: "kuechenleitung", name: state.kuechenleitungName || "Küchenleitung", zugang: state.kuechenleitungPinHash };
   } else {
     const match = (state.authPins || []).find((p) => sameHash(hash, p.pinHash));
     if (match) session = { role: "employee", name: match.name };
@@ -2292,6 +2314,217 @@ async function handleKuecheStation(request, env) {
     notizen: (state.kuechenNotizen || []).filter((n) => !n.erledigtAm).length,
     updatedAt: state.updatedAt || null,
   });
+}
+
+/** Der Hub: was die Küche als Ganzes über sich wissen muss.
+ *
+ * Erreichbar mit dem Geräte-Zugang, ohne dass sich jemand persönlich anmeldet – das ist der Sinn eines
+ * Hubs: man geht vorbei und sieht, wie es steht. Deshalb steht hier auch nichts Persönliches drin:
+ * keine Stunden, keine Löhne. Wer wie viel produziert hat, schon – das hängt in jeder Küche ohnehin
+ * an der Wand.
+ *
+ * Gerechnet wird HIER, nicht im Modell. Eine Zahl, die sich eine KI ausgedacht hat, wäre schlimmer als
+ * gar keine Auswertung.
+ */
+async function handleKuecheHub(request, env) {
+  const guard = await requireSession(request, env, ["kuechenstation", "kuechenleitung"]);
+  if (guard.error) return guard.error;
+  const state = await getState(env);
+  const heute = todayBerlin();
+  const produkte = state.produktionsProdukte || [];
+  const verlauf = state.chargenVerlauf || [];
+  const offen = state.offeneChargen || [];
+
+  const seit = (tage) => plusTage(heute, -tage);
+  const imFenster = (c, tage) => String(c.am || "").slice(0, 10) >= seit(tage);
+
+  // Je Produkt: wie es steht und was zuletzt lief.
+  const zeilen = produkte.map((p) => {
+    const meine = verlauf.filter((c) => String(c.produktId) === String(p.id));
+    const offenP = offen.filter((c) => String(c.produktId) === String(p.id));
+    const brauchbar = offenP.filter((c) => !c.mhd || c.mhd >= heute);
+    const abgelaufenJetzt = offenP.filter((c) => c.mhd && c.mhd < heute);
+    const produziert7 = meine.filter((c) => imFenster(c, 7)).reduce((n, c) => n + Number(c.menge || 0), 0);
+    const produziert30 = meine.filter((c) => imFenster(c, 30)).reduce((n, c) => n + Number(c.menge || 0), 0);
+    // Ausschuss: was leer gemeldet wurde, obwohl es da schon über dem MHD war. Das ist der Teil,
+    // der in die Tonne ging statt in den Verkauf.
+    const ausschuss30 = meine
+      .filter((c) => c.leerAm && c.mhd && String(c.leerAm).slice(0, 10) > c.mhd && imFenster(c, 30))
+      .reduce((n, c) => n + Number(c.menge || 0), 0);
+    const ist = brauchbar.reduce((n, c) => n + Number(c.menge || 0), 0);
+    return {
+      produktId: p.id,
+      name: p.name,
+      einheit: p.einheit,
+      soll: p.soll,
+      ist: Math.round(ist * 100) / 100,
+      unterSoll: p.soll > 0 && ist < p.soll,
+      abgelaufen: abgelaufenJetzt.length,
+      produziert7: Math.round(produziert7 * 100) / 100,
+      produziert30: Math.round(produziert30 * 100) / 100,
+      ausschuss30: Math.round(ausschuss30 * 100) / 100,
+      // Anteil, der weggeworfen wurde – die Zahl, an der man merkt, dass das Soll zu hoch steht.
+      ausschussAnteil: produziert30 > 0 ? Math.round((ausschuss30 / produziert30) * 100) : 0,
+      zuletzt: meine.length > 0 ? meine.map((c) => c.am).sort().slice(-1)[0] : null,
+    };
+  });
+
+  // Wer hat in den letzten 30 Tagen was gemacht? Je Person, je Produkt summiert.
+  const proPerson = new Map();
+  for (const c of verlauf.filter((x) => imFenster(x, 30))) {
+    const name = String(c.vonName || "").trim();
+    if (!name) continue;
+    const e = proPerson.get(name) || { name, chargen: 0, produkte: new Set() };
+    e.chargen += 1;
+    if (c.produktId) e.produkte.add(String(c.produktId));
+    proPerson.set(name, e);
+  }
+
+  // Produktion je Tag, für den Verlauf der letzten zwei Wochen.
+  const proTag = new Map();
+  for (const c of verlauf.filter((x) => imFenster(x, 14))) {
+    const tag = String(c.am || "").slice(0, 10);
+    proTag.set(tag, (proTag.get(tag) || 0) + 1);
+  }
+
+  return jsonResponse({
+    datum: heute,
+    darfPflegen: guard.session.role === "kuechenleitung",
+    name: guard.session.name,
+    produkte: zeilen,
+    behaelter: (state.behaelter || []).map((b) => {
+      const drin = offen.find((c) => String(c.behaelterId) === String(b.id));
+      return { ...b, belegtMit: drin ? produkte.find((p) => String(p.id) === String(drin.produktId))?.name || "?" : null };
+    }),
+    auftraegeOffen: (state.produktionsAuftraege || []).length,
+    ablaufend: offen
+      .filter((c) => c.mhd && c.mhd <= plusTage(heute, 2))
+      .map((c) => ({
+        produkt: produkte.find((p) => String(p.id) === String(c.produktId))?.name || "?",
+        behaelter: (state.behaelter || []).find((b) => String(b.id) === String(c.behaelterId))?.name || null,
+        mhd: c.mhd,
+        menge: c.menge,
+        einheit: c.einheit,
+      }))
+      .sort((a, b) => String(a.mhd).localeCompare(String(b.mhd))),
+    personen: [...proPerson.values()].map((e) => ({ name: e.name, chargen: e.chargen, produkte: e.produkte.size })).sort((a, b) => b.chargen - a.chargen),
+    proTag: [...proTag.entries()].map(([datum, anzahl]) => ({ datum, anzahl })).sort((a, b) => a.datum.localeCompare(b.datum)),
+    rezepte: (state.rezepte || []).map((r) => ({ id: r.id, name: r.name })),
+    updatedAt: state.updatedAt || null,
+  });
+}
+
+/** Stammdaten pflegen – nur die Küchenleitung, und wie überall als Wunsch in eine Warteschlange.
+ * Das Haupt-Tablet bleibt die maßgebliche Instanz. */
+async function handleKuecheStamm(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, "kuechenleitung");
+  if (guard.error) return guard.error;
+  const state = await getState(env);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad request" }, 400);
+  }
+  const art = String(body?.art || "");
+  const zahl = (v, fallback = null) => {
+    const n = Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  };
+  let eintrag = null;
+
+  if (art === "produkt") {
+    const name = String(body?.name || "").trim();
+    const id = body?.id ? String(body.id) : null;
+    if (!id && !name) return jsonResponse({ error: "Bitte einen Namen eintragen." }, 400);
+    if (id && !(state.produktionsProdukte || []).some((p) => String(p.id) === id)) {
+      return jsonResponse({ error: "Dieses Produkt gibt es hier nicht (mehr)." }, 400);
+    }
+    eintrag = {
+      id: crypto.randomUUID(),
+      art,
+      produktId: id,
+      name,
+      einheit: String(body?.einheit || "").slice(0, 30),
+      soll: zahl(body?.soll, 0),
+      gebinde: zahl(body?.gebinde, 0),
+      haltbarkeitTage: Math.round(zahl(body?.haltbarkeitTage, 0)),
+      standardBehaelterId: body?.standardBehaelterId ? String(body.standardBehaelterId) : null,
+      rezeptId: body?.rezeptId ? String(body.rezeptId) : null,
+      notiz: String(body?.notiz || "").slice(0, 200),
+      aktiv: body?.aktiv !== false,
+    };
+  } else if (art === "behaelter") {
+    const name = String(body?.name || "").trim();
+    const id = body?.id ? String(body.id) : null;
+    if (!id && !name) return jsonResponse({ error: "Bitte einen Namen eintragen." }, 400);
+    eintrag = {
+      id: crypto.randomUUID(),
+      art,
+      behaelterId: id,
+      name,
+      groesse: String(body?.groesse || "").slice(0, 40),
+      ort: String(body?.ort || "").slice(0, 120),
+      aktiv: body?.aktiv !== false,
+    };
+  } else if (art === "auftrag") {
+    // Die Küchenleitung legt selbst einen Auftrag an ("heute extra 4 Blech").
+    const produktId = String(body?.produktId || "");
+    if (!(state.produktionsProdukte || []).some((p) => String(p.id) === produktId)) {
+      return jsonResponse({ error: "Dieses Produkt gibt es hier nicht." }, 400);
+    }
+    const menge = zahl(body?.menge);
+    if (!menge || menge <= 0) return jsonResponse({ error: "Bitte eine Menge grösser als null." }, 400);
+    eintrag = { id: crypto.randomUUID(), art, produktId, menge, employeeName: String(body?.fuer || "").trim() };
+  } else {
+    return jsonResponse({ error: "Unbekannte Art." }, 400);
+  }
+
+  eintrag.von = guard.session.name;
+  eintrag.at = new Date().toISOString();
+
+  // Vorschau: was hier gespeichert wird, muss SOFORT dastehen. Sonst drückt jemand dreimal auf
+  // Speichern, weil sich nichts tut – und beim nächsten Abgleich stehen drei Behälter in der Liste.
+  // Das Haupt-Tablet bleibt trotzdem die maßgebliche Instanz und überschreibt die Vorschau.
+  const patch = { produktionsStammChanges: [...(state.produktionsStammChanges || []), eintrag].slice(-200) };
+  if (art === "behaelter") {
+    const vorschau = { id: eintrag.behaelterId || eintrag.id, name: eintrag.name, groesse: eintrag.groesse, ort: eintrag.ort };
+    patch.behaelter = eintrag.behaelterId
+      ? (state.behaelter || []).map((b) => (String(b.id) === eintrag.behaelterId ? { ...b, ...vorschau } : b))
+      : [...(state.behaelter || []), vorschau];
+  } else if (art === "produkt") {
+    const vorschau = {
+      id: eintrag.produktId || eintrag.id,
+      name: eintrag.name,
+      einheit: eintrag.einheit,
+      soll: eintrag.soll,
+      gebinde: eintrag.gebinde,
+      haltbarkeitTage: eintrag.haltbarkeitTage,
+      standardBehaelterId: eintrag.standardBehaelterId,
+      rezeptId: eintrag.rezeptId,
+      ist: 0,
+    };
+    patch.produktionsProdukte = eintrag.produktId
+      ? (state.produktionsProdukte || []).map((p) => (String(p.id) === eintrag.produktId ? { ...p, ...vorschau } : p))
+      : [...(state.produktionsProdukte || []), vorschau];
+  } else if (art === "auftrag") {
+    const p = (state.produktionsProdukte || []).find((x) => String(x.id) === eintrag.produktId);
+    patch.produktionsAuftraege = [
+      ...(state.produktionsAuftraege || []),
+      {
+        id: eintrag.id,
+        produktId: eintrag.produktId,
+        menge: eintrag.menge,
+        einheit: p?.einheit || "",
+        fuerDatum: todayBerlin(),
+        quelle: "kueche",
+        zugewiesenName: eintrag.employeeName || "",
+      },
+    ];
+  }
+  await patchState(env, patch);
+  return jsonResponse({ ok: true });
 }
 
 /** Ein- und Ausstempeln vom Küchen-Tablet.
@@ -3091,7 +3324,7 @@ async function handleSocialConfig(request, env) {
 async function handleAdminOverview(request, env) {
   const guard = await requireSession(request, env, "boss");
   if (guard.error) return guard.error;
-  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash, conversationHistory, ...safe } = await getState(env);
+  const { authPins, adminPinHash, socialPinHash, managerPinHash, kuechenPinHash, kuechenleitungPinHash, conversationHistory, ...safe } = await getState(env);
   const bereich = await getManagerBereich(env);
   return jsonResponse({ ...safe, managerZugang: !!managerPinHash, managerAufgaben: bereich.aufgaben });
 }
@@ -5111,6 +5344,9 @@ async function handleState(request, env) {
     if (body.managerPinHash !== undefined) patch.managerPinHash = body.managerPinHash || null;
     // null statt "weglassen", damit sich ein einmal vergebener Zugang auch wieder entziehen lässt.
     if (body.kuechenPinHash !== undefined) patch.kuechenPinHash = body.kuechenPinHash || null;
+    if (body.kuechenleitungPinHash !== undefined) patch.kuechenleitungPinHash = body.kuechenleitungPinHash || null;
+    if (typeof body.kuechenleitungName === "string") patch.kuechenleitungName = body.kuechenleitungName;
+    if (Array.isArray(body.chargenVerlauf)) patch.chargenVerlauf = body.chargenVerlauf.slice(-2000);
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);
     if (Array.isArray(body.kuechenNotizen)) patch.kuechenNotizen = body.kuechenNotizen.slice(-200);
     if (Array.isArray(body.produkte)) patch.produkte = body.produkte;
@@ -5513,6 +5749,8 @@ export default {
       if (url.pathname === "/me/notifications/read") return handleMeNotificationsRead(request, env);
       if (url.pathname === "/me/bestand") return handleMeBestand(request, env);
       if (url.pathname === "/kueche/station") return handleKuecheStation(request, env);
+      if (url.pathname === "/kueche/hub") return handleKuecheHub(request, env);
+      if (url.pathname === "/kueche/stamm") return handleKuecheStamm(request, env);
       if (url.pathname === "/kueche/overview") return handleKuecheOverview(request, env);
       if (url.pathname === "/kueche/clock") return handleKuecheClock(request, env);
       if (url.pathname === "/kueche/produktion") return handleKuecheProduktion(request, env);

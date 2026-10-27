@@ -49,6 +49,11 @@ function defaultData() {
       // dass der Leerlauf-Bildschirm zeigen darf, wer im Dienst ist. Gestempelt wird weiterhin mit dem
       // eigenen PIN.
       kuechenPin: null,
+      // Zugang der Küchenleitung. Darf die Stammdaten der Produktion pflegen – Produkte, Behälter,
+      // Soll-Werte, Rezepte – direkt am Küchen-Tablet, ohne ans Haupt-Tablet zu laufen. Keine Löhne,
+      // keine Umsätze, keine Stunden. Der eigene PIN zum Einstempeln bleibt davon unberührt.
+      kuechenleitungPin: null,
+      kuechenleitungName: "",
       managerName: "",
       // Aufgaben-Vorlagen, werden beim Anlegen eines Tages nach day.tasks kopiert – aber nur die, die an
       // diesem Wochentag gelten. { id, text, weekdays[], schicht, bereich, time, priority }
@@ -180,6 +185,7 @@ function defaultData() {
         // IDs der Stempel- und Produktions-Ereignisse vom Küchen-Tablet, die schon übernommen wurden.
         appliedSchichtEreignisIds: [],
         appliedProduktionsEreignisIds: [],
+        appliedProduktionsStammIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -911,7 +917,8 @@ export const store = {
     if (data.settings.adminPin === p) return true;
     // Auch die Zugangs-PINs: beim Anmelden gewinnt der Zugang, und die Person käme mit ihrem eigenen PIN
     // nie mehr in ihre Mitarbeiter-Ansicht.
-    if (data.settings.socialPin === p || data.settings.managerPin === p || data.settings.kuechenPin === p) return true;
+    if (data.settings.socialPin === p || data.settings.managerPin === p) return true;
+    if (data.settings.kuechenPin === p || data.settings.kuechenleitungPin === p) return true;
     return data.employees.some((e) => e.active && e.id !== excludingEmployeeId && e.pin === p);
   },
   /** Findet den aktiven Mitarbeiter zu einem eingegebenen PIN (fürs Ein-/Ausstempeln am Kiosk). */
@@ -972,6 +979,17 @@ export const store = {
   },
   hasKuechenPin() {
     return !!data.settings.kuechenPin;
+  },
+  hasKuechenleitungPin() {
+    return !!data.settings.kuechenleitungPin;
+  },
+  /** Zugang der Küchenleitung setzen, oder mit leerem PIN entziehen. */
+  setKuechenleitungZugang(pin, name) {
+    const p = String(pin || "").trim();
+    data.settings.kuechenleitungPin = p || null;
+    if (name !== undefined) data.settings.kuechenleitungName = String(name || "").trim();
+    persist();
+    return data.settings.kuechenleitungPin;
   },
   /** Zugang des Küchen-Tablets setzen, oder mit leerem PIN entziehen. */
   setKuechenZugang(pin) {

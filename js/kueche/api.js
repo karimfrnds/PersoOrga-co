@@ -92,15 +92,21 @@ async function geraetAnmelden(pin) {
   return geraet;
 }
 
-/** Eine Person öffnet ihr Fenster. */
+/** Eine Person öffnet ihr Fenster – oder die Küchenleitung ihren Pflege-Bereich.
+ * Welche der beiden es war, steht in `rolle`; der Aufrufer entscheidet, was er damit macht. */
 async function personAnmelden(pin) {
   const data = await anmelden(pin);
-  if (data.role !== "employee") throw new Error("Das ist kein Mitarbeiter-PIN.");
-  person = { token: data.token, name: data.name };
+  if (data.role !== "employee" && data.role !== "kuechenleitung") throw new Error("Das ist kein Mitarbeiter-PIN.");
+  person = { token: data.token, name: data.name, rolle: data.role };
   return person;
 }
 
 const getStation = () => call("/kueche/station", geraet?.token);
+/** Der Hub: Auswertung der Küche. Mit dem Geräte-Zugang lesbar – wer vorbeigeht, soll sehen, wie es
+ * steht, ohne sich anzumelden. Mit dem Zugang der Küchenleitung kommt das Pflegen dazu. */
+const getHub = (alsLeitung = false) => call("/kueche/hub", alsLeitung ? person?.token : geraet?.token);
+/** Stammdaten pflegen – nur die Küchenleitung. art: "produkt" | "behaelter" | "auftrag". */
+const sendeStamm = (daten) => call("/kueche/stamm", person?.token, { method: "POST", body: daten });
 const getOverview = () => call("/kueche/overview", person?.token);
 /** kind: "in" | "out" */
 const stempeln = (kind) => call("/kueche/clock", person?.token, { method: "POST", body: { kind } });
@@ -118,6 +124,8 @@ export {
   geraetAnmelden,
   personAnmelden,
   getStation,
+  getHub,
+  sendeStamm,
   getOverview,
   stempeln,
   sendeCharge,

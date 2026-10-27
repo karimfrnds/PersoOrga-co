@@ -40,7 +40,7 @@ function renderSettings() {
           "Admin-PIN",
           ...(kann("social") ? ["Zugang Social Media"] : []),
           ...(kann("storeManagement") ? ["Zugang Store-Management"] : []),
-          ...(kann("produktion") ? ["Zugang Küchen-Tablet"] : []),
+          ...(kann("produktion") ? ["Zugang Küchen-Tablet", "Zugang Küchenleitung"] : []),
         ].join(", "),
         build: buildSicherheitCards,
       },
@@ -390,12 +390,79 @@ function renderSettings() {
     }
     kuecheCard.appendChild(kReihe);
 
+    // --- Zugang der Küchenleitung ---
+    //
+    // Anders als der Geräte-Zugang gehört dieser einer PERSON: sie darf die Stammdaten der Produktion
+    // pflegen – Produkte, Behälter, Soll-Werte – direkt in der Küche, ohne ans Haupt-Tablet zu laufen.
+    // Löhne, Umsätze und Stunden sind für sie nicht erreichbar, nicht durch eine ausgeblendete
+    // Schaltfläche, sondern weil kein Endpunkt sie ihr gibt.
+    const leitungCard = document.createElement("section");
+    leitungCard.className = "card";
+    const lName = store.getSettings().kuechenleitungName || "";
+    leitungCard.innerHTML = `<h2>Zugang Küchenleitung</h2>
+      <p class="muted small">Eigener PIN für die Person, die die Küche führt. Damit meldet sie sich am
+      <b>Küchen-Tablet</b> an und kann Produktionsprodukte, Behälter und Soll-Mengen anlegen und ändern –
+      und der Schicht zusätzliche Aufträge geben. <b>Nicht</b> an Löhne, Umsätze oder Stunden.
+      Ihr normaler PIN zum Einstempeln bleibt davon unberührt.</p>`;
+    const lStand = document.createElement("p");
+    lStand.className = store.hasKuechenleitungPin() ? "callout" : "muted small";
+    lStand.textContent = store.hasKuechenleitungPin() ? `Zugang eingerichtet${lName ? ` für ${lName}` : ""}.` : "Noch kein Zugang eingerichtet.";
+    leitungCard.appendChild(lStand);
+    const lReihe = document.createElement("div");
+    lReihe.className = "employee-actions";
+    const lSetzen = document.createElement("button");
+    lSetzen.className = "btn btn-secondary";
+    lSetzen.textContent = store.hasKuechenleitungPin() ? "Ändern" : "Zugang einrichten";
+    lSetzen.onclick = async () => {
+      const name = await promptDialog("Wer führt die Küche? So steht es oben in ihrer Ansicht.", {
+        title: "Küchenleitung",
+        defaultValue: lName,
+        okLabel: "Weiter",
+      });
+      if (name === null) return;
+      const pin = await promptDialog("Vier Ziffern oder mehr – und <b>nicht</b> ihr PIN zum Einstempeln.", {
+        title: "PIN für die Küchenleitung",
+        type: "number",
+        okLabel: "Speichern",
+      });
+      if (pin === null) return;
+      const sauber = String(pin).trim();
+      if (sauber.length < 4) {
+        await alertDialog("Der PIN sollte mindestens 4 Zeichen haben.");
+        return;
+      }
+      if (sauber === String(store.getSettings().adminPin || "")) {
+        await alertDialog("Das ist dein Admin-PIN. Bitte einen anderen wählen – sonst käme sie überall hin.");
+        return;
+      }
+      if (sauber === String(store.getSettings().kuechenPin || "") || store.findEmployeeByPin(sauber)) {
+        await alertDialog("Dieser PIN ist schon vergeben (Geräte-Zugang oder ein Mitarbeiter-PIN). Bitte einen eigenen wählen.");
+        return;
+      }
+      store.setKuechenleitungZugang(sauber, name);
+      rerender();
+      await alertDialog("Zugang eingerichtet. Er gilt, sobald sich das Tablet das nächste Mal abgeglichen hat (spätestens 90 Sekunden).");
+    };
+    lReihe.appendChild(lSetzen);
+    if (store.hasKuechenleitungPin()) {
+      const lWeg = document.createElement("button");
+      lWeg.className = "btn btn-link";
+      lWeg.textContent = "Zugang entziehen";
+      lWeg.onclick = async () => {
+        if (!(await confirmDialog("Zugang entziehen? Sie kann danach keine Stammdaten mehr pflegen.", { danger: true, okLabel: "Entziehen" }))) return;
+        store.setKuechenleitungZugang("");
+        rerender();
+      };
+      lReihe.appendChild(lWeg);
+    }
+    leitungCard.appendChild(lReihe);
+
     // Zugänge nur dort, wo es die Bereiche gibt.
     return [
       pinCard,
       ...(kann("social") ? [socialCard] : []),
       ...(kann("storeManagement") ? [managerCard] : []),
-      ...(kann("produktion") ? [kuecheCard] : []),
+      ...(kann("produktion") ? [kuecheCard, leitungCard] : []),
     ];
   }
 

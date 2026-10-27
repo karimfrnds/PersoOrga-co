@@ -8,6 +8,21 @@
 // ============================================================================
 import { store } from "./store.js";
 import { todayStr } from "./format.js";
+import { betrieb } from "./betrieb.js";
+
+/** In welchem Ordner die Sicherungen dieses Betriebs liegen.
+ *
+ * frnds bleibt bei "backups/" – dort liegt die gesamte Historie, und ein Umbenennen würde sie aus der
+ * Wiederherstellung verschwinden lassen. Jeder weitere Betrieb bekommt einen eigenen Unterordner.
+ *
+ * Ohne diese Trennung schreiben zwei Betriebe mit demselben Repository in DIESELBE Datei
+ * (backup-YYYY-MM-DD.json) und überschreiben sich gegenseitig – alle drei Stunden, weil die Datei im
+ * Lauf des Tages aktualisiert wird. Am Ende stünde in der Sicherung des einen der Stand des anderen:
+ * derselbe Schaden wie im September, nur im Rettungsnetz selbst.
+ */
+function backupOrdner() {
+  return betrieb.id === "frnds" ? "backups" : `backups/${betrieb.id}`;
+}
 
 function utf8ToBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
@@ -24,7 +39,7 @@ async function performBackup() {
     throw new Error("Bitte GitHub-Nutzername, Repository und Token eintragen.");
   }
   const date = todayStr();
-  const path = `backups/backup-${date}.json`;
+  const path = `${backupOrdner()}/backup-${date}.json`;
   const content = utf8ToBase64(store.exportJSON());
   const kopf = { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
 
@@ -52,7 +67,7 @@ async function performBackup() {
 async function listBackups() {
   const cfg = store.getGithubBackupConfig();
   if (!cfg.owner || !cfg.repo || !cfg.token) throw new Error("Backup ist nicht eingerichtet.");
-  const res = await fetch(ghUrl(cfg, "backups"), { headers: { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json" } });
+  const res = await fetch(ghUrl(cfg, backupOrdner()), { headers: { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json" } });
   if (!res.ok) throw new Error(`GitHub antwortete mit ${res.status}`);
   const liste = await res.json();
   return (Array.isArray(liste) ? liste : [])
@@ -64,7 +79,7 @@ async function listBackups() {
 /** Den Inhalt einer Sicherung holen – zum Ansehen, bevor man sie einspielt. */
 async function fetchBackup(datei) {
   const cfg = store.getGithubBackupConfig();
-  const res = await fetch(ghUrl(cfg, `backups/${datei.name}`), {
+  const res = await fetch(ghUrl(cfg, `${backupOrdner()}/${datei.name}`), {
     headers: { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github.raw" },
   });
   if (!res.ok) throw new Error(`GitHub antwortete mit ${res.status}`);

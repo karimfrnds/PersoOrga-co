@@ -34,7 +34,7 @@ import {
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
 import { escapeHtml, dateDe, todayStr } from "../format.js";
 
-const APP_VERSION = "2026-10-27.3";
+const APP_VERSION = "2026-10-29.1";
 const outlet = document.getElementById("outlet");
 
 // Wie lange ein persönliches Fenster offen bleiben darf, ohne dass jemand es anfasst. Danach zurück in

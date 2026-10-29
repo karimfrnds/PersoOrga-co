@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-27.3";
+const WORKER_VERSION = "2026-10-29.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -266,6 +266,8 @@ const EMPTY_STATE = {
   managerPinHash: null,
   managerName: "",
   // Zugang des Küchen-Tablets. Gehört dem GERÄT und erlaubt nur den Leerlauf-Bildschirm.
+  // Die Bestands-Bereiche dieses Betriebs, vom Tablet geliefert.
+  bestandBereiche: [],
   kuechenPinHash: null,
   // Zugang der Küchenleitung: darf die Stammdaten der Produktion pflegen, sonst nichts.
   kuechenleitungPinHash: null,
@@ -348,6 +350,7 @@ async function getState(env) {
       eventConfig: parsed.eventConfig && typeof parsed.eventConfig === "object" ? parsed.eventConfig : null,
       eventSignups: Array.isArray(parsed.eventSignups) ? parsed.eventSignups : [],
       bestand: Array.isArray(parsed.bestand) ? parsed.bestand : [],
+      bestandBereiche: Array.isArray(parsed.bestandBereiche) ? parsed.bestandBereiche : [],
       bestandZaehlungen: Array.isArray(parsed.bestandZaehlungen) ? parsed.bestandZaehlungen : [],
       bestandChanges: Array.isArray(parsed.bestandChanges) ? parsed.bestandChanges : [],
       bestandAbschluesse: Array.isArray(parsed.bestandAbschluesse) ? parsed.bestandAbschluesse : [],
@@ -2003,7 +2006,7 @@ async function handleMe(request, env) {
         .sort((x, y) => (Number(x.sort) || 0) - (Number(y.sort) || 0) || String(x.name).localeCompare(String(y.name)))
         .map((a) => ({ id: a.id, name: a.name, einheit: a.einheit || "", soll: Number(a.soll) || 0, notiz: a.notiz || "", menge: a.menge ?? null, at: a.at || null, by: a.by || null }));
       const abschluss = (state.bestandAbschluesse || []).filter((a) => a.bereich === b).slice(-1)[0] || null;
-      return { id: b, label: BESTAND_BEREICHE[b].label, faellig: bestandZaehlungFaellig(state, b, today), letzteZaehlung: abschluss, artikel };
+      return { id: b, label: bestandBereiche(state)[b]?.label || b, faellig: bestandZaehlungFaellig(state, b, today), letzteZaehlung: abschluss, artikel };
     })
     .filter((b) => b.artikel.length > 0);
 
@@ -2125,7 +2128,12 @@ async function handleMeSick(request, env) {
 // erst nach dem nächsten Abgleich erscheint, wird jede Zählung zusätzlich sofort auf die Worker-Kopie
 // angewandt.
 // ---------------------------------------------------------------------
-const BESTAND_BEREICHE = {
+/** Die Bereiche des Cafés – nur noch Rückfall, falls das Tablet sie noch nicht geschickt hat.
+ *
+ * Fest getippt war das ein Fehler: Rolla Costa zählt Theke, Lager und Produktion. Jeder Bereich, den
+ * diese Liste nicht kennt, wurde abgewiesen – damit liessen sich dort weder Artikel anlegen noch vom
+ * Handy zählen. Welche Bereiche es gibt, weiss der Betrieb, nicht der Worker. */
+const BESTAND_BEREICHE_STANDARD = {
   kueche: { label: "Küche", rollen: ["kueche"] },
   // Service und Bar teilen sich im Café die Theke – wer im Service steht, füllt auch auf.
   bar: { label: "Bar", rollen: ["bar", "service"] },
@@ -2134,14 +2142,35 @@ const BESTAND_BEREICHE = {
 };
 const BESTAND_EINHEITEN_MAX = 40;
 
-function bestandBereicheFuerRolle(rolle) {
-  return Object.keys(BESTAND_BEREICHE).filter((b) => BESTAND_BEREICHE[b].rollen.includes(rolle));
+/** Die Bereiche dieses Betriebs, so wie das Tablet sie kennt. */
+function bestandBereiche(state) {
+  const vom = state?.bestandBereiche;
+  if (!Array.isArray(vom) || vom.length === 0) return BESTAND_BEREICHE_STANDARD;
+  const map = {};
+  for (const b of vom) {
+    if (!b?.id) continue;
+    map[b.id] = { label: String(b.label || b.id), rollen: Array.isArray(b.rollen) ? b.rollen : [] };
+  }
+  return Object.keys(map).length > 0 ? map : BESTAND_BEREICHE_STANDARD;
+}
+/** Lesbare Aufzählung für Fehlermeldungen – "Bitte Küche, Bar oder Divers wählen" war schlicht falsch,
+ * sobald ein Betrieb andere Bereiche hat. */
+function bestandBereicheText(state) {
+  const namen = Object.values(bestandBereiche(state)).map((b) => b.label);
+  if (namen.length === 0) return "einen Bereich";
+  if (namen.length === 1) return namen[0];
+  return `${namen.slice(0, -1).join(", ")} oder ${namen[namen.length - 1]}`;
+}
+
+function bestandBereicheFuerRolle(state, rolle) {
+  const alle = bestandBereiche(state);
+  return Object.keys(alle).filter((b) => alle[b].rollen.includes(rolle));
 }
 /** Welche Bestände zählt diese Person? Die Store-Managerin (vom iPad als alleBestaende markiert) alle. */
 function bestandBereicheFuerPerson(state, name) {
   const eintrag = (state.employeeRoles || []).find((r) => kleinschreiben(r.name) === kleinschreiben(name));
-  if (eintrag?.alleBestaende) return Object.keys(BESTAND_BEREICHE);
-  return bestandBereicheFuerRolle(eintrag?.role || null);
+  if (eintrag?.alleBestaende) return Object.keys(bestandBereiche(state));
+  return bestandBereicheFuerRolle(state, eintrag?.role || null);
 }
 
 /** Ist in diesem Bereich heute eine Zählung dran? Ja, wenn eine Standard-Aufgabe mit diesem Bestand
@@ -2197,7 +2226,7 @@ async function handleMeBestand(request, env) {
   const name = guard.session.name;
   const state = await getState(env);
   const bereich = String(body?.bereich || "");
-  if (!BESTAND_BEREICHE[bereich]) return jsonResponse({ error: "Unbekannter Bereich." }, 400);
+  if (!bestandBereiche(state)[bereich]) return jsonResponse({ error: "Unbekannter Bereich." }, 400);
   if (!bestandBereicheFuerPerson(state, name).includes(bereich)) return jsonResponse({ error: "Diesen Bestand zählst du nicht." }, 403);
 
   const erlaubteIds = new Set((state.bestand || []).filter((a) => a.bereich === bereich && a.aktiv !== false).map((a) => String(a.id)));
@@ -2839,21 +2868,25 @@ async function handleAdminBestand(request, env) {
   if (!["create", "update", "delete"].includes(kind)) return jsonResponse({ error: "Unbekannte Aktion." }, 400);
   if (kind !== "create" && !String(body?.itemId || "").trim()) return jsonResponse({ error: "Artikel fehlt." }, 400);
   if (kind !== "delete" && !String(body?.name || "").trim()) return jsonResponse({ error: "Bitte einen Namen angeben." }, 400);
-  if (kind !== "delete" && !BESTAND_BEREICHE[body?.bereich]) return jsonResponse({ error: "Bitte Küche, Bar oder Divers wählen." }, 400);
+
+  const state = await getState(env);
+  const bereiche = bestandBereiche(state);
+  if (kind !== "delete" && !bereiche[body?.bereich]) {
+    return jsonResponse({ error: `Bitte ${bestandBereicheText(state)} wählen.` }, 400);
+  }
 
   const eintrag = {
     id: crypto.randomUUID(),
     kind,
     itemId: String(body?.itemId || "") || null,
     name: String(body?.name || "").trim().slice(0, 80),
-    bereich: BESTAND_BEREICHE[body?.bereich] ? body.bereich : "kueche",
+    bereich: bereiche[body?.bereich] ? body.bereich : Object.keys(bereiche)[0],
     einheit: String(body?.einheit || "Stück").slice(0, BESTAND_EINHEITEN_MAX),
     soll: bestandZahl(body?.soll) ?? 0,
     notiz: String(body?.notiz || "").trim().slice(0, 200),
     aktiv: body?.aktiv !== false,
     at: new Date().toISOString(),
   };
-  const state = await getState(env);
   await patchState(env, {
     bestandChanges: [...(state.bestandChanges || []), eintrag].slice(-200),
     bestand: bestandAenderungVorschau(state.bestand, eintrag),
@@ -4453,7 +4486,7 @@ async function handleAdminTaskTemplate(request, env) {
     phase: AUFGABEN_PHASEN.includes(body?.phase) ? body.phase : "schicht",
     // Mit einem Bestand verknüpft ("Bar zählen"): dann ist die Aufgabe erledigt, sobald die Zählung
     // abgeschlossen ist, und das Handy weiß, dass heute gezählt wird.
-    bestandBereich: BESTAND_BEREICHE[body?.bestandBereich] ? body.bestandBereich : "",
+    bestandBereich: bestandBereiche(await getState(env))[body?.bestandBereich] ? body.bestandBereich : "",
   };
   const state = await getState(env);
   await patchState(env, {
@@ -5637,6 +5670,7 @@ async function handleState(request, env) {
     if (body.kuechenPinHash !== undefined) patch.kuechenPinHash = body.kuechenPinHash || null;
     if (body.kuechenleitungPinHash !== undefined) patch.kuechenleitungPinHash = body.kuechenleitungPinHash || null;
     if (typeof body.kuechenleitungName === "string") patch.kuechenleitungName = body.kuechenleitungName;
+    if (Array.isArray(body.bestandBereiche)) patch.bestandBereiche = body.bestandBereiche;
     if (Array.isArray(body.chargenVerlauf)) patch.chargenVerlauf = body.chargenVerlauf.slice(-2000);
     if (Array.isArray(body.verbrauch)) patch.verbrauch = body.verbrauch;
     if (typeof body.managerName === "string") patch.managerName = body.managerName.trim().slice(0, 40);

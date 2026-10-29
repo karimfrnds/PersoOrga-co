@@ -1124,6 +1124,10 @@ async function performTaskSync() {
     bestandZaehlungenApplied,
     bestandChangesApplied,
     bestandAbschluesse: store.getBestandAbschluesse(),
+    // Welche Bereiche es gibt, weiss der Betrieb – nicht der Worker. Fest getippt kannte er nur
+    // Küche, Bar und Divers und wies alles andere ab; bei Rolla Costa liess sich damit kein Artikel
+    // anlegen und nichts vom Handy zählen.
+    bestandBereiche: store.BESTAND_BEREICHE.map((b) => ({ id: b.id, label: b.label, rollen: b.rollen })),
     // Pop-up: Verkaufszahlen und der Backvorschlag für morgen. Gerechnet wird er auf dem iPad, damit die
     // Regel an einer Stelle steht und Laptop und iPad nicht verschieden rechnen.
     // Produktionsküche: das Tablet im anderen Raum liest das hier und schreibt nichts selbst.

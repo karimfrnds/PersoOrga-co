@@ -19,7 +19,7 @@ import { renderBericht } from "./bericht.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-10-27.3";
+const APP_VERSION = "2026-10-29.1";
 
 const outlet = document.getElementById("outlet");
 

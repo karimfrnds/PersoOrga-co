@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-29.1";
+const WORKER_VERSION = "2026-10-29.2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -1999,7 +1999,7 @@ async function handleMe(request, env) {
 
   // Bestand: nur die Bereiche, die die eigene Rolle zählt. Mengen sind keine Lohn- oder Gastdaten, aber
   // wer an der Bar steht, braucht die Küchenliste trotzdem nicht auf dem Handy.
-  const bestand = bestandBereicheFuerPerson(state, name)
+  const bestand = (bereichsRollenBekannt(state) ? bestandBereicheFuerPerson(state, name) : Object.keys(bestandBereiche(state)))
     .map((b) => {
       const artikel = (state.bestand || [])
         .filter((a) => a.bereich === b && a.aktiv !== false)
@@ -2145,13 +2145,31 @@ const BESTAND_EINHEITEN_MAX = 40;
 /** Die Bereiche dieses Betriebs, so wie das Tablet sie kennt. */
 function bestandBereiche(state) {
   const vom = state?.bestandBereiche;
-  if (!Array.isArray(vom) || vom.length === 0) return BESTAND_BEREICHE_STANDARD;
-  const map = {};
-  for (const b of vom) {
-    if (!b?.id) continue;
-    map[b.id] = { label: String(b.label || b.id), rollen: Array.isArray(b.rollen) ? b.rollen : [] };
+  if (Array.isArray(vom) && vom.length > 0) {
+    const map = {};
+    for (const b of vom) {
+      if (!b?.id) continue;
+      map[b.id] = { label: String(b.label || b.id), rollen: Array.isArray(b.rollen) ? b.rollen : [] };
+    }
+    if (Object.keys(map).length > 0) return map;
   }
-  return Object.keys(map).length > 0 ? map : BESTAND_BEREICHE_STANDARD;
+  // Das Tablet hat die Bereiche noch nicht geschickt (frisch eingespielter Worker, erster Abgleich
+  // steht aus). Dann lieber aus den Artikeln ableiten, die da sind, als die Liste des Cafés zu
+  // unterstellen: sonst weist der Worker in jedem anderen Betrieb genau die Bereiche ab, um die es geht.
+  const ausArtikeln = [...new Set((state?.bestand || []).map((a) => a.bereich).filter(Boolean))];
+  if (ausArtikeln.length > 0) {
+    const map = {};
+    // rollen bleibt leer: wer was zählen darf, weiss nur das Tablet. Solange das offen ist, wird hier
+    // nicht eingeschränkt – eine Zählung ist keine Lohn- oder Gastdatei, und falsch sperren ist
+    // schlimmer als gar nicht sperren.
+    for (const id of ausArtikeln) map[id] = { label: id, rollen: [] };
+    return map;
+  }
+  return BESTAND_BEREICHE_STANDARD;
+}
+/** Weiss der Worker verlässlich, wer welchen Bereich zählt? Nur, wenn das Tablet es geschickt hat. */
+function bereichsRollenBekannt(state) {
+  return Array.isArray(state?.bestandBereiche) && state.bestandBereiche.length > 0;
 }
 /** Lesbare Aufzählung für Fehlermeldungen – "Bitte Küche, Bar oder Divers wählen" war schlicht falsch,
  * sobald ein Betrieb andere Bereiche hat. */
@@ -2226,8 +2244,16 @@ async function handleMeBestand(request, env) {
   const name = guard.session.name;
   const state = await getState(env);
   const bereich = String(body?.bereich || "");
-  if (!bestandBereiche(state)[bereich]) return jsonResponse({ error: "Unbekannter Bereich." }, 400);
-  if (!bestandBereicheFuerPerson(state, name).includes(bereich)) return jsonResponse({ error: "Diesen Bestand zählst du nicht." }, 403);
+  // Wie oben: nur prüfen, wenn die Bereiche bekannt sind. Dass der Artikel in diesem Bereich liegt,
+  // prüft die Liste darunter ohnehin – das ist die schaerfere Prüfung.
+  if (Array.isArray(state.bestandBereiche) && state.bestandBereiche.length > 0 && !bestandBereiche(state)[bereich]) {
+    return jsonResponse({ error: "Unbekannter Bereich." }, 400);
+  }
+  // Wer welchen Bereich zählt, weiss nur das Tablet. Hat es das noch nicht geschickt, wird nicht
+  // gesperrt – die schaerfere Prüfung kommt gleich darunter: der Artikel muss in diesem Bereich liegen.
+  if (bereichsRollenBekannt(state) && !bestandBereicheFuerPerson(state, name).includes(bereich)) {
+    return jsonResponse({ error: "Diesen Bestand zählst du nicht." }, 403);
+  }
 
   const erlaubteIds = new Set((state.bestand || []).filter((a) => a.bereich === bereich && a.aktiv !== false).map((a) => String(a.id)));
   const werte = [];
@@ -2871,8 +2897,18 @@ async function handleAdminBestand(request, env) {
 
   const state = await getState(env);
   const bereiche = bestandBereiche(state);
-  if (kind !== "delete" && !bereiche[body?.bereich]) {
-    return jsonResponse({ error: `Bitte ${bestandBereicheText(state)} wählen.` }, 400);
+  // Prüfen nur, wenn der Worker die Bereiche dieses Betriebs WIRKLICH kennt – also das Tablet sie
+  // geschickt hat. Sonst wird durchgewunken: das Tablet ordnet den Bereich beim Übernehmen ohnehin
+  // ein und ist die massgebliche Instanz. Eine Prüfung gegen eine Liste, die man gar nicht hat, weist
+  // genau die Betriebe ab, um die es geht – frisch eingespielter Worker, erster Abgleich noch nicht
+  // gelaufen, und nichts geht.
+  const kenntBereiche = Array.isArray(state.bestandBereiche) && state.bestandBereiche.length > 0;
+  const bereichRoh = String(body?.bereich || "").trim();
+  if (kind !== "delete") {
+    if (!bereichRoh) return jsonResponse({ error: `Bitte ${bestandBereicheText(state)} wählen.` }, 400);
+    if (kenntBereiche && !bereiche[bereichRoh]) {
+      return jsonResponse({ error: `Bitte ${bestandBereicheText(state)} wählen.` }, 400);
+    }
   }
 
   const eintrag = {
@@ -2880,7 +2916,8 @@ async function handleAdminBestand(request, env) {
     kind,
     itemId: String(body?.itemId || "") || null,
     name: String(body?.name || "").trim().slice(0, 80),
-    bereich: bereiche[body?.bereich] ? body.bereich : Object.keys(bereiche)[0],
+    // Unbekanntes unverändert weiterreichen: das Tablet ordnet es ein, nicht der Worker.
+    bereich: bereichRoh || Object.keys(bereiche)[0],
     einheit: String(body?.einheit || "Stück").slice(0, BESTAND_EINHEITEN_MAX),
     soll: bestandZahl(body?.soll) ?? 0,
     notiz: String(body?.notiz || "").trim().slice(0, 200),
@@ -4486,7 +4523,7 @@ async function handleAdminTaskTemplate(request, env) {
     phase: AUFGABEN_PHASEN.includes(body?.phase) ? body.phase : "schicht",
     // Mit einem Bestand verknüpft ("Bar zählen"): dann ist die Aufgabe erledigt, sobald die Zählung
     // abgeschlossen ist, und das Handy weiß, dass heute gezählt wird.
-    bestandBereich: bestandBereiche(await getState(env))[body?.bestandBereich] ? body.bestandBereich : "",
+    bestandBereich: String(body?.bestandBereich || "").trim(),
   };
   const state = await getState(env);
   await patchState(env, {

@@ -799,15 +799,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-30",
-      "lastBackupAt": "2026-10-30T14:13:23.477Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at dda159a0aafc3e50df5f02f9fc4c5c5346154b34 but expected 138117b6456ba12c12ea52a4208d9f3be63f9e5c\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-10-30T17:23:38.853Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-30T17:23:16.532Z",
+      "lastSyncAt": "2026-10-30T18:41:19.887Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -837,37 +837,37 @@
         },
         {
           "id": "3796f340-859d-49b2-bbbc-37a10ff7d7ef",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|lilly|2026-10-30||hoch"
         },
         {
           "id": "c83437c7-a8a7-40aa-adef-c0484219948f",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|lilly|2026-10-30||hoch"
         },
         {
           "id": "95773e8f-0142-4d24-a33a-e9c4fa46f93f",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|lilly|2026-10-30||hoch"
         },
         {
           "id": "d8e4bc6c-d35b-4da3-9920-72641bb12fbe",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|lilly|2026-10-30||hoch"
         },
         {
           "id": "f50a7f78-be64-426d-84ee-96b17247c6f8",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|lilly|2026-10-30||hoch"
         },
         {
           "id": "40e10919-7079-4e07-b88d-e0f095d62996",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|lilly|2026-10-30||hoch"
         },
         {
           "id": "e65db042-8511-40de-ae5a-94054d45daca",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|lilly|2026-10-30||hoch"
         },
         {
@@ -957,12 +957,12 @@
         },
         {
           "id": "3fc8f634-8863-4d61-a184-8eb807239b43",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|arianna|2026-10-30||hoch"
         },
         {
           "id": "c3e549e7-047b-4812-8c9c-491117aee44d",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|arianna|2026-10-30||hoch"
         },
         {
@@ -61305,11 +61305,11 @@
           "id": "1e2f784b-acee-4498-a5bd-d1ad6562ace3",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "from": "08:33",
-          "to": null,
+          "to": "19:40",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-30T07:33:27.716Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-30T18:40:09.096Z"
         },
         {
           "id": "c2bbc1cd-25a9-4e09-9977-ccdf1978cc76",
@@ -61569,9 +61569,9 @@
         {
           "id": "3796f340-859d-49b2-bbbc-37a10ff7d7ef",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:01.987Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -61586,9 +61586,9 @@
         {
           "id": "c83437c7-a8a7-40aa-adef-c0484219948f",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:02.263Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
@@ -61603,9 +61603,9 @@
         {
           "id": "95773e8f-0142-4d24-a33a-e9c4fa46f93f",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:02.729Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
@@ -61620,9 +61620,9 @@
         {
           "id": "d8e4bc6c-d35b-4da3-9920-72641bb12fbe",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:02.980Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -61637,9 +61637,9 @@
         {
           "id": "f50a7f78-be64-426d-84ee-96b17247c6f8",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:03.913Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -61654,9 +61654,9 @@
         {
           "id": "40e10919-7079-4e07-b88d-e0f095d62996",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:04.981Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -61671,9 +61671,9 @@
         {
           "id": "e65db042-8511-40de-ae5a-94054d45daca",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "lilly",
+          "doneAt": "2026-10-30T18:40:04.398Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -61977,9 +61977,9 @@
         {
           "id": "3fc8f634-8863-4d61-a184-8eb807239b43",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-30T17:35:27.074Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -61994,9 +61994,9 @@
         {
           "id": "c3e549e7-047b-4812-8c9c-491117aee44d",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-10-30T17:35:26.191Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -62134,6 +62134,11 @@
           "timestamp": "2026-10-30T17:05:10.040Z",
           "action": "eingestempelt",
           "detail": "arianna um 18:05 Uhr"
+        },
+        {
+          "timestamp": "2026-10-30T18:40:09.096Z",
+          "action": "ausgestempelt",
+          "detail": "lilly um 19:40 Uhr"
         }
       ],
       "closedAt": null,

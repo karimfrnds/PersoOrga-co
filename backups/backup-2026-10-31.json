@@ -799,7 +799,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-10-31",
-      "lastBackupAt": "2026-10-31T07:38:50.127Z",
+      "lastBackupAt": "2026-10-31T10:39:06.382Z",
       "lastError": null
     },
     "taskInbox": {
@@ -807,7 +807,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-10-31T10:29:27.732Z",
+      "lastSyncAt": "2026-10-31T13:22:00.168Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -917,37 +917,37 @@
         },
         {
           "id": "4d3b03ab-bf84-4cb3-9eb4-ed8b28c1817a",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|nina|2026-10-31||hoch"
         },
         {
           "id": "aabcfa51-5bf5-42b2-a6de-da7ef743b274",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|nina|2026-10-31||hoch"
         },
         {
           "id": "7145ec43-cb28-431e-8769-afe329695532",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|nina|2026-10-31||hoch"
         },
         {
           "id": "2e200179-ce11-45a1-b08e-0380571ccab5",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|nina|2026-10-31||hoch"
         },
         {
           "id": "a256146d-7a1b-4630-8c4f-f395fc956002",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|nina|2026-10-31||hoch"
         },
         {
           "id": "e66c7934-160f-4d42-a81e-80b24678a6e9",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nina|2026-10-31||hoch"
         },
         {
           "id": "25499ff1-41f7-4c47-842a-03b68ec96382",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|nina|2026-10-31||hoch"
         }
       ],
@@ -1687,7 +1687,6 @@
         "e9dbb803-12fc-45c7-abb1-2da6eaf2647a"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|anna z.|2026-08-29T17:16:04.812Z",
         "2026-08-31|lilly|2026-08-29T17:16:04.813Z",
         "2026-08-31|maria|2026-08-29T17:16:04.815Z",
         "2026-08-31|samuel|2026-08-29T17:16:04.816Z",
@@ -1986,7 +1985,8 @@
         "2026-11-23|rotraut|2026-10-30T07:00:17.835Z",
         "2026-11-23|lilly|2026-10-30T07:00:17.835Z",
         "2026-11-02|emma|2026-10-30T18:46:23.829Z",
-        "2026-11-23|lilly|2026-10-31T00:11:31.775Z"
+        "2026-11-23|lilly|2026-10-31T00:11:31.775Z",
+        "2026-11-09|emma|2026-10-31T11:06:38.641Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -64063,6 +64063,14 @@
           "to": "23:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-5d4e0bae-f8d8-47d5-8f7c-ef367e3781e9",
+          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "from": "10:00",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -64109,6 +64117,17 @@
           ],
           "note": "",
           "submittedAt": "2026-10-18T19:34:16.166Z"
+        },
+        {
+          "id": "5d4e0bae-f8d8-47d5-8f7c-ef367e3781e9",
+          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "slotIds": [
+            "frueh2"
+          ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-31T11:06:38.641Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -64804,6 +64823,14 @@
           "to": "17:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-ad1b5e2a-55ea-4ac2-9618-bba0c3adeff7",
+          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "from": "10:00",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -64839,6 +64866,17 @@
           ],
           "note": "",
           "submittedAt": "2026-10-18T06:21:04.361Z"
+        },
+        {
+          "id": "ad1b5e2a-55ea-4ac2-9618-bba0c3adeff7",
+          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "slotIds": [
+            "frueh2"
+          ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-10-31T11:06:38.641Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -66474,11 +66512,11 @@
           "id": "e1178940-d810-4f27-8c27-9e36cf512770",
           "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
           "from": "09:59",
-          "to": null,
+          "to": "14:02",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-10-31T08:59:48.610Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-10-31T13:02:25.840Z"
         }
       ],
       "plannedShifts": [
@@ -66896,9 +66934,9 @@
         {
           "id": "4d3b03ab-bf84-4cb3-9eb4-ed8b28c1817a",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:04.778Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -66913,9 +66951,9 @@
         {
           "id": "aabcfa51-5bf5-42b2-a6de-da7ef743b274",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:04.985Z",
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
@@ -66930,9 +66968,9 @@
         {
           "id": "7145ec43-cb28-431e-8769-afe329695532",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:05.537Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
@@ -66947,9 +66985,9 @@
         {
           "id": "2e200179-ce11-45a1-b08e-0380571ccab5",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:05.888Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -66964,9 +67002,9 @@
         {
           "id": "a256146d-7a1b-4630-8c4f-f395fc956002",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:07.271Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -66981,9 +67019,9 @@
         {
           "id": "e66c7934-160f-4d42-a81e-80b24678a6e9",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:07.070Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -66998,9 +67036,9 @@
         {
           "id": "25499ff1-41f7-4c47-842a-03b68ec96382",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-10-31T13:02:06.887Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -67049,6 +67087,11 @@
           "timestamp": "2026-10-31T08:59:48.611Z",
           "action": "eingestempelt",
           "detail": "nina um 09:59 Uhr"
+        },
+        {
+          "timestamp": "2026-10-31T13:02:25.840Z",
+          "action": "ausgestempelt",
+          "detail": "nina um 14:02 Uhr"
         }
       ],
       "closedAt": null,
@@ -85774,15 +85817,15 @@
       "area": "innen",
       "note": "",
       "tableIds": [],
-      "status": "offen",
+      "status": "storniert",
       "source": "web",
       "createdAt": "2026-10-15T15:58:30.333Z",
       "arrivedAt": null,
-      "cancelReason": null,
+      "cancelReason": "ausgebucht",
       "cancelNote": "",
-      "cancelledAt": null,
+      "cancelledAt": "2026-10-31T13:02:58.888Z",
       "cancelledBy": "",
-      "cancelNotified": false
+      "cancelNotified": true
     },
     {
       "id": "8986e30f-1cab-4572-a630-a0b1bad702db",
@@ -88866,8 +88909,10 @@
       "guests": 3,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-27T07:01:43.764Z",
       "arrivedAt": null,
@@ -89311,7 +89356,7 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-29T10:33:55.679Z",
       "arrivedAt": "2026-10-31T10:00:40.741Z",
@@ -89420,10 +89465,10 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-29T18:23:36.517Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-10-31T10:39:10.092Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -89592,7 +89637,7 @@
       "tableIds": [
         "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-30T14:13:20.306Z",
       "arrivedAt": "2026-10-31T09:05:02.327Z",

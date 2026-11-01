@@ -799,7 +799,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-01",
-      "lastBackupAt": "2026-11-01T10:11:15.560Z",
+      "lastBackupAt": "2026-11-01T13:12:07.802Z",
       "lastError": null
     },
     "taskInbox": {
@@ -807,12 +807,12 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-01T13:06:59.884Z",
+      "lastSyncAt": "2026-11-01T16:11:54.004Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "cbb721fa-a75b-41ea-bd7c-bd3e18614811",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|emma|2026-11-01||hoch"
         },
         {
@@ -912,7 +912,7 @@
         },
         {
           "id": "355887c1-5957-4f74-b274-f3c55aead877",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|anna z.|2026-11-01||hoch"
         },
         {
@@ -1131,7 +1131,9 @@
         "c2e1c66d-dc21-4550-aae8-60fe9e23295e",
         "f61cb79c-15b0-4e82-9b6f-caf11a655d37",
         "b275b261-0164-4fb0-be6e-3b321c85d965",
-        "c6eea244-d4d5-4a25-b0e7-7efff322d05c"
+        "c6eea244-d4d5-4a25-b0e7-7efff322d05c",
+        "2d5186ff-3b02-4607-b99b-cd03144aad27",
+        "818211fb-600b-4d72-92cf-2f7e2b99ab4d"
       ],
       "appliedMessageIds": [
         "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
@@ -1276,7 +1278,9 @@
         "3f451b92-5683-4764-b0c3-d269d6f1daef",
         "a27260e6-3697-4964-88b7-1e07e67425fc",
         "e04164a8-8176-44ed-9517-243d4926899e",
-        "33c70e19-2e8f-45d5-b9bb-2a0179a49187"
+        "33c70e19-2e8f-45d5-b9bb-2a0179a49187",
+        "a88142cd-f17e-4ed7-ba0e-fd313eff0c95",
+        "4f32bd6f-97b9-4ce9-8ba3-ba06026dda3e"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -2694,7 +2698,8 @@
         "f37757da-a761-4215-b646-8fd414b354f4",
         "96372d24-b94c-4855-b2cb-a3afc641b987",
         "a6d527fc-44de-4931-b960-31f178e8568b",
-        "1c998940-55ae-4cc4-b354-9b15827a5a59"
+        "1c998940-55ae-4cc4-b354-9b15827a5a59",
+        "0d8ebe34-4245-428b-ad64-7ebcdfbb24cc"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -63215,11 +63220,11 @@
           "id": "ff3dd359-95c0-4b80-a222-8b5ccf1b5be5",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "08:07",
-          "to": null,
+          "to": "15:35",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-01T07:07:36.028Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-01T14:35:53.190Z"
         },
         {
           "id": "0887bee1-0b86-405d-8c3a-705f217cbfd0",
@@ -63326,9 +63331,9 @@
         {
           "id": "cbb721fa-a75b-41ea-bd7c-bd3e18614811",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "emma",
+          "doneAt": "2026-11-01T14:35:51.193Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -63670,9 +63675,9 @@
         {
           "id": "355887c1-5957-4f74-b274-f3c55aead877",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-11-01T16:07:38.215Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -63811,6 +63816,11 @@
           "timestamp": "2026-11-01T12:59:25.733Z",
           "action": "ausgestempelt",
           "detail": "lilly um 13:59 Uhr"
+        },
+        {
+          "timestamp": "2026-11-01T14:35:53.190Z",
+          "action": "ausgestempelt",
+          "detail": "emma um 15:35 Uhr"
         }
       ],
       "closedAt": null,
@@ -63946,14 +63956,6 @@
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-42330af3-b5d9-4ebc-adb4-44e5b7cd2e68",
-          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
-          "from": "08:30",
-          "to": "16:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-6b7dccbd-1729-41b6-a2f8-247ac4a3790d",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "from": "15:30",
@@ -63984,6 +63986,14 @@
           "to": "23:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-e671846c-e6ca-495c-bfca-46be208a11b3",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "from": "08:30",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -63997,13 +64007,11 @@
           "submittedAt": "2026-09-29T10:00:17.512Z"
         },
         {
-          "confirmedSlotId": "frueh1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "42330af3-b5d9-4ebc-adb4-44e5b7cd2e68",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
-          "slotIds": [
-            "frueh1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
@@ -64050,6 +64058,17 @@
           ],
           "note": "",
           "submittedAt": "2026-10-28T16:19:34.014Z"
+        },
+        {
+          "id": "e671846c-e6ca-495c-bfca-46be208a11b3",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "slotIds": [
+            "frueh1"
+          ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-01T16:07:23.891Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -64077,7 +64096,8 @@
       "festeSchichtenAngewandt": [
         "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
         "42c3fbc1-c67a-4886-8530-98f52edb74bc",
-        "b16d5f40-7062-41dc-8a3d-185a3b7fca5b"
+        "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
+        "b22e3ff2-5d27-4c9b-8187-acc3366cbe14"
       ]
     },
     {
@@ -64237,14 +64257,6 @@
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-19eb5caa-f4b4-4ae8-9eca-37ea1937d4b7",
-          "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
-          "from": "08:30",
-          "to": "16:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-32b03642-e278-4ab3-b49f-254b69478c4c",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "from": "08:00",
@@ -64275,17 +64287,23 @@
           "to": "23:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-659cb532-aae2-4ffe-8911-a97c60955ca6",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "from": "08:30",
+          "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "19eb5caa-f4b4-4ae8-9eca-37ea1937d4b7",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
-          "slotIds": [
-            "frueh1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
@@ -64332,6 +64350,17 @@
           ],
           "note": "",
           "submittedAt": "2026-10-28T07:22:24.710Z"
+        },
+        {
+          "id": "659cb532-aae2-4ffe-8911-a97c60955ca6",
+          "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+          "slotIds": [
+            "frueh1"
+          ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-01T16:07:23.902Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -64358,7 +64387,8 @@
       "materialkosten": 0,
       "festeSchichtenAngewandt": [
         "2619fc79-ba1f-497e-893e-1a89c0dbd585",
-        "b16d5f40-7062-41dc-8a3d-185a3b7fca5b"
+        "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
+        "b22e3ff2-5d27-4c9b-8187-acc3366cbe14"
       ]
     },
     {
@@ -70460,6 +70490,34 @@
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "❌ Deine Schicht am Mittwoch, 04.11.2026 (Service Abend 1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-10-28T07:22:24.764Z",
+      "readAt": null
+    },
+    {
+      "id": "3004aa91-cb07-47c5-961d-ce2ff1293a76",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "text": "✅ Deine Schicht am Donnerstag, 05.11.2026 (Bar, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-01T16:07:23.898Z",
+      "readAt": null
+    },
+    {
+      "id": "3091c667-3cd1-452d-ad77-af377fce8214",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "text": "✅ Deine Schicht am Freitag, 06.11.2026 (Bar, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-01T16:07:23.907Z",
+      "readAt": null
+    },
+    {
+      "id": "9cf88de2-59c5-441e-90be-22746b7a917d",
+      "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+      "text": "❌ Deine Schicht am Freitag, 06.11.2026 (Bar) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-01T16:07:23.923Z",
+      "readAt": null
+    },
+    {
+      "id": "4c95a6eb-5061-4a18-bff5-75672a74050e",
+      "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
+      "text": "❌ Deine Schicht am Donnerstag, 05.11.2026 (Bar) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-01T16:07:23.932Z",
       "readAt": null
     }
   ],
@@ -90995,10 +91053,10 @@
       "tableIds": [
         "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-01T09:23:15.506Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-01T13:12:20.973Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -91018,10 +91076,10 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-01T10:17:12.904Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-01T13:23:36.233Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -91041,9 +91099,30 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-01T12:42:34.455Z",
+      "arrivedAt": "2026-11-01T13:46:44.020Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "7ba1ac99-6861-442e-b025-fa07f3d86b67",
+      "code": "WJREK",
+      "date": "2026-11-07",
+      "time": "12:45",
+      "name": "Manuela Rheingans",
+      "phone": "017682656419",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-01T14:12:03.942Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

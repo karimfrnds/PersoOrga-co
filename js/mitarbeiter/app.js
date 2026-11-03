@@ -5,6 +5,7 @@
 // ============================================================================
 import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead, sendBestand } from "./api.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
+import { betrieb } from "../betrieb.js";
 
 const outlet = document.getElementById("outlet");
 const WEEKDAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
@@ -637,7 +638,9 @@ function buildPlanTabelle(plan) {
 
     const titel = document.createElement("div");
     titel.className = "muted small wp-bereich";
-    titel.innerHTML = `<b>${bereich === "service" ? "Service / Bar" : "Küche"}</b>`;
+    // "Service / Bar" nur dort, wo es auch eine Bar gibt – bei Rolla Costa stuende sonst eine Rolle
+    // in der Überschrift, die der Betrieb gar nicht kennt. Service und Bar teilen sich einen Plan.
+    titel.innerHTML = `<b>${bereich === "service" ? (betrieb.rollen.includes("bar") ? "Service / Bar" : "Service") : "Küche"}</b>`;
     wrap.appendChild(titel);
 
     const scroll = document.createElement("div");

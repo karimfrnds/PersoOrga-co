@@ -799,15 +799,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-03",
-      "lastBackupAt": "2026-11-03T07:00:29.436Z",
-      "lastError": null
+      "lastBackupAt": "2026-11-03T11:50:22.538Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 5584d0ca752c8b5bc63ed70c514bdbde890a7e2a but expected 32dc0154b209997db09a27d9af72aac777efe62a\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-03T09:57:56.011Z",
+      "lastSyncAt": "2026-11-03T14:45:33.264Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -857,7 +857,7 @@
         },
         {
           "id": "f634d0a4-afa3-4a65-ab08-a47c4223498f",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|julie|2026-11-03||hoch"
         }
       ],
@@ -65625,11 +65625,11 @@
           "id": "6a5d1a83-217f-487d-abcd-fd271b2d16db",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "from": "08:05",
-          "to": null,
+          "to": "15:32",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-03T07:05:52.496Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-03T14:32:10.431Z"
         }
       ],
       "plannedShifts": [
@@ -65862,9 +65862,9 @@
         {
           "id": "f634d0a4-afa3-4a65-ab08-a47c4223498f",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "julie",
+          "doneAt": "2026-11-03T14:32:07.994Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -65903,6 +65903,11 @@
           "timestamp": "2026-11-03T07:05:52.496Z",
           "action": "eingestempelt",
           "detail": "julie um 08:05 Uhr"
+        },
+        {
+          "timestamp": "2026-11-03T14:32:10.431Z",
+          "action": "ausgestempelt",
+          "detail": "julie um 15:32 Uhr"
         }
       ],
       "closedAt": null,
@@ -92537,6 +92542,27 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-11-03T07:00:26.832Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "33e6aa45-2d90-456b-8763-42db8ccf74f1",
+      "code": "U439C",
+      "date": "2026-11-14",
+      "time": "11:00",
+      "name": "Susanne",
+      "phone": "",
+      "guests": 4,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-03T14:26:55.016Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

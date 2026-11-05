@@ -799,7 +799,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-05",
-      "lastBackupAt": "2026-11-05T07:01:28.650Z",
+      "lastBackupAt": "2026-11-05T11:04:39.243Z",
       "lastError": null
     },
     "taskInbox": {
@@ -807,7 +807,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-05T08:04:21.459Z",
+      "lastSyncAt": "2026-11-05T13:35:37.057Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1615,7 +1615,8 @@
         "0f8e7eff-f9be-463a-be19-203a7a486b81",
         "13c19c3f-d8f3-4874-b32d-bcdb4a9ca468",
         "ddb08c67-2107-4057-935e-946a089821c6",
-        "e9dbb803-12fc-45c7-abb1-2da6eaf2647a"
+        "e9dbb803-12fc-45c7-abb1-2da6eaf2647a",
+        "d54af83c-7769-4bf1-a658-7979ace0d7e6"
       ],
       "appliedAvailabilityKeys": [
         "2026-08-31|lilly|2026-08-29T17:17:34.826Z",
@@ -2647,7 +2648,8 @@
         "7fd805ea-e224-4c13-bc27-e7a2829d9bc8",
         "a4674385-0599-49c5-84d4-5abd5b75e211",
         "9805d16e-c9f6-45a1-8a24-5fde597e290c",
-        "bb053c1f-dbee-47e0-b81e-c182bcff1879"
+        "bb053c1f-dbee-47e0-b81e-c182bcff1879",
+        "5cac1de4-31af-4f8c-ad85-76c35bf90c2f"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -76070,6 +76072,38 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "date": "2026-12-06",
       "reportedAt": "2026-10-30T21:50:01.747Z"
+    },
+    {
+      "id": "5e8efc0b-7cbd-4bef-bd2a-61e5c3c275d6",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "date": "2026-11-19",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-05T11:04:36.448Z"
+    },
+    {
+      "id": "6b3e358d-2bb6-43e1-92da-1f08990f8ff7",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "date": "2026-11-20",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-05T11:04:36.458Z"
+    },
+    {
+      "id": "19798858-4d8e-4435-b137-f50e4f650b7d",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "date": "2026-11-21",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-05T11:04:36.465Z"
+    },
+    {
+      "id": "c532c29e-a317-4b59-ae81-37efc9e1ecb6",
+      "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
+      "date": "2026-11-22",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-05T11:04:36.472Z"
     }
   ],
   "publishedWeeks": [
@@ -94609,6 +94643,48 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-11-05T07:01:25.633Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "625353ae-6ef4-4b61-911c-1542d8365d28",
+      "code": "P777T",
+      "date": "2026-11-08",
+      "time": "14:00",
+      "name": "Jaane Dannenberg",
+      "phone": "+4915141645005",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-05T11:04:36.485Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d37d4eaa-9e5a-40d8-8078-51da627f5e4f",
+      "code": "9ZZZQ",
+      "date": "2026-11-08",
+      "time": "09:30",
+      "name": "Cura",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-05T11:05:36.643Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

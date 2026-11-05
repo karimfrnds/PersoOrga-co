@@ -5,7 +5,7 @@ import { store } from "../store.js";
 import { betrieb, kann } from "../betrieb.js";
 import { ROLE_LABEL } from "../calc.js";
 
-import { euro, escapeHtml, dateDe } from "../format.js";
+import { euro, escapeHtml, dateDe, todayStr } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 
 const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -13,14 +13,21 @@ const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 /** "Mo, Di, Mi: Küche 1" – und bei verschiedenen Schichten je Tag entsprechend aufgeteilt. Eine Zeile
  * pro Wochentag wäre bei jemandem mit fünf festen Tagen fünf Zeilen für eine einzige Information. */
 function festeSchichtenText(emp) {
+  // Gruppiert nach Schicht UND Zeitraum: dieselbe Schicht-ID heisst vor und nach einem Planwechsel
+  // verschieden ("Bar" bis 15.11., "Schicht 1" danach). Ohne den Zeitraum im Schluessel stuende beides
+  // unter einem Namen – und zwar unter dem falschen.
   const proSlot = new Map();
   for (const f of emp.festeSchichten || []) {
-    if (!proSlot.has(f.slotId)) proSlot.set(f.slotId, []);
-    proSlot.get(f.slotId).push(f.weekday);
+    const schluessel = `${f.slotId}|${f.von || ""}|${f.bis || ""}`;
+    if (!proSlot.has(schluessel)) proSlot.set(schluessel, { slotId: f.slotId, von: f.von || "", bis: f.bis || "", tage: [] });
+    proSlot.get(schluessel).tage.push(f.weekday);
   }
-  const slots = store.getShiftSlotsForRole(emp.role);
-  return [...proSlot.entries()]
-    .map(([slotId, tage]) => `${tage.sort((a, b) => a - b).map((w) => WOCHENTAGE_KURZ[w]).join(", ")}: ${slots.find((s) => s.id === slotId)?.label || slotId}`)
+  return [...proSlot.values()]
+    .map((g) => {
+      const label = store.findeSchichtDefinition(emp.role, g.slotId, g.von || undefined)?.label || g.slotId;
+      const zeitraum = [g.von ? `ab ${dateDe(g.von)}` : null, g.bis ? `bis ${dateDe(g.bis)}` : null].filter(Boolean).join(" ");
+      return `${g.tage.sort((a, b) => a - b).map((w) => WOCHENTAGE_KURZ[w]).join(", ")}: ${label}${zeitraum ? ` (${zeitraum})` : ""}`;
+    })
     .join(" · ");
 }
 
@@ -209,12 +216,19 @@ function renderEmployees() {
     // Befristete Schichten ("Hanna bis 30.11.") passen da nicht hinein – sie werden unten nur angezeigt
     // und beim Speichern unangetastet uebernommen. Wuerde man sie hier mit einsammeln, loeschte ein
     // beliebiges Speichern (etwa nur des Stundenlohns) stillschweigend die Befristung.
-    const befristete = (emp?.festeSchichten || []).filter((f) => f.von || f.bis);
-    const festEntwurf = new Map((emp?.festeSchichten || []).filter((f) => !f.von && !f.bis).map((f) => [f.weekday, f.slotId]));
+    // Steht ein Planwechsel bevor, ist das Muster, das man hier bearbeitet, das des NEUEN Plans:
+    // eine Dauerregel, die nur noch zehn Tage gilt, waere sinnlos. Die Eintraege bekommen dann das
+    // Startdatum des neuen Plans; die alten (die auf den Tag davor befristet sind) stehen darunter.
+    const planStart = store.naechsterPlanwechsel();
+    const heuteStr = todayStr();
+    const istMuster = (f) => !f.bis && (!f.von || f.von <= heuteStr || f.von === planStart);
+    const alleFest = emp?.festeSchichten || [];
+    const befristete = alleFest.filter((f) => !istMuster(f));
+    const festEntwurf = new Map(alleFest.filter(istMuster).map((f) => [f.weekday, f.slotId]));
     const rolleSel = overlay.querySelector("#f-role");
     const festBox = overlay.querySelector("#f-fest");
     function zeichneFest() {
-      const slots = store.getShiftSlotsForRole(rolleSel.value);
+      const slots = store.getShiftSlotsForPlan(rolleSel.value, planStart || undefined);
       festBox.innerHTML = "";
       for (let wd = 0; wd < 7; wd++) {
         const zeile = document.createElement("label");
@@ -247,11 +261,18 @@ function renderEmployees() {
       }
     }
     rolleSel.onchange = zeichneFest;
+    // Sagen, welcher Plan hier gerade bearbeitet wird – sonst wundert man sich, warum "Bar" verschwunden ist.
+    if (planStart) {
+      const info = document.createElement("p");
+      info.className = "muted small";
+      info.textContent = `Zur Auswahl stehen die Schichten des Plans ab ${dateDe(planStart)}. Was du hier einträgst, gilt ab diesem Tag; bis dahin läuft der bisherige Plan weiter.`;
+      festBox.parentNode.insertBefore(info, festBox);
+    }
     // Die Store-Managerin arbeitet Mo–Fr in ihrer eigenen Schicht. Beim Setzen des Hakens werden diese Tage
     // vorbelegt – aber nur, wo noch nichts steht, und sichtbar, damit man es vor dem Speichern sieht.
     if (overlay.querySelector("#f-store")) overlay.querySelector("#f-store").onchange = (e) => {
       if (!e.target.checked) return;
-      const storeSlot = store.getShiftSlotsForRole(rolleSel.value).find((sl) => sl.nurFest);
+      const storeSlot = store.getShiftSlotsForPlan(rolleSel.value, planStart || undefined).find((sl) => sl.nurFest);
       if (!storeSlot) return;
       for (let wd = 0; wd <= 4; wd++) if (!festEntwurf.has(wd)) festEntwurf.set(wd, storeSlot.id);
       zeichneFest();
@@ -262,7 +283,7 @@ function renderEmployees() {
       hinweis.className = "callout";
       const text = befristete
         .map((f) => {
-          const sl = store.getShiftSlotsForRole(emp?.role).find((x) => x.id === f.slotId);
+          const sl = store.findeSchichtDefinition(emp?.role, f.slotId, f.von || undefined);
           const zeitraum = [f.von ? `ab ${dateDe(f.von)}` : null, f.bis ? `bis ${dateDe(f.bis)}` : null].filter(Boolean).join(" ");
           return `${WOCHENTAGE_KURZ[f.weekday]} ${sl ? sl.label : f.slotId} (${zeitraum})`;
         })
@@ -295,7 +316,12 @@ function renderEmployees() {
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
         istStoreManagerin: !!overlay.querySelector("#f-store")?.checked,
       };
-      const feste = [...[...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId })), ...befristete];
+      // Beim bevorstehenden Planwechsel bekommt jeder neue Eintrag dessen Startdatum – sonst wuerde die
+      // Regel schon ab morgen greifen, obwohl es die Schicht erst ab dem Stichtag gibt.
+      const feste = [
+        ...[...festEntwurf.entries()].map(([weekday, slotId]) => (planStart ? { weekday, slotId, von: planStart } : { weekday, slotId })),
+        ...befristete,
+      ];
       if (isEdit) {
         store.updateEmployee(emp.id, payload);
         // Ueber setFesteSchichten, nicht ueber das payload: nur dieser Weg raeumt die schon erzeugten

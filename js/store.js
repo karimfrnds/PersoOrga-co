@@ -7,6 +7,28 @@ import { betrieb, kann } from "./betrieb.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
 import { planFuer as planAusListe } from "./schichtplan.js";
 
+/** Der frnds-Schichtplan ab 16.11.2026 als feste Schichten.
+ *  [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So, von/bis leer = unbefristet.
+ *  Steht hier und nicht in der Migration, weil die Liste weiterlebt: wer beim Umstellen noch nicht
+ *  angelegt war, bekommt seine Schichten, sobald er angelegt wird (siehe schichtplanNachtragAnwenden). */
+const SCHICHTPLAN_NEU_AB = "2026-11-16";
+const SCHICHTPLAN_NEU_BIS_ALT = "2026-11-15";
+const SCHICHTPLAN_NEU = [
+  ["Timm", "service", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"]]],
+  ["Vincent", "service", [[0, "spaet1"], [1, "spaet1"], [2, "spaet1"]]],
+  ["Lilly", "service", [[3, "frueh1"], [4, "frueh1"], [5, "frueh1"], [6, "frueh1"]]],
+  ["Leanna", "service", [[3, "spaet1"], [4, "spaet1"], [5, "spaet1"]]],
+  ["Kaya", "service", [[6, "spaet1"]]],
+  ["Anna", "service", [[6, "mittel1"]]],
+  ["Karla", "kueche", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"], [3, "frueh1"], [4, "frueh1"]]],
+  ["Hanna", "kueche", [[0, "frueh2", "", "2026-11-30"], [4, "frueh2", "", "2026-11-30"]]],
+  ["Juli", "kueche", [[1, "frueh2", "", "2026-12-31"], [3, "frueh2", "", "2026-12-31"]]],
+  ["Santiago", "kueche", [[5, "frueh1"], [6, "frueh1"]]],
+  ["Benjamin", "kueche", [[4, "spaet1", "2026-12-01"], [5, "mittel1"], [6, "mittel1"]]],
+  ["Emma", "kueche", [[5, "spaet1"], [6, "spaet1"]]],
+];
+
+
 // Je Betrieb ein eigener Speicher: das Café und der Pop-up-Store teilen sich den Code, aber keine Daten.
 const STORAGE_KEY = betrieb.speicher;
 
@@ -701,6 +723,63 @@ einmaligeMigrationen();
 
 /** Umstellungen, die genau einmal über die vorhandenen Daten laufen müssen. Jede hat einen Namen und wird
  * danach in settings.migrationen vermerkt – beim nächsten Laden passiert nichts mehr. */
+
+/**
+ * Traegt die festen Schichten des neuen Plans bei allen nach, die inzwischen angelegt sind.
+ *
+ * Der Plan stand fest, bevor alle Leute im System waren. Statt zu verlangen, dass jemand daran denkt,
+ * die Schichten spaeter von Hand einzutragen (was genau einmal vergessen wird und dann steht der
+ * Samstag leer da), bleibt die Liste offen: jeder Aufruf traegt nach, was inzwischen moeglich ist,
+ * und streicht den Namen von der Liste. Uebrig bleibt nur, wer wirklich noch fehlt – und genau das
+ * sagt der Hinweis im Admin.
+ *
+ * Die Rolle muss passen: "frueh1" gibt es in Service UND Kueche. Jemanden mit der falschen Rolle
+ * einzutragen wuerde ihn in die falsche Schicht setzen, also wird das gemeldet statt geraten.
+ */
+function schichtplanNachtragAnwenden() {
+  const offen = data.settings.schichtplanNachtrag;
+  if (!Array.isArray(offen) || offen.length === 0) return false;
+  const bleibt = [];
+  const falscheRolle = [];
+  let geaendert = false;
+  for (const eintrag of offen) {
+    const name = String(eintrag?.name || "").trim();
+    const tage = Array.isArray(eintrag?.tage) ? eintrag.tage : [];
+    if (!name || tage.length === 0) continue;
+    const emp = data.employees.find((e) => e.active && e.name.trim().toLowerCase() === name.toLowerCase());
+    if (!emp) {
+      bleibt.push(eintrag);
+      continue;
+    }
+    const sollRolle = eintrag.rolle === "kueche" ? "kueche" : "service";
+    const istRolle = emp.role === "kueche" ? "kueche" : "service";
+    if (sollRolle !== istRolle) {
+      bleibt.push(eintrag);
+      falscheRolle.push(`${emp.name} ist als ${istRolle === "kueche" ? "Küche" : "Service"} angelegt, steht im Plan aber in ${sollRolle === "kueche" ? "der Küche" : "im Service"}`);
+      continue;
+    }
+    // Was schon da ist, bleibt: Bestehendes ohne Zeitraum endet am 15.11., der Rest wird ergaenzt.
+    const alt = (emp.festeSchichten || []).map((f) => (f.von || f.bis ? f : { ...f, bis: SCHICHTPLAN_NEU_BIS_ALT }));
+    const neu = tage.map(([weekday, slotId, von, bis]) => ({ weekday, slotId, von: von || SCHICHTPLAN_NEU_AB, bis: bis || "" }));
+    emp.festeSchichten = normalizeFesteSchichten([...alt, ...neu]);
+    geaendert = true;
+  }
+  if (bleibt.length !== offen.length) {
+    data.settings.schichtplanNachtrag = bleibt;
+    geaendert = true;
+  }
+  const fehlend = bleibt.filter((e) => !falscheRolle.some((t) => t.startsWith(String(e.name) + " "))).map((e) => `${e.name} (${e.rolle === "kueche" ? "Küche" : "Service"})`);
+  const teile = [];
+  if (fehlend.length) teile.push(`Diese Leute stehen im Plan ab 16.11., sind hier aber noch nicht angelegt: ${fehlend.join(", ")}. Lege sie unter Mitarbeiter an – ihre festen Schichten trage ich danach von selbst nach.`);
+  if (falscheRolle.length) teile.push(`Rolle prüfen: ${falscheRolle.join("; ")}.`);
+  const text = teile.join(" ");
+  if ((data.settings.schichtplanHinweis || "") !== text) {
+    data.settings.schichtplanHinweis = text;
+    geaendert = true;
+  }
+  return geaendert;
+}
+
 function einmaligeMigrationen() {
   const erledigt = new Set(data.settings.migrationen || []);
   let geaendert = false;
@@ -717,52 +796,67 @@ function einmaligeMigrationen() {
   // er nicht zur Schicht erscheint.
   // Nur im Café: der Plan gehört zu frnds. Bei Rolla Costa gibt es keinen dieser Namen – dort haette
   // die Umstellung zwölf "fehlende" Leute gemeldet und einen Hinweis hinterlassen, der nichts bedeutet.
-  if (betrieb.id === "frnds" && !erledigt.has("schichtplan-2026-11-16")) {
-    const AB = "2026-11-16";
-    const BIS_ALT = "2026-11-15";
-    // [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So
-    const NEU = [
-      ["Timm", "service", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"]]],
-      ["Vincent", "service", [[0, "spaet1"], [1, "spaet1"], [2, "spaet1"]]],
-      ["Lilly", "service", [[3, "frueh1"], [4, "frueh1"], [5, "frueh1"], [6, "frueh1"]]],
-      ["Leanna", "service", [[3, "spaet1"], [4, "spaet1"], [5, "spaet1"]]],
-      ["Kaya", "service", [[6, "spaet1"]]],
-      ["Anna", "service", [[6, "mittel1"]]],
-      ["Karla", "kueche", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"], [3, "frueh1"], [4, "frueh1"]]],
-      ["Hanna", "kueche", [[0, "frueh2", "", "2026-11-30"], [4, "frueh2", "", "2026-11-30"]]],
-      ["Juli", "kueche", [[1, "frueh2", "", "2026-12-31"], [3, "frueh2", "", "2026-12-31"]]],
-      ["Santiago", "kueche", [[5, "frueh1"], [6, "frueh1"]]],
-      ["Benjamin", "kueche", [[4, "spaet1", "2026-12-01"], [5, "mittel1"], [6, "mittel1"]]],
-      ["Emma", "kueche", [[5, "spaet1"], [6, "spaet1"]]],
-    ];
-    const fehlend = [];
-    for (const [name, rolle, tage] of NEU) {
-      const emp = data.employees.find((e) => e.active && e.name.trim().toLowerCase() === name.toLowerCase());
-      if (!emp) {
-        fehlend.push(`${name} (${rolle === "kueche" ? "Küche" : "Service"})`);
-        continue;
-      }
-      // Alles Bisherige endet am 15.11. – auch bei Leuten, die im neuen Plan weiter vorkommen: ihre
-      // Zeiten und Schicht-IDs aendern sich ja.
-      const alt = (emp.festeSchichten || []).map((f) => (f.von || f.bis ? f : { ...f, bis: BIS_ALT }));
-      const neu = tage.map(([weekday, slotId, von, bis]) => ({ weekday, slotId, von: von || AB, bis: bis || "" }));
-      emp.festeSchichten = normalizeFesteSchichten([...alt, ...neu]);
-      geaendert = true;
-    }
-    // Wer im Plan steht, aber nicht mehr: feste Schichten enden trotzdem am 15.11.
-    const imPlan = new Set(NEU.map(([n]) => n.toLowerCase()));
+  // Eigener Schluessel ("-v2"), weil eine fruehere Fassung dieser Umstellung schon gelaufen sein kann:
+  // die hat die neuen Schichten nur bei denen eingetragen, die damals angelegt waren, und sich danach
+  // als erledigt vermerkt. Dieser Durchgang ist bewusst so gebaut, dass er auch darauf noch das
+  // Richtige tut – normalizeFesteSchichten wirft Doppelte weg, ein zweites Eintragen aendert nichts.
+  if (betrieb.id === "frnds" && !erledigt.has("schichtplan-2026-11-16-v2")) {
+    // Alles Bisherige endet am 15.11. – auch bei Leuten, die im neuen Plan weiter vorkommen: ihre
+    // Zeiten und Schicht-IDs aendern sich ja.
     for (const e of data.employees) {
-      if (!e.active || imPlan.has(e.name.trim().toLowerCase())) continue;
-      if (!(e.festeSchichten || []).length) continue;
-      e.festeSchichten = normalizeFesteSchichten(e.festeSchichten.map((f) => (f.von || f.bis ? f : { ...f, bis: BIS_ALT })));
+      if (!e.active || !(e.festeSchichten || []).length) continue;
+      e.festeSchichten = normalizeFesteSchichten(e.festeSchichten.map((f) => (f.von || f.bis ? f : { ...f, bis: SCHICHTPLAN_NEU_BIS_ALT })));
       geaendert = true;
     }
-    if (fehlend.length > 0) {
-      // Keine stille Luecke: der Hinweis steht im Admin, bis er abgehakt wird.
-      data.settings.schichtplanHinweis = `Diese Leute stehen im Plan ab 16.11., sind hier aber nicht angelegt: ${fehlend.join(", ")}. Lege sie unter Mitarbeiter an – ihre festen Schichten trage ich danach nicht automatisch nach, das machst du im Formular.`;
-      geaendert = true;
+    // Die neuen festen Schichten kommen nicht hier rein, sondern ueber die Nachtragsliste: wer heute
+    // noch nicht angelegt ist, bekommt sie, sobald er angelegt wird.
+    data.settings.schichtplanNachtrag = SCHICHTPLAN_NEU.map(([name, rolle, tage]) => ({ name, rolle, tage }));
+
+    // Tage ab dem Stichtag koennen schon nach dem ALTEN Plan vorbereitet sein – feste Schichten werden
+    // bis zu vier Wochen im Voraus eingetragen. Was dort steht, gibt es zum Teil gar nicht mehr
+    // ("Service Abend 1" am 20.11.). Solche Eintraege wegraeumen, sonst bliebe die Person mit einer
+    // Schicht im Plan stehen, die es nicht gibt – und der Tag gilt als "schon bearbeitet", sodass die
+    // neue feste Schicht nie nachkaeme.
+    for (const d of data.days) {
+      if (d.date < SCHICHTPLAN_NEU_AB || d.status !== "offen") continue;
+      const uebrig = [];
+      for (const a of d.availability || []) {
+        const rolle = roleOf(a.employeeId);
+        const gueltig = new Set(shiftSlotsForRole(rolle, d.date).map((sl) => sl.id));
+        const slotIds = (a.slotIds || []).filter((id) => gueltig.has(id));
+        if (slotIds.length === 0) {
+          // Nur Bescheid sagen, wenn die Schicht wirklich fest zugesagt war – eine blosse Meldung,
+          // die wegfaellt, kann die Person beim naechsten Eintragen selbst neu setzen.
+          if (a.confirmedSlotId && a.bossConfirmed && a.quelle !== "fest") {
+            data.notifications.push({
+              id: uid(),
+              employeeId: a.employeeId,
+              text: `ℹ️ Ab dem ${dateDe(SCHICHTPLAN_NEU_AB)} gilt der neue Schichtplan. Deine Schicht am ${dateDe(d.date)} gibt es in der Form nicht mehr – bitte im Kiosk neu eintragen.`,
+              createdAt: new Date().toISOString(),
+              readAt: null,
+            });
+          }
+          continue;
+        }
+        a.slotIds = slotIds;
+        if (a.confirmedSlotId && !gueltig.has(a.confirmedSlotId)) {
+          a.confirmedSlotId = null;
+          a.bossConfirmed = false;
+        }
+        uebrig.push(a);
+      }
+      if (uebrig.length !== (d.availability || []).length) geaendert = true;
+      d.availability = uebrig;
+      // Der Tag darf noch einmal mit festen Schichten befuellt werden – mit denen des neuen Plans.
+      if ((d.festeSchichtenAngewandt || []).length) {
+        d.festeSchichtenAngewandt = [];
+        geaendert = true;
+      }
+      resolveDayAvailability(d);
     }
+
     erledigt.add("schichtplan-2026-11-16");
+    erledigt.add("schichtplan-2026-11-16-v2");
     geaendert = true;
   }
 
@@ -800,6 +894,10 @@ function einmaligeMigrationen() {
     erledigt.add("mitte-werktags-weg");
     geaendert = true;
   }
+
+  // Zum Schluss: nachtragen, was inzwischen moeglich ist. Laeuft bei JEDEM Start, nicht nur einmal –
+  // darum ist der Plan irgendwann von selbst vollstaendig, ohne dass jemand daran denken muss.
+  if (schichtplanNachtragAnwenden()) geaendert = true;
 
   if (geaendert) {
     data.settings.migrationen = [...erledigt];
@@ -907,7 +1005,10 @@ function materializePlannedShiftsFromAvailability(d) {
     const idx = d.plannedShifts.findIndex((s) => s.id === shiftId);
     if (a.confirmedSlotId) {
       const emp = data.employees.find((e) => e.id === a.employeeId);
-      const slot = emp ? shiftSlotsForRole(emp.role).find((s) => s.id === a.confirmedSlotId) : null;
+      // MIT dem Datum des Tages: die Schichtzeiten haengen am Plan, der an DIESEM Tag gilt. Ohne das
+      // Datum bekaeme ein Tag ab dem 16.11.2026 die Zeiten des alten Plans – die Schicht stuende mit
+      // falschen Zeiten im Plan, und eine Schicht, die es nur im neuen Plan gibt, entstuende gar nicht.
+      const slot = emp ? shiftSlotsForRole(emp.role, d.date).find((s) => s.id === a.confirmedSlotId) : null;
       if (slot) {
         // Zeiten für den konkreten Wochentag auflösen (z.B. Service 1 endet Mo/Di später).
         const s = slotForDate(slot, d.date);
@@ -973,6 +1074,9 @@ export const store = {
       istStoreManagerin: !!emp.istStoreManagerin,
     };
     data.employees.push(e);
+    // Steht die Person im neuen Schichtplan und wurde sie erst jetzt angelegt, bekommt sie ihre festen
+    // Schichten sofort – das ist der Grund, warum die Nachtragsliste ueberhaupt existiert.
+    schichtplanNachtragAnwenden();
     persist();
     return e;
   },
@@ -982,6 +1086,9 @@ export const store = {
     Object.assign(e, patch);
     if (patch.festeSchichten !== undefined) e.festeSchichten = normalizeFesteSchichten(patch.festeSchichten);
     if (patch.istStoreManagerin !== undefined) e.istStoreManagerin = !!patch.istStoreManagerin;
+    // Name oder Rolle koennen hier korrigiert worden sein – dann passt die Person jetzt vielleicht
+    // zu einem offenen Eintrag aus dem neuen Plan.
+    if (patch.name !== undefined || patch.role !== undefined || patch.active !== undefined) schichtplanNachtragAnwenden();
     persist();
   },
   /** true, wenn der PIN schon von einem anderen aktiven Mitarbeiter oder dem Admin-PIN benutzt wird. */
@@ -1336,6 +1443,38 @@ export const store = {
   /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). Mit dateStr nur die an
    * diesem Wochentag tatsächlich angebotenen Schichten – und mit den Zeiten, die an dem Tag gelten
    * (z.B. Service 1 endet Mo/Di später). Ohne dateStr die Grunddefinition. */
+  /** Steht ein Planwechsel bevor? Gibt das Datum zurueck, ab dem der naechste Plan gilt – sonst "".
+   *
+   * Wichtig fuer das Mitarbeiter-Formular: eine feste Schicht ist eine Dauerregel. Solange dort nur die
+   * Schichten von heute zur Auswahl stuenden, koennte man niemanden auf eine Schicht des neuen Plans
+   * setzen – man saehe "Bar" und "Service Abend", obwohl es die ab dem Stichtag nicht mehr gibt. */
+  naechsterPlanwechsel() {
+    const plaene = betrieb.schichtPlaene;
+    if (!Array.isArray(plaene)) return "";
+    const heute = todayStr();
+    const zukunft = plaene.map((p) => String(p?.ab || "")).filter((ab) => ab > heute).sort();
+    return zukunft[0] || "";
+  },
+  /** Die Definition einer Schicht, auch wenn sie erst kuenftig gilt – fuers Beschriften bestehender
+   *  Eintraege ("Mo: Schicht 1" statt "Mo: frueh1"). */
+  findeSchichtDefinition(role, slotId, dateStr) {
+    const direkt = shiftSlotsForRole(role, dateStr).find((s) => s.id === slotId);
+    if (direkt) return direkt;
+    for (const plan of Array.isArray(betrieb.schichtPlaene) ? betrieb.schichtPlaene : []) {
+      const treffer = ((role === "kueche" ? plan.kueche : plan.service) || []).find((s) => s.id === slotId);
+      if (treffer) return treffer;
+    }
+    return null;
+  },
+  /** Alle Schichten eines Plans, OHNE Wochentags-Filter.
+   *
+   * getShiftSlotsForRole() filtert mit dem Datum auch gleich auf dessen Wochentag – richtig, wenn man
+   * wissen will, was an EINEM Tag laeuft. Wer das Wochenmuster bearbeitet, braucht aber alle Schichten
+   * des Plans und filtert selbst pro Wochentag: sonst fiele der Springer weg, nur weil der Stichtag
+   * zufaellig ein Montag ist. */
+  getShiftSlotsForPlan(role, dateStr) {
+    return shiftSlotsForRole(role, dateStr);
+  },
   getShiftSlotsForRole(role, dateStr) {
     const all = shiftSlotsForRole(role, dateStr);
     if (!dateStr) return all;
@@ -1477,7 +1616,7 @@ export const store = {
     resolveDayAvailability(d);
     persist();
 
-    const slotRaw = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    const slotRaw = shiftSlotsForRole(role, d.date).find((s) => s.id === slotId);
     const slotDef = slotRaw ? slotForDate(slotRaw, d.date) : null;
     const noteText = note ? String(note).trim() : "";
     this.addNotification(
@@ -1509,7 +1648,7 @@ export const store = {
     persist();
 
     const role = roleOf(employeeId);
-    const slotDef = shiftSlotsForRole(role).find((s) => s.id === slotId);
+    const slotDef = shiftSlotsForRole(role, d.date).find((s) => s.id === slotId);
     this.addNotification(
       employeeId,
       `❌ Deine Schicht am ${dateDe(d.date)}${slotDef ? ` (${slotDef.label})` : ""} wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.`

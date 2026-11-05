@@ -467,7 +467,7 @@ async function performTaskSync() {
     } else if (!r.date) {
       syncWarnings.push(`Ablehnung für ${r.employeeName}: kein gültiges Datum erkannt.`);
     } else {
-      const slot = store.getShiftSlotsForRole(match.role).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(r.slotLabel));
+      const slot = store.getShiftSlotsForRole(match.role, r.date).find((s) => normalizeSlotLabel(s.label) === normalizeSlotLabel(r.slotLabel));
       if (!slot) {
         syncWarnings.push(`Ablehnung für ${r.employeeName} am ${r.date}: Schicht "${r.slotLabel}" nicht erkannt.`);
       } else {

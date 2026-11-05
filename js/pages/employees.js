@@ -5,7 +5,7 @@ import { store } from "../store.js";
 import { betrieb, kann } from "../betrieb.js";
 import { ROLE_LABEL } from "../calc.js";
 
-import { euro, escapeHtml } from "../format.js";
+import { euro, escapeHtml, dateDe } from "../format.js";
 import { confirmDialog, alertDialog } from "../dialog.js";
 
 const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -205,7 +205,12 @@ function renderEmployees() {
     // Feste Schichten: je Wochentag eine Auswahl. Welche Schichten es gibt, haengt an der Rolle – wird
     // die im Formular geaendert, muss die Liste neu gezeichnet werden, sonst stuenden dort die Schichten
     // der alten Rolle. Was dabei nicht mehr passt, faellt weg.
-    const festEntwurf = new Map((emp?.festeSchichten || []).map((f) => [f.weekday, f.slotId]));
+    // Dieses Formular bearbeitet das WOECHENTLICHE Muster: ein Eintrag je Wochentag, unbefristet.
+    // Befristete Schichten ("Hanna bis 30.11.") passen da nicht hinein – sie werden unten nur angezeigt
+    // und beim Speichern unangetastet uebernommen. Wuerde man sie hier mit einsammeln, loeschte ein
+    // beliebiges Speichern (etwa nur des Stundenlohns) stillschweigend die Befristung.
+    const befristete = (emp?.festeSchichten || []).filter((f) => f.von || f.bis);
+    const festEntwurf = new Map((emp?.festeSchichten || []).filter((f) => !f.von && !f.bis).map((f) => [f.weekday, f.slotId]));
     const rolleSel = overlay.querySelector("#f-role");
     const festBox = overlay.querySelector("#f-fest");
     function zeichneFest() {
@@ -252,6 +257,19 @@ function renderEmployees() {
       zeichneFest();
     };
     zeichneFest();
+    if (befristete.length > 0) {
+      const hinweis = document.createElement("p");
+      hinweis.className = "callout";
+      const text = befristete
+        .map((f) => {
+          const sl = store.getShiftSlotsForRole(emp?.role).find((x) => x.id === f.slotId);
+          const zeitraum = [f.von ? `ab ${dateDe(f.von)}` : null, f.bis ? `bis ${dateDe(f.bis)}` : null].filter(Boolean).join(" ");
+          return `${WOCHENTAGE_KURZ[f.weekday]} ${sl ? sl.label : f.slotId} (${zeitraum})`;
+        })
+        .join(" · ");
+      hinweis.innerHTML = `<b>Befristete feste Schichten:</b> ${escapeHtml(text)}<br><span class="small">Die stehen im Schichtplan und bleiben beim Speichern erhalten – ändern lassen sie sich hier nicht.</span>`;
+      festBox.parentNode.insertBefore(hinweis, festBox.nextSibling);
+    }
     overlay.querySelector("#f-cancel").onclick = () => overlay.remove();
     overlay.querySelector("#f-save").onclick = async () => {
       const name = overlay.querySelector("#f-name").value.trim();
@@ -277,7 +295,7 @@ function renderEmployees() {
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,
         istStoreManagerin: !!overlay.querySelector("#f-store")?.checked,
       };
-      const feste = [...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId }));
+      const feste = [...[...festEntwurf.entries()].map(([weekday, slotId]) => ({ weekday, slotId })), ...befristete];
       if (isEdit) {
         store.updateEmployee(emp.id, payload);
         // Ueber setFesteSchichten, nicht ueber das payload: nur dieser Weg raeumt die schon erzeugten

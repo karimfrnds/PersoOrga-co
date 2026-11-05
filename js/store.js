@@ -111,25 +111,10 @@ function defaultData() {
       // weekdayOverrides: abweichende Zeiten an einzelnen Wochentagen (0=Mo).
       // Im Pop-up sind die Zeiten im Admin änderbar (sie stehen am Anfang nie fest); im Café kommen sie
       // aus dem Code und werden beim Laden immer neu gesetzt.
-      shiftSlots: betrieb.schichten || {
-        service: [
-          // Hieß bis 09/2026 "Service 1". Die ID bleibt, damit alle bisherigen Einträge weiter passen.
-          { id: "frueh1", label: "Bar", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
-          { id: "frueh2", label: "Service 2", from: "09:00", to: "17:00", allowedWeekdays: [5, 6], weekdayOverrides: { 6: { to: "17:30" } } }, // nur Sa/So, So bis 17:30
-          // Unter der Woche macht das die Store-Managerin (siehe "frueh3") – die Mittelschicht gibt es nur noch am Wochenende.
-          { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00", allowedWeekdays: [5, 6] },
-          // Die Schicht der Store-Managerin, Mo–Fr. nurFest: wird ausschließlich über eine feste Schicht vergeben
-          // und taucht deshalb in keiner Verfügbarkeits-Abfrage auf – sonst könnten andere sie auswählen.
-          { id: "frueh3", label: "Store-Management", from: "08:00", to: "14:00", allowedWeekdays: [0, 1, 2, 3, 4], nurFest: true },
-          { id: "spaet1", label: "Service Abend 1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
-          { id: "spaet2", label: "Service Abend 2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
-        ],
-        kueche: [
-          { id: "frueh1", label: "Küche 1", from: "08:00", to: "15:30" },
-          { id: "mittel", label: "Küche Mitte", from: "10:00", to: "14:00" },
-          { id: "frueh2", label: "Küche 2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
-        ],
-      },
+      // Der Plan, der HEUTE gilt. Die Folge der Plaene mit Stichtag steht in betrieb.js; hier liegt
+      // nur der aktuelle, damit jede Anzeige, die einfach "die Schichten" liest, den richtigen Stand
+      // zeigt. Im Pop-up ist es die eine, im Admin aenderbare Liste.
+      shiftSlots: betrieb.schichten || { service: [], kueche: [] },
       // Was verkauft wird (nur im Pop-up): { id, name, preis, gebacken }. "gebacken" heisst: davon wird
       // morgens eine Menge hergestellt, es gibt also Backmenge, Verkauf und Rest.
       produkte: betrieb.produkte || [],
@@ -541,14 +526,27 @@ function normalizeRecipe(v) {
 /** Feste Schichten einer Person: an welchem Wochentag sie immer welche Schicht hat.
  * [{ weekday: 0..6, slotId }] – hoechstens ein Eintrag pro Wochentag. */
 function normalizeFesteSchichten(list) {
-  const proTag = new Map();
+  const eintraege = new Map();
   for (const f of Array.isArray(list) ? list : []) {
     const wd = Number(f?.weekday);
     const slotId = String(f?.slotId || "").trim();
     if (!Number.isInteger(wd) || wd < 0 || wd > 6 || !slotId) continue;
-    proTag.set(wd, { weekday: wd, slotId });
+    // Von/Bis sind optional und beide EINSCHLIESSLICH. "Hanna bis 30.11." heisst: der 30.11. gehoert
+    // noch dazu. Ohne Angabe gilt die Schicht unbefristet – so wie bisher jede feste Schicht.
+    const von = /^\d{4}-\d{2}-\d{2}$/.test(f?.von || "") ? f.von : "";
+    const bis = /^\d{4}-\d{2}-\d{2}$/.test(f?.bis || "") ? f.bis : "";
+    // Der Schluessel enthaelt den Zeitraum: derselbe Wochentag darf zweimal vorkommen, wenn die
+    // Zeitraeume verschieden sind (eine Person uebernimmt ab Dezember eine andere Schicht).
+    eintraege.set(`${wd}|${von}|${bis}`, { weekday: wd, slotId, von, bis });
   }
-  return [...proTag.values()].sort((a, b) => a.weekday - b.weekday);
+  return [...eintraege.values()].sort((a, b) => a.weekday - b.weekday || String(a.von).localeCompare(String(b.von)));
+}
+
+/** Gilt diese feste Schicht an diesem Tag? */
+function festeSchichtGilt(f, dateStr) {
+  if (f.von && dateStr < f.von) return false;
+  if (f.bis && dateStr > f.bis) return false;
+  return true;
 }
 
 function load() {
@@ -706,6 +704,67 @@ function einmaligeMigrationen() {
   const erledigt = new Set(data.settings.migrationen || []);
   let geaendert = false;
 
+  // 11/2026: Der neue Schichtplan ab Montag, 16.11.2026.
+  //
+  // Die Schichtzeiten selbst stehen in betrieb.js und wechseln am Stichtag von allein. Was hier passiert,
+  // betrifft die PERSONEN: die bisherigen festen Zuteilungen enden am 15.11., die neuen beginnen am 16.11.
+  // Beides als Zeitraum, nicht als Loeschen – der Plan der kommenden Woche soll noch stimmen, und was
+  // vorher war, ist Abrechnung.
+  //
+  // Zugeordnet wird ueber den Namen, weil der Plan Namen nennt und keine IDs. Wen es hier nicht gibt,
+  // wird gemeldet statt still uebergangen: ein stillschweigend fehlender Mensch faellt erst auf, wenn
+  // er nicht zur Schicht erscheint.
+  // Nur im Café: der Plan gehört zu frnds. Bei Rolla Costa gibt es keinen dieser Namen – dort haette
+  // die Umstellung zwölf "fehlende" Leute gemeldet und einen Hinweis hinterlassen, der nichts bedeutet.
+  if (betrieb.id === "frnds" && !erledigt.has("schichtplan-2026-11-16")) {
+    const AB = "2026-11-16";
+    const BIS_ALT = "2026-11-15";
+    // [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So
+    const NEU = [
+      ["Timm", "service", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"]]],
+      ["Vincent", "service", [[0, "spaet1"], [1, "spaet1"], [2, "spaet1"]]],
+      ["Lilly", "service", [[3, "frueh1"], [4, "frueh1"], [5, "frueh1"], [6, "frueh1"]]],
+      ["Leanna", "service", [[3, "spaet1"], [4, "spaet1"], [5, "spaet1"]]],
+      ["Kaya", "service", [[6, "spaet1"]]],
+      ["Anna", "service", [[6, "mittel1"]]],
+      ["Karla", "kueche", [[0, "frueh1"], [1, "frueh1"], [2, "frueh1"], [3, "frueh1"], [4, "frueh1"]]],
+      ["Hanna", "kueche", [[0, "frueh2", "", "2026-11-30"], [4, "frueh2", "", "2026-11-30"]]],
+      ["Juli", "kueche", [[1, "frueh2", "", "2026-12-31"], [3, "frueh2", "", "2026-12-31"]]],
+      ["Santiago", "kueche", [[5, "frueh1"], [6, "frueh1"]]],
+      ["Benjamin", "kueche", [[4, "spaet1", "2026-12-01"], [5, "mittel1"], [6, "mittel1"]]],
+      ["Emma", "kueche", [[5, "spaet1"], [6, "spaet1"]]],
+    ];
+    const fehlend = [];
+    for (const [name, rolle, tage] of NEU) {
+      const emp = data.employees.find((e) => e.active && e.name.trim().toLowerCase() === name.toLowerCase());
+      if (!emp) {
+        fehlend.push(`${name} (${rolle === "kueche" ? "Küche" : "Service"})`);
+        continue;
+      }
+      // Alles Bisherige endet am 15.11. – auch bei Leuten, die im neuen Plan weiter vorkommen: ihre
+      // Zeiten und Schicht-IDs aendern sich ja.
+      const alt = (emp.festeSchichten || []).map((f) => (f.von || f.bis ? f : { ...f, bis: BIS_ALT }));
+      const neu = tage.map(([weekday, slotId, von, bis]) => ({ weekday, slotId, von: von || AB, bis: bis || "" }));
+      emp.festeSchichten = normalizeFesteSchichten([...alt, ...neu]);
+      geaendert = true;
+    }
+    // Wer im Plan steht, aber nicht mehr: feste Schichten enden trotzdem am 15.11.
+    const imPlan = new Set(NEU.map(([n]) => n.toLowerCase()));
+    for (const e of data.employees) {
+      if (!e.active || imPlan.has(e.name.trim().toLowerCase())) continue;
+      if (!(e.festeSchichten || []).length) continue;
+      e.festeSchichten = normalizeFesteSchichten(e.festeSchichten.map((f) => (f.von || f.bis ? f : { ...f, bis: BIS_ALT })));
+      geaendert = true;
+    }
+    if (fehlend.length > 0) {
+      // Keine stille Luecke: der Hinweis steht im Admin, bis er abgehakt wird.
+      data.settings.schichtplanHinweis = `Diese Leute stehen im Plan ab 16.11., sind hier aber nicht angelegt: ${fehlend.join(", ")}. Lege sie unter Mitarbeiter an – ihre festen Schichten trage ich danach nicht automatisch nach, das machst du im Formular.`;
+      geaendert = true;
+    }
+    erledigt.add("schichtplan-2026-11-16");
+    geaendert = true;
+  }
+
   // 09/2026: Die Service-Mittelschicht gibt es unter der Woche nicht mehr. Wer für einen kommenden
   // Werktag schon darauf eingeteilt war, stünde sonst weiter in "Deine Schichten", obwohl die Schicht in
   // keinem Plan mehr auftaucht – und niemand könnte sie dort austragen. Deshalb: austragen und Bescheid
@@ -748,8 +807,23 @@ function einmaligeMigrationen() {
 }
 
 /** Feste Schicht-Zeitfenster für eine Rolle ("service" gilt auch für "bar"). */
-function shiftSlotsForRole(role) {
-  return role === "kueche" ? data.settings.shiftSlots.kueche : data.settings.shiftSlots.service;
+/** Welcher Schichtplan gilt an diesem Tag?
+ *
+ * Im Café gibt es eine Folge von Plänen mit Stichtag ("ab"): gesucht ist der jüngste, der an diesem Tag
+ * schon begonnen hat. Dass ein Plan ein Datum hat, ist der Punkt – sonst gälte eine Änderung rückwirkend
+ * auch für Wochen, die längst eingeteilt sind. Im Pop-up gibt es nur einen Plan, der im Admin änderbar ist.
+ */
+function planFuer(dateStr) {
+  const plaene = betrieb.schichtPlaene;
+  if (!Array.isArray(plaene) || plaene.length === 0) return data.settings.shiftSlots;
+  const tag = dateStr || todayStr();
+  const passend = [...plaene].filter((p) => String(p.ab || "") <= tag).sort((a, b) => String(a.ab).localeCompare(String(b.ab)));
+  return passend[passend.length - 1] || plaene[0];
+}
+
+function shiftSlotsForRole(role, dateStr) {
+  const plan = planFuer(dateStr);
+  return (role === "kueche" ? plan.kueche : plan.service) || [];
 }
 
 /** Schicht mit den Zeiten, die an DIESEM Wochentag gelten. Manche Schichten enden an einzelnen Tagen
@@ -945,7 +1019,16 @@ export const store = {
   },
 
   // ---- Einstellungen ----
+  /** Hinweis zum Planwechsel ausblenden, wenn er abgearbeitet ist. */
+  setSchichtplanHinweis(text) {
+    data.settings.schichtplanHinweis = String(text || "");
+    persist();
+  },
   getSettings() {
+    // Der Schichtplan hängt am Datum. Hier den von heute einsetzen, damit jede Anzeige, die einfach
+    // "die Schichten" liest, ab dem Stichtag sofort den neuen Plan zeigt – auch wenn das Tablet über
+    // Mitternacht offen geblieben ist. Abgeleitet, nicht gespeichert: die Wahrheit steht in betrieb.js.
+    if (Array.isArray(betrieb.schichtPlaene)) data.settings.shiftSlots = planFuer(todayStr());
     return data.settings;
   },
   getGithubBackupConfig() {
@@ -1255,7 +1338,7 @@ export const store = {
    * diesem Wochentag tatsächlich angebotenen Schichten – und mit den Zeiten, die an dem Tag gelten
    * (z.B. Service 1 endet Mo/Di später). Ohne dateStr die Grunddefinition. */
   getShiftSlotsForRole(role, dateStr) {
-    const all = shiftSlotsForRole(role);
+    const all = shiftSlotsForRole(role, dateStr);
     if (!dateStr) return all;
     const wd = weekdayIndexOfDate(dateStr);
     return all.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(wd)).map((s) => slotForDate(s, dateStr));
@@ -1495,7 +1578,7 @@ export const store = {
     for (let i = 0; i <= tage; i++) {
       const dateStr = addDaysISOStore(heute, i);
       const wd = weekdayIndexOfDate(dateStr);
-      const dran = mitFesten.filter((e) => e.festeSchichten.some((f) => f.weekday === wd));
+      const dran = mitFesten.filter((e) => e.festeSchichten.some((f) => f.weekday === wd && festeSchichtGilt(f, dateStr)));
       if (dran.length === 0) continue;
       // Erst jetzt einen Tag anlegen: sonst entstuenden leere Tage fuer Wochentage, an denen niemand
       // eine feste Schicht hat.
@@ -1508,7 +1591,7 @@ export const store = {
         // Abwesenheit macht den Eintrag NICHT dauerhaft unmoeglich: wird der Urlaub zurueckgezogen,
         // soll die feste Schicht wieder greifen. Deshalb hier nicht als "angewandt" vermerken.
         if (this.isAbsent(e.id, dateStr)) continue;
-        const f = e.festeSchichten.find((x) => x.weekday === wd);
+        const f = e.festeSchichten.find((x) => x.weekday === wd && festeSchichtGilt(x, dateStr));
         if (!this.getShiftSlotsForRole(e.role, dateStr).some((sl) => sl.id === f.slotId)) continue;
         if (d.availability.some((a) => a.employeeId === e.id)) {
           d.festeSchichtenAngewandt.push(e.id); // eigener Eintrag gewinnt, und zwar dauerhaft

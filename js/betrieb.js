@@ -40,6 +40,52 @@ const BETRIEBE = {
     },
     rollen: ["service", "kueche", "bar"],
     produkte: [],
+    // Die Schichten des Cafés – als Folge von Plänen mit Stichtag, nicht als eine Liste.
+    //
+    // Ein Schichtplan gilt ab einem Datum und bis der nächste anfängt. Vorher gab es nur eine Liste:
+    // änderte man sie, galt die Änderung rückwirkend auch für die Wochen davor, und ein bereits
+    // eingeteilter Montag stand plötzlich unter einer Schicht, die es damals nicht gab.
+    //
+    // "ab" ist der erste Tag, an dem der Plan gilt. Der älteste Plan braucht ein Datum weit in der
+    // Vergangenheit, damit auch alte Tage einen Plan haben.
+    schichtPlaene: [
+      {
+        ab: "2000-01-01",
+        service: [
+          // Hieß bis 09/2026 "Service 1". Die ID bleibt, damit alle bisherigen Einträge weiter passen.
+          { id: "frueh1", label: "Bar", from: "08:30", to: "16:00", weekdayOverrides: { 0: { to: "17:00" }, 1: { to: "17:00" }, 6: { to: "17:00" } } }, // Mo/Di/So bis 17:00
+          { id: "frueh2", label: "Service 2", from: "09:00", to: "17:00", allowedWeekdays: [5, 6], weekdayOverrides: { 6: { to: "17:30" } } }, // nur Sa/So, So bis 17:30
+          // Unter der Woche macht das die Store-Managerin (siehe "frueh3") – die Mittelschicht gibt es nur noch am Wochenende.
+          { id: "mittel", label: "Service Mitte", from: "10:00", to: "14:00", allowedWeekdays: [5, 6] },
+          // Die Schicht der Store-Managerin, Mo–Fr. nurFest: wird ausschließlich über eine feste Schicht vergeben
+          // und taucht deshalb in keiner Verfügbarkeits-Abfrage auf – sonst könnten andere sie auswählen.
+          { id: "frueh3", label: "Store-Management", from: "08:00", to: "14:00", allowedWeekdays: [0, 1, 2, 3, 4], nurFest: true },
+          { id: "spaet1", label: "Service Abend 1", from: "15:30", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
+          { id: "spaet2", label: "Service Abend 2", from: "18:00", to: "23:00", allowedWeekdays: [2, 3, 4, 5] }, // Mi-Sa
+        ],
+        kueche: [
+          { id: "frueh1", label: "Küche 1", from: "08:00", to: "15:30" },
+          { id: "mittel", label: "Küche Mitte", from: "10:00", to: "14:00" },
+          { id: "frueh2", label: "Küche 2", from: "10:00", to: "16:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
+        ],
+      },
+      {
+        // Der Plan ab Montag, 16.11.2026. Abendschichten und die Store-Management-Schicht fallen weg.
+        ab: "2026-11-16",
+        service: [
+          { id: "frueh1", label: "Schicht 1", from: "08:30", to: "16:00" },
+          // Die Schicht, die abends zumacht – deshalb "spaet": daran hängt, wer die Schichtende-Aufgaben bekommt.
+          { id: "spaet1", label: "Schicht 2", from: "11:00", to: "18:30" },
+          { id: "mittel1", label: "Springer", from: "09:00", to: "14:00", allowedWeekdays: [5, 6] }, // Sa/So
+        ],
+        kueche: [
+          { id: "frueh1", label: "Küche 1", from: "08:00", to: "15:00" },
+          { id: "frueh2", label: "Küche 2", from: "08:00", to: "14:00", allowedWeekdays: [0, 1, 3, 4] }, // Mo/Di/Do/Fr
+          { id: "mittel1", label: "Küche lang", from: "09:00", to: "17:00", allowedWeekdays: [5, 6] }, // Sa/So
+          { id: "spaet1", label: "Küche Spät", from: "12:00", to: "18:00", allowedWeekdays: [4, 5, 6] }, // Fr/Sa/So
+        ],
+      },
+    ],
   },
 
   popup: {

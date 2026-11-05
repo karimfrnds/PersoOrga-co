@@ -55,6 +55,27 @@ function renderShiftPlanningAdmin() {
       <p class="muted">Wer arbeitet wann, wer könnte noch, wer wartet auf eine Entscheidung – eine Zelle antippen, um zu entscheiden.</p>
     `;
 
+    // Beim Planwechsel am 16.11. konnten nicht alle Namen aus dem Plan zugeordnet werden. Der Hinweis
+    // bleibt stehen, bis er abgehakt ist – eine stille Lücke faellt sonst erst auf, wenn jemand nicht
+    // zur Schicht erscheint.
+    const hinweis = store.getSettings().schichtplanHinweis;
+    if (hinweis) {
+      const box = document.createElement("div");
+      box.className = "callout callout-warn";
+      const text = document.createElement("div");
+      text.textContent = hinweis;
+      box.appendChild(text);
+      const weg = document.createElement("button");
+      weg.className = "btn btn-secondary";
+      weg.textContent = "Erledigt, Hinweis ausblenden";
+      weg.onclick = () => {
+        store.setSchichtplanHinweis("");
+        rerender();
+      };
+      box.appendChild(weg);
+      frag.appendChild(box);
+    }
+
     const nav = document.createElement("div");
     nav.className = "week-nav";
     const prevBtn = document.createElement("button");

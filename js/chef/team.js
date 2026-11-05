@@ -17,12 +17,15 @@ const ROLLEN = [
 const rollenName = (r) => ROLLEN.find(([id]) => id === r)?.[1] || r;
 
 const WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-/** "Mo, Di, Mi" – welche Schicht das ist, steht am iPad; hier zaehlt, DASS jemand fest verplant ist. */
+/** "Mo, Di, Mi" – welche Schicht das ist, steht am iPad; hier zaehlt, DASS jemand fest verplant ist.
+ * Ein Tag steht nur einmal da: seit dem Planwechsel kann derselbe Wochentag zweimal hinterlegt sein
+ * (die alte Schicht bis zum Stichtag, die neue danach) – zweimal "Mo" waere nur verwirrend. */
 function festeText(e) {
-  return (e.festeSchichten || [])
-    .map((f) => WOCHENTAGE_KURZ[f.weekday])
-    .filter(Boolean)
-    .join(", ");
+  const tage = (e.festeSchichten || [])
+    .map((f) => f.weekday)
+    .filter((w) => Number.isInteger(w) && w >= 0 && w <= 6)
+    .sort((a, b) => a - b);
+  return [...new Set(tage)].map((w) => WOCHENTAGE_KURZ[w]).join(", ");
 }
 
 function renderTeam(state, { onChanged }) {

@@ -5,6 +5,7 @@
 import { todayStr, dateDe } from "./format.js";
 import { betrieb, kann } from "./betrieb.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
+import { planFuer as planAusListe } from "./schichtplan.js";
 
 // Je Betrieb ein eigener Speicher: das Café und der Pop-up-Store teilen sich den Code, aber keine Daten.
 const STORAGE_KEY = betrieb.speicher;
@@ -813,16 +814,14 @@ function einmaligeMigrationen() {
  * schon begonnen hat. Dass ein Plan ein Datum hat, ist der Punkt – sonst gälte eine Änderung rückwirkend
  * auch für Wochen, die längst eingeteilt sind. Im Pop-up gibt es nur einen Plan, der im Admin änderbar ist.
  */
+// Gerechnet wird in schichtplan.js – dasselbe Modul benutzen Laptop und Handy, damit dort
+// nicht aus Versehen etwas anderes herauskommt als hier.
 function planFuer(dateStr) {
-  const plaene = betrieb.schichtPlaene;
-  if (!Array.isArray(plaene) || plaene.length === 0) return data.settings.shiftSlots;
-  const tag = dateStr || todayStr();
-  const passend = [...plaene].filter((p) => String(p.ab || "") <= tag).sort((a, b) => String(a.ab).localeCompare(String(b.ab)));
-  return passend[passend.length - 1] || plaene[0];
+  return planAusListe(betrieb.schichtPlaene, dateStr || todayStr(), data.settings.shiftSlots);
 }
 
 function shiftSlotsForRole(role, dateStr) {
-  const plan = planFuer(dateStr);
+  const plan = planFuer(dateStr) || {};
   return (role === "kueche" ? plan.kueche : plan.service) || [];
 }
 

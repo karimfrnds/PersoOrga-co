@@ -4,6 +4,7 @@
 // der Ferne für sich oder andere stempeln kann.
 // ============================================================================
 import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead, sendBestand } from "./api.js";
+import { slotsFuerWoche } from "../schichtplan.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 import { betrieb } from "../betrieb.js";
 
@@ -762,7 +763,12 @@ function buildAvailability() {
   wechsler.append(zurueck, mitte, vor);
   card.appendChild(wechsler);
 
-  const alle = me.meineSchichtarten || [];
+  // Welche Schichten gelten in DIESER Woche? Ab dem 16.11.2026 sind das bei frnds andere als heute –
+  // wer in der Woche davor seine Verfuegbarkeit eintraegt, muss trotzdem die neuen Schichten sehen.
+  // `meineSchichtarten` (der Plan von heute) bleibt als Rueckfall, solange der Worker die Liste nicht hat.
+  const alle = (
+    me.schichtPlaene ? slotsFuerWoche(me.schichtPlaene, weekStart, me.meineRolle) : me.meineSchichtarten || []
+  ).filter((s) => !s.nurFest);
   if (alle.length === 0) {
     const p = document.createElement("p");
     p.className = "muted small";

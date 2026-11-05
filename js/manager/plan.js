@@ -11,6 +11,7 @@
 // ============================================================================
 import { decideShift, publishWeek } from "./api.js";
 import { el, text, knopf, feld, eingabe, blatt, toast, ausfuehren, addDays, mondayOf, datumKurz, WT, WT_LANG, gleicherName } from "./ui.js";
+import { slotsFuerWoche } from "../schichtplan.js";
 
 const ABWESENHEIT = {
   urlaub: { label: "Urlaub", symbol: "🏖" },
@@ -50,13 +51,15 @@ function abwesenheit(daten, name, date) {
 
 /** Alle Schichten eines Tages mit Belegung: [{kueche, slot, belegt, kandidaten}] */
 function tagesSchichten(daten, weekStart, i) {
-  if (!daten.shiftSlots) return [];
+  if (!daten.shiftSlots && !daten.schichtPlaene) return [];
   const date = addDays(weekStart, i);
   const alle = wocheEintraege(daten, weekStart);
   const out = [];
+  // Die Schichten der gezeigten Woche, nicht die von heute: ab dem 16.11.2026 gilt bei frnds ein
+  // anderer Plan, und eine Woche danach muss ihn zeigen – eine davor weiter den alten.
   for (const [slots, kueche] of [
-    [daten.shiftSlots.service || [], false],
-    [daten.shiftSlots.kueche || [], true],
+    [slotsFuerWoche(daten.schichtPlaene, weekStart, "service", daten.shiftSlots), false],
+    [slotsFuerWoche(daten.schichtPlaene, weekStart, "kueche", daten.shiftSlots), true],
   ]) {
     for (const roh of slots) {
       if (roh.allowedWeekdays && !roh.allowedWeekdays.includes(i)) continue;
@@ -106,7 +109,7 @@ function renderPlan(daten, { neuLaden }) {
   if (tagIndex === null) tagIndex = 0;
 
   const wrap = el("div", "mg-plan");
-  if (!daten.shiftSlots) {
+  if (!daten.shiftSlots && !daten.schichtPlaene) {
     wrap.appendChild(text("div", "callout", "Die Schichtzeiten sind noch nicht da. Das iPad muss sich einmal abgleichen."));
     return wrap;
   }

@@ -6,6 +6,7 @@
 // ============================================================================
 import { escapeHtml, dateDe } from "../format.js";
 import { decideShift, publishWeek } from "./api.js";
+import { slotsFuerWoche } from "../schichtplan.js";
 
 const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -56,6 +57,16 @@ function renderPlanning(state, { onChanged, today }) {
   const rolleVon = (name) =>
     (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === name.trim().toLowerCase())?.role || "service";
   const istKueche = (name) => rolleVon(name) === "kueche";
+
+  // Welche Schichten gelten in der gezeigten Woche? Nicht die von heute – sonst saehe eine Woche
+  // nach dem 16.11.2026 noch nach dem alten Plan aus (und eine davor nach dem neuen). Ein kleiner
+  // Zwischenspeicher, weil die Zaehlung pro Tag danach fragt.
+  const slotCache = new Map();
+  const wochenSlots = (rolle) => {
+    const schluessel = gewaehlteWoche + "|" + rolle;
+    if (!slotCache.has(schluessel)) slotCache.set(schluessel, slotsFuerWoche(state.schichtPlaene, gewaehlteWoche, rolle, state.shiftSlots));
+    return slotCache.get(schluessel);
+  };
 
   function rerender() {
     el.innerHTML = "";
@@ -131,7 +142,7 @@ function renderPlanning(state, { onChanged, today }) {
     frag.appendChild(nav);
     frag.appendChild(buildAbschluss());
 
-    if (!state.shiftSlots) {
+    if (!state.shiftSlots && !state.schichtPlaene) {
       const c = document.createElement("section");
       c.className = "card";
       c.innerHTML = `<p class="muted small">Die Schichtzeiten sind noch nicht da. Das iPad muss sich einmal abgleichen.</p>`;
@@ -139,8 +150,8 @@ function renderPlanning(state, { onChanged, today }) {
       return frag;
     }
 
-    frag.appendChild(buildPlan("Service / Bar", state.shiftSlots.service || [], false));
-    frag.appendChild(buildPlan("Küche", state.shiftSlots.kueche || [], true));
+    frag.appendChild(buildPlan("Service / Bar", wochenSlots("service"), false));
+    frag.appendChild(buildPlan("Küche", wochenSlots("kueche"), true));
     frag.appendChild(buildKranke());
 
     const legend = document.createElement("p");
@@ -160,8 +171,8 @@ function renderPlanning(state, { onChanged, today }) {
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(gewaehlteWoche, i);
       for (const [slots, kueche] of [
-        [state.shiftSlots?.service || [], false],
-        [state.shiftSlots?.kueche || [], true],
+        [wochenSlots("service"), false],
+        [wochenSlots("kueche"), true],
       ]) {
         for (const slot of slots) {
           if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
@@ -209,7 +220,7 @@ function renderPlanning(state, { onChanged, today }) {
       return card;
     }
 
-    const zahl = state.shiftSlots ? zaehleWoche() : null;
+    const zahl = state.shiftSlots || state.schichtPlaene ? zaehleWoche() : null;
     const info = document.createElement("p");
     info.className = "muted small";
     info.innerHTML = zahl

@@ -8,7 +8,7 @@
 // gerade im Dienst ist – so bleiben beide Seiten in Sync.
 // ============================================================================
 import { store } from "./store.js";
-import { kann } from "./betrieb.js";
+import { kann, betrieb } from "./betrieb.js";
 import { todayStr } from "./format.js";
 import { computeDay } from "./calc.js";
 
@@ -1073,10 +1073,16 @@ async function performTaskSync() {
   // zeigt ihr Handy nur den Bestand ihrer Rolle.
   const employeeRoles = employees.map((e) => ({ name: e.name, role: e.role, ...(e.istStoreManagerin ? { alleBestaende: true } : {}) }));
   const shiftSlots = store.getSettings().shiftSlots;
+  // Nicht nur der Plan von heute, sondern die ganze datierte Liste: Laptop und Handy zeigen auch
+  // vergangene und kommende Wochen, und die haben ab dem 16.11.2026 andere Schichten als heute.
+  // Ohne die Liste wuerde dort jede Woche mit den Schichten von heute gezeichnet – alte Wochen
+  // faelschlich mit den neuen Schichten, kommende mit den alten.
+  const schichtPlaene = Array.isArray(betrieb.schichtPlaene) ? betrieb.schichtPlaene : null;
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
     employeeRoles,
     shiftSlots,
+    schichtPlaene,
     tasks: pushTasks,
     shiftsInService,
     financials,

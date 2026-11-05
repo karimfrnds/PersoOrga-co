@@ -53,7 +53,10 @@ function personZeile(daten, p, heute, neuLaden) {
 
   const z = knopf("", "mg-person" + (p.active ? "" : " aus"), () => personAktionen(daten, p, neuLaden));
   const zeilen = [ROLLEN[p.role] || p.role];
-  if ((p.festeSchichten || []).length) zeilen.push("fest: " + p.festeSchichten.map((f) => WT[f.weekday]).join(", "));
+  // Jeder Wochentag nur einmal: seit dem Planwechsel kann derselbe Tag zweimal hinterlegt sein
+  // (alte Schicht bis zum Stichtag, neue danach).
+  const festeTage = [...new Set((p.festeSchichten || []).map((f) => f.weekday).filter((w) => Number.isInteger(w) && w >= 0 && w <= 6))].sort((a, b) => a - b);
+  if (festeTage.length) zeilen.push("fest: " + festeTage.map((w) => WT[w]).join(", "));
   if (offen) zeilen.push(`${offen} ${offen === 1 ? "Aufgabe" : "Aufgaben"} heute`);
   z.innerHTML = `<span class="mg-person-name"></span><span class="muted small"></span><span class="mg-person-badges"></span>`;
   z.querySelector(".mg-person-name").textContent = p.name;

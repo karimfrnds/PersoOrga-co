@@ -82,7 +82,7 @@ function renderHeute(daten, { neuLaden, wechsle, rolle }) {
 
   // --- Schichtplan ---
   const k3 = karte("📅", "Schichtplan", () => wechsle("plan"));
-  if (!daten.shiftSlots) {
+  if (!daten.shiftSlots && !daten.schichtPlaene) {
     k3.appendChild(text("p", "muted small", "Die Schichtzeiten kommen mit dem nächsten iPad-Abgleich."));
   } else {
     for (const [ws, label] of [

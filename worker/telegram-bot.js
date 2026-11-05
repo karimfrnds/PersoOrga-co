@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-10-29.2";
+const WORKER_VERSION = "2026-11-05.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -137,14 +137,42 @@ const KNOWN_SLOT_LABELS = new Set(["Früh1", "Früh2", "Mittel", "Spät1", "Spä
 /** Gültige Schicht-Namen: bevorzugt die vom iPad gelieferten Definitionen, damit ein Umbenennen der
  * Schichten dort nicht dazu führt, dass hier plötzlich alles abgelehnt wird. Nur solange noch nichts
  * synchronisiert wurde, greift die fest hinterlegte Liste. */
+/** Der Schichtplan, der an einem bestimmten Tag gilt.
+ *
+ * Das iPad schickt zweierlei: `shiftSlots` (der Plan von HEUTE) und `schichtPlaene` (die ganze datierte
+ * Liste). Alles, was sich auf ein Datum bezieht – ein Wochenplan, eine Schicht am 20.11. –, muss die
+ * Liste benutzen, sonst gilt der heutige Plan rueckwirkend und in die Zukunft. Fehlt die Liste (altes
+ * iPad, oder ein Betrieb mit nur einem Plan), bleibt es beim bisherigen Verhalten.
+ * Entspricht planFuer() in js/schichtplan.js – beide muessen dasselbe rechnen. */
+function planFuerDatum(state, dateStr) {
+  const plaene = state?.schichtPlaene;
+  if (!Array.isArray(plaene) || plaene.length === 0) return state?.shiftSlots || null;
+  const tag = String(dateStr || todayBerlin());
+  const passend = plaene.filter((p) => p && String(p.ab || "") <= tag).sort((a, b) => String(a.ab).localeCompare(String(b.ab)));
+  return passend[passend.length - 1] || plaene[0] || state?.shiftSlots || null;
+}
+/** Die Schichten eines Bereichs an einem Tag. */
+function slotsAmTag(state, dateStr, bereich) {
+  const plan = planFuerDatum(state, dateStr) || {};
+  return (bereich === "kueche" ? plan.kueche : plan.service) || [];
+}
+/** Alle Schichten, die es je gab oder geben wird – fuer Namenslisten. Waehrend der Umstellung muss der
+ * Bot sowohl "Service Abend 1" (bis 15.11.) als auch "Schicht 2" (ab 16.11.) verstehen. */
+function alleSlotsJe(state) {
+  const aus = [...(state?.shiftSlots?.service || []), ...(state?.shiftSlots?.kueche || [])];
+  for (const plan of Array.isArray(state?.schichtPlaene) ? state.schichtPlaene : []) {
+    aus.push(...(plan?.service || []), ...(plan?.kueche || []));
+  }
+  return aus.filter(Boolean);
+}
+
 /** Die aktuellen Schicht-Namen vom iPad, für Hinweise im Chat ("Bar, Service 2, …"). */
 function schichtNamenListe(state) {
-  const namen = [...new Set([...(state?.shiftSlots?.service || []), ...(state?.shiftSlots?.kueche || [])].map((s) => s.label).filter(Boolean))];
+  const namen = [...new Set(alleSlotsJe(state).map((s) => s.label).filter(Boolean))];
   return namen.length ? namen.join(", ") : "Früh1/Früh2/Mittel/Spät1/Spät2";
 }
 function knownSlotLabels(state) {
-  const slots = state?.shiftSlots;
-  const aus = [...(slots?.service || []), ...(slots?.kueche || [])].map((s) => normalizeSlotLabelCheck(s.label));
+  const aus = alleSlotsJe(state).map((s) => normalizeSlotLabelCheck(s.label));
   return aus.length > 0 ? new Set(aus) : KNOWN_SLOT_LABELS;
 }
 const REMINDER_WEEKDAY = 5; // Freitag – Erinnerung an alle, die für nächste Woche noch nichts eingetragen haben
@@ -198,7 +226,10 @@ const EMPTY_STATE = {
   adminPinHash: null,
   // Rollen + Schicht-Definitionen vom iPad, damit die Laptop-Ansicht weiß, welche Schichten es für wen gibt.
   employeeRoles: [], // [{name, role}]
-  shiftSlots: null, // { service: [{id,label,from,to,allowedWeekdays?}], kueche: [...] }
+  shiftSlots: null, // { service: [{id,label,from,to,allowedWeekdays?}], kueche: [...] } – der Plan von HEUTE
+  // Die ganze datierte Liste: [{ab:"2026-11-16", service:[...], kueche:[...]}, ...]. Laptop und Handy
+  // zeichnen damit jede Woche mit den Schichten, die an ihren Tagen wirklich gelten.
+  schichtPlaene: null,
   // Kurznachrichten an einzelne Mitarbeiter für die HANDY-Ansicht (Schicht zugesagt/abgelehnt o.ä.).
   // Bewusst getrennt von den Kiosk-Benachrichtigungen: die entstehen lokal auf dem iPad und kämen hier
   // sonst nie an. [{id, employeeName, text, createdAt, readAt}]
@@ -329,6 +360,7 @@ async function getState(env) {
       adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
       shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
+      schichtPlaene: Array.isArray(parsed.schichtPlaene) ? parsed.schichtPlaene : null,
       employeeNotifications: Array.isArray(parsed.employeeNotifications) ? parsed.employeeNotifications : [],
       stockChanges: Array.isArray(parsed.stockChanges) ? parsed.stockChanges : [],
       employeeDetails: Array.isArray(parsed.employeeDetails) ? parsed.employeeDetails : [],
@@ -2029,6 +2061,10 @@ async function handleMe(request, env) {
       .sort((a, b) => (a.von < b.von ? 1 : -1))
       .slice(0, 40),
     meineSchichtarten,
+    // Die datierte Liste und die eigene Rolle: damit das Handy fuer JEDE Woche die Schichten anbietet,
+    // die in ihr wirklich gelten. meineSchichtarten bleibt als Rueckfall fuer aeltere Handys bestehen.
+    schichtPlaene: state.schichtPlaene || null,
+    meineRolle,
     belegteSchichten,
     // Ungelesene Kurznachrichten für diese Person (Schicht zugesagt/abgelehnt) – erscheinen als Pop-up.
     neueNachrichten: (state.employeeNotifications || [])
@@ -2997,6 +3033,7 @@ async function handleManagerOverview(request, env) {
     employees: state.employees || [],
     employeeRoles: state.employeeRoles || [],
     shiftSlots: state.shiftSlots,
+    schichtPlaene: state.schichtPlaene || null,
     availability: Object.fromEntries(Object.entries(state.availability || {}).filter(([w]) => w >= ab)),
     publishedWeeks: state.publishedWeeks || [],
     absenceReports: (state.absenceReports || []).filter((r) => (r.to || r.from) >= addDaysISO(heute, -7)),
@@ -3622,7 +3659,7 @@ function applyShiftDecisionPreview(availability, employeeName, date, slotLabel, 
   // hier wird er nur für die Sofort-Anzeige nachgebildet. Bei einer Ablehnung gibt es dagegen nichts
   // anzulegen, da hört die Vorschau auf.
   if (decision !== "confirm") return next;
-  const slotDef = findSlotDefinition(state, employeeName, slotLabel);
+  const slotDef = findSlotDefinition(state, employeeName, slotLabel, date);
   if (!slotDef) return next;
   const weekStart = mondayOf(date);
   const bucket = next[weekStart] || { entries: {}, notifiedComplete: false };
@@ -3695,7 +3732,7 @@ function buildWochenplan(state, weekStart) {
     const date = addDaysISO(weekStart, i);
     const schichten = [];
     for (const bereich of ["service", "kueche"]) {
-      for (const slot of state.shiftSlots?.[bereich] || []) {
+      for (const slot of slotsAmTag(state, date, bereich)) {
         if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
         const zeiten = slot.weekdayOverrides?.[i] ? { ...slot, ...slot.weekdayOverrides[i] } : slot;
         const wer = zuteilung.get(`${date}|${bereich}|${slot.id}`);
@@ -3734,13 +3771,13 @@ function wochentagIndex(dateStr) {
 
 /** Sucht die Schicht-Definition (Zeiten) passend zur Rolle der Person. Die Definitionen kommen vom iPad,
  * damit sie nicht doppelt gepflegt werden. Service und Bar teilen sich denselben Plan. */
-function findSlotDefinition(state, employeeName, slotLabel) {
-  const slots = state?.shiftSlots;
-  if (!slots) return null;
+function findSlotDefinition(state, employeeName, slotLabel, dateStr) {
   const needle = employeeName.trim().toLowerCase();
   const role = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role;
-  const list = role === "kueche" ? slots.kueche : slots.service;
-  const found = (list || []).find((s) => normalizeSlotLabelCheck(s.label) === normalizeSlotLabelCheck(slotLabel));
+  const bereich = role === "kueche" ? "kueche" : "service";
+  // Mit Datum: die Schicht, die an DEM Tag gilt. Ohne Datum (alte Aufrufe) der heutige Plan.
+  const list = slotsAmTag(state, dateStr, bereich);
+  const found = list.find((s) => normalizeSlotLabelCheck(s.label) === normalizeSlotLabelCheck(slotLabel));
   return found ? { id: found.id, label: found.label, from: found.from, to: found.to } : null;
 }
 
@@ -3777,7 +3814,7 @@ async function handleAdminShiftDecision(request, env) {
   // Ruhe und niemand bekommt Zwischenstände mit – die Info geht gebündelt raus, wenn er die Woche abschließt.
   // Danach ist jede Änderung eine Änderung am fertigen Plan und muss sofort ankommen.
   if (istWocheAbgeschlossen(state, date)) {
-    const slotDef = findSlotDefinition(state, employeeName, slotLabel);
+    const slotDef = findSlotDefinition(state, employeeName, slotLabel, date);
     const zeit = slotDef ? `${slotDef.label}, ${slotDef.from}–${slotDef.to} Uhr` : slotLabel;
     patch.employeeNotifications = withEmployeeNotification(
       state,
@@ -3866,17 +3903,12 @@ async function sendTelegramMessage(env, chatId, text) {
 async function interpretMessage(env, text, today, state) {
   // Schicht-Namen kommen vom iPad, damit ein Umbenennen dort nicht dazu führt, dass der Bot noch die alten
   // Namen anbietet. Doppelte (Service und Küche haben je eine "Mitte") werden zusammengefasst.
-  const alleSchichtNamen = [
-    ...new Set([...(state.shiftSlots?.service || []), ...(state.shiftSlots?.kueche || [])].map((s) => s.label).filter(Boolean)),
-  ];
+  const alleSchichtNamen = [...new Set(alleSlotsJe(state).map((s) => s.label).filter(Boolean))];
   if (alleSchichtNamen.length === 0) alleSchichtNamen.push("Früh1", "Früh2", "Mittel", "Spät1", "Spät2"); // noch nichts synchronisiert
   const schichtNamenText = alleSchichtNamen.map((n) => `"${n}"`).join(", ");
   // Schichten, die IMMER eine ausdrückliche Bestätigung brauchen (intern die ID "mittel").
   const mittelNamen =
-    [...(state.shiftSlots?.service || []), ...(state.shiftSlots?.kueche || [])]
-      .filter((s) => s.id === "mittel")
-      .map((s) => s.label)
-      .join(" / ") || "Mittel";
+    [...new Set(alleSlotsJe(state).filter((s) => s.id === "mittel").map((s) => s.label))].join(" / ") || "Mittel";
   const tool = {
     name: "handle_message",
     description: "Interpretiert eine Nachricht des Café-Betreibers ans Team-Aufgaben-System.",
@@ -5561,7 +5593,7 @@ async function handleTelegram(request, env) {
         let notifs = state.employeeNotifications;
         for (const s of newShifts) {
           if (!istWocheAbgeschlossen(state, s.date)) continue;
-          const def = findSlotDefinition(state, s.employeeName, s.slotLabel);
+          const def = findSlotDefinition(state, s.employeeName, s.slotLabel, s.date);
           const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : s.slotLabel || `${s.from}–${s.to} Uhr`;
           notifs = withEmployeeNotification(
             { employeeNotifications: notifs },
@@ -5616,7 +5648,7 @@ async function handleTelegram(request, env) {
         let rejNotifs = state.employeeNotifications;
         for (const r of newRejections) {
           if (!istWocheAbgeschlossen(state, r.date)) continue; // vor dem Abschließen bleibt alles still
-          const def = findSlotDefinition(state, r.employeeName, r.slotLabel);
+          const def = findSlotDefinition(state, r.employeeName, r.slotLabel, r.date);
           const zeit = def ? `${def.label}, ${def.from}–${def.to} Uhr` : r.slotLabel;
           rejNotifs = withEmployeeNotification(
             { employeeNotifications: rejNotifs },
@@ -5723,6 +5755,9 @@ async function handleState(request, env) {
     if (Array.isArray(body.backvorschlaege)) patch.backvorschlaege = body.backvorschlaege;
     if (Array.isArray(body.employeeRoles)) patch.employeeRoles = body.employeeRoles;
     if (body.shiftSlots && typeof body.shiftSlots === "object") patch.shiftSlots = body.shiftSlots;
+    // Nur setzen, wenn mitgeschickt – ein iPad mit aelterem Stand wuerde die Liste sonst loeschen und
+    // am Laptop waeren alle Wochen wieder mit den Schichten von heute gezeichnet.
+    if (Array.isArray(body.schichtPlaene)) patch.schichtPlaene = body.schichtPlaene;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
     // Abgeschlossene Wochen: das iPad hat die Freigaben aus der Warteschlange übernommen und schickt hier
     // seinen maßgeblichen Stand zurück. Nur setzen, wenn wirklich mitgeschickt – sonst würde ein älteres

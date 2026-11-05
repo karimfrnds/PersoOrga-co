@@ -934,15 +934,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-05",
-      "lastBackupAt": "2026-11-05T14:20:29.926Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at b8d370a56c5eefacc3d494dfb969446cc2e5934d but expected a1151c21fa33c10aea1d8c529dc47e9d12f58815\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-11-05T17:27:29.493Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-05T17:23:40.833Z",
+      "lastSyncAt": "2026-11-05T19:48:03.518Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -992,17 +992,17 @@
         },
         {
           "id": "e14fa4b2-7dff-49e7-a225-7d3b99887b8e",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|nico|2026-11-05||hoch"
         },
         {
           "id": "f15d956a-363f-4b90-9c1e-3b085e484e91",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nico|2026-11-05||hoch"
         },
         {
           "id": "9a7efc1e-b706-4ef1-b28b-3f8e57bef7e5",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|nico|2026-11-05||hoch"
         },
         {
@@ -1042,32 +1042,32 @@
         },
         {
           "id": "bd7ef913-ea5e-4765-937e-bdce8844e648",
-          "done": false,
+          "done": true,
           "sig": "Stühle hochstellen|nico|2026-11-05||hoch"
         },
         {
           "id": "09b25d34-7095-4794-9e53-3ffefb9c8fa9",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|nico|2026-11-05||hoch"
         },
         {
           "id": "40111fc8-e7cc-4ea1-b8e4-28fad91c19e3",
-          "done": false,
+          "done": true,
           "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nico|2026-11-05||hoch"
         },
         {
           "id": "39fca031-bdcc-4d42-ba3e-2e298fe8642c",
-          "done": false,
+          "done": true,
           "sig": "Strahler und Akku Lampen laden am Schichtende|nico|2026-11-05||hoch"
         },
         {
           "id": "71801cc4-e03d-4769-a0db-ca23744d23b0",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine abpumpen und öffnen|nico|2026-11-05||hoch"
         },
         {
           "id": "2fa42950-db2f-4823-b99c-06f857fc0cdb",
-          "done": false,
+          "done": true,
           "sig": "Pfand einsortieren im Keller|nico|2026-11-05||normal"
         },
         {
@@ -1097,12 +1097,12 @@
         },
         {
           "id": "579f799c-445b-4611-ae61-18b365c0f45a",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|arianna|2026-11-05||hoch"
         },
         {
           "id": "173dc3fd-2ac5-4d45-a8aa-46778d5cb321",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|arianna|2026-11-05||hoch"
         },
         {
@@ -65979,19 +65979,29 @@
           "id": "584aaafd-600d-45bc-a2c5-86f84d3fb016",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "from": "15:20",
-          "to": null,
+          "to": "18:56",
           "note": "",
           "clockInAt": "2026-11-05T14:20:33.350Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-05T17:56:57.544Z"
         },
         {
           "id": "6f69bb99-35cf-4d5d-a1a1-4635d0f30c4b",
           "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
           "from": "18:06",
-          "to": null,
+          "to": "18:56",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-05T17:06:48.247Z",
+          "clockOutAt": "2026-11-05T17:56:29.614Z"
+        },
+        {
+          "id": "226fa381-223b-47d2-9b89-51049f729601",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "18:56",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-11-05T17:56:44.129Z",
           "clockOutAt": null
         }
       ],
@@ -66315,9 +66325,9 @@
           "phase": "ende",
           "id": "e14fa4b2-7dff-49e7-a225-7d3b99887b8e",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:51.995Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -66334,9 +66344,9 @@
           "phase": "ende",
           "id": "f15d956a-363f-4b90-9c1e-3b085e484e91",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:52.545Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -66353,9 +66363,9 @@
           "phase": "ende",
           "id": "9a7efc1e-b706-4ef1-b28b-3f8e57bef7e5",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:52.962Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -66491,9 +66501,9 @@
           "phase": "ende",
           "id": "bd7ef913-ea5e-4765-937e-bdce8844e648",
           "text": "Stühle hochstellen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:53.944Z",
           "source": "template",
           "templateId": "a8f12d99-04d9-4fbb-8964-dbab9c8526a4",
           "addedBy": null,
@@ -66508,9 +66518,9 @@
           "phase": "ende",
           "id": "09b25d34-7095-4794-9e53-3ffefb9c8fa9",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:54.346Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -66525,9 +66535,9 @@
           "phase": "ende",
           "id": "40111fc8-e7cc-4ea1-b8e4-28fad91c19e3",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:54.828Z",
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
@@ -66542,9 +66552,9 @@
           "phase": "ende",
           "id": "39fca031-bdcc-4d42-ba3e-2e298fe8642c",
           "text": "Strahler und Akku Lampen laden am Schichtende",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:55.229Z",
           "source": "template",
           "templateId": "59a93ddb-4690-49a6-ac97-24eb8efd698e",
           "addedBy": null,
@@ -66559,9 +66569,9 @@
           "phase": "ende",
           "id": "71801cc4-e03d-4769-a0db-ca23744d23b0",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:55.564Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -66576,9 +66586,9 @@
           "phase": "ende",
           "id": "2fa42950-db2f-4823-b99c-06f857fc0cdb",
           "text": "Pfand einsortieren im Keller",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nico",
+          "doneAt": "2026-11-05T17:56:55.961Z",
           "source": "template",
           "templateId": "7ad218c5-8155-4fea-be78-8de7e4a9af53",
           "addedBy": null,
@@ -66673,9 +66683,9 @@
         {
           "id": "579f799c-445b-4611-ae61-18b365c0f45a",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-11-05T17:56:17.396Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -66690,9 +66700,9 @@
         {
           "id": "173dc3fd-2ac5-4d45-a8aa-46778d5cb321",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-11-05T17:56:17.862Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -66853,6 +66863,21 @@
           "timestamp": "2026-11-05T17:06:48.247Z",
           "action": "eingestempelt",
           "detail": "arianna um 18:06 Uhr"
+        },
+        {
+          "timestamp": "2026-11-05T17:56:29.614Z",
+          "action": "ausgestempelt",
+          "detail": "arianna um 18:56 Uhr"
+        },
+        {
+          "timestamp": "2026-11-05T17:56:44.129Z",
+          "action": "eingestempelt",
+          "detail": "arianna um 18:56 Uhr"
+        },
+        {
+          "timestamp": "2026-11-05T17:56:57.544Z",
+          "action": "ausgestempelt",
+          "detail": "nico um 18:56 Uhr"
         }
       ],
       "closedAt": null,

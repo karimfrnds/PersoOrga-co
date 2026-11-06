@@ -818,8 +818,114 @@
       "onlineEnabled": true
     },
     "shiftSlots": {
-      "service": [],
-      "kueche": []
+      "ab": "2000-01-01",
+      "service": [
+        {
+          "id": "frueh1",
+          "label": "Bar",
+          "from": "08:30",
+          "to": "16:00",
+          "weekdayOverrides": {
+            "0": {
+              "to": "17:00"
+            },
+            "1": {
+              "to": "17:00"
+            },
+            "6": {
+              "to": "17:00"
+            }
+          }
+        },
+        {
+          "id": "frueh2",
+          "label": "Service 2",
+          "from": "09:00",
+          "to": "17:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ],
+          "weekdayOverrides": {
+            "6": {
+              "to": "17:30"
+            }
+          }
+        },
+        {
+          "id": "mittel",
+          "label": "Service Mitte",
+          "from": "10:00",
+          "to": "14:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ]
+        },
+        {
+          "id": "frueh3",
+          "label": "Store-Management",
+          "from": "08:00",
+          "to": "14:00",
+          "allowedWeekdays": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "nurFest": true
+        },
+        {
+          "id": "spaet1",
+          "label": "Service Abend 1",
+          "from": "15:30",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "id": "spaet2",
+          "label": "Service Abend 2",
+          "from": "18:00",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "kueche": [
+        {
+          "id": "frueh1",
+          "label": "Küche 1",
+          "from": "08:00",
+          "to": "15:30"
+        },
+        {
+          "id": "mittel",
+          "label": "Küche Mitte",
+          "from": "10:00",
+          "to": "14:00"
+        },
+        {
+          "id": "frueh2",
+          "label": "Küche 2",
+          "from": "10:00",
+          "to": "16:00",
+          "allowedWeekdays": [
+            4,
+            5,
+            6
+          ]
+        }
+      ]
     },
     "produkte": [],
     "githubBackup": {
@@ -828,15 +934,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-06",
-      "lastBackupAt": "2026-11-06T07:02:16.733Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at c035a6beefccaed56825941054ef7283bef0c379 but expected 24aca138b0aef05ee334d15d5bbcce3d5ee88ba6\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-11-06T11:03:13.992Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-06T08:38:32.560Z",
+      "lastSyncAt": "2026-11-06T11:04:47.665Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1639,8 +1745,6 @@
         "d54af83c-7769-4bf1-a658-7979ace0d7e6"
       ],
       "appliedAvailabilityKeys": [
-        "2026-08-31|karim|2026-08-29T10:37:42.825Z",
-        "2026-08-31|emma|2026-08-29T17:19:04.787Z",
         "2026-08-31|elli|2026-08-29T17:19:04.791Z",
         "2026-08-31|anna z.|2026-08-29T17:19:04.792Z",
         "2026-08-31|lilly|2026-08-29T17:19:04.793Z",
@@ -1938,7 +2042,9 @@
         "2026-11-30|lilly|2026-11-06T07:02:13.614Z",
         "2026-08-31|timm|2026-08-29T17:19:04.778Z",
         "2026-08-31|arianna|2026-08-29T17:19:04.779Z",
-        "2026-08-31|george|2026-08-29T17:19:04.783Z"
+        "2026-08-31|george|2026-08-29T17:19:04.783Z",
+        "2026-11-16|kaya|2026-11-06T11:03:10.507Z",
+        "2026-08-31|karim|2026-08-29T10:37:42.825Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -69610,7 +69716,6 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
           "submittedAt": "2026-11-06T11:03:10.507Z"
         }
       ],
@@ -69962,15 +70067,15 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "70a79202-2e56-45c3-a497-f566a16c7e8c",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-10-13T20:00:54.181Z"
+          "submittedAt": "2026-11-06T11:03:10.507Z"
         },
         {
           "confirmedSlotId": "frueh1",

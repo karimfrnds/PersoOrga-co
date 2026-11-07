@@ -934,15 +934,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-07",
-      "lastBackupAt": "2026-11-07T07:00:49.417Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 74dfb7bfdbb1debded69341fc0eb2bb2b7e3c882 but expected 2220989e2e79cfcd52008356ff6ccd2fb554e485\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-11-07T10:02:03.628Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at dfea3fa8504c3e53a7ef4f3d3014b4706e6dc7b1 but expected 74dfb7bfdbb1debded69341fc0eb2bb2b7e3c882\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-07T09:43:31.713Z",
+      "lastSyncAt": "2026-11-07T13:03:56.084Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1234,7 +1234,8 @@
         "c6eea244-d4d5-4a25-b0e7-7efff322d05c",
         "2d5186ff-3b02-4607-b99b-cd03144aad27",
         "818211fb-600b-4d72-92cf-2f7e2b99ab4d",
-        "c29a91b9-bd32-4038-83b0-3f97970116f2"
+        "c29a91b9-bd32-4038-83b0-3f97970116f2",
+        "b6033204-096c-4f85-8747-edd8e214348a"
       ],
       "appliedMessageIds": [
         "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
@@ -1383,7 +1384,8 @@
         "a88142cd-f17e-4ed7-ba0e-fd313eff0c95",
         "4f32bd6f-97b9-4ce9-8ba3-ba06026dda3e",
         "251e883f-2dca-4f98-b2eb-1b30a0ba04b2",
-        "e8b52d9d-40fd-43eb-ad4c-0548b601adbe"
+        "e8b52d9d-40fd-43eb-ad4c-0548b601adbe",
+        "068a5fc8-312c-4be5-b4d9-f8199a7f3518"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -62918,14 +62920,6 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-d4906911-4dd9-422e-bebc-6e7a8348761f",
-          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "from": "10:00",
-          "to": "14:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-6f595005-c94b-4b26-898c-3a8fea484585",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
           "from": "08:30",
@@ -62938,6 +62932,14 @@
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "10:00",
           "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-1193e9fc-0c3f-4bee-aa2c-f7028c2bdafa",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "10:00",
+          "to": "14:00",
           "note": "",
           "bossConfirmed": true
         }
@@ -62955,13 +62957,11 @@
           "submittedAt": "2026-10-28T16:19:34.014Z"
         },
         {
-          "confirmedSlotId": "mittel",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "d4906911-4dd9-422e-bebc-6e7a8348761f",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "slotIds": [
-            "mittel"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-09-29T09:42:49.616Z"
         },
@@ -62986,6 +62986,17 @@
           ],
           "note": "",
           "submittedAt": "2026-10-30T18:46:23.829Z"
+        },
+        {
+          "id": "1193e9fc-0c3f-4bee-aa2c-f7028c2bdafa",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "slotIds": [
+            "mittel"
+          ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-07T10:38:57.075Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -76750,6 +76761,20 @@
       "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
       "text": "ℹ️ Ab dem Montag, 16.11.2026 gilt der neue Schichtplan. Deine Schicht am Dienstag, 01.12.2026 gibt es in der Form nicht mehr – bitte im Kiosk neu eintragen.",
       "createdAt": "2026-11-06T11:03:10.494Z",
+      "readAt": null
+    },
+    {
+      "id": "77dd7a47-739d-41d1-8451-9d18cc027121",
+      "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+      "text": "✅ Deine Schicht am Sonntag, 08.11.2026 (Service Mitte, 10:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-07T10:38:57.080Z",
+      "readAt": null
+    },
+    {
+      "id": "25ba943a-5bbe-48b1-a1b0-de709d8f67e0",
+      "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+      "text": "❌ Deine Schicht am Sonntag, 08.11.2026 (Service Mitte) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-07T10:38:57.095Z",
       "readAt": null
     }
   ],
@@ -97011,7 +97036,7 @@
       "tableIds": [
         "e68472c1-9528-40df-8388-4067b8a5a969"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-30T14:13:20.286Z",
       "arrivedAt": "2026-11-07T09:26:53.865Z",
@@ -97394,12 +97419,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-01T14:12:03.942Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-07T12:17:10.100Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -97482,7 +97507,7 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-03T07:00:26.821Z",
       "arrivedAt": "2026-11-07T09:30:48.629Z",
@@ -97700,7 +97725,7 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-05T07:01:25.633Z",
       "arrivedAt": "2026-11-07T09:36:03.992Z",
@@ -97849,7 +97874,7 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-06T15:54:53.415Z",
       "arrivedAt": "2026-11-07T08:55:22.486Z",
@@ -97958,10 +97983,10 @@
       "tableIds": [
         "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-07T07:00:45.709Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-07T10:16:30.368Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -98052,6 +98077,75 @@
       "source": "walkin",
       "createdAt": "2026-11-07T08:21:03.150Z",
       "arrivedAt": "2026-11-07T08:21:03.165Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "3b21cfd3-1bfa-404f-a25a-ad9491d439bd",
+      "code": "PMHE7",
+      "date": "2026-11-07",
+      "time": "09:45",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-07T10:02:42.834Z",
+      "arrivedAt": "2026-11-07T10:02:42.850Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "79b36e60-1193-4f29-992d-644d1d3df4c0",
+      "code": "XJ8EH",
+      "date": "2026-11-07",
+      "time": "11:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-07T10:30:11.784Z",
+      "arrivedAt": "2026-11-07T10:30:11.797Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "f4af88b6-183b-495b-ba90-e03fb8e8e5a1",
+      "code": "ERFCV",
+      "date": "2026-11-07",
+      "time": "11:30",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "weg",
+      "source": "walkin",
+      "createdAt": "2026-11-07T10:30:14.148Z",
+      "arrivedAt": "2026-11-07T10:30:14.163Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

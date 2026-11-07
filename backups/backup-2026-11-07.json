@@ -934,15 +934,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-07",
-      "lastBackupAt": "2026-11-07T10:02:03.628Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at dfea3fa8504c3e53a7ef4f3d3014b4706e6dc7b1 but expected 74dfb7bfdbb1debded69341fc0eb2bb2b7e3c882\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupAt": "2026-11-07T13:09:38.708Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-07T13:03:56.084Z",
+      "lastSyncAt": "2026-11-07T15:14:40.396Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -998,47 +998,47 @@
         {
           "id": "eb5f281b-ff42-4f8f-9c02-afbb50e171e6",
           "done": false,
-          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|anna z.|2026-11-07||hoch"
+          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|lilly|2026-11-07||hoch"
         },
         {
           "id": "c42d2a91-81fb-4ff3-83db-1066e8226faa",
           "done": false,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|anna z.|2026-11-07||hoch"
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|lilly|2026-11-07||hoch"
         },
         {
           "id": "a2749092-664b-423d-8973-80cc9294ecb1",
-          "done": false,
+          "done": true,
           "sig": "Alles Besteck polieren und mind. 20 rollen|anna z.|2026-11-07||hoch"
         },
         {
           "id": "6faa4731-2865-4c27-9e5c-84c13bedc757",
           "done": false,
-          "sig": "Reservierungen zuordnen für den Tag|anna z.|2026-11-07||hoch"
+          "sig": "Reservierungen zuordnen für den Tag|lilly|2026-11-07||hoch"
         },
         {
           "id": "43a13ed2-b0e0-4b7f-ac0d-ed2c43d89475",
           "done": false,
-          "sig": "Pflanzen draußen Giesen wenn kein regen|anna z.|2026-11-07||hoch"
+          "sig": "Pflanzen draußen Giesen wenn kein regen|lilly|2026-11-07||hoch"
         },
         {
           "id": "7ed08ad6-7553-455d-89aa-5a5d0d8e3d88",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|anna z.|2026-11-07||hoch"
         },
         {
           "id": "cce52c86-7f18-4833-9087-b74b5fe19c00",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|anna z.|2026-11-07||hoch"
         },
         {
           "id": "eec6a0b2-a556-46de-a144-22239511a78a",
           "done": false,
-          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|anna z.|2026-11-07||hoch"
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|lilly|2026-11-07||hoch"
         },
         {
           "id": "d364f19a-0011-47bd-840e-1f525d8f43e8",
           "done": false,
-          "sig": "Spülmaschine abpumpen und öffnen|anna z.|2026-11-07||hoch"
+          "sig": "Spülmaschine abpumpen und öffnen|lilly|2026-11-07||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -67569,10 +67569,10 @@
           "id": "634aab3f-b85a-4495-af45-934daf4900a6",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "from": "08:00",
-          "to": null,
+          "to": "16:14",
           "note": "",
           "clockInAt": "2026-11-07T07:00:53.548Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-07T15:14:49.164Z"
         },
         {
           "id": "cca82a36-0470-40ae-bc73-05f655d86fb7",
@@ -67588,11 +67588,11 @@
           "id": "913a0326-d6e6-49af-8a32-6326f1141845",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "from": "09:04",
-          "to": null,
+          "to": "14:11",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-07T08:04:28.001Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-07T13:11:49.664Z"
         }
       ],
       "plannedShifts": [
@@ -67735,9 +67735,9 @@
           "phase": "ende",
           "id": "fbe2d865-e840-423d-b0fc-06b72755937d",
           "text": "Spülmaschine abpumpen und öffnen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "hanna",
+          "doneAt": "2026-11-07T15:14:46.682Z",
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
@@ -67906,13 +67906,15 @@
           "source": "template",
           "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:10:34.031Z"
         },
         {
           "id": "c42d2a91-81fb-4ff3-83db-1066e8226faa",
@@ -67923,20 +67925,22 @@
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:10:44.047Z"
         },
         {
           "id": "a2749092-664b-423d-8973-80cc9294ecb1",
           "text": "Alles Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-11-07T13:10:51.233Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -67957,13 +67961,15 @@
           "source": "template",
           "templateId": "3d912c5e-7f78-426d-8d78-e4f26f4a351c",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:11:00.064Z"
         },
         {
           "id": "43a13ed2-b0e0-4b7f-ac0d-ed2c43d89475",
@@ -67974,20 +67980,22 @@
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:11:17.198Z"
         },
         {
           "id": "7ed08ad6-7553-455d-89aa-5a5d0d8e3d88",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-11-07T13:11:02.416Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -68002,9 +68010,9 @@
         {
           "id": "cce52c86-7f18-4833-9087-b74b5fe19c00",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "anna z.",
+          "doneAt": "2026-11-07T13:11:21.833Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -68025,13 +68033,15 @@
           "source": "template",
           "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "ende",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:11:31.613Z"
         },
         {
           "id": "d364f19a-0011-47bd-840e-1f525d8f43e8",
@@ -68042,13 +68052,15 @@
           "source": "template",
           "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
           "addedBy": null,
-          "assignedTo": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "assignedTo": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
           "time": "",
           "phase": "ende",
-          "bestandBereich": ""
+          "bestandBereich": "",
+          "handoffFrom": "anna z.",
+          "handoffAt": "2026-11-07T13:11:41.163Z"
         }
       ],
       "kassenabschluss": {
@@ -68082,6 +68094,16 @@
           "timestamp": "2026-11-07T08:04:28.002Z",
           "action": "eingestempelt",
           "detail": "anna z. um 09:04 Uhr"
+        },
+        {
+          "timestamp": "2026-11-07T13:11:49.664Z",
+          "action": "ausgestempelt",
+          "detail": "anna z. um 14:11 Uhr"
+        },
+        {
+          "timestamp": "2026-11-07T15:14:49.164Z",
+          "action": "ausgestempelt",
+          "detail": "hanna um 16:14 Uhr"
         }
       ],
       "closedAt": null,
@@ -76775,7 +76797,7 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "❌ Deine Schicht am Sonntag, 08.11.2026 (Service Mitte) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-07T10:38:57.095Z",
-      "readAt": null
+      "readAt": "2026-11-07T13:09:59.666Z"
     }
   ],
   "stock": [

@@ -119,6 +119,9 @@ const taskAction = (body) => request("/admin/task", { method: "POST", body });
 const taskTemplateAction = (body) => request("/admin/task-template", { method: "POST", body });
 const bestandAction = (body) => request("/admin/bestand", { method: "POST", body });
 const managerAufgabeAction = (body) => request("/manager/aufgabe", { method: "POST", body });
+/** Geänderte Schichtzeiten einreichen. Der Worker merkt sie sich, das iPad übernimmt sie beim
+ *  nächsten Abgleich und schickt den maßgeblichen Stand zurück. */
+const saveSchichtplan = (plaene, ab) => request("/admin/schichtplan", { method: "POST", body: { plaene, ab } });
 
 export {
   getSession,
@@ -136,6 +139,7 @@ export {
   taskTemplateAction,
   bestandAction,
   managerAufgabeAction,
+  saveSchichtplan,
   employeeAction,
   sendMessage,
   berichtLaden,

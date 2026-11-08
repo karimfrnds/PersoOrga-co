@@ -6,7 +6,7 @@
 // ============================================================================
 import { escapeHtml, dateDe } from "../format.js";
 import { decideShift, publishWeek } from "./api.js";
-import { slotsFuerWoche } from "../schichtplan.js";
+import { slotsFuerWoche, bereichFuerRolleAm, barEigenAm, BEREICH_LABEL } from "../schichtplan.js";
 
 const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -56,7 +56,14 @@ function renderPlanning(state, { onChanged, today }) {
 
   const rolleVon = (name) =>
     (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === name.trim().toLowerCase())?.role || "service";
-  const istKueche = (name) => rolleVon(name) === "kueche";
+  // Drei Bereiche statt zwei: Service, Küche und – ab dem Tag, an dem sie eigene Schichten hat –
+  // die Bar. Davor zählt die Bar zum Service, so wie bisher. Beides hängt am Tag, nicht an einem
+  // Schalter: in der Woche der Umstellung stehen Bar-Leute vorher im Service und danach in der Bar.
+  const bereichVon = (name, date) => bereichFuerRolleAm(state.schichtPlaene, rolleVon(name), date);
+  // Welche Tabellen die Woche braucht: die Bar, sobald sie bis zum Ende dieser Woche eigen ist.
+  const barInWoche = () => barEigenAm(state.schichtPlaene, addDaysISO(gewaehlteWoche, 6));
+  const bereicheDerWoche = () => (barInWoche() ? ["service", "kueche", "bar"] : ["service", "kueche"]);
+  const bereichTitel = (b) => (b === "service" && !barInWoche() ? "Service / Bar" : BEREICH_LABEL[b]);
 
   // Welche Schichten gelten in der gezeigten Woche? Nicht die von heute – sonst saehe eine Woche
   // nach dem 16.11.2026 noch nach dem alten Plan aus (und eine davor nach dem neuen). Ein kleiner
@@ -150,8 +157,7 @@ function renderPlanning(state, { onChanged, today }) {
       return frag;
     }
 
-    frag.appendChild(buildPlan("Service / Bar", wochenSlots("service"), false));
-    frag.appendChild(buildPlan("Küche", wochenSlots("kueche"), true));
+    for (const b of bereicheDerWoche()) frag.appendChild(buildPlan(bereichTitel(b), wochenSlots(b), b));
     frag.appendChild(buildKranke());
 
     const legend = document.createElement("p");
@@ -170,14 +176,12 @@ function renderPlanning(state, { onChanged, today }) {
     const eingeteilt = new Set();
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(gewaehlteWoche, i);
-      for (const [slots, kueche] of [
-        [wochenSlots("service"), false],
-        [wochenSlots("kueche"), true],
-      ]) {
+      for (const bereich of bereicheDerWoche()) {
+        const slots = wochenSlots(bereich);
         for (const slot of slots) {
           if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
           const wer = alle.find(
-            (e) => e.date === date && e.confirmedSlotId === slot.id && e.bossConfirmed && istKueche(e.name) === kueche
+            (e) => e.date === date && e.confirmedSlotId === slot.id && e.bossConfirmed && bereichVon(e.name, date) === bereich
           );
           if (wer) {
             besetzt++;
@@ -303,7 +307,7 @@ function renderPlanning(state, { onChanged, today }) {
     }
   }
 
-  function buildPlan(titel, slots, kueche) {
+  function buildPlan(titel, slots, bereich) {
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `<h2>${escapeHtml(titel)}</h2>`;
@@ -326,7 +330,7 @@ function renderPlanning(state, { onChanged, today }) {
       const date = addDaysISO(gewaehlteWoche, i);
       const relevanteSlots = slots.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i));
       const besetzt = relevanteSlots.filter((s) =>
-        alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && istKueche(e.name) === kueche && !istKrank(e.name, date))
+        alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && bereichVon(e.name, date) === bereich && !istKrank(e.name, date))
       ).length;
       besetzung.push({ besetzt, gesamt: relevanteSlots.length });
     }
@@ -369,7 +373,7 @@ function renderPlanning(state, { onChanged, today }) {
       for (let i = 0; i < 7; i++) {
         const date = addDaysISO(gewaehlteWoche, i);
         const gilt = !slot.allowedWeekdays || slot.allowedWeekdays.includes(i);
-        tr.appendChild(buildCell(slotAmTag(slot, i), date, gilt, kueche, alle));
+        tr.appendChild(buildCell(slotAmTag(slot, i), date, gilt, bereich, alle));
       }
       tbody.appendChild(tr);
     }
@@ -379,7 +383,7 @@ function renderPlanning(state, { onChanged, today }) {
     return card;
   }
 
-  function buildCell(slot, date, gilt, kueche, alle) {
+  function buildCell(slot, date, gilt, bereich, alle) {
     const td = document.createElement("td");
     td.className = "roster-cell";
     if (!gilt) {
@@ -389,7 +393,7 @@ function renderPlanning(state, { onChanged, today }) {
     }
 
     // Nur Personen der passenden Rolle betrachten (Service und Bar teilen sich einen Plan).
-    const relevant = alle.filter((e) => e.date === date && istKueche(e.name) === kueche && !istKrank(e.name, date));
+    const relevant = alle.filter((e) => e.date === date && bereichVon(e.name, date) === bereich && !istKrank(e.name, date));
     const belegt = relevant.find((e) => e.confirmedSlotId === slot.id);
     const kandidaten = relevant.filter((e) => e.confirmedSlotId !== slot.id && (e.slots || []).some((s) => s.id === slot.id));
 
@@ -405,7 +409,7 @@ function renderPlanning(state, { onChanged, today }) {
       nm.className = "roster-name-btn";
       nm.textContent = belegt.name + (belegt.note ? " 📝" : "");
       nm.title = (belegt.bossConfirmed ? "Fest eingeteilt" : "Wartet auf deine Bestätigung") + (belegt.note ? ` · ${belegt.note}` : "") + " · Klicken zum Wechseln";
-      nm.onclick = () => openPicker(date, slot, kueche, relevant, belegt);
+      nm.onclick = () => openPicker(date, slot, bereich, relevant, belegt);
       row.appendChild(nm);
 
       const raus = document.createElement("button");
@@ -436,7 +440,7 @@ function renderPlanning(state, { onChanged, today }) {
       frei.className = "roster-frei-btn";
       frei.textContent = kandidaten.length ? "＋" : "frei";
       frei.title = "Jemanden einteilen";
-      frei.onclick = () => openPicker(date, slot, kueche, relevant, null);
+      frei.onclick = () => openPicker(date, slot, bereich, relevant, null);
       chips.appendChild(frei);
 
       for (const k of kandidaten.slice(0, 2)) {
@@ -452,7 +456,7 @@ function renderPlanning(state, { onChanged, today }) {
         mehr.className = "roster-chip roster-chip-more";
         mehr.textContent = `+${kandidaten.length - 2}`;
         mehr.title = `${kandidaten.length} haben sich gemeldet – alle anzeigen`;
-        mehr.onclick = () => openPicker(date, slot, kueche, relevant, null);
+        mehr.onclick = () => openPicker(date, slot, bereich, relevant, null);
         chips.appendChild(mehr);
       }
       box.appendChild(chips);
@@ -464,8 +468,8 @@ function renderPlanning(state, { onChanged, today }) {
 
   /** Auswahl-Fenster für eine Schicht: wer sich gemeldet hat steht oben, danach alle anderen.
    * Ein Klick auf einen Namen teilt ein – kein Dropdown, kein zweiter Bestätigungsschritt. */
-  function openPicker(date, slot, kueche, relevant, belegt) {
-    const alleNamen = [...(state.employees || [])].filter((n) => istKueche(n) === kueche).sort((a, b) => a.localeCompare(b));
+  function openPicker(date, slot, bereich, relevant, belegt) {
+    const alleNamen = [...(state.employees || [])].filter((n) => bereichVon(n, date) === bereich).sort((a, b) => a.localeCompare(b));
     const gemeldet = new Set(relevant.filter((e) => (e.slots || []).some((s) => s.id === slot.id)).map((e) => e.name));
     // Wer an dem Tag schon woanders fest eingeteilt ist, wird gekennzeichnet – schützt vor Doppelbelegung.
     const anderweitig = new Map();

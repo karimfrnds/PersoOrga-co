@@ -744,6 +744,29 @@ async function performTaskSync() {
   const schichtEreignisseApplied = [];
   const produktionsEreignisseApplied = [];
   const produktionsStammApplied = [];
+
+  // Schichtzeiten, die der Chef am Laptop geaendert hat. Wie ueberall: der Laptop stellt einen Wunsch
+  // in die Warteschlange, hier wird er angewandt, und gleich danach geht der massgebliche Stand
+  // zurueck. Nur der zuletzt eingereichte Stand zaehlt – zwei Aenderungen hintereinander sind kein
+  // Streit, die zweite ist die gueltige. Gilt in JEDEM Betrieb, nicht nur dort, wo produziert wird.
+  const schichtplanApplied = [];
+  {
+    const appliedPlanIds = new Set(cfg.appliedSchichtplanIds || []);
+    let letzterWunsch = null;
+    for (const e of Array.isArray(remote.schichtplanChanges) ? remote.schichtplanChanges : []) {
+      if (!e.id) continue;
+      schichtplanApplied.push(e.id);
+      if (appliedPlanIds.has(e.id)) continue;
+      appliedPlanIds.add(e.id);
+      if (Array.isArray(e.plaene) && e.plaene.length > 0) letzterWunsch = e;
+    }
+    if (letzterWunsch) {
+      store.setSchichtPlaene(letzterWunsch.plaene, { ab: letzterWunsch.ab || null });
+    }
+    if (schichtplanApplied.length > 0) {
+      store.updateTaskInboxConfig({ appliedSchichtplanIds: [...appliedPlanIds].slice(-500) });
+    }
+  }
   if (kann("produktion")) {
     const appliedSchichtIds = new Set(cfg.appliedSchichtEreignisIds || []);
     for (const e of Array.isArray(remote.schichtEreignisse) ? remote.schichtEreignisse : []) {
@@ -1077,7 +1100,7 @@ async function performTaskSync() {
   // vergangene und kommende Wochen, und die haben ab dem 16.11.2026 andere Schichten als heute.
   // Ohne die Liste wuerde dort jede Woche mit den Schichten von heute gezeichnet – alte Wochen
   // faelschlich mit den neuen Schichten, kommende mit den alten.
-  const schichtPlaene = Array.isArray(betrieb.schichtPlaene) ? betrieb.schichtPlaene : null;
+  const schichtPlaene = store.getSchichtPlaene();
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
     employeeRoles,
@@ -1202,6 +1225,7 @@ async function performTaskSync() {
           produktionsStammApplied,
         }
       : {}),
+    schichtplanApplied,
     ...(kann("verkauf")
       ? {
           produkte: store.getProdukte(),

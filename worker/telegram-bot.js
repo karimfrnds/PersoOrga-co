@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-11-05.1";
+const WORKER_VERSION = "2026-11-08.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -151,17 +151,47 @@ function planFuerDatum(state, dateStr) {
   const passend = plaene.filter((p) => p && String(p.ab || "") <= tag).sort((a, b) => String(a.ab).localeCompare(String(b.ab)));
   return passend[passend.length - 1] || plaene[0] || state?.shiftSlots || null;
 }
+/** Zwilling von bereichVonRolle() in js/schichtplan.js. */
+function bereichVonRolleW(rolle) {
+  if (rolle === "kueche") return "kueche";
+  if (rolle === "bar") return "bar";
+  return "service";
+}
+/** Ab welchem Tag ist die Bar ein eigener Bereich? Zwilling von barEigenAb() in js/schichtplan.js. */
+function barEigenAbW(state) {
+  const mit = (Array.isArray(state?.schichtPlaene) ? state.schichtPlaene : [])
+    .filter((p) => Array.isArray(p?.bar) && p.bar.length > 0)
+    .map((p) => String(p.ab || ""))
+    .sort();
+  return mit[0] || null;
+}
+function barEigenAmW(state, dateStr) {
+  const ab = barEigenAbW(state);
+  return !!ab && String(dateStr || "") >= ab;
+}
+/** In welchem Bereich arbeitet diese Rolle an diesem Tag? Zwilling von bereichFuerRolleAm(). */
+function bereichFuerRolleAmW(state, rolle, dateStr) {
+  const bereich = bereichVonRolleW(rolle);
+  return bereich === "bar" && !barEigenAmW(state, dateStr) ? "service" : bereich;
+}
+/** Die Bereiche, die es an diesem Tag gibt. */
+function bereicheW(state, dateStr) {
+  return barEigenAmW(state, dateStr) ? ["service", "kueche", "bar"] : ["service", "kueche"];
+}
 /** Die Schichten eines Bereichs an einem Tag. */
-function slotsAmTag(state, dateStr, bereich) {
+function slotsAmTag(state, dateStr, rolleOderBereich) {
   const plan = planFuerDatum(state, dateStr) || {};
-  return (bereich === "kueche" ? plan.kueche : plan.service) || [];
+  const bereich = bereichFuerRolleAmW(state, rolleOderBereich, dateStr);
+  if (bereich === "kueche") return plan.kueche || [];
+  if (bereich === "bar") return plan.bar || [];
+  return plan.service || [];
 }
 /** Alle Schichten, die es je gab oder geben wird – fuer Namenslisten. Waehrend der Umstellung muss der
  * Bot sowohl "Service Abend 1" (bis 15.11.) als auch "Schicht 2" (ab 16.11.) verstehen. */
 function alleSlotsJe(state) {
-  const aus = [...(state?.shiftSlots?.service || []), ...(state?.shiftSlots?.kueche || [])];
+  const aus = [...(state?.shiftSlots?.service || []), ...(state?.shiftSlots?.kueche || []), ...(state?.shiftSlots?.bar || [])];
   for (const plan of Array.isArray(state?.schichtPlaene) ? state.schichtPlaene : []) {
-    aus.push(...(plan?.service || []), ...(plan?.kueche || []));
+    aus.push(...(plan?.service || []), ...(plan?.kueche || []), ...(plan?.bar || []));
   }
   return aus.filter(Boolean);
 }
@@ -306,6 +336,7 @@ const EMPTY_STATE = {
   chargenVerlauf: [], // Historie für die Auswertung (60 Tage), getrennt vom Arbeitsstand offeneChargen
   verbrauch: [], // Verbrauch und Reichweite je Artikel, gerechnet auf dem Haupt-Tablet
   produktionsStammChanges: [], // Warteschlange: Änderungen an Produkten/Behältern aus der Küche
+  schichtplanChanges: [], // Warteschlange: geänderte Schichtzeiten aus dem Chef-Bereich
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
   // --- Produktionsküche ---
@@ -394,6 +425,7 @@ async function getState(env) {
       chargenVerlauf: Array.isArray(parsed.chargenVerlauf) ? parsed.chargenVerlauf : [],
       verbrauch: Array.isArray(parsed.verbrauch) ? parsed.verbrauch : [],
       produktionsStammChanges: Array.isArray(parsed.produktionsStammChanges) ? parsed.produktionsStammChanges : [],
+      schichtplanChanges: Array.isArray(parsed.schichtplanChanges) ? parsed.schichtplanChanges : [],
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
       produktionsProdukte: Array.isArray(parsed.produktionsProdukte) ? parsed.produktionsProdukte : [],
@@ -1998,9 +2030,7 @@ async function handleMe(request, env) {
   // Schichten, die für die eigene Rolle angeboten werden (Service und Bar teilen sich einen Plan).
   const meineRolle = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role || null;
   // Ohne Schichten, die nur als feste Schicht vergeben werden (Store-Management) – die sucht sich niemand aus.
-  const meineSchichtarten = (state.shiftSlots ? (meineRolle === "kueche" ? state.shiftSlots.kueche : state.shiftSlots.service) || [] : []).filter(
-    (s) => !s.nurFest
-  );
+  const meineSchichtarten = slotsAmTag(state, today, meineRolle).filter((s) => !s.nurFest);
 
   // Welche Schichten im eigenen Konkurrenz-Pool schon FEST an jemand anderen vergeben sind – damit die
   // Person sie gar nicht erst auswählt. Bewusst OHNE Namen: wer die Schicht hat, geht sie nichts an.
@@ -3715,7 +3745,7 @@ function buildWochenplan(state, weekStart) {
   for (const [name, entry] of Object.entries(bucket?.entries || {})) {
     for (const day of entry?.days || []) {
       if (!day.confirmedSlotId || !day.bossConfirmed) continue;
-      const bereich = rolleVon(name) === "kueche" ? "kueche" : "service";
+      const bereich = bereichFuerRolleAmW(state, rolleVon(name), day.date);
       zuteilung.set(`${day.date}|${bereich}|${day.confirmedSlotId}`, { name, note: day.note || "" });
     }
   }
@@ -3731,7 +3761,7 @@ function buildWochenplan(state, weekStart) {
   for (let i = 0; i < 7; i++) {
     const date = addDaysISO(weekStart, i);
     const schichten = [];
-    for (const bereich of ["service", "kueche"]) {
+    for (const bereich of bereicheW(state, date)) {
       for (const slot of slotsAmTag(state, date, bereich)) {
         if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
         const zeiten = slot.weekdayOverrides?.[i] ? { ...slot, ...slot.weekdayOverrides[i] } : slot;
@@ -3774,11 +3804,86 @@ function wochentagIndex(dateStr) {
 function findSlotDefinition(state, employeeName, slotLabel, dateStr) {
   const needle = employeeName.trim().toLowerCase();
   const role = (state.employeeRoles || []).find((r) => String(r.name || "").trim().toLowerCase() === needle)?.role;
-  const bereich = role === "kueche" ? "kueche" : "service";
+  const bereich = bereichFuerRolleAmW(state, role, dateStr);
   // Mit Datum: die Schicht, die an DEM Tag gilt. Ohne Datum (alte Aufrufe) der heutige Plan.
   const list = slotsAmTag(state, dateStr, bereich);
   const found = list.find((s) => normalizeSlotLabelCheck(s.label) === normalizeSlotLabelCheck(slotLabel));
   return found ? { id: found.id, label: found.label, from: found.from, to: found.to } : null;
+}
+
+/**
+ * Der Chef aendert am Laptop die Schichtzeiten.
+ *
+ * Geprueft wird hier nur so viel, dass kein Unsinn in die Warteschlange kommt – die maßgebliche
+ * Formgebung macht das iPad in store.setSchichtPlaene(). Der Worker rechnet nichts aus, er merkt
+ * sich den Wunsch und zeigt ihn sofort an, damit der Laptop nicht 90 Sekunden lang so tut, als
+ * waere nichts passiert.
+ */
+async function handleAdminSchichtplan(request, env) {
+  if (request.method !== "POST") return jsonResponse({ error: "method not allowed" }, 405);
+  const guard = await requireSession(request, env, ["boss", "kuechenleitung"]);
+  if (guard.error) return guard.error;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "bad json" }, 400);
+  }
+  const roh = Array.isArray(body?.plaene) ? body.plaene : null;
+  if (!roh || roh.length === 0) return jsonResponse({ error: "Es muss mindestens einen Plan geben." }, 400);
+  if (roh.length > 20) return jsonResponse({ error: "Zu viele Pläne." }, 400);
+
+  const zeit = (x) => (/^\d{2}:\d{2}$/.test(String(x || "")) ? String(x) : null);
+  const plaene = [];
+  for (const p of roh) {
+    const ab = /^\d{4}-\d{2}-\d{2}$/.test(p?.ab || "") ? p.ab : null;
+    if (!ab) return jsonResponse({ error: "Jeder Plan braucht ein Datum, ab dem er gilt." }, 400);
+    const plan = { ab };
+    for (const bereich of ["service", "kueche", "bar"]) {
+      const liste = Array.isArray(p?.[bereich]) ? p[bereich] : [];
+      if (liste.length > 40) return jsonResponse({ error: "Zu viele Schichten in einem Bereich." }, 400);
+      plan[bereich] = [];
+      for (const sl of liste) {
+        const label = String(sl?.label || "").trim().slice(0, 40);
+        const from = zeit(sl?.from);
+        const to = zeit(sl?.to);
+        if (!label || !from || !to) return jsonResponse({ error: `Bei „${label || "einer Schicht"}“ fehlt der Name oder eine Zeit.` }, 400);
+        const tage = Array.isArray(sl?.allowedWeekdays)
+          ? [...new Set(sl.allowedWeekdays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b)
+          : [];
+        plan[bereich].push({
+          ...(sl?.id ? { id: String(sl.id).slice(0, 40) } : {}),
+          label,
+          from,
+          to,
+          ...(tage.length > 0 && tage.length < 7 ? { allowedWeekdays: tage } : {}),
+          ...(sl?.weekdayOverrides && typeof sl.weekdayOverrides === "object" ? { weekdayOverrides: sl.weekdayOverrides } : {}),
+          ...(sl?.nurFest ? { nurFest: true } : {}),
+        });
+      }
+    }
+    plaene.push(plan);
+  }
+  plaene.sort((a, b) => a.ab.localeCompare(b.ab));
+
+  const state = await getState(env);
+  const eintrag = {
+    id: crypto.randomUUID(),
+    plaene,
+    ab: /^\d{4}-\d{2}-\d{2}$/.test(body?.ab || "") ? body.ab : null,
+    von: guard.session.name,
+    at: new Date().toISOString(),
+  };
+  // Vorschau: der Laptop zeigt den neuen Stand sofort. Das Haupt-Tablet bleibt die maßgebliche
+  // Instanz und ueberschreibt sie beim naechsten Abgleich mit dem, was dort wirklich steht.
+  const heute = todayBerlin();
+  const heutePlan = plaene.filter((p) => p.ab <= heute).sort((a, b) => a.ab.localeCompare(b.ab)).pop() || plaene[0];
+  await patchState(env, {
+    schichtplanChanges: [...(state.schichtplanChanges || []), eintrag].slice(-50),
+    schichtPlaene: plaene,
+    shiftSlots: { service: heutePlan.service || [], kueche: heutePlan.kueche || [], bar: heutePlan.bar || [] },
+  });
+  return jsonResponse({ ok: true, plaene });
 }
 
 /** Chef entscheidet vom Laptop über eine Schicht. Der Eintrag geht in dieselbe Warteschlange, die auch der
@@ -5779,6 +5884,13 @@ async function handleState(request, env) {
     // Der iPad meldet, welche Anmeldungen er übernommen hat. Sie fliegen aus der Warteschlange, denn ab
     // jetzt stecken sie in seiner Zahl – ließe man sie liegen, wären sie doppelt gezählt und der Abend
     // wäre auf dem Papier voll, obwohl noch Plätze frei sind.
+    // Schichtzeiten: was das iPad uebernommen hat, fliegt aus der Warteschlange. Alles andere bleibt
+    // liegen – es kam zwischen dem Abholen und diesem Push herein und muss noch angewandt werden.
+    if (Array.isArray(body.schichtplanApplied)) {
+      const erledigt = new Set(body.schichtplanApplied.map(String));
+      const aktuell = await getState(env);
+      patch.schichtplanChanges = (aktuell.schichtplanChanges || []).filter((c) => !erledigt.has(String(c.id)));
+    }
     if (Array.isArray(body.eventSignupsApplied) && body.eventSignupsApplied.length > 0) {
       const erledigt = new Set(body.eventSignupsApplied.map(String));
       const aktuell = await getState(env);
@@ -6151,6 +6263,7 @@ export default {
       if (url.pathname === "/kueche/station") return handleKuecheStation(request, env);
       if (url.pathname === "/kueche/hub") return handleKuecheHub(request, env);
       if (url.pathname === "/kueche/stamm") return handleKuecheStamm(request, env);
+      if (url.pathname === "/admin/schichtplan") return handleAdminSchichtplan(request, env);
       if (url.pathname === "/kueche/overview") return handleKuecheOverview(request, env);
       if (url.pathname === "/kueche/clock") return handleKuecheClock(request, env);
       if (url.pathname === "/kueche/produktion") return handleKuecheProduktion(request, env);

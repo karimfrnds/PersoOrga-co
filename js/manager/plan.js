@@ -11,7 +11,7 @@
 // ============================================================================
 import { decideShift, publishWeek } from "./api.js";
 import { el, text, knopf, feld, eingabe, blatt, toast, ausfuehren, addDays, mondayOf, datumKurz, WT, WT_LANG, gleicherName } from "./ui.js";
-import { slotsFuerWoche } from "../schichtplan.js";
+import { slotsFuerWoche, bereichFuerRolleAm, barEigenAm, BEREICH_LABEL } from "../schichtplan.js";
 
 const ABWESENHEIT = {
   urlaub: { label: "Urlaub", symbol: "🏖" },
@@ -30,7 +30,11 @@ let tagIndex = null;
 function rolleVon(daten, name) {
   return (daten.employeeRoles || []).find((r) => gleicherName(r.name, name))?.role || "service";
 }
-const istKueche = (daten, name) => rolleVon(daten, name) === "kueche";
+// Drei Bereiche, ab dem Tag, an dem die Bar eigene Schichten hat – davor läuft sie im Service mit.
+const barEigen = (daten, date) => barEigenAm(daten.schichtPlaene, date);
+const bereichVon = (daten, name, date) => bereichFuerRolleAm(daten.schichtPlaene, rolleVon(daten, name), date);
+const bereicheVon = (daten, date) => (barEigen(daten, date) ? ["service", "kueche", "bar"] : ["service", "kueche"]);
+const bereichTitel = (daten, b, date) => (b === "service" && !barEigen(daten, date) ? "Service / Bar" : BEREICH_LABEL[b]);
 
 function slotAmTag(slot, i) {
   const ov = slot?.weekdayOverrides?.[i];
@@ -49,7 +53,7 @@ function abwesenheit(daten, name, date) {
   return (daten.absenceReports || []).find((r) => gleicherName(r.employeeName, name) && r.from <= date && (r.to || r.from) >= date) || null;
 }
 
-/** Alle Schichten eines Tages mit Belegung: [{kueche, slot, belegt, kandidaten}] */
+/** Alle Schichten eines Tages mit Belegung: [{bereich, slot, belegt, kandidaten}] */
 function tagesSchichten(daten, weekStart, i) {
   if (!daten.shiftSlots && !daten.schichtPlaene) return [];
   const date = addDays(weekStart, i);
@@ -57,16 +61,14 @@ function tagesSchichten(daten, weekStart, i) {
   const out = [];
   // Die Schichten der gezeigten Woche, nicht die von heute: ab dem 16.11.2026 gilt bei frnds ein
   // anderer Plan, und eine Woche danach muss ihn zeigen – eine davor weiter den alten.
-  for (const [slots, kueche] of [
-    [slotsFuerWoche(daten.schichtPlaene, weekStart, "service", daten.shiftSlots), false],
-    [slotsFuerWoche(daten.schichtPlaene, weekStart, "kueche", daten.shiftSlots), true],
-  ]) {
+  for (const bereich of bereicheVon(daten, date)) {
+    const slots = slotsFuerWoche(daten.schichtPlaene, weekStart, bereich, daten.shiftSlots);
     for (const roh of slots) {
       if (roh.allowedWeekdays && !roh.allowedWeekdays.includes(i)) continue;
       const slot = slotAmTag(roh, i);
-      const relevant = alle.filter((e) => e.date === date && istKueche(daten, e.name) === kueche && !abwesenheit(daten, e.name, date));
+      const relevant = alle.filter((e) => e.date === date && bereichVon(daten, e.name, date) === bereich && !abwesenheit(daten, e.name, date));
       out.push({
-        kueche,
+        bereich,
         slot,
         date,
         relevant,
@@ -175,13 +177,10 @@ function renderPlan(daten, { neuLaden }) {
   const date = addDays(woche, tagIndex);
   wrap.appendChild(text("h2", "mg-plan-tag", `${WT_LANG[tagIndex]}, ${datumKurz(date)}`));
   const schichten = tagesSchichten(daten, woche, tagIndex);
-  for (const [kueche, titel] of [
-    [false, "Service / Bar"],
-    [true, "Küche"],
-  ]) {
-    const teil = schichten.filter((s) => s.kueche === kueche);
+  for (const bereich of bereicheVon(daten, date)) {
+    const teil = schichten.filter((s) => s.bereich === bereich);
     if (teil.length === 0) continue;
-    wrap.appendChild(text("p", "muted small res-bereich", titel));
+    wrap.appendChild(text("p", "muted small res-bereich", bereichTitel(daten, bereich, date)));
     for (const s of teil) wrap.appendChild(schichtKarte(daten, s, neuLaden));
   }
 
@@ -242,8 +241,8 @@ function schichtKarte(daten, s, neuLaden) {
 
 /** Auswahl, wer die Schicht bekommt: Gemeldete oben, dann alle anderen aus dem passenden Bereich. */
 function waehlen(daten, s, neuLaden) {
-  const { slot, date, kueche, relevant, belegt } = s;
-  const namen = [...(daten.employees || [])].filter((n) => istKueche(daten, n) === kueche).sort((a, b) => a.localeCompare(b));
+  const { slot, date, bereich, relevant, belegt } = s;
+  const namen = [...(daten.employees || [])].filter((n) => bereichVon(daten, n, date) === bereich).sort((a, b) => a.localeCompare(b));
   const gemeldet = new Set(relevant.filter((e) => (e.slots || []).some((x) => x.id === slot.id)).map((e) => e.name));
 
   blatt(`${slot.label} · ${datumKurz(date)}`, (box, schliessen) => {
@@ -282,7 +281,7 @@ function waehlen(daten, s, neuLaden) {
       box.appendChild(l);
     }
     if (rest.length) {
-      box.appendChild(text("p", "muted small res-bereich", oben.length ? "Alle anderen" : kueche ? "Küche" : "Service / Bar"));
+      box.appendChild(text("p", "muted small res-bereich", oben.length ? "Alle anderen" : bereichTitel(daten, bereich, date)));
       const l = el("div", "picker-list");
       rest.forEach((n) => l.appendChild(zeile(n)));
       box.appendChild(l);

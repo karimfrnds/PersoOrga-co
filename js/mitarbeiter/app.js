@@ -4,7 +4,7 @@
 // der Ferne für sich oder andere stempeln kann.
 // ============================================================================
 import { getSession, clearSession, getWorkerUrl, setWorkerUrl, login, getMe, sendAvailability, reportAbsence, markNotificationsRead, sendBestand } from "./api.js";
-import { slotsFuerWoche } from "../schichtplan.js";
+import { slotsFuerWoche, barEigenAm, BEREICH_LABEL } from "../schichtplan.js";
 import { euro, hours, escapeHtml, dateDe, todayStr } from "../format.js";
 import { betrieb } from "../betrieb.js";
 
@@ -633,15 +633,19 @@ function buildPlanTabelle(plan) {
   const meinName = String(me.name || "").trim().toLowerCase();
   const zelleFinden = (tag, eintrag) => tag.schichten.find((s) => s.bereich === eintrag.bereich && s.label === eintrag.label);
 
-  for (const bereich of ["service", "kueche"]) {
+  // Die Bar ist ein eigener Bereich, sobald sie eigene Schichten hat – sonst läuft sie im Service mit.
+  const barEigen = barEigenAm(me.schichtPlaene, plan.tage[plan.tage.length - 1]?.date || me.heute);
+  for (const bereich of ["service", "kueche", "bar"]) {
     const zeilen = reihenfolge.filter((r) => r.bereich === bereich);
     if (zeilen.length === 0) continue;
 
     const titel = document.createElement("div");
     titel.className = "muted small wp-bereich";
-    // "Service / Bar" nur dort, wo es auch eine Bar gibt – bei Rolla Costa stuende sonst eine Rolle
-    // in der Überschrift, die der Betrieb gar nicht kennt. Service und Bar teilen sich einen Plan.
-    titel.innerHTML = `<b>${bereich === "service" ? (betrieb.rollen.includes("bar") ? "Service / Bar" : "Service") : "Küche"}</b>`;
+    // "Service / Bar" nur dort, wo es eine Bar gibt, die keinen eigenen Plan hat – bei Rolla Costa
+    // stuende sonst eine Rolle in der Überschrift, die der Betrieb gar nicht kennt.
+    titel.innerHTML = `<b>${
+      bereich === "service" && !barEigen && betrieb.rollen.includes("bar") ? "Service / Bar" : BEREICH_LABEL[bereich]
+    }</b>`;
     wrap.appendChild(titel);
 
     const scroll = document.createElement("div");

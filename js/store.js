@@ -5,7 +5,7 @@
 import { todayStr, dateDe } from "./format.js";
 import { betrieb, kann } from "./betrieb.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
-import { planFuer as planAusListe } from "./schichtplan.js";
+import { planFuer as planAusListe, slotsAusPlan, bereichFuerRolleAm, BEREICHE } from "./schichtplan.js";
 
 /** Der frnds-Schichtplan ab 16.11.2026 als feste Schichten.
  *  [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So, von/bis leer = unbefristet.
@@ -138,6 +138,10 @@ function defaultData() {
       // nur der aktuelle, damit jede Anzeige, die einfach "die Schichten" liest, den richtigen Stand
       // zeigt. Im Pop-up ist es die eine, im Admin aenderbare Liste.
       shiftSlots: betrieb.schichten || { service: [], kueche: [] },
+      // Die Folge der Plaene mit Stichtag – DAS sind die Schichtzeiten. Wird beim ersten Start aus
+      // betrieb.js (Cafe) bzw. aus shiftSlots (Pop-up) befuellt und danach im Chef-Bereich gepflegt.
+      // Seit sie bearbeitbar sind, gehoeren sie den Daten und nicht mehr dem Code.
+      schichtPlaene: null,
       // Was verkauft wird (nur im Pop-up): { id, name, preis, gebacken }. "gebacken" heisst: davon wird
       // morgens eine Menge hergestellt, es gibt also Backmenge, Verkauf und Rest.
       produkte: betrieb.produkte || [],
@@ -194,6 +198,8 @@ function defaultData() {
         appliedSchichtEreignisIds: [],
         appliedProduktionsEreignisIds: [],
         appliedProduktionsStammIds: [],
+        // Schon uebernommene Schichtplan-Aenderungen vom Laptop.
+        appliedSchichtplanIds: [],
       },
     },
     // { id, date, status, shifts[], plannedShifts[], tasks[], kassenabschluss{}, stornos[], auditLog[], closedAt }
@@ -592,6 +598,9 @@ function load() {
         // Im Café rein code-gesteuert (keine Bearbeiten-UI) -> immer die aktuelle Definition, nie aus
         // localStorage "einfrieren". Im Pop-up gehören die Zeiten dem Betrieb und werden gespeichert.
         shiftSlots: kann("schichtenEditierbar") ? parsed.settings?.shiftSlots ?? base.settings.shiftSlots : base.settings.shiftSlots,
+        // Die Plaene kommen aus dem Speicher, nicht mehr aus dem Code – sonst waere jede Aenderung
+        // beim naechsten Laden wieder weg.
+        schichtPlaene: Array.isArray(parsed.settings?.schichtPlaene) ? parsed.settings.schichtPlaene : null,
         produkte: Array.isArray(parsed.settings?.produkte) ? parsed.settings.produkte : base.settings.produkte,
       },
       days: (parsed.days ?? base.days).map(normalizeDay),
@@ -719,6 +728,9 @@ function persist() {
   }
 }
 
+// Erst die Plaene sicherstellen, dann migrieren: die Umstellung auf den Plan ab 16.11. fragt beim
+// Aufraeumen alter Tage danach, welche Schichten es an dem Tag gibt.
+if (stellePlaeneSicher()) persist();
 einmaligeMigrationen();
 
 /** Umstellungen, die genau einmal über die vorhandenen Daten laufen müssen. Jede hat einen Namen und wird
@@ -821,7 +833,7 @@ function einmaligeMigrationen() {
       if (d.date < SCHICHTPLAN_NEU_AB || d.status !== "offen") continue;
       const uebrig = [];
       for (const a of d.availability || []) {
-        const rolle = roleOf(a.employeeId);
+        const rolle = roleOf(a.employeeId, d.date);
         const gueltig = new Set(shiftSlotsForRole(rolle, d.date).map((sl) => sl.id));
         const slotIds = (a.slotIds || []).filter((id) => gueltig.has(id));
         if (slotIds.length === 0) {
@@ -870,7 +882,7 @@ function einmaligeMigrationen() {
       if (d.date < heute || d.status !== "offen" || weekdayIndexOfDate(d.date) > 4) continue;
       let tagGeaendert = false;
       for (const a of d.availability || []) {
-        if (roleOf(a.employeeId) !== "service" || !(a.slotIds || []).includes("mittel")) continue;
+        if (roleOf(a.employeeId, d.date) !== "service" || !(a.slotIds || []).includes("mittel")) continue;
         const warFest = a.confirmedSlotId === "mittel";
         a.slotIds = a.slotIds.filter((id) => id !== "mittel");
         if (warFest) {
@@ -912,15 +924,84 @@ function einmaligeMigrationen() {
  * schon begonnen hat. Dass ein Plan ein Datum hat, ist der Punkt – sonst gälte eine Änderung rückwirkend
  * auch für Wochen, die längst eingeteilt sind. Im Pop-up gibt es nur einen Plan, der im Admin änderbar ist.
  */
+/** Eine einzelne Schicht in Form bringen. Ungueltiges fliegt raus statt stillschweigend kaputt
+ *  gespeichert zu werden – eine Schicht ohne Zeiten waere im Plan eine leere Zeile, auf die man
+ *  niemanden einteilen kann. */
+function normalizeSlot(roh, vergebeneIds) {
+  const label = String(roh?.label || "").trim().slice(0, 40);
+  const from = String(roh?.from || "");
+  const to = String(roh?.to || "");
+  if (!label || !/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(to)) return null;
+  // Die ID wird aus der Anfangszeit gebildet (frueh/mittel/spaet + Nummer): daran haengt, zu welcher
+  // Schicht-Gruppe eine Aufgabe gehoert. Eine bestehende ID bleibt unangetastet – sonst verloeren
+  // alle bisherigen Einteilungen ihren Bezug.
+  let id = String(roh?.id || "").trim();
+  if (!id || vergebeneIds.has(id)) {
+    const gruppe = from < "11:00" ? "frueh" : from < "15:00" ? "mittel" : "spaet";
+    let n = 1;
+    while (vergebeneIds.has(`${gruppe}${n}`)) n++;
+    id = `${gruppe}${n}`;
+  }
+  vergebeneIds.add(id);
+  const tage = Array.isArray(roh?.allowedWeekdays)
+    ? [...new Set(roh.allowedWeekdays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b)
+    : [];
+  // Abweichende Zeiten an einzelnen Wochentagen ("Mo/Di bis 17:00") bleiben erhalten.
+  const ov = {};
+  for (const [wd, werte] of Object.entries(roh?.weekdayOverrides || {})) {
+    const i = Number(wd);
+    if (!Number.isInteger(i) || i < 0 || i > 6 || !werte) continue;
+    const eintrag = {};
+    if (/^\d{2}:\d{2}$/.test(werte.from || "")) eintrag.from = werte.from;
+    if (/^\d{2}:\d{2}$/.test(werte.to || "")) eintrag.to = werte.to;
+    if (Object.keys(eintrag).length) ov[i] = eintrag;
+  }
+  return {
+    id,
+    label,
+    from,
+    to,
+    ...(tage.length > 0 && tage.length < 7 ? { allowedWeekdays: tage } : {}),
+    ...(Object.keys(ov).length ? { weekdayOverrides: ov } : {}),
+    ...(roh?.nurFest ? { nurFest: true } : {}),
+  };
+}
+
+/** Die ganze Plan-Folge in Form bringen: nach Stichtag sortiert, je Stichtag genau ein Plan. */
+function normalizeSchichtPlaene(liste) {
+  const nachAb = new Map();
+  for (const roh of Array.isArray(liste) ? liste : []) {
+    const ab = /^\d{4}-\d{2}-\d{2}$/.test(roh?.ab || "") ? roh.ab : "2000-01-01";
+    const plan = { ab };
+    for (const bereich of BEREICHE) {
+      const ids = new Set();
+      plan[bereich] = (Array.isArray(roh?.[bereich]) ? roh[bereich] : []).map((x) => normalizeSlot(x, ids)).filter(Boolean);
+    }
+    nachAb.set(ab, plan);
+  }
+  return [...nachAb.values()].sort((a, b) => a.ab.localeCompare(b.ab));
+}
+
+/** Beim ersten Start die Plaene aus dem bisherigen Ort uebernehmen: im Cafe aus betrieb.js, im
+ *  Pop-up aus den dort im Admin gepflegten Schichtzeiten. Danach leben sie in den Daten. */
+function stellePlaeneSicher() {
+  if (Array.isArray(data.settings.schichtPlaene) && data.settings.schichtPlaene.length > 0) return false;
+  const saat = Array.isArray(betrieb.schichtPlaene)
+    ? betrieb.schichtPlaene
+    : [{ ab: "2000-01-01", service: data.settings.shiftSlots?.service || [], kueche: data.settings.shiftSlots?.kueche || [], bar: [] }];
+  data.settings.schichtPlaene = normalizeSchichtPlaene(saat);
+  return true;
+}
+
 // Gerechnet wird in schichtplan.js – dasselbe Modul benutzen Laptop und Handy, damit dort
 // nicht aus Versehen etwas anderes herauskommt als hier.
 function planFuer(dateStr) {
-  return planAusListe(betrieb.schichtPlaene, dateStr || todayStr(), data.settings.shiftSlots);
+  return planAusListe(data.settings.schichtPlaene, dateStr || todayStr(), data.settings.shiftSlots);
 }
 
 function shiftSlotsForRole(role, dateStr) {
-  const plan = planFuer(dateStr) || {};
-  return (role === "kueche" ? plan.kueche : plan.service) || [];
+  const tag = dateStr || todayStr();
+  return slotsAusPlan(planFuer(tag), bereichFuerRolleAm(data.settings.schichtPlaene, role, tag));
 }
 
 /** Schicht mit den Zeiten, die an DIESEM Wochentag gelten. Manche Schichten enden an einzelnen Tagen
@@ -957,9 +1038,14 @@ function autoConfirmsWithoutBoss(slotId) {
  * Schicht-ID"). Service und Bar teilen sich einen Plan (blockieren sich gegenseitig), Küche hat einen
  * eigenen – deren Schicht "frueh1" ist zeitlich eine ganz andere als die von Service/Bar, darf die also
  * nicht blockieren. Entspricht genau der Aufteilung von shiftSlotsForRole(). */
-function roleOf(employeeId) {
+function roleOf(employeeId, dateStr) {
   const role = data.employees.find((e) => e.id === employeeId)?.role || null;
-  return role === "kueche" ? "kueche" : role === null ? null : "service";
+  if (role === null) return null;
+  // MIT dem Tag: an Tagen, an denen die Bar eigene Schichten hat, ist sie ein eigener Pool – ihre
+  // "frueh1" ist dann eine andere Schicht als die des Service und darf sie nicht blockieren. An
+  // Tagen davor laeuft die Bar im Service mit und konkurriert dort mit. Beide Seiten eines
+  // Vergleichs fragen immer mit demselben Tag, also bleibt es in sich stimmig.
+  return bereichFuerRolleAm(data.settings.schichtPlaene, role, dateStr || todayStr());
 }
 
 /**
@@ -974,11 +1060,11 @@ function resolveDayAvailability(d) {
     changed = false;
     const taken = new Map(); // "rolle:slotId" -> employeeId, wer diese Schicht gerade fest hat
     for (const a of d.availability) {
-      if (a.confirmedSlotId) taken.set(roleOf(a.employeeId) + ":" + a.confirmedSlotId, a.employeeId);
+      if (a.confirmedSlotId) taken.set(roleOf(a.employeeId, d.date) + ":" + a.confirmedSlotId, a.employeeId);
     }
     for (const a of d.availability) {
       if (a.confirmedSlotId) continue;
-      const role = roleOf(a.employeeId);
+      const role = roleOf(a.employeeId, d.date);
       const open = a.slotIds.filter((id) => !taken.has(role + ":" + id));
       if (open.length === 1) {
         a.confirmedSlotId = open[0];
@@ -1134,7 +1220,10 @@ export const store = {
     // Der Schichtplan hängt am Datum. Hier den von heute einsetzen, damit jede Anzeige, die einfach
     // "die Schichten" liest, ab dem Stichtag sofort den neuen Plan zeigt – auch wenn das Tablet über
     // Mitternacht offen geblieben ist. Abgeleitet, nicht gespeichert: die Wahrheit steht in betrieb.js.
-    if (Array.isArray(betrieb.schichtPlaene)) data.settings.shiftSlots = planFuer(todayStr());
+    // shiftSlots ist die bequeme Sicht "die Schichten von heute". Sie wird aus den Plaenen abgeleitet,
+    // damit jede Anzeige, die einfach "die Schichten" liest, den richtigen Stand zeigt.
+    const heutePlan = planFuer(todayStr());
+    if (heutePlan) data.settings.shiftSlots = { service: heutePlan.service || [], kueche: heutePlan.kueche || [], bar: heutePlan.bar || [] };
     return data.settings;
   },
   getGithubBackupConfig() {
@@ -1449,7 +1538,7 @@ export const store = {
    * Schichten von heute zur Auswahl stuenden, koennte man niemanden auf eine Schicht des neuen Plans
    * setzen – man saehe "Bar" und "Service Abend", obwohl es die ab dem Stichtag nicht mehr gibt. */
   naechsterPlanwechsel() {
-    const plaene = betrieb.schichtPlaene;
+    const plaene = data.settings.schichtPlaene;
     if (!Array.isArray(plaene)) return "";
     const heute = todayStr();
     const zukunft = plaene.map((p) => String(p?.ab || "")).filter((ab) => ab > heute).sort();
@@ -1460,8 +1549,8 @@ export const store = {
   findeSchichtDefinition(role, slotId, dateStr) {
     const direkt = shiftSlotsForRole(role, dateStr).find((s) => s.id === slotId);
     if (direkt) return direkt;
-    for (const plan of Array.isArray(betrieb.schichtPlaene) ? betrieb.schichtPlaene : []) {
-      const treffer = ((role === "kueche" ? plan.kueche : plan.service) || []).find((s) => s.id === slotId);
+    for (const plan of Array.isArray(data.settings.schichtPlaene) ? data.settings.schichtPlaene : []) {
+      const treffer = slotsAusPlan(plan, bereichFuerRolleAm(data.settings.schichtPlaene, role, plan.ab)).find((s) => s.id === slotId);
       if (treffer) return treffer;
     }
     return null;
@@ -1486,6 +1575,67 @@ export const store = {
    * Die ID wird aus der Anfangszeit gebildet (frueh/mittel/spaet + Nummer): daran hängt, zu welcher
    * Schicht-Gruppe eine Aufgabe gehört. Eine zufällige ID wäre für die Aufgaben-Zuordnung wertlos.
    */
+  /** Alle Plaene lesen – Grundlage des Editors im Chef-Bereich. */
+  getSchichtPlaene() {
+    stellePlaeneSicher();
+    return data.settings.schichtPlaene;
+  },
+  /**
+   * Die Schichtzeiten neu setzen. Das ist der einzige Weg, auf dem sie sich aendern – vom iPad
+   * direkt, vom Laptop ueber die Warteschlange des Workers.
+   *
+   * Danach laufen zwei Aufraeumschritte, ohne die eine Aenderung nur halb ankaeme:
+   *   - Eintraege auf Schichten, die es an ihrem Tag nicht mehr gibt, werden entfernt (sonst stuende
+   *     jemand auf einer Schicht, die niemand mehr sehen kann, und der Platz bliebe blockiert).
+   *   - Die geplanten Schichten werden neu aufgeloest, damit geaenderte Zeiten sofort ueberall stehen.
+   * Vergangene und abgeschlossene Tage bleiben unberuehrt – das ist Abrechnung.
+   */
+  setSchichtPlaene(liste, { ab = null } = {}) {
+    const neu = normalizeSchichtPlaene(liste);
+    if (neu.length === 0) return null;
+    data.settings.schichtPlaene = neu;
+    const heute = todayStr();
+    // Ab wann aufraeumen? Ab dem Stichtag der Aenderung, mindestens aber ab heute.
+    const grenze = ab && ab > heute ? ab : heute;
+    const entfernt = [];
+    for (const d of data.days) {
+      if (d.date < grenze || d.status !== "offen") continue;
+      const uebrig = [];
+      for (const a of d.availability || []) {
+        const gueltig = new Set(shiftSlotsForRole(data.employees.find((e) => e.id === a.employeeId)?.role, d.date).map((sl) => sl.id));
+        const slotIds = (a.slotIds || []).filter((id) => gueltig.has(id));
+        if (slotIds.length === 0) {
+          if (a.confirmedSlotId && a.bossConfirmed) entfernt.push({ employeeId: a.employeeId, date: d.date });
+          continue;
+        }
+        a.slotIds = slotIds;
+        if (a.confirmedSlotId && !gueltig.has(a.confirmedSlotId)) {
+          a.confirmedSlotId = null;
+          a.bossConfirmed = false;
+          entfernt.push({ employeeId: a.employeeId, date: d.date });
+        }
+        uebrig.push(a);
+      }
+      d.availability = uebrig;
+      // Der Tag darf erneut mit festen Schichten befuellt werden – jetzt mit den neuen.
+      d.festeSchichtenAngewandt = [];
+      resolveDayAvailability(d);
+    }
+    for (const e of entfernt) {
+      data.notifications.push({
+        id: uid(),
+        employeeId: e.employeeId,
+        text: `ℹ️ Die Schichtzeiten haben sich geändert. Deine Schicht am ${dateDe(e.date)} gibt es so nicht mehr – bitte im Kiosk neu eintragen.`,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+      });
+    }
+    const heutePlan = planFuer(heute);
+    if (heutePlan) data.settings.shiftSlots = { service: heutePlan.service || [], kueche: heutePlan.kueche || [], bar: heutePlan.bar || [] };
+    persist();
+    this.ergaenzeFesteSchichten();
+    return data.settings.schichtPlaene;
+  },
   setShiftSlots(liste) {
     if (!kann("schichtenEditierbar")) return null;
     const zaehler = { frueh: 0, mittel: 0, spaet: 0 };
@@ -1508,8 +1658,12 @@ export const store = {
       });
     // Doppelte IDs wären ein stiller Datenfehler (zwei Schichten, eine Zuteilung).
     const gesehen = new Set();
-    data.settings.shiftSlots = { ...data.settings.shiftSlots, service: sauber.filter((s) => !gesehen.has(s.id) && gesehen.add(s.id)) };
-    persist();
+    const service = sauber.filter((s) => !gesehen.has(s.id) && gesehen.add(s.id));
+    // Schreibt in den juengsten Plan: die Schichtzeiten leben in den Plaenen, shiftSlots ist nur die
+    // abgeleitete Sicht "heute". Im Pop-up gibt es genau einen Plan, hier aendert sich also nichts.
+    const plaene = this.getSchichtPlaene();
+    const letzter = plaene[plaene.length - 1];
+    this.setSchichtPlaene(plaene.map((p) => (p === letzter ? { ...p, service } : p)));
     return data.settings.shiftSlots.service;
   },
   getAvailability(dayId, employeeId) {
@@ -1523,8 +1677,8 @@ export const store = {
   isSlotTaken(dayId, slotId, excludingEmployeeId) {
     const d = this.getDay(dayId);
     if (!d) return false;
-    const role = roleOf(excludingEmployeeId);
-    return d.availability.some((a) => a.employeeId !== excludingEmployeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId) === role);
+    const role = roleOf(excludingEmployeeId, d.date);
+    return d.availability.some((a) => a.employeeId !== excludingEmployeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId, d.date) === role);
   },
   /** Reine Zwischenspeicherung während der Eingabe im Kiosk (noch nicht "abgeschickt") – löst noch
    * keine Kaskade/Ausgraue-Wirkung für andere aus, das passiert erst bei commitAvailability. */
@@ -1554,9 +1708,9 @@ export const store = {
   commitAvailability(dayId, employeeId, slotIds, submittedAt) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const role = roleOf(employeeId);
+    const role = roleOf(employeeId, d.date);
     const takenByOthers = new Set(
-      d.availability.filter((a) => a.employeeId !== employeeId && a.confirmedSlotId && roleOf(a.employeeId) === role).map((a) => a.confirmedSlotId)
+      d.availability.filter((a) => a.employeeId !== employeeId && a.confirmedSlotId && roleOf(a.employeeId, d.date) === role).map((a) => a.confirmedSlotId)
     );
     const clean = [...new Set(Array.isArray(slotIds) ? slotIds : [])].filter((id) => !takenByOthers.has(id));
     const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
@@ -1589,9 +1743,9 @@ export const store = {
   confirmAvailability(dayId, employeeId, slotId, note) {
     const d = this.getDay(dayId);
     if (!d) return;
-    const role = roleOf(employeeId);
+    const role = roleOf(employeeId, d.date);
     for (const a of d.availability) {
-      if (a.employeeId !== employeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId) === role) a.confirmedSlotId = null;
+      if (a.employeeId !== employeeId && a.confirmedSlotId === slotId && roleOf(a.employeeId, d.date) === role) a.confirmedSlotId = null;
     }
     const idx = d.availability.findIndex((a) => a.employeeId === employeeId);
     if (idx >= 0) {
@@ -1647,7 +1801,7 @@ export const store = {
     resolveDayAvailability(d);
     persist();
 
-    const role = roleOf(employeeId);
+    const role = roleOf(employeeId, d.date);
     const slotDef = shiftSlotsForRole(role, d.date).find((s) => s.id === slotId);
     this.addNotification(
       employeeId,

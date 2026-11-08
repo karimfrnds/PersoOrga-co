@@ -16,16 +16,18 @@ import { escapeHtml, todayStr } from "../format.js";
 import { betrieb, kann } from "../betrieb.js";
 import { renderVerkauf } from "./verkauf.js";
 import { renderBericht } from "./bericht.js";
+import { renderSchichtzeiten } from "./schichtzeiten.js";
 
 // Wird bei jeder Änderung hochgezählt und in der Kopfzeile angezeigt – so ist auf einen Blick erkennbar,
 // ob der Browser schon die neue Fassung geladen hat oder noch eine gecachte.
-const APP_VERSION = "2026-11-05.2";
+const APP_VERSION = "2026-11-08.1";
 
 const outlet = document.getElementById("outlet");
 
 const TABS = [
   { id: "bericht", label: "🧠 Wochenrückblick" },
   { id: "planning", label: "📅 Schichtplanung" },
+  { id: "schichtzeiten", label: "🕗 Schichtzeiten" },
   { id: "tasks", label: "📋 Aufgaben" },
   { id: "bestand", label: "🧮 Bestand" },
   ...(kann("verkauf") ? [{ id: "verkauf", label: "🧁 Verkauf" }] : []),
@@ -178,6 +180,7 @@ function renderShell() {
   const onChanged = () => loadAndRender();
   let view;
   if (activeTab === "bericht") view = renderBericht(state);
+  else if (activeTab === "schichtzeiten") view = renderSchichtzeiten(state, { onChanged });
   else if (activeTab === "tasks") view = renderTasks(state, { onChanged });
   else if (activeTab === "bestand") view = renderBestand(state, { onChanged });
   else if (activeTab === "verkauf") view = renderVerkauf(state, { onChanged });

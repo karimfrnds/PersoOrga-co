@@ -34,7 +34,7 @@ const BETRIEBE = {
       storeManagement: true,
       verkauf: false, // Stückzahlen je Produkt
       kennzahlen: true, // Umsatz, Umschlag, Wareneinsatz
-      schichtenEditierbar: false, // Schichtzeiten stehen im Code
+      schichtenEditierbar: false, // einfache Schichtliste im iPad-Admin – im Café läuft das über den Chef-Bereich
       beta: true, // Testbereich im Admin (Wochenplan-CSV)
       einrichtung: false, // laeuft seit Jahren – nichts mehr einzurichten
     },
@@ -48,6 +48,8 @@ const BETRIEBE = {
     //
     // "ab" ist der erste Tag, an dem der Plan gilt. Der älteste Plan braucht ein Datum weit in der
     // Vergangenheit, damit auch alte Tage einen Plan haben.
+    // Startbelegung der Schichtzeiten. Ab dem ersten Start leben sie in den Daten und werden im
+    // Chef-Bereich unter "Schichtzeiten" gepflegt – was hier steht, ist nur noch die Saat.
     schichtPlaene: [
       {
         ab: "2000-01-01",

@@ -1072,6 +1072,8 @@ async function performTaskSync() {
     minLeadMinutes: einstellungen.minLeadMinutes,
     maxGuestsOnline: einstellungen.maxGuestsOnline,
     onlineEnabled: einstellungen.onlineEnabled,
+    // Fuer die Buchungsseite: "bei Fragen ruft uns an" ist nur dann etwas wert, wenn die Nummer dabeisteht.
+    telefon: einstellungen.telefon || "",
     // Nur die kommenden Sperrtage – vergangene interessieren die Buchungsseite nicht.
     terraceClosedDates: (einstellungen.terraceClosedDates || []).filter((d) => d >= todayStr()),
   };

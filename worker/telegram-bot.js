@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-11-08.1";
+const WORKER_VERSION = "2026-11-10.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -620,6 +620,7 @@ function buchungsConfig(state) {
     onlineEnabled: c.onlineEnabled !== false,
     terraceClosedDates: Array.isArray(c.terraceClosedDates) ? c.terraceClosedDates : [],
     cafeName: String(c.cafeName || "").trim(),
+    telefon: String(c.telefon || "").trim(),
   };
 }
 
@@ -1662,6 +1663,8 @@ async function handleBookingPage(env) {
 
   .erfolg { text-align: center; padding: 34px 6px 26px; }
   .erfolg h1 { font-size: 38px; }
+  /* Der Telefonlink soll zur Seite gehoeren und nicht nach Standard-Browserblau aussehen. */
+  .erfolg a { color: var(--tinte); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
   .code {
     font-family: "Ojuju", "Archivo", sans-serif;
     font-size: 36px; font-weight: 600; letter-spacing: 0.18em; margin: 14px 0 6px;
@@ -1674,6 +1677,10 @@ async function handleBookingPage(env) {
 <script>
 var MAX_GUESTS = ${cfg.maxGuestsOnline};
 var MAX_TAGE = ${cfg.maxDaysAhead};
+// Telefonnummer des Cafes, falls hinterlegt. Zweimal: einmal zum Anzeigen, einmal fuer den
+// tel:-Link, in dem Leerzeichen nichts verloren haben.
+var TELEFON = ${JSON.stringify(cfg.telefon)};
+var TELEFON_LINK = ${JSON.stringify(cfg.telefon.replace(/[^+\d]/g, ""))};
 // Die eigene Adresse als Grundlage fuer alle Anfragen. Eine RELATIVE Adresse wie "slots" wuerde von
 // /booking aus bei /slots landen (der letzte Teil des Pfades gilt als Dateiname, nicht als Ordner).
 // Bewusst ohne regulaeren Ausdruck: dieser Code steht in einem Text-Baustein des Workers, und der
@@ -1891,11 +1898,20 @@ function senden() {
       }
       var datumText = new Date(daten.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
       app.innerHTML = "";
+      // Die Bestaetigung IST diese Seite. Das muss dastehen, sonst wartet jemand auf eine Mail,
+      // die nie kommt, und haelt die Reservierung fuer gescheitert.
+      var anruf = TELEFON
+        ? '<p class="hint">Fragen, oder soll sich etwas ändern? Ruft uns gerne an: ' +
+          '<a href="tel:' + TELEFON_LINK + '">' + TELEFON + '</a></p>'
+        : '<p class="hint">Fragen, oder soll sich etwas ändern? Ruft uns gerne im Café an.</p>';
       app.appendChild(el(
-        '<div class="erfolg"><h1>Danke!</h1>' +
-        '<p>Wir haben eure Reservierung für <b>' + datumText + ' um ' + daten.time + ' Uhr</b> (' + daten.guests + ' Personen) notiert.</p>' +
+        '<div class="erfolg"><h1>Hat geklappt!</h1>' +
+        '<p>Eure Reservierung für <b>' + datumText + ' um ' + daten.time + ' Uhr</b> (' + daten.guests + ' Personen) steht bei uns im Buch.</p>' +
         '<p class="hint">Eure Reservierungsnummer:</p><div class="code">' + x.d.code + '</div>' +
-        '<p class="hint">Am besten kurz notieren. Wir melden uns nur, falls es ein Problem gibt.</p></div>'
+        '<p class="hint">Am besten kurz notieren.</p>' +
+        '<div class="melde"><b>Diese Seite ist eure Bestätigung.</b><br>Ihr bekommt dazu keine E-Mail und keine Nachricht. ' +
+        'Wir melden uns nur, falls es doch ein Problem gibt.</div>' +
+        anruf + '</div>'
       ));
     })
     .catch(function () {

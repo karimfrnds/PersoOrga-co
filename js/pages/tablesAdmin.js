@@ -452,6 +452,18 @@ function renderTablesAdmin() {
     );
     card.appendChild(reihe);
 
+    // Die Nummer steht auf der Buchungsseite – dort, wo "ruft uns gerne an" steht, und auf der
+    // Bestaetigung nach dem Absenden. Ohne Nummer bleibt es beim blossen "ruft an", was auf dem
+    // Handy niemand abtippt.
+    const tel = document.createElement("input");
+    tel.type = "tel";
+    tel.value = r.telefon || "";
+    tel.placeholder = "z.B. 0621 123456";
+    tel.onchange = () => setzen({ telefon: tel.value.trim().slice(0, 40) });
+    const telFeld = feld("Telefonnummer fürs Café", "Erscheint auf der Buchungsseite zum Antippen. Leer lassen = keine Nummer anzeigen.", tel);
+    telFeld.style.marginTop = "12px";
+    card.appendChild(telFeld);
+
     const hinweis = document.createElement("p");
     hinweis.className = "muted small";
     hinweis.textContent =

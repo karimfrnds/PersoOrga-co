@@ -598,7 +598,7 @@
       "festangestellt": 21
     },
     "cashWagePayout": false,
-    "adminPin": "0402",
+    "adminPin": "0165",
     "socialPin": "01099",
     "managerPin": "1329",
     "kuechenPin": null,
@@ -1110,114 +1110,8 @@
       "onlineEnabled": true
     },
     "shiftSlots": {
-      "service": [
-        {
-          "id": "frueh1",
-          "label": "Bar",
-          "from": "08:30",
-          "to": "16:00",
-          "weekdayOverrides": {
-            "0": {
-              "to": "17:00"
-            },
-            "1": {
-              "to": "17:00"
-            },
-            "6": {
-              "to": "17:00"
-            }
-          }
-        },
-        {
-          "id": "frueh2",
-          "label": "Service 2",
-          "from": "09:00",
-          "to": "17:00",
-          "allowedWeekdays": [
-            5,
-            6
-          ],
-          "weekdayOverrides": {
-            "6": {
-              "to": "17:30"
-            }
-          }
-        },
-        {
-          "id": "mittel",
-          "label": "Service Mitte",
-          "from": "10:00",
-          "to": "14:00",
-          "allowedWeekdays": [
-            5,
-            6
-          ]
-        },
-        {
-          "id": "frueh3",
-          "label": "Store-Management",
-          "from": "08:00",
-          "to": "14:00",
-          "allowedWeekdays": [
-            0,
-            1,
-            2,
-            3,
-            4
-          ],
-          "nurFest": true
-        },
-        {
-          "id": "spaet1",
-          "label": "Service Abend 1",
-          "from": "15:30",
-          "to": "23:00",
-          "allowedWeekdays": [
-            2,
-            3,
-            4,
-            5
-          ]
-        },
-        {
-          "id": "spaet2",
-          "label": "Service Abend 2",
-          "from": "18:00",
-          "to": "23:00",
-          "allowedWeekdays": [
-            2,
-            3,
-            4,
-            5
-          ]
-        }
-      ],
-      "kueche": [
-        {
-          "id": "frueh1",
-          "label": "Küche 1",
-          "from": "08:00",
-          "to": "15:30"
-        },
-        {
-          "id": "mittel",
-          "label": "Küche Mitte",
-          "from": "10:00",
-          "to": "14:00"
-        },
-        {
-          "id": "frueh2",
-          "label": "Küche 2",
-          "from": "10:00",
-          "to": "16:00",
-          "allowedWeekdays": [
-            4,
-            5,
-            6
-          ]
-        }
-      ],
-      "bar": []
+      "service": [],
+      "kueche": []
     },
     "schichtPlaene": [
       {
@@ -1396,186 +1290,386 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-11",
-      "lastBackupAt": "2026-11-11T07:09:24.133Z",
-      "lastError": null
+      "lastBackupAt": "2026-11-11T14:27:35.032Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 4dc256f741560e0fffb0f28393a0c28c1ceebc09 but expected 5e2b1c03e1fc2db84b0dccc55886775b12ccb01e\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-11T08:54:17.272Z",
+      "lastSyncAt": "2026-11-11T17:14:42.196Z",
       "lastError": null,
       "knownRemoteState": [
         {
           "id": "1f61b801-d89a-49e7-bbb9-52a59d1d9b66",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|timm|2026-11-11||hoch"
         },
         {
           "id": "bfc53cd8-1a5c-4706-98f4-c5dd4ce12895",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|timm|2026-11-11||hoch"
         },
         {
           "id": "105ce490-0008-45b9-a2a7-6bb20fd52a16",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|timm|2026-11-11||hoch"
         },
         {
           "id": "15bc2992-706c-4a21-9b86-7a7a137423fc",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|timm|2026-11-11||hoch"
         },
         {
           "id": "14d4a3e7-8eba-4107-9d36-ed4954d04baa",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|timm|2026-11-11||hoch"
         },
         {
           "id": "ff801e36-dd02-4135-b011-51977b7d23e7",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|timm|2026-11-11||hoch"
         },
         {
           "id": "8b9037db-6711-4643-a56e-03090ccf7081",
-          "done": false,
+          "done": true,
           "sig": "Besteck wickeln (nur poliertes!)|timm|2026-11-11||normal"
         },
         {
           "id": "ad49fe81-1d0a-4a13-adab-4ddc597dd072",
-          "done": false,
+          "done": true,
           "sig": "Tische und Karten wischen (check)|timm|2026-11-11||normal"
         },
         {
           "id": "7ac8ae54-9cfb-458e-8e07-bcad9e7918dd",
-          "done": false,
+          "done": true,
           "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|timm|2026-11-11||normal"
         },
         {
           "id": "9bfa82a6-3a4f-426c-bc07-fa70bd0663b2",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine einschalten (braucht 30 Minuten)|timm|2026-11-11||hoch"
         },
         {
           "id": "062fa92e-ff37-4e95-930a-55147e5a8eda",
-          "done": false,
+          "done": true,
           "sig": "Lichterketten anschalten|timm|2026-11-11||normal"
         },
         {
           "id": "a073b384-4a53-4a35-9551-1edcc28276c5",
-          "done": false,
+          "done": true,
           "sig": "Besteck polieren und mind. 20 rollen|timm|2026-11-11||normal"
         },
         {
           "id": "de9686d3-5d4c-409b-b85e-61cbcb870b39",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|timm|2026-11-11||hoch"
         },
         {
           "id": "48309266-00ad-483d-9f32-134e43b6a419",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|timm|2026-11-11||hoch"
         },
         {
           "id": "89585fc7-7c2e-460f-9dc4-f629d4933897",
-          "done": false,
+          "done": true,
           "sig": "Tische sauber halten|timm|2026-11-11||hoch"
         },
         {
           "id": "d283f3ef-7d82-4613-a895-1cbe01f3d05c",
-          "done": false,
+          "done": true,
           "sig": "Terrasse checken und ggfs. fegen|timm|2026-11-11||normal"
         },
         {
           "id": "5db52b17-3b4c-4251-a3d9-e906267fccbd",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|timm|2026-11-11||hoch"
         },
         {
           "id": "7a3d1f73-fb57-4c87-9497-c610077cd026",
-          "done": false,
+          "done": true,
           "sig": "Kerzen anmachen|vincent|2026-11-11||hoch"
         },
         {
           "id": "cbe30cff-f205-48b5-b449-b4551dca1dcf",
-          "done": false,
+          "done": true,
           "sig": "Licht außen anmachen|vincent|2026-11-11||hoch"
         },
         {
           "id": "d292cc57-fd49-4d18-b487-16f51186edfa",
-          "done": false,
+          "done": true,
           "sig": "Baum Strahler anmachen|vincent|2026-11-11||hoch"
         },
         {
           "id": "a0eed931-767b-4b5b-8f63-f480b70f4031",
-          "done": false,
+          "done": true,
           "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|vincent|2026-11-11||hoch"
         },
         {
           "id": "2bec82e1-8cd7-40f0-9c8e-530afd9b7f39",
-          "done": false,
+          "done": true,
           "sig": "Terrasse fegen vor dem Aufstellen der Tische|vincent|2026-11-11||hoch"
         },
         {
           "id": "170734a9-d11d-4cc5-9661-560eec2b95dd",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|vincent|2026-11-11||hoch"
         },
         {
           "id": "21e24a9c-a1a4-41ba-90dc-a1c137c8774d",
-          "done": false,
+          "done": true,
           "sig": "Besteck wickeln (nur poliertes!)|vincent|2026-11-11||normal"
         },
         {
           "id": "6dad652a-1c03-4beb-9587-99be536c04c9",
-          "done": false,
+          "done": true,
           "sig": "Tische und Karten wischen (check)|vincent|2026-11-11||normal"
         },
         {
           "id": "0a36b2ae-d66b-4af9-b60e-bb7727b1fe73",
-          "done": false,
+          "done": true,
           "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|vincent|2026-11-11||normal"
         },
         {
           "id": "a226991f-cc0b-45d3-814d-36bc8a2d6ce9",
-          "done": false,
+          "done": true,
           "sig": "Spülmaschine einschalten (braucht 30 Minuten)|vincent|2026-11-11||hoch"
         },
         {
           "id": "111128bc-5ba5-4e8c-8e04-f5edd2ccc5d5",
-          "done": false,
+          "done": true,
           "sig": "Lichterketten anschalten|vincent|2026-11-11||normal"
         },
         {
           "id": "d0a40629-ee0c-4efe-aace-906c9ad91735",
-          "done": false,
+          "done": true,
           "sig": "Besteck polieren und mind. 20 rollen|vincent|2026-11-11||normal"
         },
         {
           "id": "dada1b26-7209-4a14-bcba-efc4c2aacdc9",
-          "done": false,
+          "done": true,
           "sig": "Pflanzen draußen Giesen wenn kein regen|vincent|2026-11-11||hoch"
         },
         {
           "id": "522af626-9524-4f2e-be1e-2652c8afec68",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|vincent|2026-11-11||hoch"
         },
         {
           "id": "0c8e3ecb-bac7-4a12-bed5-a1d697bf8378",
-          "done": false,
+          "done": true,
           "sig": "Tische sauber halten|vincent|2026-11-11||hoch"
         },
         {
           "id": "23b1b5e4-00e8-4b8c-bf13-9f34c1b635dc",
-          "done": false,
+          "done": true,
           "sig": "Terrasse checken und ggfs. fegen|vincent|2026-11-11||normal"
         },
         {
           "id": "9e006998-9b25-4209-a7ef-5e021fdf4bbd",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|vincent|2026-11-11||hoch"
+        },
+        {
+          "id": "cde90921-21fc-48f8-8013-acd917f04f27",
+          "done": false,
+          "sig": "Kerzen anmachen|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "5df876e2-16b9-496d-9dfa-9fb855dde361",
+          "done": false,
+          "sig": "Licht außen anmachen|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "fad5e92b-c2cf-4dc1-8a29-0ff9f985d314",
+          "done": false,
+          "sig": "Baum Strahler anmachen|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "e56217c6-d9f4-4f8c-9c9d-aaad9044b85e",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "f01ac519-4642-46d4-82a6-fc9e6bf1100e",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "ce3a6a94-af78-40e4-a767-57f7a91b226c",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "75560794-b993-47a8-a5b1-200e02eab899",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "291ca04a-5013-446b-be64-b2e99e46f4d8",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "d58156ca-0bc7-4e4e-8ea2-9b40dfad7aa9",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "a9fdfff8-927b-4624-952e-b68163f68446",
+          "done": false,
+          "sig": "Karten abwischen|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "0669528d-0e52-4b84-ab20-4bd461a4056e",
+          "done": false,
+          "sig": "Tische sauber halten|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "776f472e-1353-413e-ad18-517d0b60fca6",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "775778ac-55f0-47a5-814a-13b08da46b05",
+          "done": false,
+          "sig": "Tische wischen nach Service|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "8a22c0b3-9718-4586-b999-3a92fc91beb1",
+          "done": false,
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "e72923ab-45b8-4b15-9b5f-5ad05aa8e931",
+          "done": false,
+          "sig": "Strahler und Akku Lampen laden am Schichtende|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "6f561c52-6672-4e7f-82e7-effd72c4a0d9",
+          "done": false,
+          "sig": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "d233ab9e-c699-4478-b113-c2f3a64bd9e4",
+          "done": false,
+          "sig": "Pfand einsortieren im Keller|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "9de09aee-f67f-446f-90e2-843b9fae0c5e",
+          "done": false,
+          "sig": "Aschenbecher spülen|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "ea7cbba9-8dcb-411a-abbf-773ddd91005e",
+          "done": false,
+          "sig": "Kűhlschränke und Bar auffüllen|leanna|2026-11-11||normal"
+        },
+        {
+          "id": "b9abf224-d2d0-4e09-860f-a22b85cf8519",
+          "done": false,
+          "sig": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)|leanna|2026-11-11||hoch"
+        },
+        {
+          "id": "98a920e1-e4b6-4fb6-bdeb-25a97ee4a4ff",
+          "done": true,
+          "sig": "Kerzen anmachen|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "ad8a34fd-8f0c-484e-8a0d-fe489d5149ee",
+          "done": false,
+          "sig": "Licht außen anmachen|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "93dfbd2f-7dc3-4051-9074-1e2b9baf85b4",
+          "done": false,
+          "sig": "Baum Strahler anmachen|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "4bfde6dd-4928-4701-aa55-fad40d770a6a",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "47e401e0-750c-407f-8ef7-debd9a060615",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "64f7a9e3-72db-49cc-a422-f9ae249b0736",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "59092dd2-a41d-46d2-a7eb-dccd280d713c",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "eab56232-6d90-46e4-bc25-5acf8e11cf9e",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "726acad5-9dd9-4c04-9e78-162cb477b27d",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "a6190d70-44ae-4827-9f67-1036bac43350",
+          "done": false,
+          "sig": "Karten abwischen|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "14a91d89-ff1c-452b-a551-0a89a30a139f",
+          "done": false,
+          "sig": "Tische sauber halten|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "f3e1471f-60b8-4ce5-9de6-f690bf491362",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "d0d5b8e9-07a1-42e7-b42d-03c2a0546db6",
+          "done": false,
+          "sig": "Tische wischen nach Service|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "84ff19cb-1bc8-4d22-83b7-d259405b6c9b",
+          "done": false,
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "d9ed4a1c-648e-48e1-ac79-176da7a7355c",
+          "done": false,
+          "sig": "Strahler und Akku Lampen laden am Schichtende|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "90663cf4-3b8c-4be2-bf35-eac10f344747",
+          "done": false,
+          "sig": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen|arianna|2026-11-11||hoch"
+        },
+        {
+          "id": "1dcf65ac-3292-402d-a921-c05d376b0c05",
+          "done": false,
+          "sig": "Pfand einsortieren im Keller|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "1c11e383-32b5-457a-94d6-2df2000bc2c6",
+          "done": false,
+          "sig": "Aschenbecher spülen|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "42e52df0-73c9-4e96-b81c-802931a1d7d0",
+          "done": false,
+          "sig": "Kűhlschränke und Bar auffüllen|arianna|2026-11-11||normal"
+        },
+        {
+          "id": "c25de698-cbc9-4cfd-9038-a2470a1a2021",
+          "done": false,
+          "sig": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)|arianna|2026-11-11||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -3377,7 +3471,9 @@
         "6c5ff1b2-5b91-4450-80c6-5ddebcccc236",
         "8251538d-ebda-4a4a-b545-b51971c93ce5",
         "821f7b7e-86f5-4294-9f5a-d854fa13c503",
-        "410cad56-9b91-4bf4-982b-dc91020ff5e5"
+        "410cad56-9b91-4bf4-982b-dc91020ff5e5",
+        "76953491-e605-4b5a-8e3a-3842b0ba92a0",
+        "f8b4f190-344c-44bd-8d78-d270a7e1a890"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -72385,23 +72481,43 @@
       "status": "offen",
       "shifts": [
         {
+          "source": "pin",
           "id": "32a7cdf9-5bf9-4c07-a34e-307ebcfad55b",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:09",
-          "to": null,
+          "to": "16:20",
           "note": "",
-          "source": "pin",
           "clockInAt": "2026-11-11T07:09:23.378Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-11T15:20:46.723Z"
         },
         {
+          "source": "pin",
           "id": "7e477de1-d0e1-4cb6-9ef6-2f303cdaf4c4",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "from": "08:38",
+          "to": "15:34",
+          "note": "",
+          "clockInAt": "2026-11-11T07:38:30.093Z",
+          "clockOutAt": "2026-11-11T14:34:39.266Z"
+        },
+        {
+          "source": "pin",
+          "id": "30911b36-32ac-4b63-8e02-4a53524126e3",
+          "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "from": "15:27",
           "to": null,
           "note": "",
+          "clockInAt": "2026-11-11T14:27:37.668Z",
+          "clockOutAt": null
+        },
+        {
           "source": "pin",
-          "clockInAt": "2026-11-11T07:38:30.093Z",
+          "id": "dc681bf2-390b-4609-a897-78dd62a4fc43",
+          "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "from": "18:06",
+          "to": null,
+          "note": "",
+          "clockInAt": "2026-11-11T17:06:04.559Z",
           "clockOutAt": null
         }
       ],
@@ -72519,300 +72635,634 @@
         "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a:82d0b446-2787-44f0-9e95-fc517800a8a3",
         "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
         "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a:e91ada82-be94-4bf4-b54d-2781e6c29a19",
-        "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a:da31ad58-8e8f-4bf4-94b0-124669caacfd"
+        "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:f31c9839-a8a9-4c1e-88be-be26f2db152b",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:b0ad5c70-5d10-4953-884c-69aa9afc264d",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:c7d28cd2-c410-4210-944f-0865692838cc",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:e91ada82-be94-4bf4-b54d-2781e6c29a19",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:59a93ddb-4690-49a6-ac97-24eb8efd698e",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:7ad218c5-8155-4fea-be78-8de7e4a9af53",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:13f81434-655d-48f1-8818-6c07ae5496cf",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:b5fda0d3-5d1e-44e9-9de6-3bb8328c047d",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:161e1968-aef1-4c92-88b4-c7c7c8def387",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:f31c9839-a8a9-4c1e-88be-be26f2db152b",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:b0ad5c70-5d10-4953-884c-69aa9afc264d",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:c7d28cd2-c410-4210-944f-0865692838cc",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:e91ada82-be94-4bf4-b54d-2781e6c29a19",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:59a93ddb-4690-49a6-ac97-24eb8efd698e",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:7ad218c5-8155-4fea-be78-8de7e4a9af53",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:13f81434-655d-48f1-8818-6c07ae5496cf",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:b5fda0d3-5d1e-44e9-9de6-3bb8328c047d",
+        "216459c0-e32f-4f43-b258-d6639ae87e0e:161e1968-aef1-4c92-88b4-c7c7c8def387"
       ],
       "tasks": [
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
           "id": "1f61b801-d89a-49e7-bbb9-52a59d1d9b66",
           "text": "Kerzen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:37.673Z",
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "bfc53cd8-1a5c-4706-98f4-c5dd4ce12895",
           "text": "Licht außen anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:37.887Z",
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "105ce490-0008-45b9-a2a7-6bb20fd52a16",
           "text": "Baum Strahler anmachen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:38.173Z",
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "15bc2992-706c-4a21-9b86-7a7a137423fc",
           "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:38.724Z",
           "source": "template",
           "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "14d4a3e7-8eba-4107-9d36-ed4954d04baa",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:38.954Z",
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
           "bestandBereich": ""
         },
         {
-          "id": "ff801e36-dd02-4135-b011-51977b7d23e7",
-          "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
-          "addedBy": null,
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
           "time": "",
           "phase": "beginn",
+          "id": "ff801e36-dd02-4135-b011-51977b7d23e7",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:39.189Z",
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "bestandBereich": ""
         },
         {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
           "id": "8b9037db-6711-4643-a56e-03090ccf7081",
           "text": "Besteck wickeln (nur poliertes!)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:40.354Z",
           "source": "template",
           "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "ad49fe81-1d0a-4a13-adab-4ddc597dd072",
           "text": "Tische und Karten wischen (check)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:40.637Z",
           "source": "template",
           "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "7ac8ae54-9cfb-458e-8e07-bcad9e7918dd",
           "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:40.953Z",
           "source": "template",
           "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "normal",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "9bfa82a6-3a4f-426c-bc07-fa70bd0663b2",
           "text": "Spülmaschine einschalten (braucht 30 Minuten)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:39.420Z",
           "source": "template",
           "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "hoch",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
           "id": "062fa92e-ff37-4e95-930a-55147e5a8eda",
           "text": "Lichterketten anschalten",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:41.290Z",
           "source": "template",
           "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
-          "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
+          "phase": "schicht",
           "id": "a073b384-4a53-4a35-9551-1edcc28276c5",
           "text": "Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:44.322Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "normal",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "de9686d3-5d4c-409b-b85e-61cbcb870b39",
           "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:43.856Z",
           "source": "template",
           "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "48309266-00ad-483d-9f32-134e43b6a419",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:42.906Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
           "id": "89585fc7-7c2e-460f-9dc4-f629d4933897",
           "text": "Tische sauber halten",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:42.602Z",
           "source": "template",
           "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
           "addedBy": null,
           "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
           "bestandBereich": ""
         },
         {
-          "id": "d283f3ef-7d82-4613-a895-1cbe01f3d05c",
-          "text": "Terrasse checken und ggfs. fegen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
-          "addedBy": null,
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
+          "id": "d283f3ef-7d82-4613-a895-1cbe01f3d05c",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:44.501Z",
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "bestandBereich": ""
         },
         {
-          "id": "5db52b17-3b4c-4251-a3d9-e906267fccbd",
-          "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
-          "addedBy": null,
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
           "time": "",
           "phase": "ende",
+          "id": "5db52b17-3b4c-4251-a3d9-e906267fccbd",
+          "text": "Tische wischen nach Service",
+          "done": true,
+          "doneBy": "timm",
+          "doneAt": "2026-11-11T15:20:45.204Z",
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "bestandBereich": ""
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
           "id": "7a3d1f73-fb57-4c87-9497-c610077cd026",
+          "text": "Kerzen anmachen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:25.231Z",
+          "source": "template",
+          "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "cbe30cff-f205-48b5-b449-b4551dca1dcf",
+          "text": "Licht außen anmachen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:25.480Z",
+          "source": "template",
+          "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "d292cc57-fd49-4d18-b487-16f51186edfa",
+          "text": "Baum Strahler anmachen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:26.079Z",
+          "source": "template",
+          "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "a0eed931-767b-4b5b-8f63-f480b70f4031",
+          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:26.329Z",
+          "source": "template",
+          "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "2bec82e1-8cd7-40f0-9c8e-530afd9b7f39",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:27.381Z",
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "id": "170734a9-d11d-4cc5-9661-560eec2b95dd",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:27.631Z",
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "21e24a9c-a1a4-41ba-90dc-a1c137c8774d",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:28.448Z",
+          "source": "template",
+          "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "6dad652a-1c03-4beb-9587-99be536c04c9",
+          "text": "Tische und Karten wischen (check)",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:28.594Z",
+          "source": "template",
+          "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "0a36b2ae-d66b-4af9-b60e-bb7727b1fe73",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:29.695Z",
+          "source": "template",
+          "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "a226991f-cc0b-45d3-814d-36bc8a2d6ce9",
+          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:27.812Z",
+          "source": "template",
+          "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "111128bc-5ba5-4e8c-8e04-f5edd2ccc5d5",
+          "text": "Lichterketten anschalten",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:29.862Z",
+          "source": "template",
+          "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "d0a40629-ee0c-4efe-aace-906c9ad91735",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:32.063Z",
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "dada1b26-7209-4a14-bcba-efc4c2aacdc9",
+          "text": "Pflanzen draußen Giesen wenn kein regen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:32.747Z",
+          "source": "template",
+          "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "522af626-9524-4f2e-be1e-2652c8afec68",
+          "text": "Karten abwischen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:32.549Z",
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "0c8e3ecb-bac7-4a12-bed5-a1d697bf8378",
+          "text": "Tische sauber halten",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:32.330Z",
+          "source": "template",
+          "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "23b1b5e4-00e8-4b8c-bf13-9f34c1b635dc",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:31.814Z",
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "9e006998-9b25-4209-a7ef-5e021fdf4bbd",
+          "text": "Tische wischen nach Service",
+          "done": true,
+          "doneBy": "vincent",
+          "doneAt": "2026-11-11T14:34:33.564Z",
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "cde90921-21fc-48f8-8013-acd917f04f27",
           "text": "Kerzen anmachen",
           "done": false,
           "doneBy": null,
@@ -72820,16 +73270,16 @@
           "source": "template",
           "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "cbe30cff-f205-48b5-b449-b4551dca1dcf",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "5df876e2-16b9-496d-9dfa-9fb855dde361",
           "text": "Licht außen anmachen",
           "done": false,
           "doneBy": null,
@@ -72837,16 +73287,16 @@
           "source": "template",
           "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "d292cc57-fd49-4d18-b487-16f51186edfa",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "fad5e92b-c2cf-4dc1-8a29-0ff9f985d314",
           "text": "Baum Strahler anmachen",
           "done": false,
           "doneBy": null,
@@ -72854,33 +73304,16 @@
           "source": "template",
           "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "a0eed931-767b-4b5b-8f63-f480b70f4031",
-          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
-          "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "priority": "hoch",
-          "schicht": "frueh",
+          "schicht": "spaet",
           "bereich": "service",
           "time": "",
           "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
-          "id": "2bec82e1-8cd7-40f0-9c8e-530afd9b7f39",
+          "id": "e56217c6-d9f4-4f8c-9c9d-aaad9044b85e",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
           "done": false,
           "doneBy": null,
@@ -72888,16 +73321,16 @@
           "source": "template",
           "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "170734a9-d11d-4cc5-9661-560eec2b95dd",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "id": "f01ac519-4642-46d4-82a6-fc9e6bf1100e",
           "text": "Reservierungen zuordnen für den Tag",
           "done": false,
           "doneBy": null,
@@ -72905,16 +73338,16 @@
           "source": "template",
           "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "21e24a9c-a1a4-41ba-90dc-a1c137c8774d",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "ce3a6a94-af78-40e4-a767-57f7a91b226c",
           "text": "Besteck wickeln (nur poliertes!)",
           "done": false,
           "doneBy": null,
@@ -72922,16 +73355,16 @@
           "source": "template",
           "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "6dad652a-1c03-4beb-9587-99be536c04c9",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "75560794-b993-47a8-a5b1-200e02eab899",
           "text": "Tische und Karten wischen (check)",
           "done": false,
           "doneBy": null,
@@ -72939,16 +73372,16 @@
           "source": "template",
           "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "0a36b2ae-d66b-4af9-b60e-bb7727b1fe73",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "291ca04a-5013-446b-be64-b2e99e46f4d8",
           "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
           "done": false,
           "doneBy": null,
@@ -72956,50 +73389,16 @@
           "source": "template",
           "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
           "priority": "normal",
-          "schicht": "frueh",
+          "schicht": "spaet",
           "bereich": "service",
           "time": "",
-          "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
-          "id": "a226991f-cc0b-45d3-814d-36bc8a2d6ce9",
-          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
-          "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
-          "id": "111128bc-5ba5-4e8c-8e04-f5edd2ccc5d5",
-          "text": "Lichterketten anschalten",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
-          "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "beginn",
-          "bestandBereich": ""
-        },
-        {
-          "id": "d0a40629-ee0c-4efe-aace-906c9ad91735",
+          "phase": "schicht",
+          "id": "d58156ca-0bc7-4e4e-8ea2-9b40dfad7aa9",
           "text": "Besteck polieren und mind. 20 rollen",
           "done": false,
           "doneBy": null,
@@ -73007,33 +73406,16 @@
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "dada1b26-7209-4a14-bcba-efc4c2aacdc9",
-          "text": "Pflanzen draußen Giesen wenn kein regen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
-          "source": "template",
-          "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
-          "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "priority": "hoch",
-          "schicht": "frueh",
+          "schicht": "spaet",
           "bereich": "service",
           "time": "",
           "phase": "schicht",
-          "bestandBereich": ""
-        },
-        {
-          "id": "522af626-9524-4f2e-be1e-2652c8afec68",
+          "id": "a9fdfff8-927b-4624-952e-b68163f68446",
           "text": "Karten abwischen",
           "done": false,
           "doneBy": null,
@@ -73041,16 +73423,16 @@
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "0c8e3ecb-bac7-4a12-bed5-a1d697bf8378",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "0669528d-0e52-4b84-ab20-4bd461a4056e",
           "text": "Tische sauber halten",
           "done": false,
           "doneBy": null,
@@ -73058,16 +73440,16 @@
           "source": "template",
           "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "23b1b5e4-00e8-4b8c-bf13-9f34c1b635dc",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "776f472e-1353-413e-ad18-517d0b60fca6",
           "text": "Terrasse checken und ggfs. fegen",
           "done": false,
           "doneBy": null,
@@ -73075,16 +73457,16 @@
           "source": "template",
           "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": "",
-          "phase": "schicht",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "bestandBereich": ""
         },
         {
-          "id": "9e006998-9b25-4209-a7ef-5e021fdf4bbd",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "775778ac-55f0-47a5-814a-13b08da46b05",
           "text": "Tische wischen nach Service",
           "done": false,
           "doneBy": null,
@@ -73092,12 +73474,466 @@
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
           "priority": "hoch",
-          "schicht": "frueh",
+          "schicht": "spaet",
           "bereich": "service",
           "time": "",
           "phase": "ende",
+          "id": "8a22c0b3-9718-4586-b999-3a92fc91beb1",
+          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "e72923ab-45b8-4b15-9b5f-5ad05aa8e931",
+          "text": "Strahler und Akku Lampen laden am Schichtende",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "59a93ddb-4690-49a6-ac97-24eb8efd698e",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "6f561c52-6672-4e7f-82e7-effd72c4a0d9",
+          "text": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "d233ab9e-c699-4478-b113-c2f3a64bd9e4",
+          "text": "Pfand einsortieren im Keller",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "7ad218c5-8155-4fea-be78-8de7e4a9af53",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "9de09aee-f67f-446f-90e2-843b9fae0c5e",
+          "text": "Aschenbecher spülen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "13f81434-655d-48f1-8818-6c07ae5496cf",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "ea7cbba9-8dcb-411a-abbf-773ddd91005e",
+          "text": "Kűhlschränke und Bar auffüllen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b5fda0d3-5d1e-44e9-9de6-3bb8328c047d",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "b9abf224-d2d0-4e09-860f-a22b85cf8519",
+          "text": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "161e1968-aef1-4c92-88b4-c7c7c8def387",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "98a920e1-e4b6-4fb6-bdeb-25a97ee4a4ff",
+          "text": "Kerzen anmachen",
+          "done": true,
+          "doneBy": "arianna",
+          "doneAt": "2026-11-11T17:07:57.010Z",
+          "source": "template",
+          "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "ad8a34fd-8f0c-484e-8a0d-fe489d5149ee",
+          "text": "Licht außen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "93dfbd2f-7dc3-4051-9074-1e2b9baf85b4",
+          "text": "Baum Strahler anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "4bfde6dd-4928-4701-aa55-fad40d770a6a",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "id": "47e401e0-750c-407f-8ef7-debd9a060615",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "64f7a9e3-72db-49cc-a422-f9ae249b0736",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "59092dd2-a41d-46d2-a7eb-dccd280d713c",
+          "text": "Tische und Karten wischen (check)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "id": "eab56232-6d90-46e4-bc25-5acf8e11cf9e",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "726acad5-9dd9-4c04-9e78-162cb477b27d",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "a6190d70-44ae-4827-9f67-1036bac43350",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "14a91d89-ff1c-452b-a551-0a89a30a139f",
+          "text": "Tische sauber halten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "id": "f3e1471f-60b8-4ce5-9de6-f690bf491362",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "d0d5b8e9-07a1-42e7-b42d-03c2a0546db6",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "84ff19cb-1bc8-4d22-83b7-d259405b6c9b",
+          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "ad3545d7-b07e-41d3-aee3-52f1eaea3b4e",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "d9ed4a1c-648e-48e1-ac79-176da7a7355c",
+          "text": "Strahler und Akku Lampen laden am Schichtende",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "59a93ddb-4690-49a6-ac97-24eb8efd698e",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "90663cf4-3b8c-4be2-bf35-eac10f344747",
+          "text": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "5b04fe9c-d1d6-43ce-8e84-340beccc5423",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "1dcf65ac-3292-402d-a921-c05d376b0c05",
+          "text": "Pfand einsortieren im Keller",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "7ad218c5-8155-4fea-be78-8de7e4a9af53",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "1c11e383-32b5-457a-94d6-2df2000bc2c6",
+          "text": "Aschenbecher spülen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "13f81434-655d-48f1-8818-6c07ae5496cf",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "42e52df0-73c9-4e96-b81c-802931a1d7d0",
+          "text": "Kűhlschränke und Bar auffüllen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b5fda0d3-5d1e-44e9-9de6-3bb8328c047d",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
+          "bestandBereich": ""
+        },
+        {
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "id": "c25de698-cbc9-4cfd-9038-a2470a1a2021",
+          "text": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "161e1968-aef1-4c92-88b4-c7c7c8def387",
+          "addedBy": null,
+          "assignedTo": "216459c0-e32f-4f43-b258-d6639ae87e0e",
           "bestandBereich": ""
         }
       ],
@@ -73127,6 +73963,26 @@
           "timestamp": "2026-11-11T07:38:30.094Z",
           "action": "eingestempelt",
           "detail": "vincent um 08:38 Uhr"
+        },
+        {
+          "timestamp": "2026-11-11T14:27:37.668Z",
+          "action": "eingestempelt",
+          "detail": "Leanna um 15:27 Uhr"
+        },
+        {
+          "timestamp": "2026-11-11T14:34:39.266Z",
+          "action": "ausgestempelt",
+          "detail": "vincent um 15:34 Uhr"
+        },
+        {
+          "timestamp": "2026-11-11T15:20:46.723Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 16:20 Uhr"
+        },
+        {
+          "timestamp": "2026-11-11T17:06:04.559Z",
+          "action": "eingestempelt",
+          "detail": "arianna um 18:06 Uhr"
         }
       ],
       "closedAt": null,
@@ -76018,6 +76874,11 @@
           "bestandBereich": ""
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "",
           "id": "b7200424-12b1-45a6-9eec-bb6fa0f9a646",
           "text": "Spülmaschine abpumpen und öffnen",
           "done": false,
@@ -76025,13 +76886,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": ""
+          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "c720418c-b29c-4d3e-b9c5-2861070e7d6e",
           "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
           "done": false,
@@ -76039,13 +76901,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "69a65636-327f-401e-9f8f-6ba67650ccd4",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
           "done": false,
@@ -76053,13 +76916,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "27a49a79-3441-47ba-804f-326f467b0c83",
           "text": "Alles Besteck polieren und mind. 20 rollen",
           "done": false,
@@ -76067,13 +76931,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "daa9f705-6ba9-49ac-a44f-9827df622e2e",
           "text": "Reservierungen zuordnen für den Tag",
           "done": false,
@@ -76081,13 +76946,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "550e0268-ec1c-4977-bb8b-ead5cb3b02f1",
           "text": "Pflanzen draußen Giesen wenn kein regen",
           "done": false,
@@ -76095,13 +76961,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "78ddbbfc-705a-4de9-a66b-2427801d0e8a",
           "text": "Karten abwischen",
           "done": false,
@@ -76109,13 +76976,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "5a186b6a-f2d4-464e-8e64-3698e7faa4f4",
           "text": "Tische wischen nach Service",
           "done": false,
@@ -76123,13 +76991,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "b478969d-c232-47f2-a31a-49db4a552539",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
           "done": false,
@@ -76137,13 +77006,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "",
           "id": "bac98a8b-3deb-4c13-91d6-7a56867a6958",
           "text": "Spülmaschine abpumpen und öffnen",
           "done": false,
@@ -76151,13 +77021,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": ""
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "6d7fa4ff-d59e-48ea-80a5-be30c8dee349",
           "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
           "done": false,
@@ -76165,13 +77036,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "1947a29c-7680-438c-a890-05dd1e50834f",
           "text": "Terrasse fegen vor dem Aufstellen der Tische",
           "done": false,
@@ -76179,13 +77051,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "6cbe2561-349a-42c8-825f-317e9d86ec1d",
           "text": "Alles Besteck polieren und mind. 20 rollen",
           "done": false,
@@ -76193,13 +77066,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "09817e8d-24f5-43c6-9ee4-0a93900d0bc7",
           "text": "Reservierungen zuordnen für den Tag",
           "done": false,
@@ -76207,13 +77081,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "39f49fa7-7ba3-446c-8b71-f1fba13ea33f",
           "text": "Pflanzen draußen Giesen wenn kein regen",
           "done": false,
@@ -76221,13 +77096,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "db5b04dc-d78a-45c6-b519-71525657be4b",
           "text": "Karten abwischen",
           "done": false,
@@ -76235,13 +77111,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "d6a47659-3386-47b8-aec1-376d9f9c2f31",
           "text": "Tische wischen nach Service",
           "done": false,
@@ -76249,13 +77126,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "16463365-36ed-479a-b31d-160e9331a795",
           "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
           "done": false,
@@ -76263,13 +77141,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "",
           "id": "3c824bbf-aa60-40fc-be46-af5c0e6e834c",
           "text": "Spülmaschine abpumpen und öffnen",
           "done": false,
@@ -76277,13 +77156,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "55cf8515-37e9-47b1-8255-15265eb706b3",
           "text": "Kerzen anmachen",
           "done": false,
@@ -76291,13 +77171,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "b8eebcc3-8a10-4077-ad52-5515bc345213",
           "text": "Licht außen anmachen",
           "done": false,
@@ -76305,13 +77186,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "43fad3e8-bbf8-42d7-ad37-54d400529061",
           "text": "Kerzen anmachen",
           "done": false,
@@ -76319,13 +77201,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "936b6638-f944-4b6d-ae1e-c60fcd9fb52b",
           "text": "Licht außen anmachen",
           "done": false,
@@ -76333,13 +77216,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "552f4a76-bcc2-4578-99f7-c5452627dd46",
           "text": "Baum Strahler anmachen",
           "done": false,
@@ -76347,13 +77231,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "0a622b74-756a-47d1-99eb-a9a4b7813023",
           "text": "Baum Strahler anmachen",
           "done": false,
@@ -76361,13 +77246,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "",
           "id": "129a9f95-f5e8-4369-88c1-0e8c141e5b28",
           "text": "Reservierungen",
           "done": false,
@@ -76375,13 +77261,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
+          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "337bf5da-071d-4140-91f5-2ecb0b39e98b",
           "text": "Reservierungen",
           "done": false,
@@ -76389,13 +77276,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "0a52191b-0d41-4420-8d47-d38edf5d9ef1",
           "text": "Reservierungen",
           "done": false,
@@ -76403,13 +77291,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "",
           "id": "2d329a0c-8d75-4a82-9025-4d4f0f78d020",
           "text": "Besteck wickeln (nur poliertes!)",
           "done": false,
@@ -76417,13 +77306,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
+          "assignedTo": "42c3fbc1-c67a-4886-8530-98f52edb74bc"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "e287a12c-290f-4cdf-ab1f-390108d81a3f",
           "text": "Besteck wickeln (nur poliertes!)",
           "done": false,
@@ -76431,13 +77321,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "51d27258-e205-41ce-b7e0-0239e837fca7",
           "text": "Besteck wickeln (nur poliertes!)",
           "done": false,
@@ -76445,13 +77336,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "8f0dbf22-5a08-4769-8f0f-9b6ced65a548",
           "text": "Tische und Karten wischen (check)",
           "done": false,
@@ -76459,13 +77351,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "3862294c-b7c3-4955-8460-9cb7794ccbd0",
           "text": "Tische und Karten wischen (check)",
           "done": false,
@@ -76473,13 +77366,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "743ded89-2477-4b87-976a-c3f96e2912b6",
           "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
           "done": false,
@@ -76487,13 +77381,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "83607199-3b0f-4236-bd2e-e98224db4a48",
           "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
           "done": false,
@@ -76501,13 +77396,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "4c9b2bbe-e819-449b-b7ce-1056095b6c39",
           "text": "Tische sauber halten",
           "done": false,
@@ -76515,13 +77411,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "4119dd92-3021-4e21-9ddd-2a087e36ab09",
           "text": "Tische sauber halten",
           "done": false,
@@ -76529,13 +77426,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "7c36bace-35e9-414b-9270-00675ec165a5",
           "text": "Spülmaschine einschalten (braucht 30 Minuten)",
           "done": false,
@@ -76543,13 +77441,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "hoch",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "3f81eccf-bac2-4c71-b882-21d17a534243",
           "text": "Spülmaschine einschalten (braucht 30 Minuten)",
           "done": false,
@@ -76557,13 +77456,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "hoch",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         },
         {
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "",
           "id": "7e65e5fa-4498-416f-babe-3e1d88de4fca",
           "text": "Lichterketten anschalten",
           "done": false,
@@ -76571,13 +77471,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "f7cb94fc-6dd8-4e04-9340-206ef9b718df",
           "text": "Lichterketten anschalten",
           "done": false,
@@ -76585,13 +77486,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "fed7ec81-a50c-4bbf-953f-d22dc7275a21",
           "text": "Terrasse checken und ggfs. fegen",
           "done": false,
@@ -76599,13 +77501,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "e7e9097d-d704-4272-a2e5-40a978815b90",
           "text": "Terrasse checken und ggfs. fegen",
           "done": false,
@@ -76613,13 +77516,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "22037d96-33e5-4be1-a50e-c6e35d552169",
           "text": "Atlglas wegbringen",
           "done": false,
@@ -76627,13 +77531,14 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103"
+        },
+        {
           "priority": "normal",
           "schicht": "frueh",
           "bereich": "service",
-          "time": ""
-        },
-        {
+          "time": "",
+          "phase": "",
           "id": "059c41ae-e2af-4fc1-82f9-bb2f1c454312",
           "text": "Atlglas wegbringen",
           "done": false,
@@ -76641,11 +77546,7 @@
           "doneAt": null,
           "source": "remote",
           "addedBy": "Telegram",
-          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "priority": "normal",
-          "schicht": "frueh",
-          "bereich": "service",
-          "time": ""
+          "assignedTo": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a"
         }
       ],
       "kassenabschluss": {
@@ -80209,35 +81110,35 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "e5d2ec80-e171-4973-abe9-1325f20e0e8a",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "cc24a532-12cd-42ad-91a4-1f25a895cc4a",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "908f838f-56f1-4001-bd55-077214c03a94",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         }
@@ -80303,35 +81204,35 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "149f5465-ef29-424e-a128-5db88cb40f54",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "0c0af57c-36fd-4fb1-8ac8-652b7b9f8073",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "d09a8450-d24a-455c-a393-226cdeaca0d0",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         }
@@ -80397,35 +81298,35 @@
       ],
       "availability": [
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "b93c756f-d594-4f94-9fc0-fff06e579201",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "f811ff50-6e9a-4fb7-ad21-5eb35c8e47c2",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         },
         {
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "id": "cb9e1c7e-2bed-4ab7-bb4a-b375a81b3bfc",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
           ],
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-11T07:09:19.916Z"
         }
@@ -80455,7 +81356,8 @@
         "40a95e02-bacb-4e1e-ae54-41d3e2714103",
         "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
         "c75519c4-1eea-4de0-8b2a-45474d2c1faf"
-      ]
+      ],
+      "materialkosten": 0
     }
   ],
   "notifications": [
@@ -105097,6 +105999,69 @@
       "status": "offen",
       "source": "manuell",
       "createdAt": "2026-11-11T08:43:10.329Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "c3c936e7-dc0b-45af-8833-7a61028257dc",
+      "code": "AJNWT",
+      "date": "2026-11-13",
+      "time": "10:00",
+      "name": "Manuela",
+      "phone": "+4917682656419",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-11T14:27:31.076Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8394cd54-dace-4710-9ea7-6fbfd5a9c9be",
+      "code": "T6KEH",
+      "date": "2026-11-16",
+      "time": "09:30",
+      "name": "Isabell Schüßler",
+      "phone": "01629244083",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-11T15:20:31.926Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "55b5acc3-739a-4ce4-906d-546b4882a2ea",
+      "code": "3UV47",
+      "date": "2026-11-11",
+      "time": "17:15",
+      "name": "Xenia Groß",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-11T15:25:12.022Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

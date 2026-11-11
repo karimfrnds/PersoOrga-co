@@ -19,7 +19,7 @@ import { renderMeins } from "./meins.js";
 import { renderProduktion } from "./produktion.js";
 import { betrieb, kann } from "../betrieb.js";
 
-const APP_VERSION = "2026-11-10.1";
+const APP_VERSION = "2026-11-11.1";
 const outlet = document.getElementById("outlet");
 
 const ALLE_TABS = [

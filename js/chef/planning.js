@@ -180,9 +180,11 @@ function renderPlanning(state, { onChanged, today }) {
         const slots = wochenSlots(bereich);
         for (const slot of slots) {
           if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
-          const wer = alle.find(
-            (e) => e.date === date && e.confirmedSlotId === slot.id && e.bossConfirmed && bereichVon(e.name, date) === bereich
-          );
+          // slot.id kann fehlen, wenn eine eben angelegte Schicht noch nicht durchgelaufen ist.
+          // Ohne diese Pruefung waere undefined === undefined wahr und JEDE Schicht gaelte als besetzt.
+          const wer = slot.id
+            ? alle.find((e) => e.date === date && e.confirmedSlotId === slot.id && e.bossConfirmed && bereichVon(e.name, date) === bereich)
+            : null;
           if (wer) {
             besetzt++;
             eingeteilt.add(wer.name);
@@ -329,8 +331,10 @@ function renderPlanning(state, { onChanged, today }) {
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(gewaehlteWoche, i);
       const relevanteSlots = slots.filter((s) => !s.allowedWeekdays || s.allowedWeekdays.includes(i));
-      const besetzt = relevanteSlots.filter((s) =>
-        alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && bereichVon(e.name, date) === bereich && !istKrank(e.name, date))
+      const besetzt = relevanteSlots.filter(
+        (s) =>
+          s.id &&
+          alle.some((e) => e.date === date && e.confirmedSlotId === s.id && e.bossConfirmed && bereichVon(e.name, date) === bereich && !istKrank(e.name, date))
       ).length;
       besetzung.push({ besetzt, gesamt: relevanteSlots.length });
     }
@@ -394,8 +398,11 @@ function renderPlanning(state, { onChanged, today }) {
 
     // Nur Personen der passenden Rolle betrachten (Service und Bar teilen sich einen Plan).
     const relevant = alle.filter((e) => e.date === date && bereichVon(e.name, date) === bereich && !istKrank(e.name, date));
-    const belegt = relevant.find((e) => e.confirmedSlotId === slot.id);
-    const kandidaten = relevant.filter((e) => e.confirmedSlotId !== slot.id && (e.slots || []).some((s) => s.id === slot.id));
+    // Ohne ID gehoert niemand zu dieser Schicht – lieber eine leere Zelle als jede Person in jeder Zeile.
+    const belegt = slot.id ? relevant.find((e) => e.confirmedSlotId === slot.id) : null;
+    const kandidaten = slot.id
+      ? relevant.filter((e) => e.confirmedSlotId !== slot.id && (e.slots || []).some((s) => s.id === slot.id))
+      : [];
 
     const box = document.createElement("div");
     box.className = "roster-box";

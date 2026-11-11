@@ -15,7 +15,7 @@
 // ============================================================================
 import { saveSchichtplan } from "./api.js";
 import { escapeHtml, dateDe } from "../format.js";
-import { BEREICH_LABEL, barEigenAb } from "../schichtplan.js";
+import { BEREICH_LABEL, barEigenAb, neueSlotId } from "../schichtplan.js";
 
 const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const BEREICHE_REIHENFOLGE = ["service", "kueche", "bar"];
@@ -374,8 +374,11 @@ function renderSchichtzeiten(state, { onChanged }) {
         return;
       }
       const tage = [...gewaehlt].sort((a, b) => a - b);
+      // Die ID gleich hier vergeben, nicht erst auf dem iPad: bis der Abgleich durch ist, zeigt der
+      // Laptop den Plan schon an, und eine Schicht ohne ID wuerde dabei jede Einteilung schlucken.
+      const vergebene = new Set(plan[bereich].filter((x) => x !== slot).map((x) => x.id).filter(Boolean));
       const neu = {
-        ...(slot?.id ? { id: slot.id } : {}),
+        id: slot?.id || neueSlotId(from, vergebene),
         ...(slot?.weekdayOverrides ? { weekdayOverrides: slot.weekdayOverrides } : {}),
         ...(slot?.nurFest ? { nurFest: true } : {}),
         label,

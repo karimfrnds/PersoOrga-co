@@ -15,6 +15,22 @@
 // ============================================================================
 
 export const BEREICHE = ["service", "kueche", "bar"];
+
+/**
+ * Die ID einer neuen Schicht: Gruppe (frueh/mittel/spaet nach der Anfangszeit) plus Nummer.
+ *
+ * An der ID haengt alles – wer auf welche Schicht eingeteilt ist, welche Aufgaben zu ihr gehoeren.
+ * Eine Schicht OHNE ID ist kein Schoenheitsfehler, sondern ein Fehler mit Folgen: der Vergleich
+ * "steht diese Person auf dieser Schicht?" ist dann undefined === undefined und damit fuer JEDE
+ * Schicht wahr. Deshalb vergibt jede Stelle, die eine Schicht anlegt, sofort eine ID – nach genau
+ * dieser Regel, damit Laptop, Worker und iPad auf dasselbe kommen.
+ */
+export function neueSlotId(from, vergebene) {
+  const gruppe = String(from) < "11:00" ? "frueh" : String(from) < "15:00" ? "mittel" : "spaet";
+  let n = 1;
+  while (vergebene.has(`${gruppe}${n}`)) n++;
+  return `${gruppe}${n}`;
+}
 export const BEREICH_LABEL = { service: "Service", kueche: "Küche", bar: "Bar" };
 
 /** Zu welchem Schicht-Bereich gehört eine Mitarbeiter-Rolle? Alles Unbekannte ist Service. */

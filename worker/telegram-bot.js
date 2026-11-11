@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-11-10.1";
+const WORKER_VERSION = "2026-11-11.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -358,6 +358,35 @@ const EMPTY_STATE = {
   backvorschlaege: [],
 };
 
+/**
+ * Sorgt dafuer, dass jede Schicht eine ID hat.
+ *
+ * Eine Schicht ohne ID ist kein Schoenheitsfehler: der Vergleich "steht diese Person auf dieser
+ * Schicht?" ist dann undefined === undefined und damit fuer jede Schicht wahr – eine eingeteilte
+ * Person stuende ueberall. Das kann im Speicher liegen, wenn eine aeltere Fassung eine neu
+ * angelegte Schicht ohne ID abgelegt hat. Deshalb wird hier beim Lesen nachgeholt, mit derselben
+ * Regel wie neueSlotId() in js/schichtplan.js – gleiche Liste, gleiche IDs, bei jedem Aufruf.
+ */
+function mitSlotIds(liste) {
+  if (!Array.isArray(liste)) return [];
+  if (liste.every((s) => s && s.id)) return liste;
+  const vergebene = new Set(liste.map((s) => s?.id).filter(Boolean));
+  return liste.map((s) => {
+    if (!s || s.id) return s;
+    const from = String(s.from || "");
+    const gruppe = from < "11:00" ? "frueh" : from < "15:00" ? "mittel" : "spaet";
+    let n = 1;
+    while (vergebene.has(`${gruppe}${n}`)) n++;
+    const id = `${gruppe}${n}`;
+    vergebene.add(id);
+    return { ...s, id };
+  });
+}
+function planMitSlotIds(plan) {
+  if (!plan || typeof plan !== "object") return plan;
+  return { ...plan, service: mitSlotIds(plan.service), kueche: mitSlotIds(plan.kueche), bar: mitSlotIds(plan.bar) };
+}
+
 async function getState(env) {
   const raw = await env.TASKS_KV.get(STATE_KEY);
   if (!raw) return { ...EMPTY_STATE };
@@ -390,8 +419,8 @@ async function getState(env) {
       authPins: Array.isArray(parsed.authPins) ? parsed.authPins : [],
       adminPinHash: typeof parsed.adminPinHash === "string" ? parsed.adminPinHash : null,
       employeeRoles: Array.isArray(parsed.employeeRoles) ? parsed.employeeRoles : [],
-      shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? parsed.shiftSlots : null,
-      schichtPlaene: Array.isArray(parsed.schichtPlaene) ? parsed.schichtPlaene : null,
+      shiftSlots: parsed.shiftSlots && typeof parsed.shiftSlots === "object" ? planMitSlotIds(parsed.shiftSlots) : null,
+      schichtPlaene: Array.isArray(parsed.schichtPlaene) ? parsed.schichtPlaene.map(planMitSlotIds) : null,
       employeeNotifications: Array.isArray(parsed.employeeNotifications) ? parsed.employeeNotifications : [],
       stockChanges: Array.isArray(parsed.stockChanges) ? parsed.stockChanges : [],
       employeeDetails: Array.isArray(parsed.employeeDetails) ? parsed.employeeDetails : [],
@@ -3781,7 +3810,8 @@ function buildWochenplan(state, weekStart) {
       for (const slot of slotsAmTag(state, date, bereich)) {
         if (slot.allowedWeekdays && !slot.allowedWeekdays.includes(i)) continue;
         const zeiten = slot.weekdayOverrides?.[i] ? { ...slot, ...slot.weekdayOverrides[i] } : slot;
-        const wer = zuteilung.get(`${date}|${bereich}|${slot.id}`);
+        // Ohne ID waere der Schluessel "…|undefined" und mehrere Schichten teilten sich eine Zuteilung.
+        const wer = slot.id ? zuteilung.get(`${date}|${bereich}|${slot.id}`) : null;
         schichten.push({
           bereich,
           label: slot.label,
@@ -3859,16 +3889,29 @@ async function handleAdminSchichtplan(request, env) {
       const liste = Array.isArray(p?.[bereich]) ? p[bereich] : [];
       if (liste.length > 40) return jsonResponse({ error: "Zu viele Schichten in einem Bereich." }, 400);
       plan[bereich] = [];
+      // Jede Schicht MUSS eine ID haben, auch in der Vorschau. Ohne ID ist der Vergleich
+      // "steht diese Person auf dieser Schicht?" undefined === undefined – und damit fuer jede
+      // Schicht wahr. Dieselbe Regel wie neueSlotId() in js/schichtplan.js.
+      const vergebene = new Set();
+      for (const sl of liste) if (sl?.id) vergebene.add(String(sl.id).slice(0, 40));
       for (const sl of liste) {
         const label = String(sl?.label || "").trim().slice(0, 40);
         const from = zeit(sl?.from);
         const to = zeit(sl?.to);
         if (!label || !from || !to) return jsonResponse({ error: `Bei „${label || "einer Schicht"}“ fehlt der Name oder eine Zeit.` }, 400);
+        let id = sl?.id ? String(sl.id).slice(0, 40) : "";
+        if (!id) {
+          const gruppe = from < "11:00" ? "frueh" : from < "15:00" ? "mittel" : "spaet";
+          let n = 1;
+          while (vergebene.has(`${gruppe}${n}`)) n++;
+          id = `${gruppe}${n}`;
+          vergebene.add(id);
+        }
         const tage = Array.isArray(sl?.allowedWeekdays)
           ? [...new Set(sl.allowedWeekdays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b)
           : [];
         plan[bereich].push({
-          ...(sl?.id ? { id: String(sl.id).slice(0, 40) } : {}),
+          id,
           label,
           from,
           to,

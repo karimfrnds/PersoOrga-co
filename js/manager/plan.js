@@ -72,8 +72,12 @@ function tagesSchichten(daten, weekStart, i) {
         slot,
         date,
         relevant,
-        belegt: relevant.find((e) => e.confirmedSlotId === slot.id) || null,
-        kandidaten: relevant.filter((e) => e.confirmedSlotId !== slot.id && !e.confirmedSlotId && (e.slots || []).some((s) => s.id === slot.id)),
+        // Ohne ID gehoert niemand zu dieser Schicht – sonst waere undefined === undefined wahr
+        // und dieselbe Person stuende in jeder Schicht.
+        belegt: (slot.id && relevant.find((e) => e.confirmedSlotId === slot.id)) || null,
+        kandidaten: slot.id
+          ? relevant.filter((e) => e.confirmedSlotId !== slot.id && !e.confirmedSlotId && (e.slots || []).some((s) => s.id === slot.id))
+          : [],
       });
     }
   }

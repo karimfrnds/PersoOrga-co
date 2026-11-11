@@ -5,7 +5,7 @@
 import { todayStr, dateDe } from "./format.js";
 import { betrieb, kann } from "./betrieb.js";
 import { normalisiereProduktname, findeNachName, bewerteKandidaten } from "./nameMatch.js";
-import { planFuer as planAusListe, slotsAusPlan, bereichFuerRolleAm, BEREICHE } from "./schichtplan.js";
+import { planFuer as planAusListe, slotsAusPlan, bereichFuerRolleAm, neueSlotId, BEREICHE } from "./schichtplan.js";
 
 /** Der frnds-Schichtplan ab 16.11.2026 als feste Schichten.
  *  [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So, von/bis leer = unbefristet.
@@ -936,12 +936,7 @@ function normalizeSlot(roh, vergebeneIds) {
   // Schicht-Gruppe eine Aufgabe gehoert. Eine bestehende ID bleibt unangetastet – sonst verloeren
   // alle bisherigen Einteilungen ihren Bezug.
   let id = String(roh?.id || "").trim();
-  if (!id || vergebeneIds.has(id)) {
-    const gruppe = from < "11:00" ? "frueh" : from < "15:00" ? "mittel" : "spaet";
-    let n = 1;
-    while (vergebeneIds.has(`${gruppe}${n}`)) n++;
-    id = `${gruppe}${n}`;
-  }
+  if (!id || vergebeneIds.has(id)) id = neueSlotId(from, vergebeneIds);
   vergebeneIds.add(id);
   const tage = Array.isArray(roh?.allowedWeekdays)
     ? [...new Set(roh.allowedWeekdays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b)

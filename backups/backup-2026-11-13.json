@@ -1396,15 +1396,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-13",
-      "lastBackupAt": "2026-11-13T07:01:57.477Z",
-      "lastError": null
+      "lastBackupAt": "2026-11-13T11:24:20.694Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at abe6f47db06f0c30e2dcac19cd6d125ffab2f186 but expected 46d641ae8726bd3e528daed1898d57f71536a2a4\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-13T10:17:57.196Z",
+      "lastSyncAt": "2026-11-13T14:28:12.692Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -103872,8 +103872,10 @@
       "guests": 3,
       "area": "egal",
       "note": "Gerne mit einem Kinderstuhl (dann 4 Personen)",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-10-13T15:12:06.536Z",
       "arrivedAt": null,
@@ -107704,7 +107706,7 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-10-29T11:54:59.521Z",
       "arrivedAt": "2026-11-13T09:29:20.991Z",
@@ -108444,8 +108446,10 @@
       "guests": 4,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-03T14:26:55.016Z",
       "arrivedAt": null,
@@ -109551,8 +109555,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-11-10T07:02:58.269Z",
       "arrivedAt": null,
@@ -109656,8 +109662,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-10T11:52:06.485Z",
       "arrivedAt": null,
@@ -109701,7 +109709,7 @@
       "tableIds": [
         "7b260f51-2354-44fb-9971-1f0b6ec467f6"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-10T15:36:46.311Z",
       "arrivedAt": "2026-11-13T09:25:31.712Z",
@@ -109745,7 +109753,7 @@
       "tableIds": [
         "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-11T14:27:31.076Z",
       "arrivedAt": "2026-11-13T08:42:08.387Z",
@@ -109828,8 +109836,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-11T20:13:29.927Z",
       "arrivedAt": null,
@@ -109849,8 +109859,10 @@
       "guests": 4,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-12T13:47:08.560Z",
       "arrivedAt": null,
@@ -109870,8 +109882,10 @@
       "guests": 5,
       "area": "innen",
       "note": "mit Kinderwagen",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-12T14:28:43.277Z",
       "arrivedAt": null,
@@ -109912,8 +109926,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-11-13T07:47:02.622Z",
       "arrivedAt": null,
@@ -109934,10 +109950,10 @@
       "area": "innen",
       "note": "",
       "tableIds": [],
-      "status": "offen",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-13T08:08:16.981Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-13T14:21:06.867Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -109954,8 +109970,10 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-13T08:23:34.118Z",
       "arrivedAt": null,
@@ -109978,7 +109996,7 @@
       "tableIds": [
         "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-13T08:38:26.272Z",
       "arrivedAt": "2026-11-13T08:38:26.292Z",
@@ -110001,7 +110019,7 @@
       "tableIds": [
         "3e05549f-583e-450f-bfeb-76150d3b12e6"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-13T08:42:12.867Z",
       "arrivedAt": "2026-11-13T08:42:12.880Z",
@@ -110024,7 +110042,7 @@
       "tableIds": [
         "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-13T08:42:15.570Z",
       "arrivedAt": "2026-11-13T08:42:15.587Z",
@@ -110044,10 +110062,100 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "fbcdaf50-11ae-4faa-a413-7554074f2c73"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-11-13T09:44:56.610Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "c2505347-e348-46f7-9600-e7e1e64e6782",
+      "code": "H943E",
+      "date": "2026-12-05",
+      "time": "10:00",
+      "name": "nerz",
+      "phone": "",
+      "guests": 4,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-13T11:24:40.066Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "66e682b3-d986-47c5-8f4d-21be9c772a43",
+      "code": "6F3QZ",
+      "date": "2026-11-13",
+      "time": "18:30",
+      "name": "myriam",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "zugewiesen",
+      "source": "manuell",
+      "createdAt": "2026-11-13T13:15:26.630Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "93351317-f50f-4ba5-ac39-fa5b77126d84",
+      "code": "LDNW3",
+      "date": "2026-11-14",
+      "time": "11:00",
+      "name": "helena",
+      "phone": "",
+      "guests": 4,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4029057b-0fa7-484e-8bad-ba880accde56"
+      ],
+      "status": "zugewiesen",
+      "source": "manuell",
+      "createdAt": "2026-11-13T14:09:28.811Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "c8c6556c-df36-437c-8465-df12b277e031",
+      "code": "7SFHW",
+      "date": "2026-11-20",
+      "time": "09:30",
+      "name": "Rehberger",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-13T14:20:42.834Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

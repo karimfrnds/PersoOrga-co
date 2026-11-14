@@ -1396,7 +1396,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-14",
-      "lastBackupAt": "2026-11-14T07:23:23.104Z",
+      "lastBackupAt": "2026-11-14T10:25:29.823Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1404,7 +1404,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-14T10:19:41.471Z",
+      "lastSyncAt": "2026-11-14T13:26:15.557Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1634,32 +1634,32 @@
         },
         {
           "id": "749af172-bd2f-47d5-86ac-318fcd888add",
-          "done": false,
+          "done": true,
           "sig": "Besteck polieren und mind. 20 rollen|nina|2026-11-14||normal"
         },
         {
           "id": "ac42569c-e364-46f1-a8de-1a9eed03777e",
-          "done": false,
+          "done": true,
           "sig": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen|nina|2026-11-14||hoch"
         },
         {
           "id": "89cfb39d-fa13-48a9-bc0f-b97b45ec9b1f",
-          "done": false,
+          "done": true,
           "sig": "Karten abwischen|nina|2026-11-14||hoch"
         },
         {
           "id": "fbe67c89-2d59-438a-bf2e-84787a061edf",
-          "done": false,
+          "done": true,
           "sig": "Tische sauber halten|nina|2026-11-14||hoch"
         },
         {
           "id": "a920b388-6b4a-49a8-a35e-c04c965e95c2",
-          "done": false,
+          "done": true,
           "sig": "Terrasse checken und ggfs. fegen|nina|2026-11-14||normal"
         },
         {
           "id": "0b8aee03-41df-4785-9e13-e0bd14f6c5c9",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|nina|2026-11-14||hoch"
         }
       ],
@@ -3475,7 +3475,9 @@
         "3f5edcbd-77be-40f5-9adf-d3dd2040cf5c",
         "eec4de9c-93e6-4c8d-9890-29341b3ed644",
         "ee490611-b341-4f14-bb3b-609e6c5728c3",
-        "2d9a22e0-a957-4a9a-a467-4c88607f7df7"
+        "2d9a22e0-a957-4a9a-a467-4c88607f7df7",
+        "9fd9dd3a-51bf-40d0-b432-39bfc6583c2a",
+        "192440ef-d2d0-46c3-8a0e-754e13ad9dde"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -75206,11 +75208,11 @@
           "id": "eff59620-a4fd-4533-8b83-4e6b38ff2b36",
           "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
           "from": "10:02",
-          "to": null,
+          "to": "14:07",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-14T09:02:06.869Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-14T13:07:02.611Z"
         }
       ],
       "plannedShifts": [
@@ -76143,9 +76145,9 @@
         {
           "id": "749af172-bd2f-47d5-86ac-318fcd888add",
           "text": "Besteck polieren und mind. 20 rollen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:50.196Z",
           "source": "template",
           "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
           "addedBy": null,
@@ -76160,9 +76162,9 @@
         {
           "id": "ac42569c-e364-46f1-a8de-1a9eed03777e",
           "text": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:49.122Z",
           "source": "template",
           "templateId": "89265887-efed-4bf7-81d0-760f37b20fba",
           "addedBy": null,
@@ -76177,9 +76179,9 @@
         {
           "id": "89cfb39d-fa13-48a9-bc0f-b97b45ec9b1f",
           "text": "Karten abwischen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:49.381Z",
           "source": "template",
           "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
           "addedBy": null,
@@ -76194,9 +76196,9 @@
         {
           "id": "fbe67c89-2d59-438a-bf2e-84787a061edf",
           "text": "Tische sauber halten",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:49.981Z",
           "source": "template",
           "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
           "addedBy": null,
@@ -76211,9 +76213,9 @@
         {
           "id": "a920b388-6b4a-49a8-a35e-c04c965e95c2",
           "text": "Terrasse checken und ggfs. fegen",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:50.764Z",
           "source": "template",
           "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
           "addedBy": null,
@@ -76228,9 +76230,9 @@
         {
           "id": "0b8aee03-41df-4785-9e13-e0bd14f6c5c9",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "nina",
+          "doneAt": "2026-11-14T13:06:52.279Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -76279,6 +76281,11 @@
           "timestamp": "2026-11-14T09:02:06.869Z",
           "action": "eingestempelt",
           "detail": "nina um 10:02 Uhr"
+        },
+        {
+          "timestamp": "2026-11-14T13:07:02.612Z",
+          "action": "ausgestempelt",
+          "detail": "nina um 14:07 Uhr"
         }
       ],
       "closedAt": null,
@@ -111469,10 +111476,10 @@
       "tableIds": [
         "3e05549f-583e-450f-bfeb-76150d3b12e6"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-03T14:26:55.016Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-14T10:30:16.861Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -112578,7 +112585,7 @@
       "tableIds": [
         "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-10T07:02:58.269Z",
       "arrivedAt": "2026-11-14T09:14:53.216Z",
@@ -112685,7 +112692,7 @@
       "tableIds": [
         "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-10T11:52:06.485Z",
       "arrivedAt": "2026-11-14T09:25:12.580Z",
@@ -112882,10 +112889,10 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-12T13:47:08.560Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-14T11:03:18.329Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -112993,10 +113000,10 @@
       "tableIds": [
         "820bd379-257d-4751-906e-447b32b6030a"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-13T08:23:34.118Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-14T11:27:44.776Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -113085,7 +113092,7 @@
       "tableIds": [
         "fbcdaf50-11ae-4faa-a413-7554074f2c73"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-13T09:44:56.610Z",
       "arrivedAt": "2026-11-14T09:56:13.338Z",
@@ -113152,10 +113159,10 @@
       "tableIds": [
         "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "zugewiesen",
+      "status": "weg",
       "source": "manuell",
       "createdAt": "2026-11-13T14:09:28.811Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-14T10:30:10.111Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -113326,7 +113333,7 @@
       "tableIds": [
         "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-14T09:55:37.059Z",
       "arrivedAt": "2026-11-14T09:55:37.076Z",
@@ -113349,7 +113356,7 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-14T09:57:06.456Z",
       "arrivedAt": "2026-11-14T09:57:06.474Z",
@@ -113418,7 +113425,7 @@
       "tableIds": [
         "a6379e08-9663-4e63-9e8c-f6cf5d7c7bed"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "walkin",
       "createdAt": "2026-11-14T10:10:36.031Z",
       "arrivedAt": "2026-11-14T10:10:36.050Z",
@@ -113439,11 +113446,122 @@
       "area": "innen",
       "note": "",
       "tableIds": [
-        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+        "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-14T10:18:58.028Z",
+      "arrivedAt": "2026-11-14T12:35:53.365Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "fd538984-930b-4f2d-a5ae-7799f08502ae",
+      "code": "THXJW",
+      "date": "2026-11-14",
+      "time": "11:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-14T10:26:17.974Z",
+      "arrivedAt": "2026-11-14T10:26:17.989Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "04a404a0-22d6-49a8-a4d5-1e6da99691e5",
+      "code": "7SWD3",
+      "date": "2026-11-14",
+      "time": "16:00",
+      "name": "Maurice Kraemer",
+      "phone": "0176 23113288",
+      "guests": 4,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-14T10:56:45.057Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "09f94417-bbc7-4e9d-81ba-7e2debf8114b",
+      "code": "4N4SV",
+      "date": "2026-11-14",
+      "time": "12:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-14T11:27:54.659Z",
+      "arrivedAt": "2026-11-14T11:27:54.677Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d68cae1d-7301-4e0a-a054-cd3f9853c85e",
+      "code": "4QT9Z",
+      "date": "2026-11-14",
+      "time": "12:15",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-14T11:31:30.778Z",
+      "arrivedAt": "2026-11-14T11:31:30.794Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "0623cd61-6f3d-40cf-bb38-9b1939baab9c",
+      "code": "EHZE9",
+      "date": "2026-11-14",
+      "time": "16:15",
+      "name": "Maurice Krämer",
+      "phone": "0176 23113288",
+      "guests": 5,
+      "area": "innen",
+      "note": "Hallo, Ich habe bereits um 16 Uhr für 4 Personen reserviert, jedoch wären wir jz zu 5. entschuldigen sie den Aufwand / die Verirrung.",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-14T12:19:36.508Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

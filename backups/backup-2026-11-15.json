@@ -584,6 +584,18 @@
         }
       ],
       "istStoreManagerin": false
+    },
+    {
+      "id": "f71eaf06-e233-47fe-91db-fb421481b617",
+      "name": "Jade",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": null,
+      "festeSchichten": [],
+      "istStoreManagerin": false
     }
   ],
   "settings": {
@@ -1396,7 +1408,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-15",
-      "lastBackupAt": "2026-11-15T07:27:54.087Z",
+      "lastBackupAt": "2026-11-15T10:35:36.741Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1404,7 +1416,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-15T10:34:50.764Z",
+      "lastSyncAt": "2026-11-15T13:35:24.996Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1901,7 +1913,12 @@
         "2062262f-f0ca-4c8a-a52d-7b685bcdbeab",
         "0f399315-e5a8-4a36-a813-42d40a79eae7",
         "f63113d3-766c-4c76-a922-03b284082efc",
-        "cb16ac38-7aea-4029-914f-ae50e1baa48c"
+        "cb16ac38-7aea-4029-914f-ae50e1baa48c",
+        "ece518ad-c33f-4048-b00e-d0a8e6d16141",
+        "8980cb4c-2d53-4078-a184-8d660794106e",
+        "e431c803-5ef9-4a4f-8074-d9c7280ec6c3",
+        "09f415af-3286-4c26-a104-09fb4b3d54a1",
+        "5ba45b6a-0016-4a8c-8bd2-deab7d6f58aa"
       ],
       "appliedMessageIds": [
         "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
@@ -2068,7 +2085,9 @@
         "af299eaf-ac0a-4ef9-acfb-4fc68c393bdf",
         "913049d5-8e57-4fdb-8d33-d164500d7bf6",
         "cb855a70-70fd-4305-9d78-50a172c128e6",
-        "7110b41f-c461-4404-af93-9e4129767705"
+        "7110b41f-c461-4404-af93-9e4129767705",
+        "b1711212-a80f-419f-b232-d52f02e5f425",
+        "12722ce3-3c34-4cdd-a21f-e59a7a0db252"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -2472,14 +2491,6 @@
         "1441f7b9-bc49-4c67-bff0-abe185a79f5a"
       ],
       "appliedAvailabilityKeys": [
-        "2026-11-02|julie|2026-10-08T06:27:44.753Z",
-        "2026-11-02|nico|2026-10-08T06:27:44.753Z",
-        "2026-11-09|nico|2026-10-08T11:02:36.453Z",
-        "2026-11-02|hanna|2026-10-09T06:23:08.498Z",
-        "2026-11-02|rotraut|2026-10-09T06:23:08.498Z",
-        "2026-11-02|lilly|2026-10-10T05:56:02.527Z",
-        "2026-11-02|nele|2026-10-10T07:22:56.424Z",
-        "2026-11-09|nele|2026-10-10T07:24:25.066Z",
         "2026-10-12|Leanna|2026-10-10T20:17:09.230Z",
         "2026-10-19|Leanna|2026-10-10T20:18:24.618Z",
         "2026-10-26|Leanna|2026-10-10T20:19:50.746Z",
@@ -2771,7 +2782,15 @@
         "2026-10-12|george|2026-10-06T13:46:26.073Z",
         "2026-11-09|maria|2026-10-05T08:08:55.316Z",
         "2026-11-02|timm|2026-10-07T05:56:56.975Z",
-        "2026-10-05|miguel|2026-10-07T17:44:40.358Z"
+        "2026-10-05|miguel|2026-10-07T17:44:40.358Z",
+        "2026-11-16|Jade|2026-11-15T12:39:42.266Z",
+        "2026-11-23|Jade|2026-11-15T12:40:00.441Z",
+        "2026-11-02|julie|2026-10-08T06:27:44.753Z",
+        "2026-11-02|nico|2026-10-08T06:27:44.753Z",
+        "2026-11-09|nico|2026-10-08T11:02:36.453Z",
+        "2026-11-02|rotraut|2026-10-09T06:23:08.498Z",
+        "2026-11-02|lilly|2026-10-10T05:56:02.527Z",
+        "2026-11-02|nele|2026-10-10T07:22:56.424Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -3040,7 +3059,8 @@
       ],
       "appliedEmployeeChangeIds": [
         "3bed2d05-4723-41eb-b458-4543f88e4bc9",
-        "55ae448a-05ff-4be7-aca4-b9bb0022e1ef"
+        "55ae448a-05ff-4be7-aca4-b9bb0022e1ef",
+        "0d8619bc-41c0-47ba-a8b5-1e5c288c896d"
       ],
       "appliedPublicationIds": [
         "7a2cde3e-425e-42ba-aa2a-bc104cdcd995",
@@ -3534,7 +3554,8 @@
         "192440ef-d2d0-46c3-8a0e-754e13ad9dde",
         "69b07348-999f-4743-9192-7014ed085177",
         "32c851a1-901b-46df-9db9-dd1d6cdcd491",
-        "bb4c4ba8-a7a8-4e49-bda5-51ac4bcec66f"
+        "bb4c4ba8-a7a8-4e49-bda5-51ac4bcec66f",
+        "d506db4b-0b0b-4a19-8b75-de352c909641"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -66363,13 +66384,13 @@
           "submittedAt": "2026-10-07T05:56:56.975Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "8381acd8-2ece-4ec4-b6cb-2ead8bdee73a",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-09T06:23:08.498Z"
         },
@@ -67758,35 +67779,35 @@
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "6b7dccbd-1729-41b6-a2f8-247ac4a3790d",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-08T06:27:44.753Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "d2442f23-0abe-4b14-913a-3520d6b946ae",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-08T06:27:44.753Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "4488594e-6553-4f2b-b9c7-86f0642c4800",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-09T06:23:08.498Z"
         },
@@ -67802,15 +67823,15 @@
           "submittedAt": "2026-10-28T16:19:34.014Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "e671846c-e6ca-495c-bfca-46be208a11b3",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-01T16:07:23.891Z"
+          "submittedAt": "2026-10-10T05:56:02.527Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -69342,13 +69363,13 @@
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "be71b13f-4f52-4d4e-8ed6-5d8da1604743",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-10T05:56:02.527Z"
         },
@@ -70623,24 +70644,24 @@
           "submittedAt": "2026-10-23T05:54:37.958Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "f53e5bc4-bf0c-4ab9-948c-3692791c44a7",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-09T06:23:08.498Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "04f9b498-9491-491b-a3f1-4af9988731d8",
           "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-10T07:22:56.424Z"
         },
@@ -70656,15 +70677,15 @@
           "submittedAt": "2026-10-28T07:22:24.710Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "659cb532-aae2-4ffe-8911-a97c60955ca6",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-01T16:07:23.902Z"
+          "submittedAt": "2026-10-10T05:56:02.527Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -72061,13 +72082,13 @@
           "submittedAt": "2026-10-23T05:54:37.958Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "5a7532dc-74d9-478a-a958-a9de754d0e00",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-09T06:23:08.498Z"
         }
@@ -77717,24 +77738,24 @@
           "submittedAt": "2026-10-07T05:56:56.975Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "c570d1b9-d906-4fc3-862d-1537bd65ca40",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-08T06:27:44.753Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "c5614c0b-a4a1-4433-919f-02f2ba18aaf6",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-09T06:23:08.498Z"
         }
@@ -78245,13 +78266,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "e673d460-20fc-4ead-b7ab-5525b47044e6",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-08T11:02:36.453Z"
         },
@@ -83600,8 +83621,8 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-cd6d7bb3-95e7-4dea-9074-820215bc8387",
-          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "id": "avail-6aaf43b1-a23d-4ebe-930d-5d73b5d71289",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
           "from": "08:30",
           "to": "16:00",
           "note": "",
@@ -83687,13 +83708,22 @@
         {
           "id": "cd6d7bb3-95e7-4dea-9074-820215bc8387",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "slotIds": [],
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
+          "note": "",
+          "submittedAt": "2026-11-15T07:27:44.725Z"
+        },
+        {
+          "id": "6aaf43b1-a23d-4ebe-930d-5d73b5d71289",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
           "slotIds": [
             "frueh1"
           ],
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.725Z"
+          "submittedAt": "2026-11-15T12:39:42.266Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -86982,6 +87012,14 @@
         {
           "id": "avail-2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "from": "09:00",
+          "to": "14:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-f7a6fc2d-e730-40f0-b91a-d6873fbebeab",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
           "from": "08:30",
           "to": "16:00",
           "note": "",
@@ -87059,12 +87097,23 @@
           "id": "2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
+            "mittel1"
+          ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-15T07:27:44.725Z"
+        },
+        {
+          "id": "f7a6fc2d-e730-40f0-b91a-d6873fbebeab",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+          "slotIds": [
             "frueh1"
           ],
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.725Z"
+          "submittedAt": "2026-11-15T12:39:42.266Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -87210,6 +87259,14 @@
           "to": "15:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-450c34bc-f3c8-4561-a87f-a27c7577dd11",
+          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "from": "11:00",
+          "to": "18:30",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -87254,11 +87311,13 @@
           "submittedAt": "2026-11-11T18:34:26.469Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": false,
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "450c34bc-f3c8-4561-a87f-a27c7577dd11",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "slotIds": [],
+          "slotIds": [
+            "spaet1"
+          ],
           "note": "",
           "submittedAt": "2026-11-11T18:34:26.482Z"
         },
@@ -87540,6 +87599,14 @@
           "to": "17:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-bf3f2d2f-0c96-4c76-b771-979b4164c495",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+          "from": "09:00",
+          "to": "14:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -87608,6 +87675,17 @@
           ],
           "note": "",
           "submittedAt": "2026-11-09T13:59:17.105Z"
+        },
+        {
+          "id": "bf3f2d2f-0c96-4c76-b771-979b4164c495",
+          "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+          "slotIds": [
+            "mittel1"
+          ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-15T12:40:00.441Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -93674,6 +93752,55 @@
       "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
       "text": "❌ Deine Schicht am Donnerstag, 03.12.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:45.084Z",
+      "readAt": null
+    },
+    {
+      "id": "adedf9f4-5114-4500-9a42-1ee0413b887f",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "✅ Deine Schicht am Samstag, 21.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-15T12:34:01.752Z",
+      "readAt": null
+    },
+    {
+      "id": "7fe51ed7-2c5a-48a1-bc42-20b16d0840b5",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "❌ Deine Schicht am Samstag, 21.11.2026 (Schicht 1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-15T12:34:01.753Z",
+      "readAt": null
+    },
+    {
+      "id": "dd12c382-103c-49a0-bb5a-9f44bca9a6c4",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Schicht 1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-15T12:34:01.754Z",
+      "readAt": null
+    },
+    {
+      "id": "d14b29ae-c859-47fb-982b-d9021f0ccd1a",
+      "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+      "text": "✅ Deine Schicht am Samstag, 21.11.2026 (Schicht 1, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-15T12:40:01.472Z",
+      "readAt": null
+    },
+    {
+      "id": "e81d81b9-37d1-40d3-8bdb-a2bc6cd6a07e",
+      "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+      "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Schicht 1, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-15T12:40:01.473Z",
+      "readAt": null
+    },
+    {
+      "id": "4c3d6429-dab3-49af-a2b4-49df322f8164",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "✅ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-15T12:40:01.473Z",
+      "readAt": null
+    },
+    {
+      "id": "93fe18b8-6f36-4fd0-9c50-e236c66a4186",
+      "employeeId": "f71eaf06-e233-47fe-91db-fb421481b617",
+      "text": "✅ Deine Schicht am Samstag, 28.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-15T12:40:01.474Z",
       "readAt": null
     }
   ],
@@ -116613,7 +116740,7 @@
       "tableIds": [
         "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
       ],
-      "status": "da",
+      "status": "weg",
       "source": "web",
       "createdAt": "2026-11-14T14:58:48.347Z",
       "arrivedAt": "2026-11-15T09:02:47.068Z",
@@ -116634,12 +116761,12 @@
       "area": "egal",
       "note": "",
       "tableIds": [
-        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-14T16:08:15.107Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T13:15:01.027Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -116732,6 +116859,27 @@
       "source": "walkin",
       "createdAt": "2026-11-15T08:51:13.546Z",
       "arrivedAt": "2026-11-15T08:51:13.546Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "7feb96d3-09a5-4aaa-8dd1-70582d4bd6c6",
+      "code": "G5YRJ",
+      "date": "2026-11-16",
+      "time": "10:00",
+      "name": "Kett",
+      "phone": "015753106400",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-15T13:13:55.427Z",
+      "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

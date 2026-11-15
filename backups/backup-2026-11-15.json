@@ -1110,8 +1110,114 @@
       "onlineEnabled": true
     },
     "shiftSlots": {
-      "service": [],
-      "kueche": []
+      "service": [
+        {
+          "id": "frueh1",
+          "label": "Bar",
+          "from": "08:30",
+          "to": "16:00",
+          "weekdayOverrides": {
+            "0": {
+              "to": "17:00"
+            },
+            "1": {
+              "to": "17:00"
+            },
+            "6": {
+              "to": "17:00"
+            }
+          }
+        },
+        {
+          "id": "frueh2",
+          "label": "Service 2",
+          "from": "09:00",
+          "to": "17:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ],
+          "weekdayOverrides": {
+            "6": {
+              "to": "17:30"
+            }
+          }
+        },
+        {
+          "id": "mittel",
+          "label": "Service Mitte",
+          "from": "10:00",
+          "to": "14:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ]
+        },
+        {
+          "id": "frueh3",
+          "label": "Store-Management",
+          "from": "08:00",
+          "to": "14:00",
+          "allowedWeekdays": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "nurFest": true
+        },
+        {
+          "id": "spaet1",
+          "label": "Service Abend 1",
+          "from": "15:30",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "id": "spaet2",
+          "label": "Service Abend 2",
+          "from": "18:00",
+          "to": "23:00",
+          "allowedWeekdays": [
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "kueche": [
+        {
+          "id": "frueh1",
+          "label": "Küche 1",
+          "from": "08:00",
+          "to": "15:30"
+        },
+        {
+          "id": "mittel",
+          "label": "Küche Mitte",
+          "from": "10:00",
+          "to": "14:00"
+        },
+        {
+          "id": "frueh2",
+          "label": "Küche 2",
+          "from": "10:00",
+          "to": "16:00",
+          "allowedWeekdays": [
+            4,
+            5,
+            6
+          ]
+        }
+      ],
+      "bar": []
     },
     "schichtPlaene": [
       {
@@ -1289,372 +1395,292 @@
       "owner": "karimfrnds",
       "repo": "PersoOrga-co",
       "token": "",
-      "lastBackupDate": "2026-11-14",
-      "lastBackupAt": "2026-11-14T17:24:15.131Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a7413608dfad37d23dcb03416cf5bb57f1e6cf45 but expected 9614191b5213d80f8bf74a2b24bffa8560ccce48\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupDate": "2026-11-15",
+      "lastBackupAt": "2026-11-15T07:27:54.087Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-14T19:52:44.028Z",
+      "lastSyncAt": "2026-11-15T10:34:50.764Z",
       "lastError": null,
       "knownRemoteState": [
         {
-          "id": "b26554a8-cd45-413b-9418-1f54b4dd8d3a",
-          "done": true,
-          "sig": "Kerzen anmachen|lilly|2026-11-14||hoch"
+          "id": "34622138-99b3-4755-9324-ffd065d429a7",
+          "done": false,
+          "sig": "Kerzen anmachen|leanna|2026-11-15||hoch"
         },
         {
-          "id": "2444e8d2-53da-41db-be62-7baaec90253a",
-          "done": true,
-          "sig": "Licht außen anmachen|lilly|2026-11-14||hoch"
+          "id": "e3fb0a6c-bc11-47c8-a15b-2dc4165aa328",
+          "done": false,
+          "sig": "Licht außen anmachen|leanna|2026-11-15||hoch"
         },
         {
-          "id": "1406a18b-948c-4771-bc5b-ae28eeae9321",
-          "done": true,
-          "sig": "Baum Strahler anmachen|lilly|2026-11-14||hoch"
+          "id": "04db22ce-0892-4a33-838c-0a2e893e7fbd",
+          "done": false,
+          "sig": "Baum Strahler anmachen|leanna|2026-11-15||hoch"
         },
         {
-          "id": "1eda947a-9d69-43b7-992d-02ba59940f15",
-          "done": true,
-          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|lilly|2026-11-14||hoch"
+          "id": "725c3036-8fe5-4eeb-a885-4f5666b17c3d",
+          "done": false,
+          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|leanna|2026-11-15||hoch"
         },
         {
-          "id": "0c46aa87-f58d-47ea-8011-4cba9030f6c9",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|lilly|2026-11-14||hoch"
+          "id": "ebfef9ee-19b9-45ec-b1a9-62457901c19b",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|leanna|2026-11-15||hoch"
         },
         {
-          "id": "d0b39c16-dfcf-4898-95cd-b2310f78314a",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|lilly|2026-11-14||hoch"
+          "id": "a594050a-a0fa-46ec-b95f-4a390cbc6786",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|leanna|2026-11-15||hoch"
         },
         {
-          "id": "c16b0411-c8eb-483a-a6e6-05ecbbab4211",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|lilly|2026-11-14||normal"
+          "id": "0891f270-580b-41a1-a5f2-542286f4ae13",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|leanna|2026-11-15||normal"
         },
         {
-          "id": "6d5a7b1a-a881-4c31-a686-52798d9b7cfc",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|lilly|2026-11-14||normal"
+          "id": "68297e27-3608-490f-83be-0115ae32574a",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|leanna|2026-11-15||normal"
         },
         {
-          "id": "de45e77f-5221-4066-aeb5-677ab224a5a2",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|lilly|2026-11-14||normal"
+          "id": "5dd9f15b-3e59-4260-9d8b-3b871b2a275c",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|leanna|2026-11-15||normal"
         },
         {
-          "id": "908e287b-6a14-4302-bdcd-b5f61c09f66d",
-          "done": true,
-          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|lilly|2026-11-14||hoch"
+          "id": "c17d8eb5-c7c3-4f56-933d-7397a6f5b93f",
+          "done": false,
+          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|leanna|2026-11-15||hoch"
         },
         {
-          "id": "257e893c-17b7-4902-8ea8-fba60d063fb1",
-          "done": true,
-          "sig": "Lichterketten anschalten|lilly|2026-11-14||normal"
+          "id": "4f5dc447-887e-41bf-9161-6acbc9aa870f",
+          "done": false,
+          "sig": "Lichterketten anschalten|leanna|2026-11-15||normal"
         },
         {
-          "id": "be256ace-13a9-4ef1-acf9-814517cf4c43",
-          "done": true,
-          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|lilly|2026-11-14||normal"
+          "id": "fef909c0-0148-4239-b001-712cfec04cc9",
+          "done": false,
+          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|leanna|2026-11-15||normal"
         },
         {
-          "id": "c9acdeb3-7600-4f81-ae5f-46e40d4c4357",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|lilly|2026-11-14||normal"
+          "id": "06c201ef-e4fe-4d23-99f7-71dd2aec3fc3",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|leanna|2026-11-15||normal"
         },
         {
-          "id": "13caf5ca-5468-4e2d-99f3-4959fb846d49",
-          "done": true,
-          "sig": "Pflanzen draußen Giesen wenn kein regen|lilly|2026-11-14||hoch"
+          "id": "6dca5d15-1c71-4982-b547-b41f66ba77a6",
+          "done": false,
+          "sig": "Pflanzen draußen Giesen wenn kein regen|leanna|2026-11-15||hoch"
         },
         {
-          "id": "93a98a54-902a-4d0a-983c-83b4fe72a58f",
-          "done": true,
-          "sig": "Karten abwischen|lilly|2026-11-14||hoch"
+          "id": "d6ead40e-2243-4296-82d0-9d59db8b9d48",
+          "done": false,
+          "sig": "Karten abwischen|leanna|2026-11-15||hoch"
         },
         {
-          "id": "12ee1461-b02a-4e3c-8617-d1916ea065b4",
-          "done": true,
-          "sig": "Tische sauber halten|lilly|2026-11-14||hoch"
+          "id": "dae78858-604f-4601-a022-bab81997ff1d",
+          "done": false,
+          "sig": "Tische sauber halten|leanna|2026-11-15||hoch"
         },
         {
-          "id": "1ef2bc2e-1c1b-40e9-a4ae-63182b665cc6",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|lilly|2026-11-14||normal"
+          "id": "f4390ebb-f6fa-4eaf-a0b2-c4563a339efb",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|leanna|2026-11-15||normal"
         },
         {
-          "id": "c39f5e2d-f7ba-4872-bdb2-7c042c744557",
-          "done": true,
-          "sig": "Tische wischen nach Service|lilly|2026-11-14||hoch"
+          "id": "83f7f262-d097-4814-a019-79343801ba80",
+          "done": false,
+          "sig": "Tische wischen nach Service|leanna|2026-11-15||hoch"
         },
         {
-          "id": "7f529e89-598e-4ba4-a686-c7fdb6f28113",
-          "done": true,
-          "sig": "Kerzen anmachen|maria|2026-11-14||hoch"
+          "id": "30df8f0d-1eff-48c8-b727-ea12cb16db8c",
+          "done": false,
+          "sig": "Kerzen anmachen|kaya|2026-11-15||hoch"
         },
         {
-          "id": "3a7a651d-6c7c-416c-a269-01f7b72f6165",
-          "done": true,
-          "sig": "Licht außen anmachen|maria|2026-11-14||hoch"
+          "id": "89038b3c-abda-4b4f-bbc5-721bc641f2f0",
+          "done": false,
+          "sig": "Licht außen anmachen|kaya|2026-11-15||hoch"
         },
         {
-          "id": "eeeabd6e-ac4c-43c8-b801-2a205717be17",
-          "done": true,
-          "sig": "Baum Strahler anmachen|maria|2026-11-14||hoch"
+          "id": "744ba953-6418-4dc8-a661-cf7dd871a5ea",
+          "done": false,
+          "sig": "Baum Strahler anmachen|kaya|2026-11-15||hoch"
         },
         {
-          "id": "284dd146-ae37-45f8-8af1-437f24b4d318",
-          "done": true,
-          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|maria|2026-11-14||hoch"
+          "id": "a82ca004-c208-498a-ad81-58874585dc1e",
+          "done": false,
+          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|kaya|2026-11-15||hoch"
         },
         {
-          "id": "26380703-fa29-49aa-9abe-4eb86ced1607",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|maria|2026-11-14||hoch"
+          "id": "f218af68-d07f-4af3-b510-fa83ffa6a393",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|kaya|2026-11-15||hoch"
         },
         {
-          "id": "714f386b-f20d-48c1-ad4d-545f765bb088",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|maria|2026-11-14||hoch"
+          "id": "53b64ab5-caad-4475-ade1-4bd81057b5d8",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|kaya|2026-11-15||hoch"
         },
         {
-          "id": "bccfa732-f783-477d-831f-49d73b99f37c",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|maria|2026-11-14||normal"
+          "id": "69cd0c56-b22e-4e85-b83a-d35f1e7914e4",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|kaya|2026-11-15||normal"
         },
         {
-          "id": "584ba580-30ee-4c79-a468-17b35b87f68b",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|maria|2026-11-14||normal"
+          "id": "459823a4-4fd3-4a59-aade-f623893d6f2b",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|kaya|2026-11-15||normal"
         },
         {
-          "id": "0f3b926f-bf9e-43b4-ba31-168cdb5b78ef",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|maria|2026-11-14||normal"
+          "id": "4ff4f43a-1838-49c7-842b-f3c1733d28d4",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|kaya|2026-11-15||normal"
         },
         {
-          "id": "e38fde0c-feda-4c08-9d0a-e6788973204b",
-          "done": true,
-          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|maria|2026-11-14||hoch"
+          "id": "137910be-c7bb-46b2-848c-482cf5e55a47",
+          "done": false,
+          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|kaya|2026-11-15||hoch"
         },
         {
-          "id": "153d2367-cdf4-4810-b865-672397be0740",
-          "done": true,
-          "sig": "Lichterketten anschalten|maria|2026-11-14||normal"
+          "id": "a9e5a757-7f94-4fc7-a53a-bb9607ca5f61",
+          "done": false,
+          "sig": "Lichterketten anschalten|kaya|2026-11-15||normal"
         },
         {
-          "id": "aaeb0a33-a96a-424b-99e5-d3c2a456fa5b",
-          "done": true,
-          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|maria|2026-11-14||normal"
+          "id": "85f0a4e9-2452-44eb-bc38-e58f067d18ec",
+          "done": false,
+          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|kaya|2026-11-15||normal"
         },
         {
-          "id": "cb0f65e1-2b14-4d4b-bc15-7ccac3843735",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|maria|2026-11-14||normal"
+          "id": "d1184467-ca80-4a6d-b2af-fdedaad0f5e4",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|kaya|2026-11-15||normal"
         },
         {
-          "id": "ca4149d1-4566-471f-8015-010d4831d856",
-          "done": true,
-          "sig": "Pflanzen draußen Giesen wenn kein regen|maria|2026-11-14||hoch"
+          "id": "62de1ec2-3350-4082-ae2b-292ad41fdcc3",
+          "done": false,
+          "sig": "Pflanzen draußen Giesen wenn kein regen|kaya|2026-11-15||hoch"
         },
         {
-          "id": "2291914b-6ca3-42d9-9c85-6e99fc895368",
-          "done": true,
-          "sig": "Karten abwischen|maria|2026-11-14||hoch"
+          "id": "d096b45c-1b80-4ef9-b21e-86df3ed29daa",
+          "done": false,
+          "sig": "Karten abwischen|kaya|2026-11-15||hoch"
         },
         {
-          "id": "25173a80-b67f-4395-9e88-f3b3f917bdbb",
-          "done": true,
-          "sig": "Tische sauber halten|maria|2026-11-14||hoch"
+          "id": "a87af124-9a2c-48fa-86e6-9e8c7f759f14",
+          "done": false,
+          "sig": "Tische sauber halten|kaya|2026-11-15||hoch"
         },
         {
-          "id": "6f98f1a4-63f0-4987-b37b-a0b8831fe834",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|maria|2026-11-14||normal"
+          "id": "fe8b29e6-c756-42e2-bb7d-f972cfad0456",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|kaya|2026-11-15||normal"
         },
         {
-          "id": "99f63132-f605-4866-bf35-1db6819bbfdc",
-          "done": true,
-          "sig": "Tische wischen nach Service|maria|2026-11-14||hoch"
+          "id": "b3c86b8a-90ac-455e-8be2-1c7e3457386b",
+          "done": false,
+          "sig": "Tische wischen nach Service|kaya|2026-11-15||hoch"
         },
         {
-          "id": "b8d07007-9cf2-447e-8007-e29c57fc540c",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|emma|2026-11-14||hoch"
+          "id": "6ade3add-f6d4-4a12-9e6c-aeeece736b64",
+          "done": false,
+          "sig": "Kerzen anmachen|nele|2026-11-15||hoch"
         },
         {
-          "id": "3cc937a3-8894-4bfa-9ec0-990f4777b909",
-          "done": true,
-          "sig": "Kerzen anmachen|nina|2026-11-14||hoch"
+          "id": "60e029d9-bf24-40fe-b0b4-8d94c2a9937d",
+          "done": false,
+          "sig": "Licht außen anmachen|nele|2026-11-15||hoch"
         },
         {
-          "id": "0bec1c15-320f-44a8-852a-a9c62779af9a",
-          "done": true,
-          "sig": "Licht außen anmachen|nina|2026-11-14||hoch"
+          "id": "ac88bb6d-d2d9-4e1d-8d09-b9eb0567f579",
+          "done": false,
+          "sig": "Baum Strahler anmachen|nele|2026-11-15||hoch"
         },
         {
-          "id": "07f1c076-8a25-4446-adc1-a78ae60fa47f",
-          "done": true,
-          "sig": "Baum Strahler anmachen|nina|2026-11-14||hoch"
+          "id": "68a299a5-4ae2-46bd-8242-82f2042cb641",
+          "done": false,
+          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|nele|2026-11-15||hoch"
         },
         {
-          "id": "266025e2-63cb-4776-8f76-e0a1b581bf5f",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|nina|2026-11-14||hoch"
+          "id": "5148265f-fcc4-4070-94e5-840930be7064",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|nele|2026-11-15||hoch"
         },
         {
-          "id": "268d5b0e-f270-4c3e-8e5e-4017d0385a76",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|nina|2026-11-14||hoch"
+          "id": "149294ab-3f77-4767-8ab0-81f211386617",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|nele|2026-11-15||hoch"
         },
         {
-          "id": "948aadc6-df2f-4f35-8a2e-00d59d174d53",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|nina|2026-11-14||normal"
+          "id": "e33d24df-ae92-4d3c-a701-edd672c5becc",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|nele|2026-11-15||normal"
         },
         {
-          "id": "bd228398-5d60-4777-b3ca-0aea06c55642",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|nina|2026-11-14||normal"
+          "id": "ecbb2ddf-be6f-4dd3-ac12-c7642e986390",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|nele|2026-11-15||normal"
         },
         {
-          "id": "02132a79-7836-4342-a16e-7c59528c26ea",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|nina|2026-11-14||normal"
+          "id": "a535288d-ba6f-4c2a-963e-e9007ed2a5a7",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|nele|2026-11-15||normal"
         },
         {
-          "id": "749af172-bd2f-47d5-86ac-318fcd888add",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|nina|2026-11-14||normal"
+          "id": "33e2dda8-a4e7-4d88-a4b7-c98d30afe0c5",
+          "done": false,
+          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|nele|2026-11-15||hoch"
         },
         {
-          "id": "ac42569c-e364-46f1-a8de-1a9eed03777e",
-          "done": true,
-          "sig": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen|nina|2026-11-14||hoch"
+          "id": "19adbb22-6ea5-463a-b42d-1855d2bf8510",
+          "done": false,
+          "sig": "Lichterketten anschalten|nele|2026-11-15||normal"
         },
         {
-          "id": "89cfb39d-fa13-48a9-bc0f-b97b45ec9b1f",
-          "done": true,
-          "sig": "Karten abwischen|nina|2026-11-14||hoch"
+          "id": "1d82e7a3-c7c4-4979-a437-01511c2114e5",
+          "done": false,
+          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|nele|2026-11-15||normal"
         },
         {
-          "id": "fbe67c89-2d59-438a-bf2e-84787a061edf",
-          "done": true,
-          "sig": "Tische sauber halten|nina|2026-11-14||hoch"
+          "id": "47a59458-0f06-4079-a89b-c581aad5b8e7",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|nele|2026-11-15||normal"
         },
         {
-          "id": "a920b388-6b4a-49a8-a35e-c04c965e95c2",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|nina|2026-11-14||normal"
+          "id": "cd57e4a0-249c-47d7-8538-7605a648a259",
+          "done": false,
+          "sig": "Pflanzen draußen Giesen wenn kein regen|nele|2026-11-15||hoch"
         },
         {
-          "id": "0b8aee03-41df-4785-9e13-e0bd14f6c5c9",
-          "done": true,
-          "sig": "Tische wischen nach Service|nina|2026-11-14||hoch"
+          "id": "06b620ec-15f3-428e-b4fa-fa6009a138b0",
+          "done": false,
+          "sig": "Karten abwischen|nele|2026-11-15||hoch"
         },
         {
-          "id": "ab110689-e5cc-4a9d-b408-28235f6f5d43",
-          "done": true,
-          "sig": "Kerzen anmachen|nele|2026-11-14||hoch"
+          "id": "a2623ca2-316d-4b65-84ed-77e8eac525aa",
+          "done": false,
+          "sig": "Tische sauber halten|nele|2026-11-15||hoch"
         },
         {
-          "id": "6b210a8e-ba47-473a-808f-50fe6425c893",
-          "done": true,
-          "sig": "Licht außen anmachen|nele|2026-11-14||hoch"
+          "id": "614068d5-36f0-4543-aa40-b9813cc7dcae",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|nele|2026-11-15||normal"
         },
         {
-          "id": "61c5b82f-3a85-4ab8-ad6c-760bc3354bb0",
-          "done": true,
-          "sig": "Baum Strahler anmachen|nele|2026-11-14||hoch"
+          "id": "bd639c77-e52c-4895-a8ff-dc861044bee8",
+          "done": false,
+          "sig": "Tische wischen nach Service|nele|2026-11-15||hoch"
         },
         {
-          "id": "7cc9ad78-a13c-425a-8017-500b6f858b4e",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "b664010a-1dbe-47d9-bfcb-a24ee5b76e78",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "4df34419-a393-4391-8827-61ff03edb2f9",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|nele|2026-11-14||normal"
-        },
-        {
-          "id": "5d5a687f-279f-424c-b61d-ce25b6c91949",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|nele|2026-11-14||normal"
-        },
-        {
-          "id": "cf004886-1ea8-4f46-831c-79878ce990e3",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|nele|2026-11-14||normal"
-        },
-        {
-          "id": "24f50da0-45ac-4ac7-8fd6-5bf1ac3a0cc3",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|nele|2026-11-14||normal"
-        },
-        {
-          "id": "5dc41be4-b482-48f1-8d5b-14cf5b7f3100",
-          "done": true,
-          "sig": "Karten abwischen|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "fa764977-bdee-459b-a288-c00cdd040077",
-          "done": true,
-          "sig": "Tische sauber halten|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "60c8814e-4aa3-4423-966c-8b958e2cab67",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|nele|2026-11-14||normal"
-        },
-        {
-          "id": "14bd3af3-6c62-4b72-b3f6-388dbfc2817e",
-          "done": true,
-          "sig": "Tische wischen nach Service|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "966225c5-3802-4a8c-8fe4-118b723d766b",
-          "done": true,
-          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "1fa33783-4381-472a-bb7d-800f6dba7f52",
-          "done": true,
-          "sig": "Strahler und Akku Lampen laden am Schichtende|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "60588893-3870-4f09-9c30-d0836a15cf01",
-          "done": true,
-          "sig": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen|nele|2026-11-14||hoch"
-        },
-        {
-          "id": "86c6d6ea-d770-4e0e-a4b6-74a14c5c68f0",
-          "done": true,
-          "sig": "Pfand einsortieren im Keller|nele|2026-11-14||normal"
-        },
-        {
-          "id": "6fa134e4-4d6e-4c31-a7e8-3518ac6a9009",
-          "done": true,
-          "sig": "Aschenbecher spülen|nele|2026-11-14||normal"
-        },
-        {
-          "id": "863e1281-afa6-43d9-94b3-caeab68ea397",
-          "done": true,
-          "sig": "Kűhlschränke und Bar auffüllen|nele|2026-11-14||normal"
-        },
-        {
-          "id": "c4f36142-c6aa-4d18-99c8-de33c8d1fb8f",
-          "done": true,
-          "sig": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)|nele|2026-11-14||hoch"
+          "id": "309266b5-3be2-4d0a-840f-bcbf5df75039",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|emma|2026-11-15||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -2446,47 +2472,6 @@
         "1441f7b9-bc49-4c67-bff0-abe185a79f5a"
       ],
       "appliedAvailabilityKeys": [
-        "2026-10-05|anna z.|2026-09-29T07:23:27.794Z",
-        "2026-10-12|maria|2026-09-29T07:05:01.916Z",
-        "2026-10-12|anna z.|2026-09-29T09:41:51.565Z",
-        "2026-10-12|kaya|2026-09-29T09:57:29.934Z",
-        "2026-10-19|anna z.|2026-09-29T09:42:07.664Z",
-        "2026-10-19|kaya|2026-09-29T09:58:01.323Z",
-        "2026-10-26|nina|2026-09-29T09:12:44.964Z",
-        "2026-10-26|anna z.|2026-09-29T09:42:23.272Z",
-        "2026-10-26|kaya|2026-09-29T09:58:41.938Z",
-        "2026-11-02|anna z.|2026-09-29T09:42:49.616Z",
-        "2026-11-02|kaya|2026-09-29T10:00:17.512Z",
-        "2026-10-26|nico|2026-09-29T15:17:13.028Z",
-        "2026-10-05|nele|2026-09-29T16:27:51.200Z",
-        "2026-10-12|samuel|2026-09-29T19:10:28.057Z",
-        "2026-10-26|timm|2026-09-30T06:06:12.057Z",
-        "2026-10-26|rotraut|2026-09-30T06:06:12.057Z",
-        "2026-10-26|rotraut|2026-10-01T05:59:45.980Z",
-        "2026-10-26|lilly|2026-10-01T05:59:45.980Z",
-        "2026-10-05|george|2026-10-01T06:54:29.746Z",
-        "2026-10-19|maria|2026-10-01T18:52:50.282Z",
-        "2026-10-19|maria|2026-10-01T18:55:36.621Z",
-        "2026-10-26|maria|2026-10-01T18:56:55.625Z",
-        "2026-11-02|maria|2026-10-01T18:57:50.262Z",
-        "2026-10-26|hanna|2026-10-02T04:41:54.746Z",
-        "2026-10-26|rotraut|2026-10-02T04:41:54.746Z",
-        "2026-10-26|lilly|2026-10-03T06:05:31.381Z",
-        "2026-11-02|george|2026-10-03T06:41:44.193Z",
-        "2026-10-05|karim|2026-10-04T17:39:09.388Z",
-        "2026-11-02|timm|2026-10-05T06:01:18.774Z",
-        "2026-11-02|hanna|2026-10-05T06:01:18.774Z",
-        "2026-11-02|rotraut|2026-10-05T06:01:18.775Z",
-        "2026-11-09|arianna|2026-10-05T08:07:09.367Z",
-        "2026-11-09|maria|2026-10-05T08:08:55.316Z",
-        "2026-11-02|timm|2026-10-06T06:00:23.340Z",
-        "2026-11-02|rotraut|2026-10-06T06:00:23.341Z",
-        "2026-11-02|julie|2026-10-06T06:00:23.340Z",
-        "2026-10-12|george|2026-10-06T13:46:26.073Z",
-        "2026-11-02|timm|2026-10-07T05:56:56.975Z",
-        "2026-11-02|rotraut|2026-10-07T05:56:56.975Z",
-        "2026-10-05|miguel|2026-10-07T17:44:40.358Z",
-        "2026-11-02|rotraut|2026-10-08T06:27:44.753Z",
         "2026-11-02|julie|2026-10-08T06:27:44.753Z",
         "2026-11-02|nico|2026-10-08T06:27:44.753Z",
         "2026-11-09|nico|2026-10-08T11:02:36.453Z",
@@ -2745,7 +2730,48 @@
         "2026-11-09|anna z.|2026-11-14T21:14:20.466Z",
         "2026-11-16|arianna|2026-11-14T21:15:21.306Z",
         "2026-11-30|maria|2026-11-14T21:23:01.657Z",
-        "2026-11-30|karim|2026-11-14T21:23:17.105Z"
+        "2026-11-30|karim|2026-11-14T21:23:17.105Z",
+        "2026-10-05|livia|2026-09-28T16:38:54.809Z",
+        "2026-10-26|julie|2026-09-29T05:40:45.698Z",
+        "2026-11-16|maria|2026-11-15T07:27:44.760Z",
+        "2026-11-16|vincent|2026-11-15T07:27:44.725Z",
+        "2026-11-30|Leanna|2026-11-15T07:27:44.838Z",
+        "2026-11-30|vincent|2026-11-15T07:27:44.827Z",
+        "2026-12-07|lilly|2026-11-15T07:27:45.803Z",
+        "2026-12-07|benjamin|2026-11-15T07:27:45.803Z",
+        "2026-12-07|emma|2026-11-15T07:27:45.803Z",
+        "2026-12-07|Santiago|2026-11-15T07:27:45.803Z",
+        "2026-12-07|anna|2026-11-15T07:27:45.803Z",
+        "2026-12-07|kaya|2026-11-15T07:27:45.803Z",
+        "2026-10-05|anna z.|2026-09-29T07:23:27.794Z",
+        "2026-10-12|maria|2026-09-29T07:05:01.916Z",
+        "2026-10-12|anna z.|2026-09-29T09:41:51.565Z",
+        "2026-10-12|kaya|2026-09-29T09:57:29.934Z",
+        "2026-10-19|anna z.|2026-09-29T09:42:07.664Z",
+        "2026-10-19|kaya|2026-09-29T09:58:01.323Z",
+        "2026-10-26|nina|2026-09-29T09:12:44.964Z",
+        "2026-10-26|anna z.|2026-09-29T09:42:23.272Z",
+        "2026-10-26|kaya|2026-09-29T09:58:41.938Z",
+        "2026-10-26|nico|2026-09-29T15:17:13.028Z",
+        "2026-11-02|anna z.|2026-09-29T09:42:49.616Z",
+        "2026-11-02|kaya|2026-09-29T10:00:17.512Z",
+        "2026-10-05|nele|2026-09-29T16:27:51.200Z",
+        "2026-10-05|george|2026-10-01T06:54:29.746Z",
+        "2026-10-12|samuel|2026-09-29T19:10:28.057Z",
+        "2026-10-19|maria|2026-10-01T18:55:36.621Z",
+        "2026-10-26|timm|2026-09-30T06:06:12.057Z",
+        "2026-10-26|hanna|2026-10-02T04:41:54.746Z",
+        "2026-10-26|maria|2026-10-01T18:56:55.625Z",
+        "2026-11-02|maria|2026-10-01T18:57:50.262Z",
+        "2026-10-05|karim|2026-10-04T17:39:09.388Z",
+        "2026-10-26|rotraut|2026-10-02T04:41:54.746Z",
+        "2026-10-26|lilly|2026-10-03T06:05:31.381Z",
+        "2026-11-02|george|2026-10-03T06:41:44.193Z",
+        "2026-11-09|arianna|2026-10-05T08:07:09.367Z",
+        "2026-10-12|george|2026-10-06T13:46:26.073Z",
+        "2026-11-09|maria|2026-10-05T08:08:55.316Z",
+        "2026-11-02|timm|2026-10-07T05:56:56.975Z",
+        "2026-10-05|miguel|2026-10-07T17:44:40.358Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -35722,13 +35748,13 @@
           "submittedAt": "2026-09-22T13:17:43.386Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "bd0af749-31b1-4cde-833f-8315f6656972",
           "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T16:27:51.200Z"
         },
@@ -40185,13 +40211,13 @@
           "submittedAt": "2026-09-26T05:45:10.693Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "f4f44f87-1841-45bc-b960-e739f3a58e02",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T07:05:01.916Z"
         }
@@ -41683,13 +41709,11 @@
           "submittedAt": "2026-09-26T06:29:01.547Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": true,
           "id": "ad494c61-0ec8-4a48-b4e0-2ff9d649f864",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
-          "slotIds": [
-            "spaet2"
-          ],
+          "slotIds": [],
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         },
@@ -43257,13 +43281,13 @@
           "submittedAt": "2026-09-26T06:28:53.795Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "548ce9ba-6d95-43b6-be3b-c16d26bf2cbc",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         },
@@ -44607,13 +44631,13 @@
           "submittedAt": "2026-09-27T05:56:32.506Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "cce148b8-7bd2-416d-afba-13e3686ff025",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:42:07.664Z"
         }
@@ -47706,13 +47730,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "id": "744b2a5c-4fd6-44b9-9a7a-72a8f824e6e3",
           "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
           "slotIds": [
             "frueh2"
           ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T16:27:51.200Z"
         },
@@ -47750,24 +47774,24 @@
           "submittedAt": "2026-09-28T16:38:54.809Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "9b45f365-eb7c-42e8-b6db-ab620c2a424c",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T07:23:27.794Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "e4086ff2-5e06-4171-a63d-b305380433f2",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T06:54:29.746Z"
         },
@@ -49458,13 +49482,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "1140dc8b-f13c-4318-912d-e56c7b5c3d0f",
           "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T16:27:51.200Z"
         },
@@ -49502,13 +49526,13 @@
           "submittedAt": "2026-09-24T19:09:23.720Z"
         },
         {
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "id": "25fe1803-005b-439d-844b-5441c333c0f4",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
           "slotIds": [
             "frueh2"
           ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T06:54:29.746Z"
         },
@@ -51171,24 +51195,24 @@
           "submittedAt": "2026-09-26T06:28:53.795Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "7905104d-5a74-4754-94dd-26cc7cb6a310",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:41:51.565Z"
         },
         {
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "id": "63259505-dddb-46ff-8c2d-c299e127ed25",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "frueh2"
           ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:57:29.934Z"
         },
@@ -51957,13 +51981,13 @@
           "submittedAt": "2026-09-29T09:58:01.323Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "08ee1507-2b3b-49f7-948a-0ef3e88ecc23",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T18:55:36.621Z"
         },
@@ -53389,24 +53413,24 @@
           "submittedAt": "2026-09-27T05:56:32.506Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "2d9b277e-79f0-456c-890f-e21c8341bd94",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "ad439812-0cd0-433f-81e1-f4d451ddc1bf",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T18:55:36.621Z"
         },
@@ -54993,13 +55017,13 @@
           "submittedAt": "2026-09-22T13:18:05.092Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "87b40ebf-80c1-4bc8-97c3-13658af74a65",
           "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:12:44.964Z"
         },
@@ -55013,24 +55037,24 @@
           "submittedAt": "2026-09-29T09:58:41.938Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "d0e21b0a-772c-45d4-9714-f3e7ad610480",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-30T06:06:12.057Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "7e2f92ea-2347-4afd-9950-464b9fdd7fb8",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         },
@@ -56458,13 +56482,13 @@
           "submittedAt": "2026-09-26T06:29:01.547Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "3d8c53cb-b691-4785-bb53-8c726b4917dd",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:58:01.323Z"
         },
@@ -59289,13 +59313,13 @@
           "submittedAt": "2026-09-26T06:28:53.795Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "87b8d59f-09e4-4e7c-bfc1-59393f3716b2",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T07:05:01.916Z"
         },
@@ -59309,13 +59333,13 @@
           "submittedAt": "2026-09-29T19:10:28.057Z"
         },
         {
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "id": "65b2136b-015e-46fb-8445-888afe5ca9ec",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
           "slotIds": [
             "frueh2"
           ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-06T13:46:26.073Z"
         },
@@ -60615,35 +60639,35 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "87063093-b725-4965-99b4-e5be2671a078",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-30T06:06:12.057Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "323db5b9-fa75-4908-844b-86b7137f0b1e",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "322aa812-8b03-43cb-8717-814fef7b0f88",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         }
@@ -61170,36 +61194,35 @@
           "submittedAt": "2026-09-28T08:25:05.959Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "5e35d787-c1a0-4b28-8ef6-5a3f71f109f1",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-10-01T05:59:45.980Z"
+          "submittedAt": "2026-09-29T15:17:13.028Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "92dc82da-9152-4103-a504-ca856d3fe596",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-03T06:05:31.381Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "c5fef100-124b-49c6-9ec3-217ad0d210c6",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         }
@@ -62136,13 +62159,13 @@
           "submittedAt": "2026-09-28T08:25:05.959Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "29421e6c-e37a-4abe-90c3-592f6e4de717",
           "employeeId": "9efde466-0d06-4f85-bf4c-2625d4ac3ff9",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T15:17:13.028Z"
         },
@@ -62156,37 +62179,37 @@
           "submittedAt": "2026-10-01T18:56:55.625Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "f5b181f1-a36a-4520-ad44-807bf0f5f784",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "8129049b-26ef-4390-9f67-f169beb1577a",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "7b7a32b7-c296-44d2-9f1a-dac2181d2761",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-10-05T06:01:19.496Z"
+          "submittedAt": "2026-10-03T06:05:31.381Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -63637,13 +63660,13 @@
           "submittedAt": "2026-09-29T09:42:49.616Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "6f595005-c94b-4b26-898c-3a8fea484585",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
@@ -63659,15 +63682,15 @@
           "submittedAt": "2026-10-30T18:46:23.829Z"
         },
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "1193e9fc-0c3f-4bee-aa2c-f7028c2bdafa",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-07T10:38:57.075Z"
+          "submittedAt": "2026-09-29T10:00:17.512Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -64716,35 +64739,35 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "40804235-dc58-4413-bdce-946604204e65",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-30T06:06:12.057Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "9ab75c1e-2bb3-45ea-8129-584417f75a78",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T05:40:45.698Z"
         },
         {
-          "confirmedSlotId": "frueh3",
-          "bossConfirmed": true,
           "id": "c9099d12-83c5-4c4d-b785-2e7d959a74b6",
           "employeeId": "b16d5f40-7062-41dc-8a3d-185a3b7fca5b",
           "slotIds": [
             "frueh3"
           ],
+          "confirmedSlotId": "frueh3",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-02T04:41:54.746Z"
         }
@@ -65231,26 +65254,26 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "14a48b84-c310-4519-847e-6f3437a4501e",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T09:42:23.272Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "5209a7c9-83bc-4e04-91f1-e1db5e557c7a",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-10-28T07:22:24.648Z"
+          "submittedAt": "2026-10-03T06:05:31.381Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -66318,24 +66341,24 @@
           "submittedAt": "2026-09-29T10:00:17.512Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "5d30356f-adb7-482f-aaa2-8a09370f13f0",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T18:57:50.262Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "24e4cdf8-0a4d-46ed-862a-f22d8cace727",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-07T05:56:56.975Z"
         },
@@ -69288,35 +69311,33 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "mittel",
-          "bossConfirmed": true,
           "id": "7111ba8a-1396-4366-931b-51f4f266c24d",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "mittel"
           ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T10:00:17.512Z"
         },
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "e7a2fdc4-7ba5-4058-b3f9-b6b6cf1c127d",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-01T18:57:50.262Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": false,
           "id": "e50bff12-cdef-4db3-85db-b97c407df6af",
           "employeeId": "a41c2a83-d45f-4266-b684-9238e4cb38d1",
-          "slotIds": [
-            "frueh1"
-          ],
+          "slotIds": [],
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-10-03T06:41:44.193Z"
         },
@@ -72018,13 +72039,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "c28a9695-c1ed-4383-ae76-39a0feb5399d",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-07T05:56:56.975Z"
         },
@@ -72592,13 +72613,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "spaet2",
-          "bossConfirmed": true,
           "id": "071bfbbd-c7d2-4ac7-b90f-153f993d7ab0",
           "employeeId": "216459c0-e32f-4f43-b258-d6639ae87e0e",
           "slotIds": [
             "spaet2"
           ],
+          "confirmedSlotId": "spaet2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-05T08:07:09.367Z"
         },
@@ -75300,13 +75321,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh2",
-          "bossConfirmed": true,
           "id": "62bbd2e5-a2f8-466f-a6ea-d6b2c646d7f5",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "frueh2"
           ],
+          "confirmedSlotId": "frueh2",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-05T08:08:55.316Z"
         },
@@ -77685,13 +77706,13 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "a0df1241-f565-4052-8f21-a59a802de3ca",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-10-07T05:56:56.975Z"
         },
@@ -83664,13 +83685,13 @@
           "submittedAt": "2026-11-14T21:15:21.306Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "cd6d7bb3-95e7-4dea-9074-820215bc8387",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.725Z"
         }
@@ -85402,7 +85423,48 @@
       "id": "2e6267e0-1eb1-4dd4-80b0-526ef7a34026",
       "date": "2026-11-15",
       "status": "offen",
-      "shifts": [],
+      "shifts": [
+        {
+          "id": "9e60624a-8bce-49f0-973e-5bbed1593f53",
+          "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "from": "08:27",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-11-15T07:27:54.061Z",
+          "clockOutAt": null
+        },
+        {
+          "id": "3fbf1d32-f741-4023-a685-fd1df2da7158",
+          "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "from": "09:58",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-11-15T08:58:28.998Z",
+          "clockOutAt": null
+        },
+        {
+          "id": "c951cba6-1844-4b42-9e3a-0fad98259a80",
+          "employeeId": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "from": "09:58",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-11-15T08:58:42.897Z",
+          "clockOutAt": null
+        },
+        {
+          "id": "894499d7-6471-45fa-b219-ed56d9df0c33",
+          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "from": "10:22",
+          "to": null,
+          "note": "",
+          "source": "pin",
+          "clockInAt": "2026-11-15T09:22:21.901Z",
+          "clockOutAt": null
+        }
+      ],
       "plannedShifts": [
         {
           "id": "avail-c55da4d9-7a51-4c36-98b0-43aeaba8d6ec",
@@ -85501,8 +85563,1000 @@
           "submittedAt": "2026-11-15T07:27:44.695Z"
         }
       ],
-      "appliedShiftTemplateIds": [],
-      "tasks": [],
+      "appliedShiftTemplateIds": [
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:f31c9839-a8a9-4c1e-88be-be26f2db152b",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:b0ad5c70-5d10-4953-884c-69aa9afc264d",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:0599384d-8d98-4974-b30e-4250f4a35aca",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:c7d28cd2-c410-4210-944f-0865692838cc",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:e68aded1-3691-4232-a3c0-c4a5a327e088",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:58109011-9a3e-4b07-8004-cacae70ed2d3",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:f1da426c-cd56-43e1-ae29-ec2332d07146",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:e91ada82-be94-4bf4-b54d-2781e6c29a19",
+        "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:f31c9839-a8a9-4c1e-88be-be26f2db152b",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:b0ad5c70-5d10-4953-884c-69aa9afc264d",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:0599384d-8d98-4974-b30e-4250f4a35aca",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:c7d28cd2-c410-4210-944f-0865692838cc",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:e68aded1-3691-4232-a3c0-c4a5a327e088",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:58109011-9a3e-4b07-8004-cacae70ed2d3",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:f1da426c-cd56-43e1-ae29-ec2332d07146",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:e91ada82-be94-4bf4-b54d-2781e6c29a19",
+        "c56befc2-48f3-4ac7-bc46-943f2248d324:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:f31c9839-a8a9-4c1e-88be-be26f2db152b",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:b0ad5c70-5d10-4953-884c-69aa9afc264d",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:0599384d-8d98-4974-b30e-4250f4a35aca",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:c7d28cd2-c410-4210-944f-0865692838cc",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:e68aded1-3691-4232-a3c0-c4a5a327e088",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:58109011-9a3e-4b07-8004-cacae70ed2d3",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:f1da426c-cd56-43e1-ae29-ec2332d07146",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:82d0b446-2787-44f0-9e95-fc517800a8a3",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:e91ada82-be94-4bf4-b54d-2781e6c29a19",
+        "d60514b9-06a4-4b34-a52b-9db915e251fd:da31ad58-8e8f-4bf4-94b0-124669caacfd",
+        "57e0fde8-c312-4cc9-a755-d35c4c742ed1:22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b"
+      ],
+      "tasks": [
+        {
+          "id": "34622138-99b3-4755-9324-ffd065d429a7",
+          "text": "Kerzen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "e3fb0a6c-bc11-47c8-a15b-2dc4165aa328",
+          "text": "Licht außen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "04db22ce-0892-4a33-838c-0a2e893e7fbd",
+          "text": "Baum Strahler anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "725c3036-8fe5-4eeb-a885-4f5666b17c3d",
+          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "ebfef9ee-19b9-45ec-b1a9-62457901c19b",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a594050a-a0fa-46ec-b95f-4a390cbc6786",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "0891f270-580b-41a1-a5f2-542286f4ae13",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "68297e27-3608-490f-83be-0115ae32574a",
+          "text": "Tische und Karten wischen (check)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "5dd9f15b-3e59-4260-9d8b-3b871b2a275c",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "c17d8eb5-c7c3-4f56-933d-7397a6f5b93f",
+          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "4f5dc447-887e-41bf-9161-6acbc9aa870f",
+          "text": "Lichterketten anschalten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "fef909c0-0148-4239-b001-712cfec04cc9",
+          "text": "durchsaugen und weissen Boden vor der Toilette wischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "06c201ef-e4fe-4d23-99f7-71dd2aec3fc3",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "6dca5d15-1c71-4982-b547-b41f66ba77a6",
+          "text": "Pflanzen draußen Giesen wenn kein regen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "d6ead40e-2243-4296-82d0-9d59db8b9d48",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "dae78858-604f-4601-a022-bab81997ff1d",
+          "text": "Tische sauber halten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "f4390ebb-f6fa-4eaf-a0b2-c4563a339efb",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "83f7f262-d097-4814-a019-79343801ba80",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "30df8f0d-1eff-48c8-b727-ea12cb16db8c",
+          "text": "Kerzen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "89038b3c-abda-4b4f-bbc5-721bc641f2f0",
+          "text": "Licht außen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "744ba953-6418-4dc8-a661-cf7dd871a5ea",
+          "text": "Baum Strahler anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a82ca004-c208-498a-ad81-58874585dc1e",
+          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "f218af68-d07f-4af3-b510-fa83ffa6a393",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "53b64ab5-caad-4475-ade1-4bd81057b5d8",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "69cd0c56-b22e-4e85-b83a-d35f1e7914e4",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "459823a4-4fd3-4a59-aade-f623893d6f2b",
+          "text": "Tische und Karten wischen (check)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "4ff4f43a-1838-49c7-842b-f3c1733d28d4",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "137910be-c7bb-46b2-848c-482cf5e55a47",
+          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a9e5a757-7f94-4fc7-a53a-bb9607ca5f61",
+          "text": "Lichterketten anschalten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "85f0a4e9-2452-44eb-bc38-e58f067d18ec",
+          "text": "durchsaugen und weissen Boden vor der Toilette wischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "d1184467-ca80-4a6d-b2af-fdedaad0f5e4",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "62de1ec2-3350-4082-ae2b-292ad41fdcc3",
+          "text": "Pflanzen draußen Giesen wenn kein regen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "d096b45c-1b80-4ef9-b21e-86df3ed29daa",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a87af124-9a2c-48fa-86e6-9e8c7f759f14",
+          "text": "Tische sauber halten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "fe8b29e6-c756-42e2-bb7d-f972cfad0456",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "b3c86b8a-90ac-455e-8be2-1c7e3457386b",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "c56befc2-48f3-4ac7-bc46-943f2248d324",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "6ade3add-f6d4-4a12-9e6c-aeeece736b64",
+          "text": "Kerzen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f31c9839-a8a9-4c1e-88be-be26f2db152b",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "60e029d9-bf24-40fe-b0b4-8d94c2a9937d",
+          "text": "Licht außen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "fe3d8835-c23c-45da-b09e-5cb5f3ba103c",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "ac88bb6d-d2d9-4e1d-8d09-b9eb0567f579",
+          "text": "Baum Strahler anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "b0ad5c70-5d10-4953-884c-69aa9afc264d",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "68a299a5-4ae2-46bd-8242-82f2042cb641",
+          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "0599384d-8d98-4974-b30e-4250f4a35aca",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "5148265f-fcc4-4070-94e5-840930be7064",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "1b80a463-24ed-4961-8f48-097f0a9ed3b8",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "149294ab-3f77-4767-8ab0-81f211386617",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "e33d24df-ae92-4d3c-a701-edd672c5becc",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "c7d28cd2-c410-4210-944f-0865692838cc",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "ecbb2ddf-be6f-4dd3-ac12-c7642e986390",
+          "text": "Tische und Karten wischen (check)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f4ea508a-2c48-4e45-b6f1-b3d6d9026b1f",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a535288d-ba6f-4c2a-963e-e9007ed2a5a7",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "72f4f8c6-07ff-4458-84d7-fe6d1d0d176e",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "33e2dda8-a4e7-4d88-a4b7-c98d30afe0c5",
+          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e68aded1-3691-4232-a3c0-c4a5a327e088",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "19adbb22-6ea5-463a-b42d-1855d2bf8510",
+          "text": "Lichterketten anschalten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "58109011-9a3e-4b07-8004-cacae70ed2d3",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "1d82e7a3-c7c4-4979-a437-01511c2114e5",
+          "text": "durchsaugen und weissen Boden vor der Toilette wischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "a6fec084-e4c7-4231-95ed-dc88cebec3c9",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        },
+        {
+          "id": "47a59458-0f06-4079-a89b-c581aad5b8e7",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "8e86a86c-bd09-4cc3-9c38-d802dfc057ed",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "cd57e4a0-249c-47d7-8538-7605a648a259",
+          "text": "Pflanzen draußen Giesen wenn kein regen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "f1da426c-cd56-43e1-ae29-ec2332d07146",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "06b620ec-15f3-428e-b4fa-fa6009a138b0",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "82d0b446-2787-44f0-9e95-fc517800a8a3",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "a2623ca2-316d-4b65-84ed-77e8eac525aa",
+          "text": "Tische sauber halten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "68b63036-ece2-4d3f-9dfb-a93f937aa0b3",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "614068d5-36f0-4543-aa40-b9813cc7dcae",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "e91ada82-be94-4bf4-b54d-2781e6c29a19",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "schicht",
+          "bestandBereich": ""
+        },
+        {
+          "id": "bd639c77-e52c-4895-a8ff-dc861044bee8",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
+          "addedBy": null,
+          "assignedTo": "d60514b9-06a4-4b34-a52b-9db915e251fd",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": "",
+          "phase": "ende",
+          "bestandBereich": ""
+        },
+        {
+          "id": "309266b5-3be2-4d0a-840f-bcbf5df75039",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "template",
+          "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
+          "addedBy": null,
+          "assignedTo": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": "",
+          "phase": "beginn",
+          "bestandBereich": ""
+        }
+      ],
       "kassenabschluss": {
         "umsatzGesamt": 0,
         "umsatzBar": 0,
@@ -85519,13 +86573,34 @@
           "timestamp": "2026-10-13T06:07:18.832Z",
           "action": "erstellt",
           "detail": "Tag 2026-11-15 angelegt"
+        },
+        {
+          "timestamp": "2026-11-15T07:27:54.062Z",
+          "action": "eingestempelt",
+          "detail": "Leanna um 08:27 Uhr"
+        },
+        {
+          "timestamp": "2026-11-15T08:58:28.998Z",
+          "action": "eingestempelt",
+          "detail": "kaya um 09:58 Uhr"
+        },
+        {
+          "timestamp": "2026-11-15T08:58:42.897Z",
+          "action": "eingestempelt",
+          "detail": "nele um 09:58 Uhr"
+        },
+        {
+          "timestamp": "2026-11-15T09:22:21.901Z",
+          "action": "eingestempelt",
+          "detail": "emma um 10:22 Uhr"
         }
       ],
       "closedAt": null,
       "materialkosten": 0,
       "festeSchichtenAngewandt": [
         "b22e3ff2-5d27-4c9b-8187-acc3366cbe14"
-      ]
+      ],
+      "schichtaufgabenMigriert": true
     },
     {
       "id": "16f630ae-735f-4188-89cd-6c2c13eb9276",
@@ -85591,15 +86666,15 @@
           "submittedAt": "2026-10-22T06:02:27.141Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "00cce210-cd46-42e1-ac19-50ce260bd11a",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.749Z"
+          "submittedAt": "2026-11-15T07:27:44.760Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -85703,15 +86778,15 @@
           "submittedAt": "2026-11-09T14:00:02.687Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "039390f9-6060-4afc-b9f8-5112b9ef4e38",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.783Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -85827,13 +86902,13 @@
           "submittedAt": "2026-11-09T14:00:02.687Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "ea432f04-9412-4c08-b65b-1a6fa72ccede",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.760Z"
         }
@@ -85981,15 +87056,15 @@
           "submittedAt": "2026-11-11T18:34:26.451Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.737Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -86076,15 +87151,15 @@
           "submittedAt": "2026-10-19T05:59:26.096Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "e9509f62-7171-454d-b96d-216506c1844b",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.705Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -86280,15 +87355,15 @@
           "submittedAt": "2026-10-22T06:02:27.141Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "9be0d534-7993-4df4-843a-1a2a8c255b5c",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.705Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -87018,13 +88093,11 @@
           "submittedAt": "2026-11-09T14:00:02.688Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": true,
           "id": "904aa0cf-ca82-430f-815d-c14adbbd9b2d",
           "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
-          "slotIds": [
-            "spaet1"
-          ],
+          "slotIds": [],
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.838Z"
         },
@@ -87225,13 +88298,13 @@
           "submittedAt": "2026-11-09T14:00:02.688Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "d3902d0b-bafb-475a-9b38-c562a5d50661",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.827Z"
         }
@@ -87427,20 +88500,27 @@
           "to": "17:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-324ac578-cb0f-41cb-abdf-d8d57431c4cd",
+          "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
+          "from": "10:00",
+          "to": "14:00",
+          "note": "",
+          "bossConfirmed": false
         }
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "17a9dc9e-a73b-4e92-ac12-47682a8cb217",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-10-31T00:13:48.877Z"
+          "submittedAt": "2026-10-03T06:05:31.381Z"
         },
         {
           "confirmedSlotId": "frueh2",
@@ -87452,6 +88532,17 @@
           ],
           "note": "",
           "submittedAt": "2026-09-26T05:46:46.453Z"
+        },
+        {
+          "id": "324ac578-cb0f-41cb-abdf-d8d57431c4cd",
+          "employeeId": "b9eed4da-4d91-4100-8caf-870e009f1770",
+          "slotIds": [
+            "mittel"
+          ],
+          "confirmedSlotId": "mittel",
+          "bossConfirmed": false,
+          "note": "",
+          "submittedAt": "2026-09-29T09:12:44.964Z"
         }
       ],
       "appliedShiftTemplateIds": [
@@ -88588,15 +89679,15 @@
           "submittedAt": "2026-11-02T07:00:14.729Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "1dfd2cc9-c5c8-46fa-b3cb-7c976c08b6a3",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.706Z"
+          "submittedAt": "2026-11-15T07:27:44.827Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -88681,15 +89772,15 @@
           "submittedAt": "2026-11-05T07:01:25.187Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "4b2c045e-4893-4b10-b9a2-4fbd45780ad2",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.706Z"
+          "submittedAt": "2026-11-15T07:27:44.827Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -89321,15 +90412,15 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "6497454f-5289-4443-a4ee-9d78f04ba620",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -89423,15 +90514,15 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "b81170f9-1584-493c-b066-960df156ad85",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -89445,15 +90536,15 @@
           "submittedAt": "2026-11-14T07:23:16.425Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "acb54cca-1cee-4065-8868-4cda1fb6d407",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "frueh1",
@@ -89545,26 +90636,26 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "36afc7d7-3ed7-42b0-845a-b4bc6ebf4f8c",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "27654a91-5db7-427e-8f31-cf72f7737ed3",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -89578,26 +90669,26 @@
           "submittedAt": "2026-11-14T07:23:16.425Z"
         },
         {
-          "confirmedSlotId": "mittel1",
-          "bossConfirmed": true,
           "id": "d0561a0d-1a0d-4492-84d0-8b80a6fd07a4",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "slotIds": [
             "mittel1"
           ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "1a446a49-b799-4919-89fe-040405210be7",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -89695,8 +90786,7 @@
           "confirmedSlotId": "mittel1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "77a031fe-28c3-4880-b410-a00632292723",
@@ -89707,8 +90797,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "1850cfb1-4f82-4efb-b472-256fc6dc79ba",
@@ -89719,8 +90808,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "28d721a7-61a5-4403-91dd-5828ff16812c",
@@ -89731,8 +90819,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "776de53b-5965-4560-bf5c-14efa9631a89",
@@ -89743,8 +90830,7 @@
           "confirmedSlotId": "mittel1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "8ea43709-d497-42a6-bafe-6de8b3221a7b",
@@ -89755,8 +90841,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-15T07:27:50.972Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -92330,7 +93415,7 @@
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "✅ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-11T18:34:26.476Z",
-      "readAt": null
+      "readAt": "2026-11-15T08:58:30.149Z"
     },
     {
       "id": "fdf48fcd-9e9b-4666-a130-78c8d47488b7",
@@ -92351,7 +93436,7 @@
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "❌ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-11T18:34:26.518Z",
-      "readAt": null
+      "readAt": "2026-11-15T08:58:34.465Z"
     },
     {
       "id": "da6e103a-c204-4e23-be71-906c0f6eec3e",
@@ -92365,7 +93450,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Sonntag, 15.11.2026 (Bar, 08:30–17:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.702Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:27:58.129Z"
     },
     {
       "id": "56bcab51-6f58-45a4-ac98-8202c3accf48",
@@ -92407,7 +93492,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Donnerstag, 19.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.778Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:00.529Z"
     },
     {
       "id": "90362fe8-544f-4941-8e7b-a6e2442513a0",
@@ -92421,7 +93506,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.800Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:01.646Z"
     },
     {
       "id": "078b8ef2-bae7-4d47-b90d-ad0da0e107d6",
@@ -92435,7 +93520,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Donnerstag, 26.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.822Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:03.363Z"
     },
     {
       "id": "749b18db-b27c-45a1-ac89-0b446649300e",
@@ -92449,7 +93534,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Freitag, 04.12.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.843Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:04.929Z"
     },
     {
       "id": "36b6e086-647d-45d3-95f8-00c3ca4c86ad",
@@ -92491,14 +93576,14 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "✅ Deine Schicht am Donnerstag, 03.12.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-15T07:27:44.910Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:05.929Z"
     },
     {
       "id": "b83464c9-12b1-43db-b3db-e883f3c111f1",
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "❌ Deine Schicht am Sonntag, 15.11.2026 (Service Mitte) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:44.932Z",
-      "readAt": null
+      "readAt": "2026-11-15T08:58:35.431Z"
     },
     {
       "id": "559abd3c-5d52-4701-946f-c9960bf012ad",
@@ -92512,14 +93597,14 @@
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:44.956Z",
-      "readAt": null
+      "readAt": "2026-11-15T08:58:35.982Z"
     },
     {
       "id": "ac4b43ef-7cb4-4910-acb7-187b7843e554",
       "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
       "text": "❌ Deine Schicht am Mittwoch, 18.11.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:44.967Z",
-      "readAt": null
+      "readAt": "2026-11-15T08:58:37.115Z"
     },
     {
       "id": "bd157c17-b72c-4113-bfa1-c5dc04a28ca3",
@@ -92540,7 +93625,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "❌ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:45.003Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:11.229Z"
     },
     {
       "id": "e0489246-eadf-4ad3-a90d-86488bd6d4a0",
@@ -92554,7 +93639,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "❌ Deine Schicht am Mittwoch, 02.12.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:45.027Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:12.028Z"
     },
     {
       "id": "7dba9291-d09b-48e0-8e7b-47557acc4584",
@@ -92568,7 +93653,7 @@
       "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
       "text": "❌ Deine Schicht am Donnerstag, 03.12.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:45.049Z",
-      "readAt": null
+      "readAt": "2026-11-15T07:28:12.679Z"
     },
     {
       "id": "34407b2b-fa15-4954-9cf0-170496c4aaf6",
@@ -112298,10 +113383,10 @@
         "fbcdaf50-11ae-4faa-a413-7554074f2c73",
         "4029057b-0fa7-484e-8bad-ba880accde56"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-10-27T14:03:31.187Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T10:13:08.157Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -113650,10 +114735,10 @@
       "tableIds": [
         "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-06T14:25:38.366Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T10:13:11.007Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -114332,10 +115417,10 @@
       "tableIds": [
         "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
       ],
-      "status": "zugewiesen",
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-08T10:51:28.585Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T10:13:03.773Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -114513,11 +115598,13 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "34f61281-ed3b-4ab8-b7ed-081a9860f25f"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-09T16:08:30.226Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T08:55:30.082Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -114578,11 +115665,13 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "b6f4f9e1-1a1a-49f8-8f09-8c9f6b585784"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-10T10:06:52.131Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T08:40:19.406Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -114664,11 +115753,13 @@
       "guests": 4,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "57f6ff6b-f712-412b-baeb-47197e474b86"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-10T13:15:27.816Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T09:05:02.901Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115173,11 +116264,13 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-13T16:00:17.055Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T08:02:51.505Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115194,11 +116287,13 @@
       "guests": 3,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-13T16:14:25.781Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T08:40:22.988Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115238,11 +116333,13 @@
       "guests": 2,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-14T07:23:16.905Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T10:06:06.994Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115513,11 +116610,13 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "0a6a4071-e4b1-4d33-a8bc-5049ffa13de4"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-14T14:58:48.347Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T09:02:47.068Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115534,8 +116633,10 @@
       "guests": 4,
       "area": "egal",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "3e05549f-583e-450f-bfeb-76150d3b12e6"
+      ],
+      "status": "zugewiesen",
       "source": "web",
       "createdAt": "2026-11-14T16:08:15.107Z",
       "arrivedAt": null,
@@ -115555,11 +116656,13 @@
       "guests": 4,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "7b260f51-2354-44fb-9971-1f0b6ec467f6"
+      ],
+      "status": "da",
       "source": "web",
       "createdAt": "2026-11-14T16:24:37.021Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T10:00:49.866Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115576,11 +116679,13 @@
       "guests": 3,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "4baa92ee-3cc4-47e1-b164-58991e0cdcb9"
+      ],
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-14T17:24:33.518Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T09:25:38.682Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
@@ -115597,11 +116702,36 @@
       "guests": 2,
       "area": "innen",
       "note": "",
-      "tableIds": [],
-      "status": "offen",
+      "tableIds": [
+        "e68472c1-9528-40df-8388-4067b8a5a969"
+      ],
+      "status": "da",
       "source": "manuell",
       "createdAt": "2026-11-14T17:25:10.530Z",
-      "arrivedAt": null,
+      "arrivedAt": "2026-11-15T08:35:05.018Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4ae44301-a7a6-41b9-931c-39ea633285ed",
+      "code": "UHLYF",
+      "date": "2026-11-15",
+      "time": "09:00",
+      "name": "Laufkundschaft",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "78a12192-9267-4bd1-b078-971afa5ac587"
+      ],
+      "status": "da",
+      "source": "walkin",
+      "createdAt": "2026-11-15T08:51:13.546Z",
+      "arrivedAt": "2026-11-15T08:51:13.546Z",
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

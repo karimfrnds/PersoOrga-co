@@ -1408,15 +1408,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-15",
-      "lastBackupAt": "2026-11-15T10:35:36.741Z",
-      "lastError": null
+      "lastBackupAt": "2026-11-15T13:58:32.688Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at b9f757bd53a399287edba624179a1d210ac9ae92 but expected 0474907b623a41598d6f0d392c6a5fcb5112d5af\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-15T13:35:24.996Z",
+      "lastSyncAt": "2026-11-15T16:22:40.157Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1691,7 +1691,7 @@
         },
         {
           "id": "309266b5-3be2-4d0a-840f-bcbf5df75039",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|emma|2026-11-15||hoch"
         }
       ],
@@ -85488,11 +85488,11 @@
           "id": "894499d7-6471-45fa-b219-ed56d9df0c33",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "10:22",
-          "to": null,
+          "to": "17:14",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-15T09:22:21.901Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-15T16:14:39.334Z"
         }
       ],
       "plannedShifts": [
@@ -86572,9 +86572,9 @@
         {
           "id": "309266b5-3be2-4d0a-840f-bcbf5df75039",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "emma",
+          "doneAt": "2026-11-15T16:14:34.506Z",
           "source": "template",
           "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
           "addedBy": null,
@@ -86623,6 +86623,11 @@
           "timestamp": "2026-11-15T09:22:21.901Z",
           "action": "eingestempelt",
           "detail": "emma um 10:22 Uhr"
+        },
+        {
+          "timestamp": "2026-11-15T16:14:39.334Z",
+          "action": "ausgestempelt",
+          "detail": "emma um 17:14 Uhr"
         }
       ],
       "closedAt": null,

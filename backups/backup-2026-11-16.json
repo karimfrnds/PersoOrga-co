@@ -1354,15 +1354,15 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-16",
-      "lastBackupAt": "2026-11-16T13:23:40.340Z",
-      "lastError": null
+      "lastBackupAt": "2026-11-16T16:32:58.390Z",
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a3ad9e3782a074386d2288720cab90b9654b5c16 but expected 21f1564d768fd3d4db2c312d87300d4b7404ae0b\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-16T15:27:53.357Z",
+      "lastSyncAt": "2026-11-16T16:32:56.391Z",
       "lastError": null,
       "knownRemoteState": [
         {

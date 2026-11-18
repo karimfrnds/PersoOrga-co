@@ -682,6 +682,7 @@ let meineRev = 0;
 let schreibenErlaubt = true;
 let ladeFehler = null;
 let schreibFehler = null;
+let notfallGeraeumt = false;
 let konfliktMelder = null;
 
 function leseRev() {
@@ -711,13 +712,8 @@ function meldeKonflikt(grund) {
   else if (typeof location !== "undefined") location.reload();
 }
 
-function persist() {
-  if (!schreibenErlaubt) return;
-  // Vor jedem Schreiben prüfen, ob in der Zwischenzeit jemand anderes geschrieben hat.
-  if (istVeraltet()) {
-    meldeKonflikt("veraltet");
-    return;
-  }
+/** Der eigentliche Schreibvorgang. true = hat geklappt. */
+function schreibeJetzt() {
   try {
     // Wann zuletzt wirklich gespeichert wurde. Steht IN den Daten, wandert also in jede Sicherung mit.
     // Daran erkennt das Backup, ob ein Geraet einen aelteren Stand hat als die vorhandene Sicherung –
@@ -727,13 +723,65 @@ function persist() {
     meineRev += 1;
     schreibeRev(meineRev);
     schreibFehler = null;
+    return true;
   } catch (e) {
-    // Speicher voll oder vom System gesperrt: Das darf nicht still passieren – sonst arbeitet man
-    // stundenlang weiter und beim nächsten Öffnen ist alles davon weg.
     schreibFehler = String(e.message || e);
-    schreibenErlaubt = false;
-    if (konfliktMelder) konfliktMelder("schreibfehler");
+    return false;
   }
+}
+
+/**
+ * Notfall: der Speicher ist voll. Platz schaffen und es nochmal versuchen.
+ *
+ * Ohne das steckt die App fest: sie kann nichts mehr speichern, und ausgerechnet das Aufraeumen,
+ * das Platz schaffen wuerde, laesst sich dann auch nicht speichern. Deshalb wird hier geraeumt und
+ * sofort erneut geschrieben – ohne auf eine frische Sicherung zu warten.
+ *
+ * Das ist eine Abwaegung, und zwar eine klare: weggeworfen werden abgehakte Aufgabenlisten von
+ * Tagen, die laengst abgeschlossen sind und in den bisherigen Sicherungen stehen. Dafuer bleibt der
+ * heutige Umsatz erhalten. Andersherum waere es falsch.
+ */
+function notAufraeumen() {
+  const heute = todayStr();
+  const grenze = addDaysISOStore(heute, -TASKS_BEHALTEN_TAGE);
+  let geraeumt = false;
+  for (const d of data.days) {
+    if (d.status !== "abgeschlossen" || d.date >= grenze) continue;
+    if (Array.isArray(d.tasks) && d.tasks.length > 0) {
+      d.tasksArchiviert = {
+        anzahl: d.tasks.length,
+        erledigt: d.tasks.filter((t) => t.done).length,
+        am: new Date().toISOString(),
+        notfall: true,
+      };
+      d.tasks = [];
+      geraeumt = true;
+    }
+    if (Array.isArray(d.appliedShiftTemplateIds) && d.appliedShiftTemplateIds.length > 0) {
+      d.appliedShiftTemplateIds = [];
+      geraeumt = true;
+    }
+  }
+  return geraeumt;
+}
+
+function persist() {
+  if (!schreibenErlaubt) return;
+  // Vor jedem Schreiben prüfen, ob in der Zwischenzeit jemand anderes geschrieben hat.
+  if (istVeraltet()) {
+    meldeKonflikt("veraltet");
+    return;
+  }
+  if (schreibeJetzt()) return;
+  // Erster Versuch fehlgeschlagen – Platz schaffen und genau einmal nachlegen.
+  if (notAufraeumen() && schreibeJetzt()) {
+    notfallGeraeumt = true;
+    return;
+  }
+  // Speicher voll oder vom System gesperrt: Das darf nicht still passieren – sonst arbeitet man
+  // stundenlang weiter und beim nächsten Öffnen ist alles davon weg.
+  schreibenErlaubt = false;
+  if (konfliktMelder) konfliktMelder("schreibfehler");
 }
 
 // Erst die Plaene sicherstellen, dann migrieren: die Umstellung auf den Plan ab 16.11. fragt beim
@@ -1197,12 +1245,33 @@ export const store = {
   raeumeAlteAufgabenAuf() {
     return archiviereAlteAufgaben();
   },
+  /**
+   * Von Hand Platz schaffen, wenn gar nichts mehr geht – der Weg aus der Sackgasse.
+   *
+   * Setzt das Schreiben wieder frei, raeumt die alten Aufgabenlisten weg und versucht sofort zu
+   * speichern. Gibt zurueck, ob es geklappt hat, damit die Oberflaeche nicht raten muss.
+   */
+  speicherFreimachen() {
+    const vorher = (localStorage.getItem(STORAGE_KEY) || "").length;
+    schreibenErlaubt = true;
+    notAufraeumen();
+    const ok = schreibeJetzt();
+    if (!ok) schreibenErlaubt = false;
+    return {
+      ok,
+      fehler: ok ? null : schreibFehler,
+      vorherKB: Math.round(vorher / 1024),
+      nachherKB: Math.round((localStorage.getItem(STORAGE_KEY) || "").length / 1024),
+    };
+  },
   speicherZustand() {
     return {
       ok: schreibenErlaubt && !ladeFehler && !schreibFehler,
       ladeFehler,
       schreibFehler,
       rev: meineRev,
+      // true, wenn beim Speichern schon einmal automatisch Platz geschafft werden musste.
+      notfallGeraeumt,
       groesseKB: Math.round((localStorage.getItem(STORAGE_KEY) || "").length / 1024),
     };
   },

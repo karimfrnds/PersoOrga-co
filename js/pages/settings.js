@@ -561,6 +561,31 @@ function renderSettings() {
     }
     autoBackupCard.appendChild(speicherLine);
 
+    // Der Weg aus der Sackgasse: ist der Speicher voll, kann die App auch das Aufraeumen nicht
+    // speichern. Dieser Knopf raeumt und schreibt in einem Zug – und gibt das Schreiben wieder frei.
+    if (!z.ok || z.groesseKB > 3072) {
+      const frei = document.createElement("button");
+      frei.className = "btn btn-primary";
+      frei.textContent = "🧹 Speicher freimachen";
+      frei.title = "Lagert die Aufgabenlisten abgeschlossener Tage aus, die älter als eine Woche sind";
+      frei.onclick = async () => {
+        const los = await confirmDialog(
+          "Speicher freimachen?",
+          "Die abgehakten Aufgabenlisten abgeschlossener Tage, die älter als eine Woche sind, werden aus dem Gerätespeicher genommen. " +
+            "Sie bleiben in den bisherigen Sicherungen erhalten. Schichten, Stunden, Umsätze und Kassenabschlüsse bleiben unangetastet."
+        );
+        if (!los) return;
+        const e = store.speicherFreimachen();
+        if (e.ok) {
+          await alertDialog(`Geschafft. ${e.vorherKB} KB → ${e.nachherKB} KB. Die App speichert wieder.`);
+        } else {
+          await alertDialog(`Es hat nicht gereicht: ${e.fehler || "unbekannt"}. Bitte Karim Bescheid geben – die Daten bleiben in der Sicherung.`);
+        }
+        rerender();
+      };
+      autoBackupCard.appendChild(frei);
+    }
+
     const testBtn = document.createElement("button");
     testBtn.className = "btn btn-secondary";
     testBtn.textContent = "Jetzt testen";

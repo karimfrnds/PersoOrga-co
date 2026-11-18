@@ -32,20 +32,80 @@ function ghUrl(cfg, path) {
   return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${path}`;
 }
 
+/** Die kleine Marke neben den Sicherungen: wessen Stand liegt dort, und von wann ist er?
+ *
+ * Bewusst eine EIGENE, winzige Datei statt der Sicherung selbst – sonst müsste vor jedem Schreiben
+ * eine 4-MB-Datei geladen werden, nur um ein Datum abzulesen.
+ */
+const MARKE = "_stand.json";
+
+async function leseMarke(cfg, kopf) {
+  try {
+    const res = await fetch(ghUrl(cfg, `${backupOrdner()}/${MARKE}`), {
+      headers: { ...kopf, Accept: "application/vnd.github.raw" },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return JSON.parse(await res.text());
+  } catch {
+    return null; // Keine Marke lesbar: dann eben ohne – ein fehlender Wächter darf das Sichern nicht verhindern.
+  }
+}
+
+async function schreibeMarke(cfg, kopf, inhalt) {
+  try {
+    let sha = null;
+    const vorhanden = await fetch(ghUrl(cfg, `${backupOrdner()}/${MARKE}`), { headers: kopf, cache: "no-store" });
+    if (vorhanden.ok) sha = (await vorhanden.json().catch(() => ({}))).sha || null;
+    await fetch(ghUrl(cfg, `${backupOrdner()}/${MARKE}`), {
+      method: "PUT",
+      headers: kopf,
+      body: JSON.stringify({
+        message: `Sicherungsmarke ${inhalt.zuletztGespeichert}`,
+        content: utf8ToBase64(JSON.stringify(inhalt, null, 2)),
+        ...(sha ? { sha } : {}),
+      }),
+    });
+  } catch {
+    // Die Marke ist eine Hilfe, kein Muss. Schlägt sie fehl, bleibt die Sicherung trotzdem gültig.
+  }
+}
+
 /** Führt ein Backup jetzt durch (z.B. für den "Jetzt testen"-Button). Wirft bei Fehlern. */
-async function performBackup() {
+async function performBackup({ erzwingen = false } = {}) {
   const cfg = store.getGithubBackupConfig();
   if (!cfg.owner || !cfg.repo || !cfg.token) {
     throw new Error("Bitte GitHub-Nutzername, Repository und Token eintragen.");
+  }
+  // Ein Gerät, das selbst nichts mehr speichern kann, arbeitet mit einem eingefrorenen Stand. Es darf
+  // auf keinen Fall die Sicherung überschreiben – sonst zerstört ausgerechnet das Rettungsnetz die
+  // Daten. Genau das ist im November passiert: ein zweites Gerät hat tagelang seinen Stand vom 14.11.
+  // über die guten Sicherungen geschrieben.
+  const zustand = store.speicherZustand();
+  if (!zustand.ok) {
+    throw new Error("Dieses Gerät kann gerade nichts speichern – es sichert deshalb auch nichts, damit es keine gute Sicherung überschreibt.");
   }
   const date = todayStr();
   const path = `${backupOrdner()}/backup-${date}.json`;
   const content = utf8ToBase64(store.exportJSON());
   const kopf = { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
 
+  // Liegt dort schon ein NEUERER Stand als unserer? Dann sind wir das veraltete Gerät und halten
+  // die Finger davon. Verglichen wird, wann zuletzt wirklich gespeichert wurde – nicht, wann dieses
+  // Backup läuft: ein eingefrorenes Gerät startet auch heute noch Sicherungen.
+  const meinStand = store.zuletztGespeichert();
+  const marke = await leseMarke(cfg, kopf);
+  if (!erzwingen && marke?.zuletztGespeichert && meinStand && marke.zuletztGespeichert > meinStand) {
+    throw new Error(
+      `Die vorhandene Sicherung ist neuer (${marke.zuletztGespeichert.slice(0, 16).replace("T", " ")}, Gerät ${
+        marke.geraet || "?"
+      }) als der Stand dieses Geräts (${meinStand.slice(0, 16).replace("T", " ")}). Es wird nichts überschrieben.`
+    );
+  }
+
   // Gibt es die Datei von heute schon, wird sie überschrieben – dafür braucht GitHub ihre sha.
   let sha = null;
-  const vorhanden = await fetch(ghUrl(cfg, path), { headers: kopf });
+  const vorhanden = await fetch(ghUrl(cfg, path), { headers: kopf, cache: "no-store" });
   if (vorhanden.ok) sha = (await vorhanden.json().catch(() => ({}))).sha || null;
 
   const res = await fetch(ghUrl(cfg, path), {
@@ -59,6 +119,7 @@ async function performBackup() {
     throw new Error(`GitHub antwortete mit ${res.status}${body ? ": " + body.slice(0, 200) : ""}`);
   }
 
+  await schreibeMarke(cfg, kopf, { zuletztGespeichert: meinStand, geraet: store.geraeteKennung(), gesichertAm: new Date().toISOString() });
   store.updateGithubBackupConfig({ lastBackupDate: date, lastBackupAt: new Date().toISOString(), lastError: null });
   return { aktualisiert: !!sha };
 }

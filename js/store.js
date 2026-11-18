@@ -715,6 +715,10 @@ function persist() {
     return;
   }
   try {
+    // Wann zuletzt wirklich gespeichert wurde. Steht IN den Daten, wandert also in jede Sicherung mit.
+    // Daran erkennt das Backup, ob ein Geraet einen aelteren Stand hat als die vorhandene Sicherung –
+    // ein Geraet, das seit Tagen nichts mehr speichern kann, darf die gute Sicherung nicht ueberschreiben.
+    data.settings.zuletztGespeichert = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     meineRev += 1;
     schreibeRev(meineRev);
@@ -1111,6 +1115,25 @@ export const store = {
    * reagieren (Hinweis zeigen, neu laden). */
   aufSpeicherProblem(fn) {
     konfliktMelder = fn;
+  },
+  /** Zeitpunkt des letzten erfolgreichen Speicherns – leer, wenn noch nie gespeichert wurde. */
+  zuletztGespeichert() {
+    return data.settings.zuletztGespeichert || "";
+  },
+  /** Eine Kennung fuer DIESES Geraet. Liegt bewusst neben den Daten und wird nicht mitgesichert –
+   *  sonst traegt jede wiederhergestellte Sicherung die Kennung des alten Geraets. */
+  geraeteKennung() {
+    const schluessel = `${STORAGE_KEY}__geraet`;
+    try {
+      let k = localStorage.getItem(schluessel);
+      if (!k) {
+        k = Math.random().toString(36).slice(2, 8).toUpperCase();
+        localStorage.setItem(schluessel, k);
+      }
+      return k;
+    } catch {
+      return "?";
+    }
   },
   speicherZustand() {
     return {

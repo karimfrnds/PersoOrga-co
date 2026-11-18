@@ -541,6 +541,26 @@ function renderSettings() {
     }
     autoBackupCard.appendChild(statusLine);
 
+    // Wie voll ist der Speicher des Geräts? Der Browser gibt jedem Gerät nur wenige Megabyte. Ist er
+    // voll, kann die App nichts mehr sichern – und das fällt sonst erst auf, wenn ein ganzer Tag weg
+    // ist. Darum steht die Zahl hier, mit Warnung bevor es eng wird.
+    const z = store.speicherZustand();
+    const speicherLine = document.createElement("p");
+    const anteil = z.groesseKB / 4096; // Browser erlauben meist rund 4-5 MB je Adresse
+    if (!z.ok) {
+      speicherLine.className = "callout callout-warn";
+      speicherLine.textContent = `⛔ Dieses Gerät speichert gerade NICHTS (${z.schreibFehler || z.ladeFehler || "unbekannt"}). Datenmenge ${z.groesseKB} KB. Bitte nichts eintragen, bevor das behoben ist.`;
+    } else if (anteil > 0.75) {
+      speicherLine.className = "callout callout-warn";
+      speicherLine.textContent = `⚠ Die Daten belegen ${z.groesseKB} KB. Das ist nah an der Grenze des Browsers – wenn sie erreicht ist, kann nichts mehr gespeichert werden. Bitte Bescheid geben.`;
+    } else {
+      speicherLine.className = "muted small";
+      speicherLine.textContent = `Datenmenge auf diesem Gerät: ${z.groesseKB} KB · Gerät ${store.geraeteKennung()} · zuletzt gespeichert ${
+        store.zuletztGespeichert() ? new Date(store.zuletztGespeichert()).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–"
+      }`;
+    }
+    autoBackupCard.appendChild(speicherLine);
+
     const testBtn = document.createElement("button");
     testBtn.className = "btn btn-secondary";
     testBtn.textContent = "Jetzt testen";

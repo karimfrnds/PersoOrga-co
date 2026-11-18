@@ -1102,6 +1102,9 @@ async function performTaskSync() {
   // vergangene und kommende Wochen, und die haben ab dem 16.11.2026 andere Schichten als heute.
   // Ohne die Liste wuerde dort jede Woche mit den Schichten von heute gezeichnet – alte Wochen
   // faelschlich mit den neuen Schichten, kommende mit den alten.
+  // Bei jedem Abgleich mit aufraeumen: ein iPad steht oft tagelang offen, und jeden Tag wird ein
+  // weiterer Tag alt genug zum Auslagern. Tut nichts, solange nichts faellig ist.
+  store.raeumeAlteAufgabenAuf();
   const schichtPlaene = store.getSchichtPlaene();
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),

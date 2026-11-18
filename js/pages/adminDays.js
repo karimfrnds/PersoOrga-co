@@ -78,12 +78,17 @@ function renderAdminDays(navigate) {
     const badgeLabel = day.status === "abgeschlossen" ? "Abgeschlossen" : "Offen";
     const staffCount = new Set(day.shifts.map((s) => s.employeeId)).size;
     const openTasks = day.tasks.filter((t) => !t.done).length;
+    const archiviert = day.tasksArchiviert;
     // Fuer kuenftige Tage ist die gearbeitete Zeit immer 0 – dort zaehlt, wer eingeplant ist.
     const zukunft = day.date > heute;
     const zeile = zukunft
       ? `${day.plannedShifts.length} eingeplant`
       : `${staffCount} Mitarbeiter · ${breakdown.totalHours.toFixed(2).replace(".", ",")} Std.${
-          day.tasks.length ? ` · ${openTasks === 0 ? "✔ Aufgaben erledigt" : `${openTasks} Aufgabe(n) offen`}` : ""
+          day.tasks.length
+            ? ` · ${openTasks === 0 ? "✔ Aufgaben erledigt" : `${openTasks} Aufgabe(n) offen`}`
+            : archiviert
+              ? ` · ${archiviert.anzahl} Aufgaben (ausgelagert)`
+              : ""
         }`;
     row.innerHTML = `
       <div class="day-row-main">

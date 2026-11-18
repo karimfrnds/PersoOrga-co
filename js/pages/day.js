@@ -75,7 +75,12 @@ function renderDay(dayId, navigate) {
     if (day.tasks.length === 0) {
       const empty = document.createElement("p");
       empty.className = "muted small";
-      empty.textContent = "Keine Aufgaben für diesen Tag (siehe Admin → Aufgaben für die Vorlage).";
+      // Ausgelagert ist etwas anderes als "gab es nicht" – das muss dastehen, sonst sieht ein
+      // aufgeraeumter Tag so aus, als haette an ihm niemand etwas abgehakt.
+      const arch = day.tasksArchiviert;
+      empty.textContent = arch
+        ? `Die Aufgabenliste dieses Tages wurde aus dem Gerätespeicher ausgelagert: ${arch.anzahl} Aufgaben, davon ${arch.erledigt} erledigt. Die vollständige Liste steht in der Sicherung.`
+        : "Keine Aufgaben für diesen Tag (siehe Admin → Aufgaben für die Vorlage).";
       taskSection.appendChild(empty);
     } else {
       // Nach Mitarbeiter gruppieren ("unassigned" = Aufgaben ohne Zuordnung, z.B. die Tages-Vorlage).

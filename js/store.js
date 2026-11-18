@@ -11,6 +11,10 @@ import { planFuer as planAusListe, slotsAusPlan, bereichFuerRolleAm, neueSlotId,
  *  [Name, Rolle, [[Wochentag, SchichtId, von, bis], ...]] – 0=Mo .. 6=So, von/bis leer = unbefristet.
  *  Steht hier und nicht in der Migration, weil die Liste weiterlebt: wer beim Umstellen noch nicht
  *  angelegt war, bekommt seine Schichten, sobald er angelegt wird (siehe schichtplanNachtragAnwenden). */
+// Wie lange die Aufgabenlisten eines abgeschlossenen Tages im Geraetespeicher bleiben.
+// Steht hier oben, weil archiviereAlteAufgaben() schon beim Laden des Moduls laeuft.
+const TASKS_BEHALTEN_TAGE = 7;
+
 const SCHICHTPLAN_NEU_AB = "2026-11-16";
 const SCHICHTPLAN_NEU_BIS_ALT = "2026-11-15";
 const SCHICHTPLAN_NEU = [
@@ -736,6 +740,7 @@ function persist() {
 // Aufraeumen alter Tage danach, welche Schichten es an dem Tag gibt.
 if (stellePlaeneSicher()) persist();
 einmaligeMigrationen();
+archiviereAlteAufgaben();
 
 /** Umstellungen, die genau einmal über die vorhandenen Daten laufen müssen. Jede hat einen Namen und wird
  * danach in settings.migrationen vermerkt – beim nächsten Laden passiert nichts mehr. */
@@ -1109,6 +1114,58 @@ function materializePlannedShiftsFromAvailability(d) {
   }
 }
 
+/**
+ * Aufgabenlisten lange abgeschlossener Tage aus dem Geraetespeicher nehmen.
+ *
+ * Der Browser gibt jeder App nur wenige Megabyte. Die Aufgabenlisten machten ueber die Haelfte der
+ * Daten aus – rund 11 KB pro Tag, bei 130 Tagen 1,4 MB –, und als die Grenze erreicht war, konnte
+ * ein Geraet gar nichts mehr speichern: vier Tage Arbeit waren weg, jeden Tag neu eingetragen und
+ * jeden Tag wieder verloren. Damit das nicht wiederkommt, wird hier aufgeraeumt.
+ *
+ * Drei Bedingungen, damit nichts verschwindet, was noch gebraucht wird:
+ *   - nur ABGESCHLOSSENE Tage. Ein Tag, der noch offen ist, wird noch bearbeitet.
+ *   - nur Tage, die aelter sind als TASKS_BEHALTEN_TAGE.
+ *   - nur, wenn die Sicherung nachweislich laeuft UND den Tag schon enthaelt. Ohne funktionierendes
+ *     Backup wird nichts entfernt – sonst waere es wirklich weg statt nur ausgelagert.
+ *
+ * Was bleibt, ist eine Zeile pro Tag ("12 Aufgaben, 12 erledigt"), damit die Ansicht die Wahrheit
+ * sagen kann statt "keine Aufgaben". Die vollstaendigen Listen stehen weiter in den Sicherungen,
+ * die zu dem Zeitpunkt schon geschrieben waren.
+ */
+function archiviereAlteAufgaben() {
+  const cfg = data.settings.githubBackup || {};
+  const heute = todayStr();
+  // Ohne laufende, frische Sicherung wird nichts angefasst.
+  if (!cfg.enabled || cfg.lastError || !cfg.lastBackupDate) return false;
+  if (cfg.lastBackupDate < addDaysISOStore(heute, -2)) return false;
+
+  const grenze = addDaysISOStore(heute, -TASKS_BEHALTEN_TAGE);
+  let geaendert = false;
+  for (const d of data.days) {
+    if (d.status !== "abgeschlossen") continue;
+    if (d.date >= grenze) continue;
+    // Der Tag muss vor der letzten Sicherung liegen – dann steht er dort drin.
+    if (d.date >= cfg.lastBackupDate) continue;
+    if (Array.isArray(d.tasks) && d.tasks.length > 0) {
+      d.tasksArchiviert = {
+        anzahl: d.tasks.length,
+        erledigt: d.tasks.filter((t) => t.done).length,
+        am: new Date().toISOString(),
+      };
+      d.tasks = [];
+      geaendert = true;
+    }
+    // Reine Buchfuehrung: welche Vorlagen an dem Tag schon angelegt wurden. Bei einem
+    // abgeschlossenen Tag wird nie wieder eine angelegt, die Liste hat keinen Wert mehr.
+    if (Array.isArray(d.appliedShiftTemplateIds) && d.appliedShiftTemplateIds.length > 0) {
+      d.appliedShiftTemplateIds = [];
+      geaendert = true;
+    }
+  }
+  if (geaendert) persist();
+  return geaendert;
+}
+
 export const store = {
   // ---- Zustand des Speichers ----
   /** Die Oberfläche meldet sich hier an, um bei einem veralteten Stand oder einem Schreibfehler zu
@@ -1134,6 +1191,11 @@ export const store = {
     } catch {
       return "?";
     }
+  },
+  /** Aufgabenlisten alter, abgeschlossener Tage auslagern. Laeuft beim Start und beim Abgleich –
+   *  nicht einmalig, denn jeden Tag wird ein weiterer Tag alt genug. */
+  raeumeAlteAufgabenAuf() {
+    return archiviereAlteAufgaben();
   },
   speicherZustand() {
     return {

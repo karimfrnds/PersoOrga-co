@@ -89631,13 +89631,13 @@
       "materialkosten": 0
     },
     {
-      "id": "3e895450-0d42-4745-8d4c-7fcc478b845b",
+      "id": "456107f7-3a55-4eab-8f29-d8b5498dbcfc",
       "date": "2026-12-13",
       "status": "offen",
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-480cda62-373e-4380-9317-09dbd90ec11e",
+          "id": "avail-90834f83-25d6-4816-a02b-dcd56ac35a5b",
           "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
           "from": "09:00",
           "to": "14:00",
@@ -89645,7 +89645,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-e1518422-e95d-43bb-8021-ba0d62ed456c",
+          "id": "avail-b886c24a-4625-4659-839e-5621d6f585ea",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "from": "11:00",
           "to": "18:30",
@@ -89653,7 +89653,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-a9796a17-5329-4def-bfb1-663053d11694",
+          "id": "avail-1d475589-9dd5-4899-b374-27b4aed5b782",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "from": "08:30",
           "to": "16:00",
@@ -89661,7 +89661,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-b8f90430-dc39-4f3c-a383-9c61f4ce5491",
+          "id": "avail-a9734713-a9ff-419b-8a25-e78eca8d78e5",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "from": "12:00",
           "to": "18:00",
@@ -89669,7 +89669,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-d2710c7c-97a2-4c69-83a7-2e8c8a021211",
+          "id": "avail-112473a1-5816-48da-92fb-234559847ec4",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "from": "09:00",
           "to": "17:00",
@@ -89677,7 +89677,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-c1a4ad98-ae2c-4d9b-9f13-657a07c5f26f",
+          "id": "avail-386c2f71-5647-4764-8949-6e39c2837bc3",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "from": "08:00",
           "to": "15:00",
@@ -89687,7 +89687,7 @@
       ],
       "availability": [
         {
-          "id": "480cda62-373e-4380-9317-09dbd90ec11e",
+          "id": "90834f83-25d6-4816-a02b-dcd56ac35a5b",
           "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
           "slotIds": [
             "mittel1"
@@ -89696,10 +89696,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "e1518422-e95d-43bb-8021-ba0d62ed456c",
+          "id": "b886c24a-4625-4659-839e-5621d6f585ea",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "slotIds": [
             "spaet1"
@@ -89708,10 +89708,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "a9796a17-5329-4def-bfb1-663053d11694",
+          "id": "1d475589-9dd5-4899-b374-27b4aed5b782",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
@@ -89720,10 +89720,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "b8f90430-dc39-4f3c-a383-9c61f4ce5491",
+          "id": "a9734713-a9ff-419b-8a25-e78eca8d78e5",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "slotIds": [
             "spaet1"
@@ -89732,10 +89732,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "d2710c7c-97a2-4c69-83a7-2e8c8a021211",
+          "id": "112473a1-5816-48da-92fb-234559847ec4",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "slotIds": [
             "mittel1"
@@ -89744,10 +89744,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "c1a4ad98-ae2c-4d9b-9f13-657a07c5f26f",
+          "id": "386c2f71-5647-4764-8949-6e39c2837bc3",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "slotIds": [
             "frueh1"
@@ -89756,7 +89756,7 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -89774,7 +89774,7 @@
       "stornos": [],
       "auditLog": [
         {
-          "timestamp": "2026-11-18T12:43:25.708Z",
+          "timestamp": "2026-11-18T13:46:17.860Z",
           "action": "erstellt",
           "detail": "Tag 2026-12-13 angelegt"
         }
@@ -89790,13 +89790,13 @@
       ]
     },
     {
-      "id": "4ba3fc74-e4ba-4445-adbb-9eff603f17e9",
+      "id": "7ca2c44d-eae7-459d-99c0-9bc703c4b224",
       "date": "2026-12-14",
       "status": "offen",
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-ce5b7cec-a125-4691-8a3f-85127fe6b745",
+          "id": "avail-c75df320-d06a-4afc-a67f-c9b7ea9145b6",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:30",
           "to": "16:00",
@@ -89804,7 +89804,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-1f4da793-651c-4902-829a-248fb31de130",
+          "id": "avail-4c8cc061-386a-4ffa-ae5a-fc24dcf1dd2c",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "from": "11:00",
           "to": "18:30",
@@ -89812,7 +89812,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-ca1896d2-df53-452d-a97e-b2bd7c330a04",
+          "id": "avail-216fe1af-22d9-42c2-8553-c6cda7886d8e",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "from": "08:00",
           "to": "15:00",
@@ -89822,7 +89822,7 @@
       ],
       "availability": [
         {
-          "id": "ce5b7cec-a125-4691-8a3f-85127fe6b745",
+          "id": "c75df320-d06a-4afc-a67f-c9b7ea9145b6",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
@@ -89831,10 +89831,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.868Z"
         },
         {
-          "id": "1f4da793-651c-4902-829a-248fb31de130",
+          "id": "4c8cc061-386a-4ffa-ae5a-fc24dcf1dd2c",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
@@ -89843,10 +89843,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         },
         {
-          "id": "ca1896d2-df53-452d-a97e-b2bd7c330a04",
+          "id": "216fe1af-22d9-42c2-8553-c6cda7886d8e",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
@@ -89855,7 +89855,7 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -89873,7 +89873,7 @@
       "stornos": [],
       "auditLog": [
         {
-          "timestamp": "2026-11-18T12:43:25.719Z",
+          "timestamp": "2026-11-18T13:46:17.868Z",
           "action": "erstellt",
           "detail": "Tag 2026-12-14 angelegt"
         }
@@ -89886,13 +89886,13 @@
       ]
     },
     {
-      "id": "b0ba8c88-3b44-454a-9268-309a851c2968",
+      "id": "37e8625f-4f6d-441d-93a8-c081848ddeac",
       "date": "2026-12-15",
       "status": "offen",
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-299c5a78-c872-4a51-8704-0f5f747f5079",
+          "id": "avail-6016f540-ac4d-470b-bccf-b7ace400ec2d",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:30",
           "to": "16:00",
@@ -89900,7 +89900,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-1b72a0e1-9a99-462e-95bf-03e7ab3f61f8",
+          "id": "avail-f84d4022-1bf8-4b2c-9d83-513164836c42",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "from": "11:00",
           "to": "18:30",
@@ -89908,7 +89908,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-7eaf642b-71fc-4289-8edc-4225e9b147b2",
+          "id": "avail-50f2a261-a7da-4884-838b-5bd1a33ebdbd",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "from": "08:00",
           "to": "15:00",
@@ -89918,7 +89918,7 @@
       ],
       "availability": [
         {
-          "id": "299c5a78-c872-4a51-8704-0f5f747f5079",
+          "id": "6016f540-ac4d-470b-bccf-b7ace400ec2d",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
@@ -89927,10 +89927,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         },
         {
-          "id": "1b72a0e1-9a99-462e-95bf-03e7ab3f61f8",
+          "id": "f84d4022-1bf8-4b2c-9d83-513164836c42",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
@@ -89939,10 +89939,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         },
         {
-          "id": "7eaf642b-71fc-4289-8edc-4225e9b147b2",
+          "id": "50f2a261-a7da-4884-838b-5bd1a33ebdbd",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
@@ -89951,7 +89951,7 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -89969,7 +89969,7 @@
       "stornos": [],
       "auditLog": [
         {
-          "timestamp": "2026-11-18T12:43:25.719Z",
+          "timestamp": "2026-11-18T13:46:17.869Z",
           "action": "erstellt",
           "detail": "Tag 2026-12-15 angelegt"
         }
@@ -89982,13 +89982,13 @@
       ]
     },
     {
-      "id": "5644c149-13c9-4c28-9712-c7119d79bf9a",
+      "id": "d003cd4d-4838-4d81-9ba2-11de6097af6a",
       "date": "2026-12-16",
       "status": "offen",
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-d4fe283a-bd24-463e-b66f-678cd3161868",
+          "id": "avail-743db973-9324-45bc-8c59-d9faea92b928",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:30",
           "to": "16:00",
@@ -89996,7 +89996,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-e21e6d86-a0e1-41d6-a4f1-5c868d221bf5",
+          "id": "avail-b6c91c5d-2ade-46d1-9401-217fed916875",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "from": "11:00",
           "to": "18:30",
@@ -90004,7 +90004,7 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-3678a554-37ee-4e02-b04a-3012593bf14b",
+          "id": "avail-2a7aa8d5-9ccc-4651-ad5a-0e4223802f01",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "from": "08:00",
           "to": "15:00",
@@ -90014,7 +90014,7 @@
       ],
       "availability": [
         {
-          "id": "d4fe283a-bd24-463e-b66f-678cd3161868",
+          "id": "743db973-9324-45bc-8c59-d9faea92b928",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "slotIds": [
             "frueh1"
@@ -90023,10 +90023,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         },
         {
-          "id": "e21e6d86-a0e1-41d6-a4f1-5c868d221bf5",
+          "id": "b6c91c5d-2ade-46d1-9401-217fed916875",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
@@ -90035,10 +90035,10 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         },
         {
-          "id": "3678a554-37ee-4e02-b04a-3012593bf14b",
+          "id": "2a7aa8d5-9ccc-4651-ad5a-0e4223802f01",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "slotIds": [
             "frueh1"
@@ -90047,7 +90047,7 @@
           "bossConfirmed": true,
           "note": "",
           "quelle": "fest",
-          "submittedAt": "2026-11-18T12:43:25.719Z"
+          "submittedAt": "2026-11-18T13:46:17.869Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -90065,7 +90065,7 @@
       "stornos": [],
       "auditLog": [
         {
-          "timestamp": "2026-11-18T12:43:25.719Z",
+          "timestamp": "2026-11-18T13:46:17.869Z",
           "action": "erstellt",
           "detail": "Tag 2026-12-16 angelegt"
         }

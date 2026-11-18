@@ -584,6 +584,18 @@
         }
       ],
       "istStoreManagerin": false
+    },
+    {
+      "id": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+      "name": "Jade",
+      "role": "service",
+      "hourlyWage": 13.9,
+      "isMinijob": false,
+      "minijobLimit": 556,
+      "active": true,
+      "pin": null,
+      "festeSchichten": [],
+      "istStoreManagerin": false
     }
   ],
   "settings": {
@@ -1110,8 +1122,60 @@
       "onlineEnabled": true
     },
     "shiftSlots": {
-      "service": [],
-      "kueche": []
+      "service": [
+        {
+          "id": "frueh1",
+          "label": "Schicht 1",
+          "from": "08:30",
+          "to": "16:00"
+        },
+        {
+          "id": "spaet1",
+          "label": "Schicht 2",
+          "from": "11:00",
+          "to": "18:30"
+        },
+        {
+          "id": "mittel1",
+          "label": "Springer",
+          "from": "09:00",
+          "to": "14:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ]
+        }
+      ],
+      "kueche": [
+        {
+          "id": "frueh1",
+          "label": "Küche 1",
+          "from": "08:00",
+          "to": "15:00"
+        },
+        {
+          "id": "mittel1",
+          "label": "Küche lang",
+          "from": "09:00",
+          "to": "17:00",
+          "allowedWeekdays": [
+            5,
+            6
+          ]
+        },
+        {
+          "id": "spaet1",
+          "label": "Küche Spät",
+          "from": "12:00",
+          "to": "18:00",
+          "allowedWeekdays": [
+            4,
+            5,
+            6
+          ]
+        }
+      ],
+      "bar": []
     },
     "schichtPlaene": [
       {
@@ -1289,372 +1353,207 @@
       "owner": "karimfrnds",
       "repo": "PersoOrga-co",
       "token": "",
-      "lastBackupDate": "2026-11-14",
-      "lastBackupAt": "2026-11-14T17:24:15.131Z",
-      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at a7413608dfad37d23dcb03416cf5bb57f1e6cf45 but expected 9614191b5213d80f8bf74a2b24bffa8560ccce48\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
+      "lastBackupDate": "2026-11-18",
+      "lastBackupAt": "2026-11-18T15:15:32.574Z",
+      "lastError": null
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-14T19:52:44.028Z",
-      "lastError": null,
+      "lastSyncAt": "2026-11-18T15:15:29.089Z",
+      "lastError": "Verfügbarkeit von \"livia\" (Woche ab 2026-10-05): Mitarbeiter nicht gefunden. · Verfügbarkeit von \"karla\" (Woche ab 2026-11-23): Mitarbeiter nicht gefunden. · Verfügbarkeit von \"karla\" (Woche ab 2026-11-30): Mitarbeiter nicht gefunden. · Verfügbarkeit von \"karla\" (Woche ab 2026-12-07): Mitarbeiter nicht gefunden. · Verfügbarkeit von \"karla\" (Woche ab 2026-12-14): Mitarbeiter nicht gefunden.",
       "knownRemoteState": [
         {
-          "id": "b26554a8-cd45-413b-9418-1f54b4dd8d3a",
-          "done": true,
-          "sig": "Kerzen anmachen|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "2444e8d2-53da-41db-be62-7baaec90253a",
-          "done": true,
-          "sig": "Licht außen anmachen|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "1406a18b-948c-4771-bc5b-ae28eeae9321",
-          "done": true,
-          "sig": "Baum Strahler anmachen|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "1eda947a-9d69-43b7-992d-02ba59940f15",
-          "done": true,
-          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "0c46aa87-f58d-47ea-8011-4cba9030f6c9",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "d0b39c16-dfcf-4898-95cd-b2310f78314a",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "c16b0411-c8eb-483a-a6e6-05ecbbab4211",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "6d5a7b1a-a881-4c31-a686-52798d9b7cfc",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "de45e77f-5221-4066-aeb5-677ab224a5a2",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "908e287b-6a14-4302-bdcd-b5f61c09f66d",
-          "done": true,
-          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "257e893c-17b7-4902-8ea8-fba60d063fb1",
-          "done": true,
-          "sig": "Lichterketten anschalten|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "be256ace-13a9-4ef1-acf9-814517cf4c43",
-          "done": true,
-          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "c9acdeb3-7600-4f81-ae5f-46e40d4c4357",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "13caf5ca-5468-4e2d-99f3-4959fb846d49",
-          "done": true,
-          "sig": "Pflanzen draußen Giesen wenn kein regen|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "93a98a54-902a-4d0a-983c-83b4fe72a58f",
-          "done": true,
-          "sig": "Karten abwischen|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "12ee1461-b02a-4e3c-8617-d1916ea065b4",
-          "done": true,
-          "sig": "Tische sauber halten|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "1ef2bc2e-1c1b-40e9-a4ae-63182b665cc6",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|lilly|2026-11-14||normal"
-        },
-        {
-          "id": "c39f5e2d-f7ba-4872-bdb2-7c042c744557",
-          "done": true,
-          "sig": "Tische wischen nach Service|lilly|2026-11-14||hoch"
-        },
-        {
-          "id": "7f529e89-598e-4ba4-a686-c7fdb6f28113",
-          "done": true,
-          "sig": "Kerzen anmachen|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "3a7a651d-6c7c-416c-a269-01f7b72f6165",
-          "done": true,
-          "sig": "Licht außen anmachen|maria|2026-11-14||hoch"
+          "id": "2df9909e-fea0-467b-a079-1426eb0cebc4",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|carla|2026-11-18||hoch"
         },
         {
-          "id": "eeeabd6e-ac4c-43c8-b801-2a205717be17",
-          "done": true,
-          "sig": "Baum Strahler anmachen|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "284dd146-ae37-45f8-8af1-437f24b4d318",
-          "done": true,
-          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "26380703-fa29-49aa-9abe-4eb86ced1607",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "714f386b-f20d-48c1-ad4d-545f765bb088",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "bccfa732-f783-477d-831f-49d73b99f37c",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|maria|2026-11-14||normal"
-        },
-        {
-          "id": "584ba580-30ee-4c79-a468-17b35b87f68b",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|maria|2026-11-14||normal"
-        },
-        {
-          "id": "0f3b926f-bf9e-43b4-ba31-168cdb5b78ef",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|maria|2026-11-14||normal"
-        },
-        {
-          "id": "e38fde0c-feda-4c08-9d0a-e6788973204b",
-          "done": true,
-          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "153d2367-cdf4-4810-b865-672397be0740",
-          "done": true,
-          "sig": "Lichterketten anschalten|maria|2026-11-14||normal"
-        },
-        {
-          "id": "aaeb0a33-a96a-424b-99e5-d3c2a456fa5b",
-          "done": true,
-          "sig": "durchsaugen und weissen Boden vor der Toilette wischen|maria|2026-11-14||normal"
-        },
-        {
-          "id": "cb0f65e1-2b14-4d4b-bc15-7ccac3843735",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|maria|2026-11-14||normal"
-        },
-        {
-          "id": "ca4149d1-4566-471f-8015-010d4831d856",
-          "done": true,
-          "sig": "Pflanzen draußen Giesen wenn kein regen|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "2291914b-6ca3-42d9-9c85-6e99fc895368",
-          "done": true,
-          "sig": "Karten abwischen|maria|2026-11-14||hoch"
-        },
-        {
-          "id": "25173a80-b67f-4395-9e88-f3b3f917bdbb",
-          "done": true,
-          "sig": "Tische sauber halten|maria|2026-11-14||hoch"
+          "id": "0d80cdc0-dfa9-49d5-8e41-90c63b9535a3",
+          "done": false,
+          "sig": "Kerzen anmachen|timm|2026-11-18||hoch"
         },
         {
-          "id": "6f98f1a4-63f0-4987-b37b-a0b8831fe834",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|maria|2026-11-14||normal"
-        },
-        {
-          "id": "99f63132-f605-4866-bf35-1db6819bbfdc",
-          "done": true,
-          "sig": "Tische wischen nach Service|maria|2026-11-14||hoch"
+          "id": "1db4eba6-3f09-456a-b15e-f00cc490ffbc",
+          "done": false,
+          "sig": "Licht außen anmachen|timm|2026-11-18||hoch"
         },
         {
-          "id": "b8d07007-9cf2-447e-8007-e29c57fc540c",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|emma|2026-11-14||hoch"
+          "id": "9d974822-f74b-4a10-b922-3292762bbab9",
+          "done": false,
+          "sig": "Baum Strahler anmachen|timm|2026-11-18||hoch"
         },
         {
-          "id": "3cc937a3-8894-4bfa-9ec0-990f4777b909",
-          "done": true,
-          "sig": "Kerzen anmachen|nina|2026-11-14||hoch"
+          "id": "aca2aa7d-dcf7-493c-bfd6-6c6ca4c5bc25",
+          "done": false,
+          "sig": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht|timm|2026-11-18||hoch"
         },
         {
-          "id": "0bec1c15-320f-44a8-852a-a9c62779af9a",
-          "done": true,
-          "sig": "Licht außen anmachen|nina|2026-11-14||hoch"
+          "id": "584c4fd0-2c2d-48a3-9eea-ee5b25e39c22",
+          "done": false,
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|timm|2026-11-18||hoch"
         },
         {
-          "id": "07f1c076-8a25-4446-adc1-a78ae60fa47f",
-          "done": true,
-          "sig": "Baum Strahler anmachen|nina|2026-11-14||hoch"
+          "id": "3e677c91-9226-4089-884f-3870c995e701",
+          "done": false,
+          "sig": "Reservierungen zuordnen für den Tag|timm|2026-11-18||hoch"
         },
         {
-          "id": "266025e2-63cb-4776-8f76-e0a1b581bf5f",
-          "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|nina|2026-11-14||hoch"
+          "id": "8d2c2953-1d3e-4ae0-a708-ac2a39bf712d",
+          "done": false,
+          "sig": "Besteck wickeln (nur poliertes!)|timm|2026-11-18||normal"
         },
         {
-          "id": "268d5b0e-f270-4c3e-8e5e-4017d0385a76",
-          "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|nina|2026-11-14||hoch"
+          "id": "6a4c1f52-b551-45b8-9ab8-978dbd15a2b5",
+          "done": false,
+          "sig": "Tische und Karten wischen (check)|timm|2026-11-18||normal"
         },
         {
-          "id": "948aadc6-df2f-4f35-8a2e-00d59d174d53",
-          "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|nina|2026-11-14||normal"
+          "id": "9269bd51-888d-4867-8575-b07ff57c2e96",
+          "done": false,
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|timm|2026-11-18||normal"
         },
         {
-          "id": "bd228398-5d60-4777-b3ca-0aea06c55642",
-          "done": true,
-          "sig": "Tische und Karten wischen (check)|nina|2026-11-14||normal"
+          "id": "8d9b2769-be6a-4f89-9d9c-26203ee1f24c",
+          "done": false,
+          "sig": "Spülmaschine einschalten (braucht 30 Minuten)|timm|2026-11-18||hoch"
         },
         {
-          "id": "02132a79-7836-4342-a16e-7c59528c26ea",
-          "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|nina|2026-11-14||normal"
+          "id": "4ac9460c-513d-4914-9983-9ab0567342f6",
+          "done": false,
+          "sig": "Lichterketten anschalten|timm|2026-11-18||normal"
         },
         {
-          "id": "749af172-bd2f-47d5-86ac-318fcd888add",
-          "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|nina|2026-11-14||normal"
+          "id": "b71f9f1e-2263-4219-8486-c334f6b8bd9b",
+          "done": false,
+          "sig": "Besteck polieren und mind. 20 rollen|timm|2026-11-18||normal"
         },
         {
-          "id": "ac42569c-e364-46f1-a8de-1a9eed03777e",
-          "done": true,
-          "sig": "Kerzen auffüllen / sauber machen + Aschenbecher sauber machen|nina|2026-11-14||hoch"
+          "id": "5e9e8aa8-8f8e-402f-b1d8-4800f9c49935",
+          "done": false,
+          "sig": "Pflanzen draußen Giesen wenn kein regen|timm|2026-11-18||hoch"
         },
         {
-          "id": "89cfb39d-fa13-48a9-bc0f-b97b45ec9b1f",
-          "done": true,
-          "sig": "Karten abwischen|nina|2026-11-14||hoch"
+          "id": "60a14391-9286-493b-b498-ced4243b421a",
+          "done": false,
+          "sig": "Karten abwischen|timm|2026-11-18||hoch"
         },
         {
-          "id": "fbe67c89-2d59-438a-bf2e-84787a061edf",
-          "done": true,
-          "sig": "Tische sauber halten|nina|2026-11-14||hoch"
+          "id": "df7e55fd-2e9b-43af-8d40-9a38a5b2b317",
+          "done": false,
+          "sig": "Tische sauber halten|timm|2026-11-18||hoch"
         },
         {
-          "id": "a920b388-6b4a-49a8-a35e-c04c965e95c2",
-          "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|nina|2026-11-14||normal"
+          "id": "b1fb7a14-0083-4dd1-8a7b-7b0345add0dc",
+          "done": false,
+          "sig": "Terrasse checken und ggfs. fegen|timm|2026-11-18||normal"
         },
         {
-          "id": "0b8aee03-41df-4785-9e13-e0bd14f6c5c9",
-          "done": true,
-          "sig": "Tische wischen nach Service|nina|2026-11-14||hoch"
+          "id": "3c61806a-7067-48ed-8d6e-f92b61807058",
+          "done": false,
+          "sig": "Tische wischen nach Service|timm|2026-11-18||hoch"
         },
         {
-          "id": "ab110689-e5cc-4a9d-b408-28235f6f5d43",
+          "id": "b5ec523b-780e-43eb-9e1e-64d15c26d09b",
           "done": true,
-          "sig": "Kerzen anmachen|nele|2026-11-14||hoch"
+          "sig": "Kerzen anmachen|karim|2026-11-18||hoch"
         },
         {
-          "id": "6b210a8e-ba47-473a-808f-50fe6425c893",
+          "id": "d892797c-145f-4069-ba7d-a0ac190e84e7",
           "done": true,
-          "sig": "Licht außen anmachen|nele|2026-11-14||hoch"
+          "sig": "Licht außen anmachen|karim|2026-11-18||hoch"
         },
         {
-          "id": "61c5b82f-3a85-4ab8-ad6c-760bc3354bb0",
+          "id": "f9d3e747-a49c-4d8e-9c62-d0774b4f3b6c",
           "done": true,
-          "sig": "Baum Strahler anmachen|nele|2026-11-14||hoch"
+          "sig": "Baum Strahler anmachen|karim|2026-11-18||hoch"
         },
         {
-          "id": "7cc9ad78-a13c-425a-8017-500b6f858b4e",
+          "id": "6376b584-fb00-4da9-ae6f-cdb12ecd1c60",
           "done": true,
-          "sig": "Terrasse fegen vor dem Aufstellen der Tische|nele|2026-11-14||hoch"
+          "sig": "Terrasse fegen vor dem Aufstellen der Tische|karim|2026-11-18||hoch"
         },
         {
-          "id": "b664010a-1dbe-47d9-bfcb-a24ee5b76e78",
+          "id": "a0ecd514-8725-44f9-bc3b-f129db1189f5",
           "done": true,
-          "sig": "Reservierungen zuordnen für den Tag|nele|2026-11-14||hoch"
+          "sig": "Reservierungen zuordnen für den Tag|karim|2026-11-18||hoch"
         },
         {
-          "id": "4df34419-a393-4391-8827-61ff03edb2f9",
+          "id": "e3b079a1-94d2-4ab3-bfc2-b0cbb2e12bdf",
           "done": true,
-          "sig": "Besteck wickeln (nur poliertes!)|nele|2026-11-14||normal"
+          "sig": "Besteck wickeln (nur poliertes!)|karim|2026-11-18||normal"
         },
         {
-          "id": "5d5a687f-279f-424c-b61d-ce25b6c91949",
+          "id": "f1e2cdb9-118b-46c3-bc87-b0481d070d7f",
           "done": true,
-          "sig": "Tische und Karten wischen (check)|nele|2026-11-14||normal"
+          "sig": "Tische und Karten wischen (check)|karim|2026-11-18||normal"
         },
         {
-          "id": "cf004886-1ea8-4f46-831c-79878ce990e3",
+          "id": "cbfcfda5-3f94-4ac7-9689-a4db2f4951bc",
           "done": true,
-          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|nele|2026-11-14||normal"
+          "sig": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser|karim|2026-11-18||normal"
         },
         {
-          "id": "24f50da0-45ac-4ac7-8fd6-5bf1ac3a0cc3",
+          "id": "9e00e636-054c-4e27-b4df-bfd2227751f6",
           "done": true,
-          "sig": "Besteck polieren und mind. 20 rollen|nele|2026-11-14||normal"
+          "sig": "Besteck polieren und mind. 20 rollen|karim|2026-11-18||normal"
         },
         {
-          "id": "5dc41be4-b482-48f1-8d5b-14cf5b7f3100",
+          "id": "7a6de371-695e-4807-880c-02c47ffa4e4f",
           "done": true,
-          "sig": "Karten abwischen|nele|2026-11-14||hoch"
+          "sig": "Karten abwischen|karim|2026-11-18||hoch"
         },
         {
-          "id": "fa764977-bdee-459b-a288-c00cdd040077",
+          "id": "43b5431c-a83c-4446-a81f-082e30a52f82",
           "done": true,
-          "sig": "Tische sauber halten|nele|2026-11-14||hoch"
+          "sig": "Tische sauber halten|karim|2026-11-18||hoch"
         },
         {
-          "id": "60c8814e-4aa3-4423-966c-8b958e2cab67",
+          "id": "ef812203-a3bc-4af6-89a5-5807690bb248",
           "done": true,
-          "sig": "Terrasse checken und ggfs. fegen|nele|2026-11-14||normal"
+          "sig": "Terrasse checken und ggfs. fegen|karim|2026-11-18||normal"
         },
         {
-          "id": "14bd3af3-6c62-4b72-b3f6-388dbfc2817e",
+          "id": "f7262c05-9ad9-424b-b567-11118001c4db",
           "done": true,
-          "sig": "Tische wischen nach Service|nele|2026-11-14||hoch"
+          "sig": "Tische wischen nach Service|karim|2026-11-18||hoch"
         },
         {
-          "id": "966225c5-3802-4a8c-8fe4-118b723d766b",
+          "id": "69f42dca-69d7-4133-a00f-27eaa6284b63",
           "done": true,
-          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|nele|2026-11-14||hoch"
+          "sig": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)|karim|2026-11-18||hoch"
         },
         {
-          "id": "1fa33783-4381-472a-bb7d-800f6dba7f52",
+          "id": "460659ec-657c-4140-a6d7-72cc4d32ebe8",
           "done": true,
-          "sig": "Strahler und Akku Lampen laden am Schichtende|nele|2026-11-14||hoch"
+          "sig": "Strahler und Akku Lampen laden am Schichtende|karim|2026-11-18||hoch"
         },
         {
-          "id": "60588893-3870-4f09-9c30-d0836a15cf01",
+          "id": "022c773e-fc7d-46dd-8df1-459477358cb5",
           "done": true,
-          "sig": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen|nele|2026-11-14||hoch"
+          "sig": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen|karim|2026-11-18||hoch"
         },
         {
-          "id": "86c6d6ea-d770-4e0e-a4b6-74a14c5c68f0",
+          "id": "9f9f1b17-3094-4235-9609-ac47f1fce6b1",
           "done": true,
-          "sig": "Pfand einsortieren im Keller|nele|2026-11-14||normal"
+          "sig": "Pfand einsortieren im Keller|karim|2026-11-18||normal"
         },
         {
-          "id": "6fa134e4-4d6e-4c31-a7e8-3518ac6a9009",
+          "id": "5cf16b98-305b-47f9-97d6-87ea0dc20cc0",
           "done": true,
-          "sig": "Aschenbecher spülen|nele|2026-11-14||normal"
+          "sig": "Aschenbecher spülen|karim|2026-11-18||normal"
         },
         {
-          "id": "863e1281-afa6-43d9-94b3-caeab68ea397",
+          "id": "46519307-7097-44c3-aba5-813ef68f9f05",
           "done": true,
-          "sig": "Kűhlschränke und Bar auffüllen|nele|2026-11-14||normal"
+          "sig": "Kűhlschränke und Bar auffüllen|karim|2026-11-18||normal"
         },
         {
-          "id": "c4f36142-c6aa-4d18-99c8-de33c8d1fb8f",
+          "id": "31e7dbc6-bf30-4a73-9221-bb4f9429d3c9",
           "done": true,
-          "sig": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)|nele|2026-11-14||hoch"
+          "sig": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)|karim|2026-11-18||hoch"
         }
       ],
       "appliedShiftAssignmentIds": [
@@ -1875,7 +1774,15 @@
         "2062262f-f0ca-4c8a-a52d-7b685bcdbeab",
         "0f399315-e5a8-4a36-a813-42d40a79eae7",
         "f63113d3-766c-4c76-a922-03b284082efc",
-        "cb16ac38-7aea-4029-914f-ae50e1baa48c"
+        "cb16ac38-7aea-4029-914f-ae50e1baa48c",
+        "ece518ad-c33f-4048-b00e-d0a8e6d16141",
+        "8980cb4c-2d53-4078-a184-8d660794106e",
+        "e431c803-5ef9-4a4f-8074-d9c7280ec6c3",
+        "09f415af-3286-4c26-a104-09fb4b3d54a1",
+        "5ba45b6a-0016-4a8c-8bd2-deab7d6f58aa",
+        "524be2a6-0422-4bd6-ac1d-682be73567d6",
+        "a5e95e63-67e9-4afd-ae0b-2ce7be0aa9ac",
+        "9a22cf8c-57ce-48be-8cfd-7ec632dca036"
       ],
       "appliedMessageIds": [
         "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
@@ -2042,7 +1949,13 @@
         "af299eaf-ac0a-4ef9-acfb-4fc68c393bdf",
         "913049d5-8e57-4fdb-8d33-d164500d7bf6",
         "cb855a70-70fd-4305-9d78-50a172c128e6",
-        "7110b41f-c461-4404-af93-9e4129767705"
+        "7110b41f-c461-4404-af93-9e4129767705",
+        "b1711212-a80f-419f-b232-d52f02e5f425",
+        "12722ce3-3c34-4cdd-a21f-e59a7a0db252",
+        "5c2b8318-9452-44ed-b7d6-1b1c166a55f0",
+        "e5211d83-d0a7-4c89-9e0a-4225b8bae2e4",
+        "52ee1707-1ce6-494d-996e-559ee9a11006",
+        "81cfe59f-63e6-4d5b-8160-e69cade94ca2"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -2443,30 +2356,10 @@
         "e9dbb803-12fc-45c7-abb1-2da6eaf2647a",
         "d54af83c-7769-4bf1-a658-7979ace0d7e6",
         "c2c2d94e-2fc1-4218-b576-6ba9fe68c104",
-        "1441f7b9-bc49-4c67-bff0-abe185a79f5a"
+        "1441f7b9-bc49-4c67-bff0-abe185a79f5a",
+        "b0042899-d82c-491a-8e41-c6d3c6962c31"
       ],
       "appliedAvailabilityKeys": [
-        "2026-10-05|anna z.|2026-09-29T07:23:27.794Z",
-        "2026-10-12|maria|2026-09-29T07:05:01.916Z",
-        "2026-10-12|anna z.|2026-09-29T09:41:51.565Z",
-        "2026-10-12|kaya|2026-09-29T09:57:29.934Z",
-        "2026-10-19|anna z.|2026-09-29T09:42:07.664Z",
-        "2026-10-19|kaya|2026-09-29T09:58:01.323Z",
-        "2026-10-26|nina|2026-09-29T09:12:44.964Z",
-        "2026-10-26|anna z.|2026-09-29T09:42:23.272Z",
-        "2026-10-26|kaya|2026-09-29T09:58:41.938Z",
-        "2026-11-02|anna z.|2026-09-29T09:42:49.616Z",
-        "2026-11-02|kaya|2026-09-29T10:00:17.512Z",
-        "2026-10-26|nico|2026-09-29T15:17:13.028Z",
-        "2026-10-05|nele|2026-09-29T16:27:51.200Z",
-        "2026-10-12|samuel|2026-09-29T19:10:28.057Z",
-        "2026-10-26|timm|2026-09-30T06:06:12.057Z",
-        "2026-10-26|rotraut|2026-09-30T06:06:12.057Z",
-        "2026-10-26|rotraut|2026-10-01T05:59:45.980Z",
-        "2026-10-26|lilly|2026-10-01T05:59:45.980Z",
-        "2026-10-05|george|2026-10-01T06:54:29.746Z",
-        "2026-10-19|maria|2026-10-01T18:52:50.282Z",
-        "2026-10-19|maria|2026-10-01T18:55:36.621Z",
         "2026-10-26|maria|2026-10-01T18:56:55.625Z",
         "2026-11-02|maria|2026-10-01T18:57:50.262Z",
         "2026-10-26|hanna|2026-10-02T04:41:54.746Z",
@@ -2745,7 +2638,28 @@
         "2026-11-09|anna z.|2026-11-14T21:14:20.466Z",
         "2026-11-16|arianna|2026-11-14T21:15:21.306Z",
         "2026-11-30|maria|2026-11-14T21:23:01.657Z",
-        "2026-11-30|karim|2026-11-14T21:23:17.105Z"
+        "2026-11-30|karim|2026-11-14T21:23:17.105Z",
+        "2026-10-05|livia|2026-09-28T16:38:54.809Z",
+        "2026-10-26|julie|2026-09-29T05:40:45.698Z",
+        "2026-11-16|maria|2026-11-15T07:27:44.760Z",
+        "2026-11-16|vincent|2026-11-15T07:27:44.725Z",
+        "2026-11-16|Jade|2026-11-15T12:39:42.266Z",
+        "2026-11-23|Jade|2026-11-15T12:40:00.441Z",
+        "2026-11-23|karla|2026-11-09T14:00:02.687Z",
+        "2026-11-30|Leanna|2026-11-15T07:27:44.838Z",
+        "2026-11-30|vincent|2026-11-15T07:27:44.827Z",
+        "2026-11-30|karla|2026-11-09T14:00:02.688Z",
+        "2026-12-07|lilly|2026-11-15T07:27:45.803Z",
+        "2026-12-07|benjamin|2026-11-15T07:27:45.803Z",
+        "2026-12-07|emma|2026-11-15T07:27:45.803Z",
+        "2026-12-07|Santiago|2026-11-15T07:27:45.803Z",
+        "2026-12-07|anna|2026-11-15T07:27:45.803Z",
+        "2026-12-07|kaya|2026-11-15T07:27:45.803Z",
+        "2026-12-07|karla|2026-11-13T07:01:53.452Z",
+        "2026-12-14|timm|2026-11-18T07:02:48.016Z",
+        "2026-12-14|vincent|2026-11-18T07:02:48.016Z",
+        "2026-12-14|carla|2026-11-18T07:02:48.016Z",
+        "2026-12-14|karla|2026-11-16T07:00:54.063Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -3014,7 +2928,8 @@
       ],
       "appliedEmployeeChangeIds": [
         "3bed2d05-4723-41eb-b458-4543f88e4bc9",
-        "55ae448a-05ff-4be7-aca4-b9bb0022e1ef"
+        "55ae448a-05ff-4be7-aca4-b9bb0022e1ef",
+        "0d8619bc-41c0-47ba-a8b5-1e5c288c896d"
       ],
       "appliedPublicationIds": [
         "7a2cde3e-425e-42ba-aa2a-bc104cdcd995",
@@ -3508,7 +3423,21 @@
         "192440ef-d2d0-46c3-8a0e-754e13ad9dde",
         "69b07348-999f-4743-9192-7014ed085177",
         "32c851a1-901b-46df-9db9-dd1d6cdcd491",
-        "bb4c4ba8-a7a8-4e49-bda5-51ac4bcec66f"
+        "bb4c4ba8-a7a8-4e49-bda5-51ac4bcec66f",
+        "d506db4b-0b0b-4a19-8b75-de352c909641",
+        "891e0aac-c7bb-4f4f-bd57-914fd34158ce",
+        "4a796b1d-4a56-420b-b0f8-b199a7bde85d",
+        "9f467ca8-dc73-40f0-8a21-aa505475f6c7",
+        "c884adfb-78e2-455c-86c0-566782c79526",
+        "081e6a5b-e825-4c8f-bd89-5eabe88e25c1",
+        "7daf6142-c369-4e15-9a0c-9fd05b5d4c07",
+        "532a0951-6a4f-4792-b57d-a8c84f04d2d6",
+        "dc5fb17c-6830-49b5-aa09-37ec8b9750be",
+        "b45138fa-7678-4a1d-9633-ae95cb0b01c8",
+        "69dc4bc4-2b87-406e-9017-9d6b68c2bbe1",
+        "ddb5522f-4fd5-4eb7-93eb-366dea579013",
+        "9c0dc5d1-a298-4755-8510-c7f43a4a0120",
+        "19c086cd-8ee7-4264-a7bd-36aeb62e661a"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -3946,7 +3875,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-18T15:15:26.874Z"
+    "zuletztGespeichert": "2026-11-18T15:15:32.574Z"
   },
   "days": [
     {
@@ -24429,13 +24358,13 @@
           "submittedAt": "2026-09-30T06:06:12.057Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "9ab75c1e-2bb3-45ea-8129-584417f75a78",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-09-29T05:40:45.698Z"
         },
@@ -36084,22 +36013,6 @@
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-1c735cf2-ce5a-43de-8072-5ebebae5e884",
-          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
-          "from": "09:00",
-          "to": "14:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
-          "id": "avail-5f65769d-b913-4523-b04d-2ec14aa15774",
-          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
-          "from": "12:00",
-          "to": "18:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-c66625ea-366b-4bce-8ae6-3e58d377848a",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "from": "08:00",
@@ -36124,10 +36037,18 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-cd6d7bb3-95e7-4dea-9074-820215bc8387",
-          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "id": "avail-d2051424-53cd-4f3d-a928-f7336aaaaa65",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
           "from": "08:30",
           "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-4f03ff8d-e086-4eed-a6b3-f2ccb9d6adfa",
+          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "from": "09:00",
+          "to": "14:00",
           "note": "",
           "bossConfirmed": true
         }
@@ -36145,24 +36066,20 @@
           "submittedAt": "2026-10-25T07:41:19.480Z"
         },
         {
-          "confirmedSlotId": "mittel1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "1c735cf2-ce5a-43de-8072-5ebebae5e884",
           "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
-          "slotIds": [
-            "mittel1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-05T15:41:35.771Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "id": "5f65769d-b913-4523-b04d-2ec14aa15774",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
-          "slotIds": [
-            "spaet1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-05T15:41:35.771Z"
         },
@@ -36209,15 +36126,35 @@
           "submittedAt": "2026-11-14T21:15:21.306Z"
         },
         {
-          "confirmedSlotId": "frueh1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "cd6d7bb3-95e7-4dea-9074-820215bc8387",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "slotIds": [],
+          "note": "",
+          "submittedAt": "2026-11-15T07:27:44.725Z"
+        },
+        {
+          "id": "d2051424-53cd-4f3d-a928-f7336aaaaa65",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.725Z"
+          "submittedAt": "2026-11-15T12:39:42.266Z"
+        },
+        {
+          "id": "4f03ff8d-e086-4eed-a6b3-f2ccb9d6adfa",
+          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+          "slotIds": [
+            "mittel1"
+          ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-18T15:15:27.716Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -36655,15 +36592,15 @@
           "submittedAt": "2026-10-22T06:02:27.141Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "00cce210-cd46-42e1-ac19-50ce260bd11a",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.749Z"
+          "submittedAt": "2026-11-15T07:27:44.760Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -36767,19 +36704,552 @@
           "submittedAt": "2026-11-09T14:00:02.687Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "039390f9-6060-4afc-b9f8-5112b9ef4e38",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.783Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
-      "tasks": [],
+      "tasks": [
+        {
+          "id": "2df9909e-fea0-467b-a079-1426eb0cebc4",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": ""
+        },
+        {
+          "id": "0d80cdc0-dfa9-49d5-8e41-90c63b9535a3",
+          "text": "Kerzen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "1db4eba6-3f09-456a-b15e-f00cc490ffbc",
+          "text": "Licht außen anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "9d974822-f74b-4a10-b922-3292762bbab9",
+          "text": "Baum Strahler anmachen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "aca2aa7d-dcf7-493c-bfd6-6c6ca4c5bc25",
+          "text": "Maschinen dial in, Bohnen auffüllen, Terrasse aufbauen, Sachen bereit legen (Station), Tische grade rücken, schauen dass der Laden einen ordentlichen Eindruck macht",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "584c4fd0-2c2d-48a3-9eea-ee5b25e39c22",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "3e677c91-9226-4089-884f-3870c995e701",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "",
+          "time": ""
+        },
+        {
+          "id": "8d2c2953-1d3e-4ae0-a708-ac2a39bf712d",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "6a4c1f52-b551-45b8-9ab8-978dbd15a2b5",
+          "text": "Tische und Karten wischen (check)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "9269bd51-888d-4867-8575-b07ff57c2e96",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "8d9b2769-be6a-4f89-9d9c-26203ee1f24c",
+          "text": "Spülmaschine einschalten (braucht 30 Minuten)",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "4ac9460c-513d-4914-9983-9ab0567342f6",
+          "text": "Lichterketten anschalten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "b71f9f1e-2263-4219-8486-c334f6b8bd9b",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "5e9e8aa8-8f8e-402f-b1d8-4800f9c49935",
+          "text": "Pflanzen draußen Giesen wenn kein regen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "60a14391-9286-493b-b498-ced4243b421a",
+          "text": "Karten abwischen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "df7e55fd-2e9b-43af-8d40-9a38a5b2b317",
+          "text": "Tische sauber halten",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "b1fb7a14-0083-4dd1-8a7b-7b0345add0dc",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "normal",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "3c61806a-7067-48ed-8d6e-f92b61807058",
+          "text": "Tische wischen nach Service",
+          "done": false,
+          "doneBy": null,
+          "doneAt": null,
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+          "priority": "hoch",
+          "schicht": "frueh",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "b5ec523b-780e-43eb-9e1e-64d15c26d09b",
+          "text": "Kerzen anmachen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.027Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "d892797c-145f-4069-ba7d-a0ac190e84e7",
+          "text": "Licht außen anmachen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.032Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "f9d3e747-a49c-4d8e-9c62-d0774b4f3b6c",
+          "text": "Baum Strahler anmachen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.038Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "6376b584-fb00-4da9-ae6f-cdb12ecd1c60",
+          "text": "Terrasse fegen vor dem Aufstellen der Tische",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.043Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "a0ecd514-8725-44f9-bc3b-f129db1189f5",
+          "text": "Reservierungen zuordnen für den Tag",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.049Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "",
+          "time": ""
+        },
+        {
+          "id": "e3b079a1-94d2-4ab3-bfc2-b0cbb2e12bdf",
+          "text": "Besteck wickeln (nur poliertes!)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.055Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "f1e2cdb9-118b-46c3-bc87-b0481d070d7f",
+          "text": "Tische und Karten wischen (check)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.060Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "cbfcfda5-3f94-4ac7-9689-a4db2f4951bc",
+          "text": "Wasserspender auffüllen (halbe Zitrone und Minze) und Gläser",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.066Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "9e00e636-054c-4e27-b4df-bfd2227751f6",
+          "text": "Besteck polieren und mind. 20 rollen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.071Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "7a6de371-695e-4807-880c-02c47ffa4e4f",
+          "text": "Karten abwischen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.077Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "43b5431c-a83c-4446-a81f-082e30a52f82",
+          "text": "Tische sauber halten",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.082Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "ef812203-a3bc-4af6-89a5-5807690bb248",
+          "text": "Terrasse checken und ggfs. fegen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.088Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "f7262c05-9ad9-424b-b567-11118001c4db",
+          "text": "Tische wischen nach Service",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.095Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "69f42dca-69d7-4133-a00f-27eaa6284b63",
+          "text": "Toiletten check vor Schichtende (Auffüllen, Müll leeren, Wischen)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.100Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "460659ec-657c-4140-a6d7-72cc4d32ebe8",
+          "text": "Strahler und Akku Lampen laden am Schichtende",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.106Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "022c773e-fc7d-46dd-8df1-459477358cb5",
+          "text": "Spülmaschine abpumpen, auswischen, Sieb reinigen und aufmachen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.111Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "9f9f1b17-3094-4235-9609-ac47f1fce6b1",
+          "text": "Pfand einsortieren im Keller",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.125Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "5cf16b98-305b-47f9-97d6-87ea0dc20cc0",
+          "text": "Aschenbecher spülen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.142Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "46519307-7097-44c3-aba5-813ef68f9f05",
+          "text": "Kűhlschränke und Bar auffüllen",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.152Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "normal",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        },
+        {
+          "id": "31e7dbc6-bf30-4a73-9221-bb4f9429d3c9",
+          "text": "Müll rausbringen (Restmüll, gelbe Tonne, Altpapier)",
+          "done": true,
+          "doneBy": "Telegram",
+          "doneAt": "2026-11-18T15:15:28.159Z",
+          "source": "remote",
+          "addedBy": "Telegram",
+          "assignedTo": "e85d1e90-3966-4a43-a1ef-5f131115fb90",
+          "priority": "hoch",
+          "schicht": "spaet",
+          "bereich": "service",
+          "time": ""
+        }
+      ],
       "kassenabschluss": {
         "umsatzGesamt": 0,
         "umsatzBar": 0,
@@ -36891,13 +37361,13 @@
           "submittedAt": "2026-11-09T14:00:02.687Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "ea432f04-9412-4c08-b65b-1a6fa72ccede",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.760Z"
         }
@@ -36937,14 +37407,6 @@
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-32a964f0-426d-449b-b1c9-85417d6253c2",
-          "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
-          "from": "12:00",
-          "to": "18:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-b600ef3c-06fe-45ec-8249-c680be3560c5",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "from": "08:00",
@@ -36961,25 +37423,33 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-1514764c-eebb-4d0d-aabf-0f48165fc860",
-          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "from": "11:00",
-          "to": "18:30",
+          "id": "avail-2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
+          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "from": "09:00",
+          "to": "14:00",
           "note": "",
           "bossConfirmed": true
         },
         {
-          "id": "avail-2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
-          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "id": "avail-c2ee93bf-0a8f-4c21-a354-e2fdf1627857",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
           "from": "08:30",
           "to": "16:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-7233f645-c81a-4303-aedb-222bfc8bf74b",
+          "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+          "from": "11:00",
+          "to": "18:30",
           "note": "",
           "bossConfirmed": true
         }
       ],
       "availability": [
         {
-          "confirmedSlotId": null,
+          "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "id": "7233f645-c81a-4303-aedb-222bfc8bf74b",
           "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
@@ -37001,13 +37471,11 @@
           "submittedAt": "2026-10-25T07:41:19.480Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "id": "32a964f0-426d-449b-b1c9-85417d6253c2",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
-          "slotIds": [
-            "spaet1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-05T15:41:35.771Z"
         },
@@ -37034,26 +37502,35 @@
           "submittedAt": "2026-11-09T13:59:17.105Z"
         },
         {
-          "confirmedSlotId": "spaet1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "1514764c-eebb-4d0d-aabf-0f48165fc860",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "slotIds": [
-            "spaet1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-11T18:34:26.451Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "2aeec0e1-aabb-43a5-b771-a5f4dba3fc15",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
+            "mittel1"
+          ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-15T07:27:44.725Z"
+        },
+        {
+          "id": "c2ee93bf-0a8f-4c21-a354-e2fdf1627857",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+          "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-15T07:27:44.737Z"
+          "submittedAt": "2026-11-15T12:39:42.266Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -37140,15 +37617,15 @@
           "submittedAt": "2026-10-19T05:59:26.096Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "e9509f62-7171-454d-b96d-216506c1844b",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.705Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -37199,6 +37676,14 @@
           "to": "15:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-450c34bc-f3c8-4561-a87f-a27c7577dd11",
+          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "from": "11:00",
+          "to": "18:30",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -37243,11 +37728,13 @@
           "submittedAt": "2026-11-11T18:34:26.469Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": false,
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "id": "450c34bc-f3c8-4561-a87f-a27c7577dd11",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "slotIds": [],
+          "slotIds": [
+            "spaet1"
+          ],
           "note": "",
           "submittedAt": "2026-11-11T18:34:26.482Z"
         },
@@ -37344,15 +37831,15 @@
           "submittedAt": "2026-10-22T06:02:27.141Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "9be0d534-7993-4df4-843a-1a2a8c255b5c",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.705Z"
+          "submittedAt": "2026-11-15T07:27:44.725Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -37529,6 +38016,14 @@
           "to": "17:00",
           "note": "",
           "bossConfirmed": true
+        },
+        {
+          "id": "avail-bfadfdf6-4d20-4b9d-833b-896d378896d5",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+          "from": "09:00",
+          "to": "14:00",
+          "note": "",
+          "bossConfirmed": true
         }
       ],
       "availability": [
@@ -37597,6 +38092,17 @@
           ],
           "note": "",
           "submittedAt": "2026-11-09T13:59:17.105Z"
+        },
+        {
+          "id": "bfadfdf6-4d20-4b9d-833b-896d378896d5",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+          "slotIds": [
+            "mittel1"
+          ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
+          "note": "",
+          "submittedAt": "2026-11-15T12:40:00.441Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -38082,13 +38588,11 @@
           "submittedAt": "2026-11-09T14:00:02.688Z"
         },
         {
-          "confirmedSlotId": null,
-          "bossConfirmed": true,
           "id": "904aa0cf-ca82-430f-815d-c14adbbd9b2d",
           "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
-          "slotIds": [
-            "spaet1"
-          ],
+          "slotIds": [],
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.838Z"
         },
@@ -38289,13 +38793,13 @@
           "submittedAt": "2026-11-09T14:00:02.688Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "d3902d0b-bafb-475a-9b38-c562a5d50661",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.827Z"
         }
@@ -38726,15 +39230,15 @@
           "submittedAt": "2026-11-02T07:00:14.729Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "1dfd2cc9-c5c8-46fa-b3cb-7c976c08b6a3",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.706Z"
+          "submittedAt": "2026-11-15T07:27:44.827Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -38819,15 +39323,15 @@
           "submittedAt": "2026-11-05T07:01:25.187Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "4b2c045e-4893-4b10-b9a2-4fbd45780ad2",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-09T14:02:26.706Z"
+          "submittedAt": "2026-11-15T07:27:44.827Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -39459,15 +39963,15 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "6497454f-5289-4443-a4ee-9d78f04ba620",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -39561,15 +40065,15 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "b81170f9-1584-493c-b066-960df156ad85",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -39583,15 +40087,15 @@
           "submittedAt": "2026-11-14T07:23:16.425Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "acb54cca-1cee-4065-8868-4cda1fb6d407",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "frueh1",
@@ -39683,26 +40187,26 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "36afc7d7-3ed7-42b0-845a-b4bc6ebf4f8c",
           "employeeId": "b22e3ff2-5d27-4c9b-8187-acc3366cbe14",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
-          "confirmedSlotId": "spaet1",
-          "bossConfirmed": true,
           "id": "27654a91-5db7-427e-8f31-cf72f7737ed3",
           "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
           "slotIds": [
             "spaet1"
           ],
+          "confirmedSlotId": "spaet1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "confirmedSlotId": "spaet1",
@@ -39716,26 +40220,26 @@
           "submittedAt": "2026-11-14T07:23:16.425Z"
         },
         {
-          "confirmedSlotId": "mittel1",
-          "bossConfirmed": true,
           "id": "d0561a0d-1a0d-4492-84d0-8b80a6fd07a4",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "slotIds": [
             "mittel1"
           ],
+          "confirmedSlotId": "mittel1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
-          "confirmedSlotId": "frueh1",
-          "bossConfirmed": true,
           "id": "1a446a49-b799-4919-89fe-040405210be7",
           "employeeId": "cba6d0c2-89fa-4e26-bfff-5f67a8d3a608",
           "slotIds": [
             "frueh1"
           ],
+          "confirmedSlotId": "frueh1",
+          "bossConfirmed": true,
           "note": "",
-          "submittedAt": "2026-11-14T07:23:16.425Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -39833,8 +40337,7 @@
           "confirmedSlotId": "mittel1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "dfbc9480-17a8-47df-a72d-75c2dbef365b",
@@ -39845,8 +40348,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "6623c792-a7ce-4a4d-bc53-414b68e3eb27",
@@ -39857,8 +40359,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "57f985bc-c071-4088-8a2f-97b1dc3189e6",
@@ -39869,8 +40370,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "44e9c160-b984-4f11-ae61-eb04bb886525",
@@ -39881,8 +40381,7 @@
           "confirmedSlotId": "mittel1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         },
         {
           "id": "891e100b-42c6-4e61-abde-bff8ef5919cb",
@@ -39893,8 +40392,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.863Z"
+          "submittedAt": "2026-11-15T07:27:45.803Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -39968,8 +40466,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.867Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "81212eeb-d190-4dd7-ac2a-f823faa57e42",
@@ -39980,8 +40477,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.867Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "7fb120a5-ce10-447a-b6f2-38acb2a8f37a",
@@ -39992,8 +40488,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.867Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -40064,8 +40559,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.870Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "b41d2144-5037-40ad-8130-54217b0c83ec",
@@ -40076,8 +40570,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.870Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "41d0ba07-9a48-42eb-a56e-4d8219158858",
@@ -40088,8 +40581,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.870Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -40160,8 +40652,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.874Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "b381e155-1517-4de7-b631-0f4514b1db2b",
@@ -40172,8 +40663,7 @@
           "confirmedSlotId": "spaet1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.874Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         },
         {
           "id": "09089cf1-5505-4685-912d-f46fc157c68f",
@@ -40184,8 +40674,7 @@
           "confirmedSlotId": "frueh1",
           "bossConfirmed": true,
           "note": "",
-          "quelle": "fest",
-          "submittedAt": "2026-11-18T15:15:26.874Z"
+          "submittedAt": "2026-11-18T07:02:48.016Z"
         }
       ],
       "appliedShiftTemplateIds": [],
@@ -43016,6 +43505,104 @@
       "text": "❌ Deine Schicht am Donnerstag, 03.12.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-15T07:27:45.084Z",
       "readAt": null
+    },
+    {
+      "id": "5a071ecd-6c15-4d85-98d1-892b62fa1272",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "✅ Deine Schicht am Samstag, 21.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.687Z",
+      "readAt": null
+    },
+    {
+      "id": "8c0097bf-5553-49bc-b8a9-7594e422297c",
+      "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+      "text": "✅ Deine Schicht am Samstag, 21.11.2026 (Schicht 1, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.694Z",
+      "readAt": null
+    },
+    {
+      "id": "8aa61f43-253a-4b46-9cbd-90fe8e5fbd9e",
+      "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+      "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Schicht 1, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.700Z",
+      "readAt": null
+    },
+    {
+      "id": "3562b980-f2bb-44f6-bd32-0c98d6dc7e92",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "✅ Deine Schicht am Mittwoch, 25.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.707Z",
+      "readAt": null
+    },
+    {
+      "id": "43126c89-00e4-4f34-8e52-3eaa7f897246",
+      "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+      "text": "✅ Deine Schicht am Samstag, 28.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.713Z",
+      "readAt": null
+    },
+    {
+      "id": "96851c8c-17a9-4333-96b5-094203644a17",
+      "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+      "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.719Z",
+      "readAt": null
+    },
+    {
+      "id": "0afc96c3-0bf2-4d00-b1f1-7b927fa5a72b",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "text": "✅ Deine Schicht am Samstag, 21.11.2026 (Schicht 2, 11:00–18:30 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.725Z",
+      "readAt": null
+    },
+    {
+      "id": "60392810-6176-4491-bbd8-7b8076cd6ca4",
+      "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
+      "text": "✅ Deine Schicht am Donnerstag, 19.11.2026 (Schicht 1, 08:30–16:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-18T15:15:27.731Z",
+      "readAt": null
+    },
+    {
+      "id": "abe6bc58-f3dd-45fa-917b-172b6951e300",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "❌ Deine Schicht am Samstag, 21.11.2026 (Schicht 1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.739Z",
+      "readAt": null
+    },
+    {
+      "id": "e3a264f3-c29a-4fc4-bfb9-8eb4e11782c7",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Schicht 1) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.745Z",
+      "readAt": null
+    },
+    {
+      "id": "552b44d9-1821-4934-994f-c29e006a3df4",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Springer) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.751Z",
+      "readAt": null
+    },
+    {
+      "id": "626ed83d-d9d7-40fd-aab3-3621dbf2e4d9",
+      "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+      "text": "❌ Deine Schicht am Samstag, 21.11.2026 (Schicht 2) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.757Z",
+      "readAt": null
+    },
+    {
+      "id": "6fa8b4c7-805d-4cb2-9962-ca1dc8b02f71",
+      "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+      "text": "❌ Deine Schicht am Samstag, 21.11.2026 (Küche Spät) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.762Z",
+      "readAt": null
+    },
+    {
+      "id": "6878846d-7662-45d9-a6de-82408d938970",
+      "employeeId": "57e0fde8-c312-4cc9-a755-d35c4c742ed1",
+      "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Küche Spät) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-18T15:15:27.769Z",
+      "readAt": null
     }
   ],
   "stock": [
@@ -45461,6 +46048,30 @@
       "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
       "date": "2026-12-23",
       "reportedAt": "2026-11-10T07:02:58.255Z"
+    },
+    {
+      "id": "94b66b70-8ebd-4591-9a0a-10475a33c967",
+      "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+      "date": "2026-12-07",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-18T15:15:27.775Z"
+    },
+    {
+      "id": "43a051d5-7572-4ef4-8ff9-ecad14e702c8",
+      "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+      "date": "2026-12-08",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-18T15:15:27.778Z"
+    },
+    {
+      "id": "c894ed7e-c412-49bb-90c7-d3595ed14e7b",
+      "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
+      "date": "2026-12-09",
+      "art": "urlaub",
+      "note": "",
+      "reportedAt": "2026-11-18T15:15:27.781Z"
     }
   ],
   "publishedWeeks": [
@@ -66027,6 +66638,300 @@
       "status": "offen",
       "source": "manuell",
       "createdAt": "2026-11-14T17:25:10.530Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d662e3e9-646a-4a82-b318-561fcdec54c1",
+      "code": "G5YRJ",
+      "date": "2026-11-16",
+      "time": "10:00",
+      "name": "Kett",
+      "phone": "015753106400",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.787Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "e6f6b5ce-504e-4d7c-a916-47a1a062830b",
+      "code": "HJ4FU",
+      "date": "2026-11-21",
+      "time": "10:00",
+      "name": "Jana Scheerer",
+      "phone": "01713226726",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.793Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "f6bef1c9-bb3a-4024-ae94-6729aa183f7f",
+      "code": "5E6TP",
+      "date": "2026-11-21",
+      "time": "10:00",
+      "name": "Rika",
+      "phone": "+491607083828",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.798Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "63829d0d-9544-4a53-9ff5-06fb671416a3",
+      "code": "AKCJ9",
+      "date": "2026-11-21",
+      "time": "09:30",
+      "name": "Agnes Jörger",
+      "phone": "+491716891298",
+      "guests": 4,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.803Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "aeff941f-70a8-494f-a264-8af03770644f",
+      "code": "DUJ6A",
+      "date": "2026-12-12",
+      "time": "14:00",
+      "name": "Rosanna Richter",
+      "phone": "+49 160 6876845",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.809Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "39d29ef0-e15e-4b86-8910-5f1e34f09474",
+      "code": "LGDM2",
+      "date": "2026-11-21",
+      "time": "11:00",
+      "name": "Andre Vieira da Costa",
+      "phone": "0176 24517573",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.814Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "9aa56f1e-eb9a-41c2-a98d-c4ddf90b1805",
+      "code": "42Q3X",
+      "date": "2026-11-18",
+      "time": "16:00",
+      "name": "Aleyna",
+      "phone": "+49 176 24555492",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.820Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4c888b69-f504-41a4-8398-08b1b1b1d1d2",
+      "code": "VXJY9",
+      "date": "2026-11-22",
+      "time": "10:30",
+      "name": "Teresa Föste",
+      "phone": "+4915738398399",
+      "guests": 4,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.825Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "4b301b7d-11ab-4a3c-99bd-4baec9e3ea6c",
+      "code": "ZEELQ",
+      "date": "2026-11-22",
+      "time": "10:00",
+      "name": "Tanja Ehnle",
+      "phone": "01795050355",
+      "guests": 4,
+      "area": "innen",
+      "note": "Freundinnen",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.831Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "83b5aee9-8af2-45c2-a745-4981a9d740ae",
+      "code": "HP63Y",
+      "date": "2026-11-23",
+      "time": "10:00",
+      "name": "Sven Augspurger",
+      "phone": "0173 8774198",
+      "guests": 6,
+      "area": "innen",
+      "note": "Geburtstag",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.836Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "ac0768d1-f9d8-4aec-b304-b50088880bf8",
+      "code": "HF6JY",
+      "date": "2026-11-21",
+      "time": "10:00",
+      "name": "Elea Drechsler",
+      "phone": "+4915776387689",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.842Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "d813b7c9-a0a0-42d2-807e-42d7d87a29a7",
+      "code": "Y8KXJ",
+      "date": "2026-11-22",
+      "time": "11:00",
+      "name": "Miriam Awad",
+      "phone": "+491738337962",
+      "guests": 4,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.847Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "5bee8abd-0697-4aa2-9511-9517a37af122",
+      "code": "J5ZK6",
+      "date": "2026-11-27",
+      "time": "16:00",
+      "name": "Anne",
+      "phone": "0176 80775741",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.853Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "a65e76be-09e6-4768-8b84-eb0a9d356d7d",
+      "code": "35MEK",
+      "date": "2026-11-21",
+      "time": "11:00",
+      "name": "Luna Bender",
+      "phone": "016093222049",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-18T15:15:27.859Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

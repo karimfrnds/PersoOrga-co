@@ -1302,7 +1302,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-20",
-      "lastBackupAt": "2026-11-20T11:00:36.002Z",
+      "lastBackupAt": "2026-11-20T15:06:15.278Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1310,7 +1310,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-20T13:26:24.546Z",
+      "lastSyncAt": "2026-11-20T16:41:12.682Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1395,12 +1395,12 @@
         },
         {
           "id": "d729cc7a-5f4c-4b89-b5a3-3106b0d4d37e",
-          "done": false,
+          "done": true,
           "sig": "Tische wischen nach Service|maria|2026-11-20||hoch"
         },
         {
           "id": "82e30733-82d7-4508-8afe-c0f0383c712f",
-          "done": false,
+          "done": true,
           "sig": "Reservierungen zuordnen für den Tag|carla|2026-11-20||hoch"
         },
         {
@@ -3843,7 +3843,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-20T13:26:24.546Z"
+    "zuletztGespeichert": "2026-11-20T16:41:12.683Z"
   },
   "days": [
     {
@@ -35816,20 +35816,20 @@
           "id": "1577f6a2-0874-493b-84fa-3f459fb4b1d8",
           "employeeId": "aab24ce1-ea5f-49d6-9c35-b97acbbc4298",
           "from": "08:30",
-          "to": null,
+          "to": "16:08",
           "note": "",
           "clockInAt": "2026-11-20T07:30:49.555Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-20T15:08:30.976Z"
         },
         {
           "source": "pin",
           "id": "d44caef4-5454-490d-a3a1-5cc89e540e02",
           "employeeId": "c75519c4-1eea-4de0-8b2a-45474d2c1faf",
           "from": "08:31",
-          "to": null,
+          "to": "16:09",
           "note": "",
           "clockInAt": "2026-11-20T07:31:10.820Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-20T15:09:44.860Z"
         },
         {
           "source": "pin",
@@ -36266,9 +36266,9 @@
           "phase": "ende",
           "id": "d729cc7a-5f4c-4b89-b5a3-3106b0d4d37e",
           "text": "Tische wischen nach Service",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "maria",
+          "doneAt": "2026-11-20T15:08:28.651Z",
           "source": "template",
           "templateId": "da31ad58-8e8f-4bf4-94b0-124669caacfd",
           "addedBy": null,
@@ -36283,9 +36283,9 @@
           "phase": "beginn",
           "id": "82e30733-82d7-4508-8afe-c0f0383c712f",
           "text": "Reservierungen zuordnen für den Tag",
-          "done": false,
-          "doneBy": null,
-          "doneAt": null,
+          "done": true,
+          "doneBy": "carla",
+          "doneAt": "2026-11-20T15:09:40.508Z",
           "source": "template",
           "templateId": "22d4c5cd-0531-4f5e-8bc1-1d4dfcbaca1b",
           "addedBy": null,
@@ -36703,6 +36703,16 @@
           "timestamp": "2026-11-20T11:02:31.244Z",
           "action": "eingestempelt",
           "detail": "benjamin um 12:02 Uhr"
+        },
+        {
+          "timestamp": "2026-11-20T15:08:30.976Z",
+          "action": "ausgestempelt",
+          "detail": "maria um 16:08 Uhr"
+        },
+        {
+          "timestamp": "2026-11-20T15:09:44.860Z",
+          "action": "ausgestempelt",
+          "detail": "carla um 16:09 Uhr"
         }
       ],
       "closedAt": null,

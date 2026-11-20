@@ -4,34 +4,32 @@
 // Leerlauf: einfaches PIN-Feld zum Einstempeln + darunter, wer gerade im
 // Dienst ist. Tippt man auf eine im Dienst stehende Person, muss deren PIN
 // noch einmal eingegeben werden – dann öffnet sich ihr eigenes Fenster
-// (Stunden/Trinkgeld-Übersicht + Aufgaben + Ausstempeln). Über "Zurück"
-// schließt sich dieses Fenster wieder, ohne auszustempeln, und man landet
-// wieder auf dem Leerlauf-Bildschirm.
+// (Stunden/Trinkgeld-Übersicht + Ausstempeln). Über "Zurück" schließt sich
+// dieses Fenster wieder, ohne auszustempeln.
 //
-// Ausstempeln geht erst, wenn die eigenen Aufgaben erledigt sind – abgehakt
-// oder weitergegeben. Das ist der einzige Moment am Tag, an dem sicher jemand
-// hinschaut. Es geht dabei nur um die Aufgaben DIESER Person: was bei anderen
-// liegt oder niemandem zugeordnet ist, hält hier niemanden fest, sondern wird
-// beim Namen genannt.
+// Der Kiosk macht bewusst NUR das Stempeln. Aufgabenlisten laufen im Laden
+// auf Papier, Schichten werden geplant statt hier gewählt, und gezählt wird
+// nicht mehr am Gerät. Alles davon gibt es weiterhin – im Chef-Bereich, am
+// Handy und über den Bot –, nur nicht mehr auf dem Bildschirm, an dem jemand
+// im Vorbeigehen seinen PIN eintippt.
+//
+// Entsprechend hält beim Ausstempeln nichts mehr auf: wer fertig ist, geht.
+// Eine nicht gestempelte Schicht fehlt in der Abrechnung, und das wäre
+// schlimmer als jeder offene Punkt.
 // ============================================================================
-import { store, AUFGABEN_PHASEN, PHASE_LABEL } from "../store.js";
-import { escapeHtml, todayStr, euro, hours, dateDe } from "../format.js";
+import { store } from "../store.js";
+import { escapeHtml, todayStr, euro, hours } from "../format.js";
 import { buildPinDots, buildPinKeypad } from "../pinpad.js";
-import { maybeSyncPendingTasks, sendNoteToBoss, pushAvailability, sendClockEvent, toggleManagerAufgabe } from "../taskSync.js";
-import { alertDialog, confirmDialog } from "../dialog.js";
-import { buildBestandKarten } from "./kueche.js";
+import { maybeSyncPendingTasks, sendNoteToBoss, sendClockEvent } from "../taskSync.js";
+import { alertDialog } from "../dialog.js";
 import { buildProduktionsKarten } from "./produktion.js";
 import { kann } from "../betrieb.js";
 import { computeRange } from "../calc.js";
 
 const TASK_SYNC_INTERVAL_MS = 90 * 1000;
 
-// Wie die Schicht-Abschnitte in der Aufgabenliste heissen. "Deine Schicht" waere zwar richtig, aber der
-// Name macht klarer, warum eine Aufgabe gerade bei einem selbst auftaucht.
-const SCHICHT_TITEL = { frueh: "Frühschicht", mittel: "Mittelschicht", spaet: "Spätschicht" };
 let activeSyncInterval = null; // es darf immer nur ein Leerlauf-Sync-Intervall gleichzeitig laufen
 
-const WEEKDAY_LABELS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
 function mondayOf(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -40,21 +38,6 @@ function mondayOf(dateStr) {
   const diff = day === 0 ? -6 : 1 - day;
   dt.setUTCDate(dt.getUTCDate() + diff);
   return dt.toISOString().slice(0, 10);
-}
-function addDaysISO(dateStr, n) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + n);
-  return dt.toISOString().slice(0, 10);
-}
-function dateDeShort(dateStr) {
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
-}
-function weekdayIndexOf(dateStr) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=So..6=Sa
-  return wd === 0 ? 6 : wd - 1; // Mo=0..So=6
 }
 
 function renderKiosk(navigate) {
@@ -69,10 +52,7 @@ function renderKiosk(navigate) {
   let pin = "";
   let error = "";
   let greetEmployee = null; // erkannt am Leerlauf-Pad, wartet auf "Schicht starten?"-Bestätigung
-  const wantsToEditWeek = new Set(); // "empId:weekStart", die nach "Chef anfragen" nochmal bearbeiten wollen
   // Welcher Aufgaben-Abschnitt aufgeklappt ist. undefined = automatisch (was gerade dran ist),
-  // null = alle zu, sonst "beginn" | "schicht" | "ende". Gilt nur, solange das Fenster offen ist.
-  let offenePhase = undefined;
 
   // Neue Telegram-Aufgaben abholen, Leerlauf-Bildschirm danach neu zeichnen (falls gerade sichtbar).
   // Vorheriges Intervall (von einem früheren Kiosk-Aufruf) beenden, damit sich nichts aufsummiert.
@@ -89,43 +69,6 @@ function renderKiosk(navigate) {
     if (view === "idle") rerender();
   }
 
-  // ---------------------------------------------------------------------
-  // Leerlauf-Bildschirm: PIN-Feld + wer im Dienst ist
-  // ---------------------------------------------------------------------
-  /** Was heute eine Uhrzeit hat, jetzt dran und noch offen ist. null, wenn es nichts gibt – dann soll
-   * dort auch kein leerer Kasten stehen. */
-  function buildFaelligBanner() {
-    const day = store.getDayByDate(todayStr());
-    if (!day) return null;
-    const offen = day.tasks
-      .filter((t) => !t.done && t.time && store.istFaellig(t))
-      .sort((a, b) => a.time.localeCompare(b.time));
-    if (offen.length === 0) return null;
-
-    const spaet = offen.some((t) => store.ueberfaelligSeit(t) >= 30);
-    const box = document.createElement("div");
-    box.className = "kiosk-faellig" + (spaet ? " kiosk-faellig-spaet" : "");
-    const kopf = document.createElement("div");
-    kopf.className = "kiosk-faellig-kopf";
-    kopf.textContent = offen.length === 1 ? "⏰ Jetzt dran" : `⏰ Jetzt dran (${offen.length})`;
-    box.appendChild(kopf);
-    for (const t of offen.slice(0, 4)) {
-      const zeile = document.createElement("div");
-      zeile.className = "kiosk-faellig-zeile";
-      const minuten = store.ueberfaelligSeit(t);
-      zeile.innerHTML =
-        `<b>${escapeHtml(t.text)}</b>` +
-        `<span>${escapeHtml(t.time)} Uhr${minuten >= 30 ? ` · seit ${minuten >= 60 ? Math.floor(minuten / 60) + " Std " : ""}${minuten % 60} Min offen` : ""}</span>`;
-      box.appendChild(zeile);
-    }
-    if (offen.length > 4) {
-      const rest = document.createElement("div");
-      rest.className = "kiosk-faellig-zeile";
-      rest.innerHTML = `<span>und ${offen.length - 4} weitere</span>`;
-      box.appendChild(rest);
-    }
-    return box;
-  }
 
   function buildIdle() {
     if (greetEmployee) return buildGreet();
@@ -142,12 +85,6 @@ function renderKiosk(navigate) {
         <h1>PIN eingeben zum Ein-/Ausstempeln</h1>
       </div>
     `;
-
-    // Der Leerlauf-Bildschirm ist der einzige, den den ganzen Tag jeder sieht. Deshalb steht hier, was
-    // gerade dran ist – ganz oben, ohne dass sich jemand einloggen muss. Das ist der billigste Weg,
-    // Teelichter, Pflanzen und die Lieferung nicht zu vergessen.
-    const banner = buildFaelligBanner();
-    if (banner) wrap.appendChild(banner);
 
     wrap.appendChild(buildPinDots(pin));
 
@@ -272,7 +209,6 @@ function renderKiosk(navigate) {
   function openPersonal(emp) {
     personalEmployee = emp;
     view = "personal";
-    offenePhase = undefined; // beim Öffnen wieder der Abschnitt, der gerade dran ist
     rerender();
     showUnreadNotifications(emp); // absichtlich nicht awaited, läuft als Pop-up-Kette über der Ansicht
   }
@@ -402,164 +338,28 @@ function renderKiosk(navigate) {
     `;
     wrap.appendChild(overviewCard);
 
-    // ---- Aufgaben ----
+    // ---- Aufgaben: hier bewusst keine ----
     //
-    // Drei Abschnitte statt einer langen Liste: Schichtbeginn, Waehrend der Schicht, Schichtende. Immer
-    // nur einer ist aufgeklappt – man macht seinen Beginn, klappt zu, und hat waehrend des Tages nicht
-    // die Abschluss-Liste im Blick, die einen noch nichts angeht.
-    //
-    // Was eine Uhrzeit hat und JETZT dran ist, klappt den zugehoerigen Abschnitt von selbst auf. Sonst
-    // steht die Erinnerung in einem Abschnitt, den gerade niemand offen hat.
-    const meineGruppe = store.getSchichtGruppeFuer(emp.id);
-    const passt = (t) => store.aufgabeGehoertZu(t, { schichtGruppe: meineGruppe, rolle: emp.role });
-
-    const mine = day.tasks.filter((t) => t.assignedTo === emp.id);
-    const offeneFremde = day.tasks.filter((t) => t.assignedTo && t.assignedTo !== emp.id && !t.done);
-    const allgemein = day.tasks.filter((t) => !t.assignedTo && passt(t));
-    const andereSchichten = day.tasks.filter((t) => !t.assignedTo && !passt(t));
-
-    const meineAlle = [...mine, ...allgemein];
-    // Bei der Store-Managerin stehen die Standard-Aufgaben für sich – ausgewiesen und bearbeitbar. Was ihr
-    // sonst zugeteilt wurde, steht darunter getrennt, damit es nicht als "Standard" durchgeht.
-    const istStore = !!emp.istStoreManagerin;
-    const anzeige = istStore ? meineAlle.filter((t) => t.source === "template") : meineAlle;
-    const zugeteilt = istStore ? meineAlle.filter((t) => t.source !== "template") : [];
-    const nachPhase = store.aufgabenNachPhase(anzeige);
-    const offenJe = (ph) => nachPhase[ph].filter((t) => !t.done);
-    const faellig = meineAlle.filter((t) => !t.done && t.time && store.istFaellig(t));
-
-    // Welcher Abschnitt steht offen?
-    //   Solange beim Schichtbeginn noch etwas offen ist, der – man ist gerade angekommen. Eine Aufgabe
-    //   mit Uhrzeit, die vor dem Einstempeln lag, waere sonst sofort "ueberfaellig" und wuerde die
-    //   Ankunfts-Liste wegdraengen.
-    //   Danach das, was jetzt dran ist, sonst der erste Abschnitt mit offenen Punkten.
-    // Eine eigene Wahl der Person schlaegt alles – bis sie das Fenster verlaesst.
-    const faelligPhase = faellig.length > 0 ? (AUFGABEN_PHASEN.includes(faellig[0].phase) ? faellig[0].phase : "schicht") : null;
-    const autoPhase =
-      (offenJe("beginn").length > 0 ? "beginn" : null) || faelligPhase || AUFGABEN_PHASEN.find((ph) => offenJe(ph).length > 0) || null;
-    const aktivePhase = offenePhase === undefined ? autoPhase : offenePhase;
-
-    const tasksCard = document.createElement("section");
-    tasksCard.className = "card";
-    const erledigt = meineAlle.filter((t) => t.done).length;
-    tasksCard.innerHTML = istStore
-      ? `<h2>📋 Standard-Aufgaben</h2>
-      <p class="muted small">Was jede Schicht bekommt – ${escapeHtml(SCHICHT_TITEL[meineGruppe] || "heute")}. Mit ✏️ änderst du die
-      Vorlage: gilt ab dem nächsten Einstempeln für alle.</p>`
-      : `<h2>📋 Deine Aufgaben</h2>
-      <p class="muted small">${escapeHtml(SCHICHT_TITEL[meineGruppe] || "Heute")}${
-        meineAlle.length > 0 ? ` · ${erledigt} von ${meineAlle.length} erledigt` : ""
-      }</p>`;
-
-    if (meineAlle.length === 0 && andereSchichten.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted small";
-      empty.textContent = "Keine Aufgaben für dich heute.";
-      tasksCard.appendChild(empty);
-    } else {
-      if (faellig.length > 0) {
-        // Anklickbar, weil der faellige Punkt in einem zugeklappten Abschnitt stecken kann – dann fuehrt
-        // der Hinweis direkt dorthin, statt nur zu behaupten, dass etwas ansteht.
-        const spaet = faellig.some((t) => store.ueberfaelligSeit(t) >= 30);
-        const hinweis = document.createElement("button");
-        hinweis.type = "button";
-        hinweis.className = "callout kiosk-faellig-hinweis" + (spaet ? " callout-warn" : "");
-        hinweis.textContent =
-          faellig.length === 1
-            ? `⏰ „${faellig[0].text}“ ist jetzt dran (${faellig[0].time} Uhr)`
-            : `⏰ ${faellig.length} Aufgaben sind jetzt dran`;
-        hinweis.onclick = () => {
-          offenePhase = faelligPhase;
-          rerender();
-        };
-        tasksCard.appendChild(hinweis);
-      }
-
-      const gruppen = document.createElement("div");
-      gruppen.className = "group-list";
-      for (const ph of AUFGABEN_PHASEN) {
-        const liste = nachPhase[ph];
-        if (liste.length === 0) continue;
-        const offen = offenJe(ph).length;
-        const istOffen = aktivePhase === ph;
-
-        const wrapGruppe = document.createElement("div");
-        const kopf = document.createElement("button");
-        kopf.type = "button";
-        kopf.className = "group-header" + (istOffen ? " open" : "");
-        kopf.innerHTML = `
-          <span class="group-header-chevron">▶</span>
-          <span class="group-header-name">${escapeHtml(PHASE_LABEL[ph])}</span>
-          <span class="group-header-meta">${offen === 0 ? "✓ alles erledigt" : `${offen} von ${liste.length} offen`}</span>
-        `;
-        kopf.onclick = () => {
-          offenePhase = istOffen ? null : ph;
-          rerender();
-        };
-        wrapGruppe.appendChild(kopf);
-        if (istOffen) {
-          const body = document.createElement("div");
-          body.className = "group-body";
-          body.appendChild(buildTaskList(day, liste, emp, true, istStore));
-          wrapGruppe.appendChild(body);
-        }
-        gruppen.appendChild(wrapGruppe);
-      }
-      tasksCard.appendChild(gruppen);
-
-      if (zugeteilt.length > 0) {
-        const kopf = document.createElement("p");
-        kopf.className = "muted small res-bereich";
-        kopf.innerHTML = "<b>Dir heute zugeteilt</b>";
-        tasksCard.appendChild(kopf);
-        tasksCard.appendChild(buildTaskList(day, zugeteilt, emp, true));
-      }
-
-      if (andereSchichten.length > 0) {
-        const rest = document.createElement("p");
-        rest.className = "muted small";
-        rest.textContent = `${andereSchichten.filter((t) => !t.done).length} Aufgaben gehören zu anderen Schichten.`;
-        tasksCard.appendChild(rest);
-      }
-      if (offeneFremde.length > 0) {
-        const rest = document.createElement("p");
-        rest.className = "muted small";
-        rest.textContent = `${offeneFremde.length} weitere Aufgaben sind anderen zugeordnet.`;
-        tasksCard.appendChild(rest);
-      }
-    }
-    // Ihre eigenen Aufgaben aus der Store-App (und was der Chef ihr dort gibt) stehen darüber, als eigene Karte.
-    if (istStore) wrap.appendChild(buildManagerAufgabenKarte());
-    wrap.appendChild(tasksCard);
+    // Die Aufgabenlisten laufen im Laden wieder auf Papier. Am Kiosk steht deshalb nur noch, was
+    // der Kiosk wirklich leisten muss: einstempeln, die eigenen Stunden sehen, ausstempeln.
+    // Der Chef-Bereich und die Vorlagen bleiben unveraendert – dort wird weiter gepflegt, was
+    // ueber den Bot und den Laptop laeuft.
 
     // ---- Produktion (nur Küche) ----
-    // Steht über dem Bestand: "was soll ich machen" ist in der Produktionsküche die erste Frage nach
-    // dem Einstempeln, noch vor "was ist da".
+    // Bleibt bewusst stehen: das ist keine Aufgabenliste, sondern das Nachhalten, was hergestellt
+    // wurde – in welchem Behälter, wie viel, von wem. Darauf laufen die Bestellvorschläge.
     if (kann("produktion") && emp.role === "kueche") {
       for (const karte of buildProduktionsKarten(emp, { onChange: rerender })) wrap.appendChild(karte);
     }
 
-    // ---- Bestand (Küche: mit Hinweisen und Rezepten; Bar und Service: der Bar-Bestand) ----
-    // Direkt hier statt auf einer eigenen Seite: das ist die erste Frage nach dem Einstempeln.
-    for (const karte of buildBestandKarten(emp, { onChange: rerender })) wrap.appendChild(karte);
-
-    // ---- Deine Schichten (Wochenplan) ----
-    wrap.appendChild(buildShiftsCard(emp));
-
-    const inboxCfg = store.getTaskInboxConfig();
-    const inboxUsable = inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret;
-
-    // ---- Verfügbarkeit für nächste Woche (nur wenn Telegram-Abgleich eingerichtet, sonst käme sie nirgends an) ----
-    if (inboxUsable) {
-      const weekStart = addDaysISO(mondayOf(todayStr()), 7);
-      const editKey = emp.id + ":" + weekStart;
-      const alreadySubmitted = weekHasSubmission(emp, weekStart);
-      wrap.appendChild(
-        alreadySubmitted && !wantsToEditWeek.has(editKey) ? buildAvailabilitySummaryCollapsed(emp, weekStart) : buildAvailabilityCard(emp)
-      );
-    }
+    // Bestand, Wochenplan und Verfuegbarkeit stehen hier bewusst NICHT mehr:
+    // Das Einstempeln soll Einstempeln sein. Gezaehlt wird nicht mehr am Kiosk, die Schichten
+    // werden geplant und nicht hier gewaehlt, und die Aufgaben laufen auf Papier.
 
     // ---- Notiz an den Chef ----
+    // Nur, wenn der Telegram-Abgleich eingerichtet ist – sonst käme die Notiz nirgends an.
+    const inboxCfg = store.getTaskInboxConfig();
+    const inboxUsable = inboxCfg.enabled && inboxCfg.workerUrl && inboxCfg.workerSecret;
     if (inboxUsable) {
       const noteCard = document.createElement("section");
       noteCard.className = "card";
@@ -597,686 +397,42 @@ function renderKiosk(navigate) {
 
     // ---- Ausstempeln ----
     //
-    // Wer Schluss machen will, muss seine eigenen Aufgaben erledigt haben: abgehakt oder weitergegeben.
-    // Beim Ausstempeln schaut sicher jemand hin – später nicht mehr.
-    //
-    // Es geht dabei ausschliesslich um die Aufgaben dieser Person. Was noch bei anderen liegt oder
-    // niemandem zugeordnet ist, hält hier niemanden fest: sonst hängt das Schichtende der Frühschicht
-    // daran, dass die Spätschicht ihre Liste nicht macht – und wer dann trotzdem gehen muss, stempelt gar
-    // nicht aus. Dann fehlt die Zeit in der Abrechnung, und das ist schlimmer als ein offener Punkt.
-    const offeneEigene = mine.filter((t) => !t.done);
-    const eigeneNachPhase = store.aufgabenNachPhase(offeneEigene);
-    const eigeneAbschnitte = AUFGABEN_PHASEN.map((ph) => ({ ph, offen: eigeneNachPhase[ph].length })).filter((x) => x.offen > 0);
-    // Der Knopf darf nur dorthin führen, wo die Aufgabe wirklich in einem Abschnitt steht.
-    const sprungPhase = eigeneAbschnitte.find((x) => eigeneNachPhase[x.ph].some((t) => anzeige.includes(t)))?.ph || null;
-    // Was niemandem zugeordnet ist, wird nur genannt.
-    const offeneOhneNamen = allgemein.filter((t) => !t.done).length;
+    // Frueher hing das Schichtende daran, dass die eigenen Aufgaben abgehakt waren. Die Aufgaben
+    // gibt es hier nicht mehr, also haelt auch nichts mehr auf: wer fertig ist, stempelt aus.
+    // Das muss ohne Huerde gehen – eine nicht gestempelte Schicht fehlt in der Abrechnung, und das
+    // ist schlimmer als jeder offene Punkt.
     const otherOpenShifts = store.getOpenShiftsToday().filter((s) => s.id !== shift.id);
     const wouldBeLast = otherOpenShifts.length === 0;
 
     const endBtn = document.createElement("button");
     endBtn.className = "btn btn-primary btn-huge";
     endBtn.textContent = "🚪 Schicht beenden";
-
-    if (offeneEigene.length > 0) {
-      const hint = document.createElement("div");
-      hint.className = "callout callout-warn kiosk-ende-hinweis";
-      hint.innerHTML =
-        `<b>Noch ${offeneEigene.length} ${offeneEigene.length === 1 ? "eigene Aufgabe" : "eigene Aufgaben"} offen.</b><br>` +
-        eigeneAbschnitte.map((x) => `${escapeHtml(PHASE_LABEL[x.ph])}: ${x.offen}`).join(" · ") +
-        `<span class="kiosk-ende-erklaerung small">Abhaken – oder mit „↪ Weitergeben“ an jemand anderen oder auf morgen schieben.
-        Danach kannst du Schluss machen.</span>`;
-      if (sprungPhase) {
-        const hin = document.createElement("button");
-        hin.type = "button";
-        hin.className = "btn btn-secondary";
-        hin.textContent = "Zu den offenen Aufgaben";
-        hin.onclick = () => {
-          offenePhase = sprungPhase;
-          rerender();
-        };
-        hint.appendChild(hin);
-      }
-      wrap.appendChild(hint);
-      endBtn.disabled = true;
-    }
-
-    endBtn.onclick = async () => {
-      // Sicherheitsnetz: zwischen Zeichnen und Tippen kann jemand etwas zugeteilt oder wieder aufgemacht haben.
-      const jetztOffen = (store.getDay(day.id)?.tasks || []).filter((t) => t.assignedTo === emp.id && !t.done).length;
-      if (jetztOffen > 0) {
-        await alertDialog("Es sind noch eigene Aufgaben offen. Bitte abhaken oder weitergeben – dann geht das Ausstempeln.", {
-          title: "Noch nicht fertig",
-        });
-        rerender();
-        return;
-      }
-      if (offeneOhneNamen > 0) {
-        const weiter = await confirmDialog(
-          `Deine Aufgaben sind erledigt. Im Laden ${
-            offeneOhneNamen === 1 ? "ist noch eine Aufgabe" : `sind noch ${offeneOhneNamen} Aufgaben`
-          } offen, die niemandem fest zugeordnet ${offeneOhneNamen === 1 ? "ist" : "sind"}.<br><br>` +
-            "Du kannst Schluss machen – der Chef sieht das Offene im Tagesabschluss.",
-          { title: "Im Laden noch offen", okLabel: "Schicht beenden", cancelLabel: "Nochmal ansehen" }
-        );
-        if (!weiter) {
-          rerender();
-          return;
-        }
-      }
-      endShift(day, emp, shift, wouldBeLast);
-    };
+    endBtn.onclick = () => endShift(day, emp, shift, wouldBeLast);
     wrap.appendChild(endBtn);
 
     return wrap;
   }
 
 
-  // ---------------------------------------------------------------------
-  // Deine Schichten: geplante Schichten (aus CSV-Upload oder vom Bot per
-  // Wochenplan-Nachricht eingetragen) für die kommenden Tage – reine Anzeige.
-  // ---------------------------------------------------------------------
-  function buildShiftsCard(emp) {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `<h2>📅 Deine Schichten</h2>`;
-    // Nur die naechsten acht: mit festen Schichten stuenden hier sonst vier Wochen derselben drei Tage,
-    // und die Karte schoebe alles andere aus dem Bild.
-    const alleKommenden = store.getPlannedShiftsFrom(emp.id, todayStr());
-    const upcoming = alleKommenden.slice(0, 8);
-    if (upcoming.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted small";
-      empty.textContent = "Für die kommenden Tage sind noch keine Schichten für dich eingetragen.";
-      card.appendChild(empty);
-    } else {
-      const list = document.createElement("div");
-      list.className = "task-list";
-      for (const s of upcoming) {
-        const row = document.createElement("div");
-        row.className = "summary-line";
-        const label = s.date === todayStr() ? "Heute" : `${WEEKDAY_LABELS[weekdayIndexOf(s.date)]}, ${dateDeShort(s.date)}`;
-        const statusTag = s.bossConfirmed === true ? " ✅ bestätigt" : s.bossConfirmed === false ? " ⏳ wartet auf Bestätigung" : "";
-        row.innerHTML = `<span>${escapeHtml(label)}</span><span>${escapeHtml(s.from)}–${escapeHtml(s.to)} Uhr${statusTag}</span>`;
-        list.appendChild(row);
-        // Info des Chefs zur Schicht (z.B. "bitte Lieferung annehmen") – eigene Zeile darunter.
-        if (s.note) {
-          const noteRow = document.createElement("div");
-          noteRow.className = "muted small";
-          noteRow.style.margin = "-4px 0 4px";
-          noteRow.textContent = `📝 ${s.note}`;
-          list.appendChild(noteRow);
-        }
-      }
-      card.appendChild(list);
-      if (alleKommenden.length > upcoming.length) {
-        const rest = document.createElement("p");
-        rest.className = "muted small";
-        rest.textContent = `… und ${alleKommenden.length - upcoming.length} weitere danach.`;
-        card.appendChild(rest);
-      }
-    }
-    return card;
-  }
 
-  /** true, wenn für diese Zielwoche schon mindestens ein Tag "abgeschickt" wurde.
-   *
-   * Automatisch gesetzte feste Schichten zaehlen ausdruecklich NICHT: sonst gaelte die Woche als erledigt,
-   * sobald jemand einen festen Montag hat – und fuer Donnerstag und Freitag kaeme er nicht mehr an die
-   * Auswahl heran. */
-  function weekHasSubmission(emp, weekStart) {
-    for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
-      const dayObj = store.getDayByDate(date);
-      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      if (entry?.submittedAt && entry.quelle !== "fest") return true;
-    }
-    return false;
-  }
 
-  /** Kompakte Ansicht, sobald für die Woche schon gesendet wurde – die große Auswahl bleibt zu, damit man
-   * sie nicht aus Versehen nochmal verändert. Änderungswunsch geht ausdrücklich über eine Anfrage an den Chef. */
-  function buildAvailabilitySummaryCollapsed(emp, weekStart) {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `<h2>🗓 Verfügbarkeit für nächste Woche</h2><p class="muted small">Gesendet – deine Schichten dazu stehen oben bei „Deine Schichten". Möchtest du noch etwas ändern, frag den Chef.</p>`;
-    const btn = document.createElement("button");
-    btn.className = "btn btn-secondary";
-    btn.textContent = "💬 Chef anfragen für Schichtänderung";
-    btn.onclick = async () => {
-      btn.disabled = true;
-      // Auswahl öffnet sich in jedem Fall wieder (sonst hängt die Person fest, falls die Nachricht mal
-      // nicht rausgeht) – nur die Erfolgs-/Fehlermeldung zur Chef-Benachrichtigung unterscheidet sich.
-      wantsToEditWeek.add(emp.id + ":" + weekStart);
-      try {
-        await sendNoteToBoss(emp.name, `Möchte die Verfügbarkeit für die Woche ab ${dateDeShort(weekStart)} noch ändern.`);
-        rerender();
-      } catch (e) {
-        rerender();
-        await alertDialog("Auswahl ist wieder offen, aber die Nachricht an den Chef kam nicht durch: " + e.message, { title: "Fehler" });
-      }
-    };
-    card.appendChild(btn);
-    return card;
-  }
 
-  // ---------------------------------------------------------------------
-  // Verfügbarkeit für die kommende Woche: pro Tag beliebig viele Schichten antippen,
-  // für die man bereitstehen würde. Genau EINE Schicht ausgewählt = sofort fest (für
-  // alle anderen ab da ausgegraut); mehrere = "keine Präferenz", bleibt offen, bis der
-  // Chef entscheidet oder sich die Auswahl durch anderweitige Vergabe automatisch auf
-  // eine reduziert. Auswahl passiert erst als Entwurf (nur lokal sichtbar), verbindlich
-  // wird sie erst mit "An den Chef senden". Manche Schichten gelten nur an bestimmten
-  // Wochentagen (z.B. Spät nur Mi-Sa) – pro Tag wird daher neu ermittelt, was angeboten wird.
-  // ---------------------------------------------------------------------
-  function buildAvailabilityCard(emp) {
-    const weekStart = addDaysISO(mondayOf(todayStr()), 7);
-    const weekEnd = addDaysISO(weekStart, 6);
-    const allSlotDefs = store.getShiftSlotsForRole(emp.role); // ungefiltert, für Namen-Nachschlagen egal an welchem Tag
-    const slotById = new Map(allSlotDefs.map((s) => [s.id, s]));
 
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `
-      <h2>🗓 Verfügbarkeit für nächste Woche</h2>
-      <p class="muted small">${escapeHtml(dateDeShort(weekStart))} – ${escapeHtml(dateDeShort(weekEnd))}. Für jede Schicht antippen, die du übernehmen könntest (bei keiner Präferenz einfach alle). Wählst du nur eine, ist sie sofort fest deine – bei mehreren entscheidet der Chef.</p>
-    `;
-
-    const list = document.createElement("div");
-    list.className = "avail-list";
-    for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
-      // An diesem Wochentag angebotene Schichten – ohne die, die nur als feste Schicht vergeben werden
-      // (Store-Management): die kann sich niemand selbst aussuchen.
-      const dayDefSlots = store.getShiftSlotsForRole(emp.role, date).filter((s) => !s.nurFest);
-      const dayObj = store.getDayByDate(date);
-      const entry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      const draftSelected = new Set(entry?.slotIds || []);
-      const selectableSlots = dayDefSlots.filter((s) => !(dayObj && store.isSlotTaken(dayObj.id, s.id, emp.id)));
-      const allSelected = selectableSlots.length > 0 && selectableSlots.every((s) => draftSelected.has(s.id));
-
-      const row = document.createElement("div");
-      row.className = "avail-row-col";
-
-      const head = document.createElement("div");
-      head.className = "avail-day-head";
-      const label = document.createElement("div");
-      label.className = "avail-day-label";
-      label.textContent = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
-      head.appendChild(label);
-
-      // Feste Schicht: nichts zu wählen. Die Auswahl hier trotzdem anzuzeigen, hiesse die Person zu
-      // fragen, was längst entschieden ist – und ein Fehlgriff würde die feste Schicht aufheben.
-      const fest = entry?.quelle === "fest" ? store.festeSchichtAm(emp.id, date) : null;
-      if (fest) {
-        row.appendChild(head);
-        const slotDef = dayDefSlots.find((x) => x.id === fest.slotId);
-        const info = document.createElement("p");
-        info.className = "callout avail-fest";
-        info.innerHTML = slotDef
-          ? `🔒 <b>Feste Schicht:</b> ${escapeHtml(slotDef.label)}, ${escapeHtml(slotDef.from)}–${escapeHtml(slotDef.to)} Uhr. Musst du nicht eintragen.`
-          : "🔒 <b>Feste Schicht.</b> Musst du nicht eintragen.";
-        row.appendChild(info);
-        list.appendChild(row);
-        continue;
-      }
-
-      const allBtn = document.createElement("button");
-      allBtn.type = "button";
-      allBtn.className = "btn btn-link avail-all-btn";
-      if (selectableSlots.length === 0) {
-        allBtn.textContent = "Alle vergeben";
-        allBtn.disabled = true;
-      } else {
-        allBtn.textContent = allSelected ? "Keine auswählen" : "Alle auswählen";
-        allBtn.onclick = () => {
-          const d = store.getOrCreateDayByDate(date);
-          store.setAvailabilityDraft(d.id, emp.id, allSelected ? [] : selectableSlots.map((s) => s.id));
-          rerender();
-        };
-      }
-      head.appendChild(allBtn);
-      row.appendChild(head);
-
-      const slotList = document.createElement("div");
-      slotList.className = "avail-slot-list";
-      if (dayDefSlots.length === 0) {
-        const none = document.createElement("p");
-        none.className = "muted small";
-        none.textContent = "An diesem Tag gibt es für deine Rolle keine dieser Schichten.";
-        slotList.appendChild(none);
-      }
-      for (const slot of dayDefSlots) {
-        const takenByOther = dayObj ? store.isSlotTaken(dayObj.id, slot.id, emp.id) : false;
-        const slotBtn = document.createElement("button");
-        slotBtn.type = "button";
-        slotBtn.className = "avail-slot-btn" + (draftSelected.has(slot.id) ? " active" : "") + (takenByOther ? " taken" : "");
-        slotBtn.disabled = takenByOther;
-        slotBtn.innerHTML =
-          `<b>${escapeHtml(slot.label)}</b><span>${escapeHtml(slot.from)}–${escapeHtml(slot.to)}</span>` +
-          (takenByOther ? `<span class="avail-taken-tag">vergeben</span>` : "");
-        if (!takenByOther) {
-          slotBtn.onclick = () => {
-            const d = store.getOrCreateDayByDate(date);
-            const current = new Set(store.getAvailability(d.id, emp.id)?.slotIds || []);
-            if (current.has(slot.id)) current.delete(slot.id);
-            else current.add(slot.id);
-            store.setAvailabilityDraft(d.id, emp.id, [...current]);
-            rerender();
-          };
-        }
-        slotList.appendChild(slotBtn);
-      }
-      row.appendChild(slotList);
-
-      // Status der zuletzt abgeschickten Verfügbarkeit für diesen Tag (bis zum nächsten Absenden).
-      if (entry?.submittedAt) {
-        const status = document.createElement("p");
-        status.className = "muted small avail-status";
-        if (entry.confirmedSlotId) {
-          const slot = slotById.get(entry.confirmedSlotId);
-          if (slot) {
-            status.innerHTML = entry.bossConfirmed
-              ? `✅ <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist fest deine Schicht.`
-              : `🔶 <b>${escapeHtml(slot.label)}</b> (${escapeHtml(slot.from)}–${escapeHtml(slot.to)}) ist deine Schicht, wartet aber noch auf Bestätigung vom Chef.`;
-          }
-        } else if (entry.slotIds.length > 1) {
-          const labels = entry.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
-          status.textContent = `🕓 Gesendet: ${labels} – noch offen, der Chef entscheidet.`;
-        }
-        if (status.textContent || status.innerHTML) row.appendChild(status);
-      }
-
-      list.appendChild(row);
-    }
-    card.appendChild(list);
-
-    const submitBtn = document.createElement("button");
-    submitBtn.className = "btn btn-primary";
-    submitBtn.textContent = "An den Chef senden";
-    submitBtn.onclick = () => submitAvailability(weekStart, emp, allSlotDefs, submitBtn);
-    card.appendChild(submitBtn);
-
-    return card;
-  }
-
-  async function submitAvailability(weekStart, emp, slotDefs, btn) {
-    const summaryLines = [];
-    const pushDays = [];
-    for (let i = 0; i < 7; i++) {
-      const date = addDaysISO(weekStart, i);
-      const dayObj = store.getDayByDate(date);
-      const draftEntry = dayObj ? store.getAvailability(dayObj.id, emp.id) : null;
-      if (!draftEntry || draftEntry.slotIds.length === 0) continue;
-      const d = store.getOrCreateDayByDate(date);
-      const committed = store.commitAvailability(d.id, emp.id, draftEntry.slotIds);
-      const dayLabel = `${WEEKDAY_LABELS[i]}, ${dateDeShort(date)}`;
-      // Für die Zeiten pro Tag nachschlagen (Service 1 endet Mo/Di später), nicht die Grunddefinition.
-      const slotById = new Map(store.getShiftSlotsForRole(emp.role, date).map((s) => [s.id, s]));
-      if (committed.confirmedSlotId) {
-        const slot = slotById.get(committed.confirmedSlotId);
-        summaryLines.push(
-          committed.bossConfirmed
-            ? `${dayLabel}: ✅ ${slot.label} (${slot.from}–${slot.to}) fest`
-            : `${dayLabel}: 🔶 ${slot.label} (${slot.from}–${slot.to}) – wartet noch auf Bestätigung vom Chef`
-        );
-      } else if (committed.slotIds.length > 1) {
-        const labels = committed.slotIds.map((id) => slotById.get(id)?.label).filter(Boolean).join(", ");
-        summaryLines.push(`${dayLabel}: 🕓 ${labels} – noch offen, Chef entscheidet`);
-      } else {
-        summaryLines.push(`${dayLabel}: leider inzwischen vergeben, bitte andere Schicht wählen`);
-      }
-      if (committed.slotIds.length > 0) {
-        const slots = committed.slotIds.map((id) => slotById.get(id)).filter(Boolean).map((s) => ({ id: s.id, label: s.label, from: s.from, to: s.to }));
-        pushDays.push({ date, slots, confirmedSlotId: committed.confirmedSlotId || null, bossConfirmed: !!committed.bossConfirmed });
-      }
-    }
-    if (summaryLines.length === 0) {
-      await alertDialog("Bitte für mindestens einen Tag mindestens eine Schicht antippen.");
-      return;
-    }
-    btn.disabled = true;
-    let pushError = null;
-    try {
-      await pushAvailability(emp.name, weekStart, pushDays);
-    } catch (e) {
-      pushError = e;
-    }
-    wantsToEditWeek.delete(emp.id + ":" + weekStart); // nach erfolgreichem Senden wieder einklappen
-    rerender();
-    if (pushError) {
-      await alertDialog(["Lokal gespeichert, aber nicht an den Chef gesendet (" + pushError.message + "):", ...summaryLines].join("\n"), { title: "Fehler beim Senden" });
-    } else {
-      await alertDialog(["Verfügbarkeit gesendet:", ...summaryLines].join("\n"));
-    }
-  }
-
-  function buildTaskList(day, tasks, viewerEmp, allowHandoff, vorlageBearbeiten = false) {
-    const list = document.createElement("div");
-    list.className = "task-list";
-    const priorityOrder = { hoch: 0, normal: 1, niedrig: 2 };
-    const sorted = [...tasks].sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
-    for (const task of sorted) {
-      const row = document.createElement("label");
-      row.className = "task-row" + (task.done ? " done" : "");
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = task.done;
-      cb.onchange = () => {
-        store.toggleDayTask(day.id, task.id, task.done ? null : viewerEmp.name);
-        rerender();
-      };
-      row.appendChild(cb);
-      const textWrap = document.createElement("div");
-      textWrap.className = "task-row-text";
-      const span = document.createElement("span");
-      span.textContent = (task.priority === "hoch" ? "🔴 " : task.priority === "niedrig" ? "🔵 " : "") + task.text;
-      textWrap.appendChild(span);
-      // Bei einer Aufgabe mit Uhrzeit muss man auf einen Blick sehen, ob sie noch wartet, gerade dran ist
-      // oder schon laenger liegen geblieben ist. Ohne das waere die Uhrzeit nur Zierde.
-      if (task.time && !task.done) {
-        const zeit = document.createElement("span");
-        const minuten = store.ueberfaelligSeit(task);
-        const spaet = minuten >= 30;
-        zeit.className = "task-row-meta small " + (store.istFaellig(task) ? (spaet ? "task-spaet" : "task-jetzt") : "muted");
-        zeit.textContent = !store.istFaellig(task)
-          ? `⏰ ab ${task.time} Uhr`
-          : spaet
-            ? `⏰ seit ${minuten >= 60 ? Math.floor(minuten / 60) + " Std " : ""}${minuten % 60} Min überfällig`
-            : `⏰ jetzt dran (${task.time} Uhr)`;
-        textWrap.appendChild(zeit);
-      }
-      if (task.handoffFrom) {
-        const tag = document.createElement("span");
-        tag.className = "muted small task-row-meta";
-        tag.textContent = `↩ übergeben von ${task.handoffFrom}`;
-        textWrap.appendChild(tag);
-      }
-      if (task.done && task.doneBy) {
-        const meta = document.createElement("span");
-        meta.className = "muted small task-row-meta";
-        meta.textContent = `✓ erledigt von ${task.doneBy}${task.doneAt ? ", " + new Date(task.doneAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr" : ""}`;
-        textWrap.appendChild(meta);
-      }
-      row.appendChild(textWrap);
-      if (allowHandoff && !task.done) {
-        const handoffBtn = document.createElement("button");
-        handoffBtn.type = "button";
-        handoffBtn.className = "btn btn-secondary task-row-handoff";
-        handoffBtn.textContent = "↪ Weitergeben";
-        handoffBtn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openHandoffPicker(day, task, viewerEmp);
-        };
-        row.appendChild(handoffBtn);
-      }
-      if (vorlageBearbeiten && task.templateId) {
-        const stift = document.createElement("button");
-        stift.type = "button";
-        stift.className = "btn btn-secondary task-row-handoff";
-        stift.textContent = "✏️";
-        stift.title = "Standard-Aufgabe ändern";
-        stift.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openVorlageBearbeiten(day, task);
-        };
-        row.appendChild(stift);
-      }
-      list.appendChild(row);
-    }
-    return list;
-  }
 
   /** Die Store-Managerin ändert eine Standard-Aufgabe direkt aus ihrer Liste. Geändert wird die Vorlage
    * (gilt ab dem nächsten Einstempeln für alle) und ihre eigene Aufgabe von heute gleich mit. */
-  function openVorlageBearbeiten(day, task) {
-    const vorlage = store.getTaskTemplates().find((v) => v.id === task.templateId);
-    if (!vorlage) {
-      alertDialog("Diese Standard-Aufgabe gibt es nicht mehr – sie wurde inzwischen gelöscht.");
-      return;
-    }
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    const box = document.createElement("div");
-    box.className = "dialog";
-    box.innerHTML = `<h2>Standard-Aufgabe ändern</h2>
-      <p class="muted small">Gilt ab dem nächsten Einstempeln für alle, die sie bekommen. Wochentage, Schicht und Bereich änderst du in der Store-App.</p>`;
-    const feldMit = (label, node) => {
-      const l = document.createElement("label");
-      l.className = "field";
-      l.innerHTML = `<span>${label}</span>`;
-      l.appendChild(node);
-      return l;
-    };
-    const text = document.createElement("input");
-    text.type = "text";
-    text.value = vorlage.text;
-    const phase = document.createElement("select");
-    for (const ph of AUFGABEN_PHASEN) {
-      const o = document.createElement("option");
-      o.value = ph;
-      o.textContent = PHASE_LABEL[ph];
-      phase.appendChild(o);
-    }
-    phase.value = vorlage.phase || "schicht";
-    const zeit = document.createElement("input");
-    zeit.type = "time";
-    zeit.step = 300;
-    zeit.value = vorlage.time || "";
-    box.append(feldMit("Aufgabe", text), feldMit("Wann in der Schicht?", phase), feldMit("Ab wann? (leer = ganztägig)", zeit));
-    const akt = document.createElement("div");
-    akt.className = "dialog-actions";
-    const abbrechen = document.createElement("button");
-    abbrechen.className = "btn btn-secondary";
-    abbrechen.textContent = "Abbrechen";
-    abbrechen.onclick = () => overlay.remove();
-    const speichern = document.createElement("button");
-    speichern.className = "btn btn-primary";
-    speichern.textContent = "Speichern";
-    speichern.onclick = async () => {
-      if (!text.value.trim()) {
-        await alertDialog("Bitte einen Text eintragen.");
-        return;
-      }
-      const felder = { text: text.value.trim(), phase: phase.value, time: zeit.value };
-      store.updateTaskTemplate(vorlage.id, felder);
-      store.updateTaskFields(day.id, task.id, felder);
-      overlay.remove();
-      rerender();
-    };
-    akt.append(abbrechen, speichern);
-    box.appendChild(akt);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    text.focus();
-  }
+
 
   /** Karte "Meine Aufgaben" der Store-Managerin: was sie sich in ihrer App anlegt und was der Chef ihr gibt.
    * Die Aufgaben gehören dem Worker; abgehakt wird deshalb direkt dort, damit es in der App gleich stimmt. */
-  function buildManagerAufgabenKarte() {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `<h2>🗂 Meine Aufgaben</h2><p class="muted small">Deine eigenen Aufgaben aus der Store-App – und was Karim dir dort gibt.</p>`;
-    const heute = todayStr();
-    const liste = store
-      .getManagerAufgaben()
-      .map((a) => ({ a, s: store.managerAufgabeAm(a, heute) }))
-      .filter((x) => x.s.gilt)
-      .sort((x, y) => Number(x.s.erledigt) - Number(y.s.erledigt) || Number(y.a.von === "chef") - Number(x.a.von === "chef"));
-    if (liste.length === 0) {
-      const leer = document.createElement("p");
-      leer.className = "muted small";
-      leer.textContent = "Für heute nichts offen.";
-      card.appendChild(leer);
-      return card;
-    }
-    const box = document.createElement("div");
-    box.className = "task-list";
-    for (const { a, s } of liste) {
-      const row = document.createElement("label");
-      row.className = "task-row" + (s.erledigt ? " done" : "") + (a.von === "chef" ? " task-vom-chef" : "");
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = s.erledigt;
-      cb.onchange = async () => {
-        cb.disabled = true;
-        try {
-          await toggleManagerAufgabe(a.id, heute);
-          rerender();
-        } catch (e) {
-          cb.checked = !cb.checked;
-          cb.disabled = false;
-          await alertDialog("Konnte nicht gespeichert werden: " + e.message, { title: "Fehler" });
-        }
-      };
-      row.appendChild(cb);
-      const t = document.createElement("div");
-      t.className = "task-row-text";
-      const titel = document.createElement("span");
-      titel.textContent = (a.prioritaet === "hoch" ? "🔴 " : "") + a.text;
-      const meta = document.createElement("span");
-      meta.className = "muted small task-row-meta";
-      meta.textContent = [
-        a.von === "chef" ? "vom Chef" : "eigene Aufgabe",
-        a.art === "wiederkehrend" ? "Routine" : null,
-        s.ueberfaellig ? "überfällig" : null,
-        a.notiz || null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      t.append(titel, meta);
-      row.appendChild(t);
-      box.appendChild(row);
-    }
-    card.appendChild(box);
-    return card;
-  }
+
 
   /** Weitergeben: an WEN und auf WELCHEN TAG.
    *
    * Der Tag ist wichtig: bleibt die Aufgabe auf heute, obwohl die Person gar nicht mehr kommt, ist sie
    * weitergegeben an niemanden – sie steht abends nur als offener Punkt da. Deshalb ist "morgen"
    * vorausgewählt, sobald die Person heute nicht mehr im Dienst ist. */
-  function openHandoffPicker(day, task, fromEmp) {
-    const others = store.getEmployees(false).filter((e) => e.id !== fromEmp.id);
-    const heute = todayStr();
-    const morgen = addDaysISO(heute, 1);
-    let zielDatum = heute;
-    let gewaehlt = null;
 
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    const box = document.createElement("div");
-    box.className = "dialog";
-    box.innerHTML = `<h2>Weitergeben an?</h2><p class="muted small">„${escapeHtml(task.text)}" wird der ausgewählten Person zugeordnet.</p>`;
-
-    if (others.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted small";
-      empty.textContent = "Keine anderen aktiven Mitarbeiter vorhanden.";
-      box.appendChild(empty);
-      const cancelLeer = document.createElement("button");
-      cancelLeer.className = "btn btn-link";
-      cancelLeer.textContent = "Abbrechen";
-      cancelLeer.onclick = () => overlay.remove();
-      box.appendChild(cancelLeer);
-      overlay.appendChild(box);
-      document.body.appendChild(overlay);
-      return;
-    }
-
-    // ---- Wer? ----
-    const list = document.createElement("div");
-    list.className = "employee-list";
-    for (const other of others) {
-      const btn = document.createElement("button");
-      btn.className = "btn btn-secondary btn-huge";
-      btn.textContent = other.name;
-      btn.onclick = () => {
-        gewaehlt = other;
-        // Ist die Person heute gar nicht mehr im Dienst, wäre "heute" nur eine Aufgabe, die niemand macht
-        // und die abends als offen dasteht – dann ist morgen die sinnvollere Vorauswahl.
-        zielDatum = store.getOpenShiftForEmployeeToday(other.id, heute) ? heute : morgen;
-        zeichneTag();
-      };
-      list.appendChild(btn);
-    }
-    box.appendChild(list);
-
-    // ---- Wann? (erst sichtbar, wenn jemand gewählt ist) ----
-    const tagBereich = document.createElement("div");
-    tagBereich.className = "handoff-when";
-    box.appendChild(tagBereich);
-
-    function zeichneTag() {
-      tagBereich.innerHTML = "";
-      if (!gewaehlt) return;
-
-      const frage = document.createElement("p");
-      frage.innerHTML = `<b>An ${escapeHtml(gewaehlt.name)} – für welchen Tag?</b>`;
-      tagBereich.appendChild(frage);
-
-      const reihe = document.createElement("div");
-      reihe.className = "handoff-days";
-      const knopf = (label, datum) => {
-        const b = document.createElement("button");
-        b.className = "btn " + (zielDatum === datum ? "btn-primary" : "btn-secondary");
-        b.textContent = label;
-        b.onclick = () => {
-          zielDatum = datum;
-          zeichneTag();
-        };
-        return b;
-      };
-      reihe.append(knopf("Heute", heute), knopf("Morgen", morgen));
-      tagBereich.appendChild(reihe);
-
-      const anderes = document.createElement("label");
-      anderes.className = "field";
-      anderes.innerHTML = `<span>Anderer Tag</span>`;
-      const datumInput = document.createElement("input");
-      datumInput.type = "date";
-      datumInput.min = heute;
-      datumInput.value = zielDatum;
-      datumInput.onchange = () => {
-        if (datumInput.value >= heute) {
-          zielDatum = datumInput.value;
-          zeichneTag();
-        }
-      };
-      anderes.appendChild(datumInput);
-      tagBereich.appendChild(anderes);
-
-      const hinweis = document.createElement("p");
-      hinweis.className = zielDatum === heute ? "callout callout-warn" : "muted small";
-      hinweis.textContent =
-        zielDatum === heute
-          ? `Bleibt die Aufgabe auf heute, steht sie heute Abend als offen da – ${gewaehlt.name} ist nicht mehr im Dienst.`
-          : `Die Aufgabe taucht am ${dateDe(zielDatum)} bei ${gewaehlt.name} auf und zählt heute nicht mehr als offen.`;
-      tagBereich.appendChild(hinweis);
-
-      const uebernehmen = document.createElement("button");
-      uebernehmen.className = "btn btn-primary btn-huge";
-      uebernehmen.textContent = "↪ Weitergeben";
-      uebernehmen.onclick = () => {
-        store.handoffTask(day.id, task.id, gewaehlt.id, fromEmp.name);
-        if (zielDatum !== day.date) store.moveTaskToDay(day.id, task.id, zielDatum);
-        overlay.remove();
-        rerender();
-      };
-      tagBereich.appendChild(uebernehmen);
-    }
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.className = "btn btn-link";
-    cancelBtn.textContent = "Abbrechen";
-    cancelBtn.onclick = () => overlay.remove();
-    box.appendChild(cancelBtn);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-  }
 
   function endShift(day, emp, shift, wouldBeLast) {
     const closed = store.clockOut(day.id, shift.id);

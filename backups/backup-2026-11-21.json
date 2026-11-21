@@ -1354,7 +1354,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-21",
-      "lastBackupAt": "2026-11-21T10:38:46.880Z",
+      "lastBackupAt": "2026-11-21T13:42:49.252Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1362,7 +1362,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-21T13:06:31.568Z",
+      "lastSyncAt": "2026-11-21T13:58:22.589Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -3872,7 +3872,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-21T13:06:31.568Z"
+    "zuletztGespeichert": "2026-11-21T13:58:22.590Z"
   },
   "days": [
     {
@@ -35446,10 +35446,10 @@
           "id": "13e783df-0448-43a1-a708-7bbd496844b9",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
           "from": "08:37",
-          "to": null,
+          "to": "14:57",
           "note": "",
           "clockInAt": "2026-11-21T07:37:46.127Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-21T13:57:00.426Z"
         },
         {
           "source": "pin",
@@ -36284,6 +36284,11 @@
           "timestamp": "2026-11-21T09:59:59.037Z",
           "action": "eingestempelt",
           "detail": "Leanna um 10:59 Uhr"
+        },
+        {
+          "timestamp": "2026-11-21T13:57:00.426Z",
+          "action": "ausgestempelt",
+          "detail": "vincent um 14:57 Uhr"
         }
       ],
       "closedAt": null,
@@ -42933,7 +42938,7 @@
       "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
       "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-21T11:21:53.479Z",
-      "readAt": null
+      "readAt": "2026-11-21T13:56:55.707Z"
     },
     {
       "id": "f3c1d507-9a13-41e9-848f-ae758a23154b",
@@ -66409,50 +66414,6 @@
       "cancelNotified": false
     },
     {
-      "id": "c823eb22-45bd-4c2c-b448-f760db62289b",
-      "code": "2F3NM",
-      "date": "2026-11-22",
-      "time": "11:30",
-      "name": "Thomas",
-      "phone": "01746008899",
-      "guests": 3,
-      "area": "egal",
-      "note": "",
-      "tableIds": [],
-      "status": "offen",
-      "source": "web",
-      "createdAt": "2026-11-20T07:30:44.891Z",
-      "arrivedAt": null,
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
-      "id": "bd563400-8370-41ab-8198-4e9e13841a6b",
-      "code": "TSHXS",
-      "date": "2026-11-20",
-      "time": "13:00",
-      "name": "Aubauer",
-      "phone": "+491738337962",
-      "guests": 2,
-      "area": "egal",
-      "note": "",
-      "tableIds": [
-        "820bd379-257d-4751-906e-447b32b6030a"
-      ],
-      "status": "zugewiesen",
-      "source": "web",
-      "createdAt": "2026-11-20T07:30:44.898Z",
-      "arrivedAt": null,
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
       "id": "e52a48e9-43ee-43e3-a672-7931ae9bfdf7",
       "code": "6CJGQ",
       "date": "2026-11-21",
@@ -66764,29 +66725,6 @@
       "cancelNotified": false
     },
     {
-      "id": "624a49e5-8eed-4d68-bc24-34a629a6e99b",
-      "code": "JND2Z",
-      "date": "2026-11-20",
-      "time": "13:00",
-      "name": "Trautmann",
-      "phone": "",
-      "guests": 4,
-      "area": "innen",
-      "note": "",
-      "tableIds": [
-        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
-      ],
-      "status": "zugewiesen",
-      "source": "manuell",
-      "createdAt": "2026-11-21T11:02:25.261Z",
-      "arrivedAt": null,
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
       "id": "1669a82d-3a30-46ec-bbf8-10add434513d",
       "code": "GRDTR",
       "date": "2026-11-21",
@@ -66821,6 +66759,29 @@
       "status": "offen",
       "source": "manuell",
       "createdAt": "2026-11-21T13:05:42.001Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "73e60885-b922-4d39-9279-4ac79b0c549d",
+      "code": "K64HC",
+      "date": "2026-11-20",
+      "time": "15:30",
+      "name": "Eiermann",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "zugewiesen",
+      "source": "manuell",
+      "createdAt": "2026-11-21T13:43:25.695Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

@@ -1354,7 +1354,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-21",
-      "lastBackupAt": "2026-11-21T07:37:32.109Z",
+      "lastBackupAt": "2026-11-21T10:38:46.880Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1362,7 +1362,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-21T10:31:46.871Z",
+      "lastSyncAt": "2026-11-21T13:06:31.568Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1769,7 +1769,8 @@
         "a5e95e63-67e9-4afd-ae0b-2ce7be0aa9ac",
         "9a22cf8c-57ce-48be-8cfd-7ec632dca036",
         "6555f308-fb98-443c-b9cd-fddd7bd8ce07",
-        "4a4f272a-2805-4bb7-bd02-432bb48c0098"
+        "4a4f272a-2805-4bb7-bd02-432bb48c0098",
+        "260e56c6-5993-438a-b2a7-e9c32c04298f"
       ],
       "appliedMessageIds": [
         "dab3af08-4d7e-4bc2-b3ab-b1e59727d13e",
@@ -1942,7 +1943,8 @@
         "5c2b8318-9452-44ed-b7d6-1b1c166a55f0",
         "e5211d83-d0a7-4c89-9e0a-4225b8bae2e4",
         "52ee1707-1ce6-494d-996e-559ee9a11006",
-        "81cfe59f-63e6-4d5b-8160-e69cade94ca2"
+        "81cfe59f-63e6-4d5b-8160-e69cade94ca2",
+        "0b04b17a-6636-4166-9349-6caa50cd710f"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -3870,7 +3872,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-21T10:31:46.871Z"
+    "zuletztGespeichert": "2026-11-21T13:06:31.568Z"
   },
   "days": [
     {
@@ -29640,18 +29642,18 @@
           "bossConfirmed": true
         },
         {
-          "id": "avail-4f03ff8d-e086-4eed-a6b3-f2ccb9d6adfa",
-          "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "from": "09:00",
-          "to": "14:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-f69ef8bb-2831-4630-8f30-4aacf190aef9",
           "employeeId": "d6a4742e-3ae9-499a-8a68-9517626bfad7",
           "from": "12:00",
           "to": "18:00",
+          "note": "",
+          "bossConfirmed": true
+        },
+        {
+          "id": "avail-cd6d7bb3-95e7-4dea-9074-820215bc8387",
+          "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+          "from": "09:00",
+          "to": "14:00",
           "note": "",
           "bossConfirmed": true
         }
@@ -29729,11 +29731,13 @@
           "submittedAt": "2026-11-14T21:15:21.306Z"
         },
         {
-          "confirmedSlotId": null,
+          "confirmedSlotId": "mittel1",
           "bossConfirmed": true,
           "id": "cd6d7bb3-95e7-4dea-9074-820215bc8387",
           "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
-          "slotIds": [],
+          "slotIds": [
+            "mittel1"
+          ],
           "note": "",
           "submittedAt": "2026-11-15T07:27:44.725Z"
         },
@@ -29749,13 +29753,11 @@
           "submittedAt": "2026-11-15T12:39:42.266Z"
         },
         {
-          "confirmedSlotId": "mittel1",
+          "confirmedSlotId": null,
           "bossConfirmed": true,
           "id": "4f03ff8d-e086-4eed-a6b3-f2ccb9d6adfa",
           "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
-          "slotIds": [
-            "mittel1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-18T15:15:27.716Z"
         },
@@ -42924,6 +42926,20 @@
       "employeeId": "d6a4742e-3ae9-499a-8a68-9517626bfad7",
       "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Küche Spät, 12:00–18:00 Uhr) ist vom Chef bestätigt.",
       "createdAt": "2026-11-20T07:30:44.880Z",
+      "readAt": null
+    },
+    {
+      "id": "4e97b48e-1381-4a27-a75e-e23b743814c1",
+      "employeeId": "4d5db5cf-e5a1-4054-afd4-e7c8da41d31a",
+      "text": "✅ Deine Schicht am Sonntag, 22.11.2026 (Springer, 09:00–14:00 Uhr) ist vom Chef bestätigt.",
+      "createdAt": "2026-11-21T11:21:53.479Z",
+      "readAt": null
+    },
+    {
+      "id": "f3c1d507-9a13-41e9-848f-ae758a23154b",
+      "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
+      "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Springer) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-21T11:21:53.492Z",
       "readAt": null
     }
   ],
@@ -65491,29 +65507,6 @@
       "cancelNotified": false
     },
     {
-      "id": "c8c6556c-df36-437c-8465-df12b277e031",
-      "code": "7SFHW",
-      "date": "2026-11-20",
-      "time": "09:30",
-      "name": "Rehberger",
-      "phone": "",
-      "guests": 2,
-      "area": "innen",
-      "note": "",
-      "tableIds": [
-        "e68472c1-9528-40df-8388-4067b8a5a969"
-      ],
-      "status": "da",
-      "source": "manuell",
-      "createdAt": "2026-11-13T14:20:42.834Z",
-      "arrivedAt": "2026-11-20T09:17:04.847Z",
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
       "id": "d9eac819-17b3-4ce0-b606-d36ee77784df",
       "code": "RVNCG",
       "date": "2026-11-16",
@@ -66330,29 +66323,6 @@
       "cancelNotified": false
     },
     {
-      "id": "3ef860bc-b111-405a-949a-1aa8fa302e63",
-      "code": "WXFKG",
-      "date": "2026-11-20",
-      "time": "09:00",
-      "name": "Julia",
-      "phone": "",
-      "guests": 2,
-      "area": "innen",
-      "note": "",
-      "tableIds": [
-        "820bd379-257d-4751-906e-447b32b6030a"
-      ],
-      "status": "da",
-      "source": "manuell",
-      "createdAt": "2026-11-19T09:03:51.725Z",
-      "arrivedAt": "2026-11-20T09:17:04.116Z",
-      "cancelReason": null,
-      "cancelNote": "",
-      "cancelledAt": null,
-      "cancelledBy": "",
-      "cancelNotified": false
-    },
-    {
       "id": "8f7b5fd0-e771-4f52-9bd5-1ac6dad76735",
       "code": "6MSEQ",
       "date": "2026-11-20",
@@ -66764,6 +66734,94 @@
       "source": "walkin",
       "createdAt": "2026-11-21T10:04:48.585Z",
       "arrivedAt": "2026-11-21T10:04:48.593Z",
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "61d67f60-3222-49b4-9eb6-8ca19766091c",
+      "code": "5ASX9",
+      "date": "2026-11-22",
+      "time": "10:00",
+      "name": "malou",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "820bd379-257d-4751-906e-447b32b6030a"
+      ],
+      "status": "zugewiesen",
+      "source": "manuell",
+      "createdAt": "2026-11-21T10:50:17.027Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "624a49e5-8eed-4d68-bc24-34a629a6e99b",
+      "code": "JND2Z",
+      "date": "2026-11-20",
+      "time": "13:00",
+      "name": "Trautmann",
+      "phone": "",
+      "guests": 4,
+      "area": "innen",
+      "note": "",
+      "tableIds": [
+        "a8c1bbdd-a3f0-47b1-922d-c6b09563bef4"
+      ],
+      "status": "zugewiesen",
+      "source": "manuell",
+      "createdAt": "2026-11-21T11:02:25.261Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "1669a82d-3a30-46ec-bbf8-10add434513d",
+      "code": "GRDTR",
+      "date": "2026-11-21",
+      "time": "12:00",
+      "name": "Charlotte",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-21T11:40:26.795Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "8c148e54-c629-4ce7-a4e5-e2635147deab",
+      "code": "UFMVE",
+      "date": "2026-11-21",
+      "time": "11:30",
+      "name": "Neff",
+      "phone": "",
+      "guests": 7,
+      "area": "innen",
+      "note": "rufen vorher an um essen vor zu bestellen",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-21T13:05:42.001Z",
+      "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,

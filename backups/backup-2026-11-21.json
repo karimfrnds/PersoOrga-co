@@ -1354,7 +1354,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-21",
-      "lastBackupAt": "2026-11-21T13:42:49.252Z",
+      "lastBackupAt": "2026-11-21T16:45:45.008Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1362,7 +1362,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-21T13:58:22.589Z",
+      "lastSyncAt": "2026-11-21T19:46:35.659Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2935,8 +2935,6 @@
         "8d767b7a-1281-4e22-a3c5-5071897dcaaf"
       ],
       "appliedReservationIds": [
-        "45123dd3-7623-4117-94a3-821be9abf336",
-        "0f2282c5-d6b0-4ea7-a722-dedf1c498cfc",
         "2dd1fd44-0b66-4278-8ebf-96293de2d9eb",
         "f1d56629-e60e-41d6-925f-141cd7990d7a",
         "6b3482f9-1c50-48ab-85cc-8991092f8a33",
@@ -3434,7 +3432,9 @@
         "37f2d345-5de3-444d-b5d9-4f117216a469",
         "4994ced7-e4b8-431a-8fb1-4159e3f0505f",
         "4377d73f-47b9-4408-bdfd-9fc67833d1b9",
-        "f39fc590-f78e-4aaf-916d-0e34057d0548"
+        "f39fc590-f78e-4aaf-916d-0e34057d0548",
+        "12891be2-4f06-4e79-bc0b-14b2035a16de",
+        "09a73d93-41de-4caf-abca-9ed251cc5110"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -3872,7 +3872,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-21T13:58:22.590Z"
+    "zuletztGespeichert": "2026-11-21T19:46:35.659Z"
   },
   "days": [
     {
@@ -35456,20 +35456,28 @@
           "id": "d7b2f5a2-eb99-40ba-baa7-8ff1c6b546a4",
           "employeeId": "e5789ddc-0dc4-4e76-951e-f5fcce107ce5",
           "from": "08:57",
-          "to": null,
+          "to": "20:04",
           "note": "",
           "clockInAt": "2026-11-21T07:57:44.376Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-21T19:04:07.247Z"
         },
         {
           "source": "pin",
           "id": "116b7425-bbaf-460e-8eca-997a5a4f190a",
           "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
           "from": "10:59",
-          "to": null,
+          "to": "20:50",
           "note": "",
           "clockInAt": "2026-11-21T09:59:59.037Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-21T19:36:12.959Z"
+        },
+        {
+          "id": "bdccb666-d3ab-4c61-ba45-3d8ecb416195",
+          "employeeId": "0ea85a1e-7041-455c-93dc-09c18e854ce5",
+          "from": "08:30",
+          "to": "16:30",
+          "note": "",
+          "source": "manual"
         }
       ],
       "plannedShifts": [
@@ -36254,11 +36262,11 @@
         }
       ],
       "kassenabschluss": {
-        "umsatzGesamt": 0,
-        "umsatzBar": 0,
-        "umsatz7": 0,
-        "umsatz19": 0,
-        "trinkgeldKarte": 0,
+        "umsatzGesamt": 2341.75,
+        "umsatzBar": 140.5,
+        "umsatz7": 1130.44,
+        "umsatz19": 1050.72,
+        "trinkgeldKarte": 160.59,
         "trinkgeldBar": 0
       },
       "verkauf": [],
@@ -36289,6 +36297,91 @@
           "timestamp": "2026-11-21T13:57:00.426Z",
           "action": "ausgestempelt",
           "detail": "vincent um 14:57 Uhr"
+        },
+        {
+          "timestamp": "2026-11-21T19:04:07.247Z",
+          "action": "ausgestempelt",
+          "detail": "benjamin um 20:04 Uhr"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:12.960Z",
+          "action": "ausgestempelt",
+          "detail": "Leanna um 20:36 Uhr"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:22.111Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"20:45\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:25.958Z",
+          "action": "Schicht hinzugefügt",
+          "detail": "10:00-18:00"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:31.197Z",
+          "action": "Schicht geändert",
+          "detail": "{\"employeeId\":\"0ea85a1e-7041-455c-93dc-09c18e854ce5\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:36.341Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:00\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:42.458Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"16:30\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:44.325Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:00\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:36:48.558Z",
+          "action": "Schicht geändert",
+          "detail": "{\"from\":\"08:30\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:37:31.728Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"20:50\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:37:35.941Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"21:50\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:37:39.975Z",
+          "action": "Schicht geändert",
+          "detail": "{\"to\":\"20:50\"}"
+        },
+        {
+          "timestamp": "2026-11-21T19:41:29.493Z",
+          "action": "geändert",
+          "detail": "Umsatz gesamt geändert"
+        },
+        {
+          "timestamp": "2026-11-21T19:41:40.375Z",
+          "action": "geändert",
+          "detail": "Barumsatz geändert"
+        },
+        {
+          "timestamp": "2026-11-21T19:41:47.443Z",
+          "action": "geändert",
+          "detail": "Umsatz 7% geändert"
+        },
+        {
+          "timestamp": "2026-11-21T19:41:56.675Z",
+          "action": "geändert",
+          "detail": "Umsatz 19% geändert"
+        },
+        {
+          "timestamp": "2026-11-21T19:42:06.658Z",
+          "action": "geändert",
+          "detail": "Trinkgeld Karte geändert"
         }
       ],
       "closedAt": null,
@@ -66782,6 +66875,48 @@
       "status": "zugewiesen",
       "source": "manuell",
       "createdAt": "2026-11-21T13:43:25.695Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "e9666be2-954f-4c97-8da8-c18dc99ccf4c",
+      "code": "F4NDT",
+      "date": "2026-11-22",
+      "time": "10:00",
+      "name": "Sophia Heinzelmann",
+      "phone": "+491754568044",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-21T16:45:40.804Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "5d8f5029-0686-437e-9d35-20b9b67b4b55",
+      "code": "P9NTQ",
+      "date": "2026-11-22",
+      "time": "10:00",
+      "name": "Nivin Kluger",
+      "phone": "015141667514",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-21T19:27:05.461Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",

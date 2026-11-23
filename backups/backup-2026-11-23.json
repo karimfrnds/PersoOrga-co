@@ -1069,37 +1069,37 @@
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         },
         {
           "closed": false,
           "from": "09:00",
-          "to": "18:00"
+          "to": "17:30"
         }
       ],
       "maxDaysAhead": 60,
@@ -1354,7 +1354,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-23",
-      "lastBackupAt": "2026-11-23T10:04:26.427Z",
+      "lastBackupAt": "2026-11-23T14:05:07.172Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1362,7 +1362,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-23T10:07:24.311Z",
+      "lastSyncAt": "2026-11-23T16:51:00.228Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -1959,7 +1959,8 @@
         "e5211d83-d0a7-4c89-9e0a-4225b8bae2e4",
         "52ee1707-1ce6-494d-996e-559ee9a11006",
         "81cfe59f-63e6-4d5b-8160-e69cade94ca2",
-        "0b04b17a-6636-4166-9349-6caa50cd710f"
+        "0b04b17a-6636-4166-9349-6caa50cd710f",
+        "82ce672a-4fcb-4614-a8a0-789b8a67e506"
       ],
       "appliedDeliveryIds": [
         "89d936e2-0518-4d89-858f-49d92f27a38e",
@@ -3887,7 +3888,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-23T10:07:24.311Z"
+    "zuletztGespeichert": "2026-11-23T16:51:00.228Z"
   },
   "days": [
     {
@@ -37037,21 +37038,21 @@
           "id": "00f8961a-231a-4054-90ad-ffec53c688a5",
           "employeeId": "2619fc79-ba1f-497e-893e-1a89c0dbd585",
           "from": "08:01",
-          "to": null,
+          "to": "15:30",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-23T07:01:03.380Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-23T14:30:48.533Z"
         },
         {
           "id": "5b4dfc1c-cf8f-4335-9645-4363593e92f0",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:01",
-          "to": null,
+          "to": "16:03",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-23T07:01:19.464Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-23T15:03:12.512Z"
         },
         {
           "id": "8e658f49-9f61-4a8f-a265-ab4384ba9448",
@@ -37844,6 +37845,16 @@
           "timestamp": "2026-11-23T10:04:27.007Z",
           "action": "eingestempelt",
           "detail": "vincent um 11:04 Uhr"
+        },
+        {
+          "timestamp": "2026-11-23T14:30:48.534Z",
+          "action": "ausgestempelt",
+          "detail": "hanna um 15:30 Uhr"
+        },
+        {
+          "timestamp": "2026-11-23T15:03:12.512Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 16:03 Uhr"
         }
       ],
       "closedAt": null,
@@ -39050,14 +39061,6 @@
       "shifts": [],
       "plannedShifts": [
         {
-          "id": "avail-0109e149-17a2-4711-b405-631415a0d7bf",
-          "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
-          "from": "09:00",
-          "to": "14:00",
-          "note": "",
-          "bossConfirmed": true
-        },
-        {
           "id": "avail-ef10b41b-0ffc-4a89-b4c7-1a62245d5730",
           "employeeId": "c56befc2-48f3-4ac7-bc46-943f2248d324",
           "from": "11:00",
@@ -39100,13 +39103,11 @@
       ],
       "availability": [
         {
-          "confirmedSlotId": "mittel1",
-          "bossConfirmed": true,
+          "confirmedSlotId": null,
+          "bossConfirmed": false,
           "id": "0109e149-17a2-4711-b405-631415a0d7bf",
           "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
-          "slotIds": [
-            "mittel1"
-          ],
+          "slotIds": [],
           "note": "",
           "submittedAt": "2026-11-08T07:40:00.699Z"
         },
@@ -43752,6 +43753,13 @@
       "employeeId": "351e6de4-2de9-405d-ba3a-235da86d7a7b",
       "text": "❌ Deine Schicht am Sonntag, 22.11.2026 (Springer) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
       "createdAt": "2026-11-21T11:21:53.492Z",
+      "readAt": null
+    },
+    {
+      "id": "f220d146-f046-4cee-968a-aeb7b4146323",
+      "employeeId": "2b248f4f-e31d-42c5-b9e6-1827605b4253",
+      "text": "❌ Deine Schicht am Sonntag, 06.12.2026 (Springer) wurde vom Chef abgelehnt. Bitte im Kiosk eine andere Schicht wählen.",
+      "createdAt": "2026-11-23T16:50:59.813Z",
       "readAt": null
     }
   ],
@@ -68007,6 +68015,48 @@
       "cancelReason": null,
       "cancelNote": "",
       "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "df981478-1c82-4c65-bb3e-48a504149af2",
+      "code": "TVYR7",
+      "date": "2026-11-28",
+      "time": "10:30",
+      "name": "Mariam",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "manuell",
+      "createdAt": "2026-11-23T16:47:53.032Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "34cb893a-abe0-424a-b5d5-70d27b059437",
+      "code": "6A7TZ",
+      "date": "2026-11-28",
+      "time": "10:30",
+      "name": "MARIAM",
+      "phone": "",
+      "guests": 2,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "storniert",
+      "source": "manuell",
+      "createdAt": "2026-11-23T16:48:11.197Z",
+      "arrivedAt": null,
+      "cancelReason": "ausgebucht",
+      "cancelNote": "",
+      "cancelledAt": "2026-11-23T16:48:35.329Z",
       "cancelledBy": "",
       "cancelNotified": false
     }

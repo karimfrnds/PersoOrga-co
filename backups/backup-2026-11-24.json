@@ -1354,7 +1354,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-24",
-      "lastBackupAt": "2026-11-24T10:02:59.750Z",
+      "lastBackupAt": "2026-11-24T14:36:28.017Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1362,7 +1362,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-24T11:04:31.264Z",
+      "lastSyncAt": "2026-11-24T16:32:47.786Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -3909,7 +3909,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-24T11:04:31.265Z"
+    "zuletztGespeichert": "2026-11-24T16:32:47.786Z"
   },
   "days": [
     {
@@ -38793,21 +38793,21 @@
           "id": "d2b39315-80e4-42d8-8bbe-7c71042a1690",
           "employeeId": "42c3fbc1-c67a-4886-8530-98f52edb74bc",
           "from": "08:00",
-          "to": null,
+          "to": "15:39",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-24T07:00:54.360Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-24T14:39:07.757Z"
         },
         {
           "id": "bc4853a3-a3ef-44fd-91eb-8289ef0c1ddb",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:23",
-          "to": null,
+          "to": "16:02",
           "note": "",
           "source": "pin",
           "clockInAt": "2026-11-24T07:23:10.925Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-24T15:02:24.989Z"
         },
         {
           "id": "7a060c60-63f3-4cfa-978a-556b30a1ae41",
@@ -39654,6 +39654,16 @@
           "timestamp": "2026-11-24T10:03:04.324Z",
           "action": "eingestempelt",
           "detail": "vincent um 11:03 Uhr"
+        },
+        {
+          "timestamp": "2026-11-24T14:39:07.757Z",
+          "action": "ausgestempelt",
+          "detail": "julie um 15:39 Uhr"
+        },
+        {
+          "timestamp": "2026-11-24T15:02:24.989Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 16:02 Uhr"
         }
       ],
       "closedAt": null,

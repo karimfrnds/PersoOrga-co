@@ -1302,7 +1302,7 @@
       "repo": "PersoOrga-co",
       "token": "",
       "lastBackupDate": "2026-11-25",
-      "lastBackupAt": "2026-11-25T10:58:32.643Z",
+      "lastBackupAt": "2026-11-25T14:16:03.027Z",
       "lastError": null
     },
     "taskInbox": {
@@ -1310,7 +1310,7 @@
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-25T10:59:57.580Z",
+      "lastSyncAt": "2026-11-25T15:01:35.783Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2311,10 +2311,10 @@
         "d54af83c-7769-4bf1-a658-7979ace0d7e6",
         "c2c2d94e-2fc1-4218-b576-6ba9fe68c104",
         "1441f7b9-bc49-4c67-bff0-abe185a79f5a",
-        "b0042899-d82c-491a-8e41-c6d3c6962c31"
+        "b0042899-d82c-491a-8e41-c6d3c6962c31",
+        "8a6f1670-0048-4bda-ac1c-e6d9266b9ebc"
       ],
       "appliedAvailabilityKeys": [
-        "2026-11-23|rotraut|2026-10-28T07:22:24.131Z",
         "2026-11-30|Leanna|2026-10-28T11:14:59.283Z",
         "2026-11-02|arianna|2026-10-28T16:19:34.014Z",
         "2026-11-30|arianna|2026-10-28T16:22:57.261Z",
@@ -2613,7 +2613,8 @@
         "2026-11-30|nico|2026-10-26T12:45:10.823Z",
         "2026-12-21|vincent|2026-11-25T07:20:11.297Z",
         "2026-12-21|carla|2026-11-25T07:20:11.297Z",
-        "2026-11-02|Leanna|2026-10-28T07:22:24.710Z"
+        "2026-11-02|Leanna|2026-10-28T07:22:24.710Z",
+        "2026-11-23|timm|2026-10-28T07:22:24.131Z"
       ],
       "appliedStockChangeIds": [
         "53c3d70a-6f91-4110-ae3e-27d46f4eec69",
@@ -3837,7 +3838,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-25T10:59:57.580Z"
+    "zuletztGespeichert": "2026-11-25T15:01:35.783Z"
   },
   "days": [
     {
@@ -36315,10 +36316,10 @@
           "id": "fe6f570b-b061-454c-a7a4-01506e1842b0",
           "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
           "from": "08:20",
-          "to": null,
+          "to": "15:52",
           "note": "",
           "clockInAt": "2026-11-25T07:20:14.773Z",
-          "clockOutAt": null
+          "clockOutAt": "2026-11-25T14:52:45.287Z"
         },
         {
           "source": "pin",
@@ -37115,6 +37116,11 @@
           "timestamp": "2026-11-25T10:58:41.935Z",
           "action": "eingestempelt",
           "detail": "vincent um 11:58 Uhr"
+        },
+        {
+          "timestamp": "2026-11-25T14:52:45.287Z",
+          "action": "ausgestempelt",
+          "detail": "timm um 15:52 Uhr"
         }
       ],
       "closedAt": null,
@@ -49185,6 +49191,46 @@
       "employeeId": "40a95e02-bacb-4e1e-ae54-41d3e2714103",
       "date": "2026-12-09",
       "reportedAt": "2026-11-18T15:15:27.781Z"
+    },
+    {
+      "art": "urlaub",
+      "note": "Weihnachten mit der Familie",
+      "id": "a9520dbf-56a8-4c08-84ba-d39795a833d9",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "date": "2026-12-23",
+      "reportedAt": "2026-11-25T14:15:57.849Z"
+    },
+    {
+      "art": "urlaub",
+      "note": "Weihnachten mit der Familie",
+      "id": "01906509-cbaa-46d2-bbe0-9f213ccf5ff7",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "date": "2026-12-24",
+      "reportedAt": "2026-11-25T14:15:57.852Z"
+    },
+    {
+      "art": "urlaub",
+      "note": "Weihnachten mit der Familie",
+      "id": "9cb96a73-7229-49ca-94a3-ea031b9e49bc",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "date": "2026-12-25",
+      "reportedAt": "2026-11-25T14:15:57.856Z"
+    },
+    {
+      "art": "urlaub",
+      "note": "Weihnachten mit der Familie",
+      "id": "6f343edb-d35c-49ed-987b-1b59568a7384",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "date": "2026-12-26",
+      "reportedAt": "2026-11-25T14:15:57.859Z"
+    },
+    {
+      "art": "urlaub",
+      "note": "Weihnachten mit der Familie",
+      "id": "f6a969c8-a33f-492e-a255-82f8568832ef",
+      "employeeId": "dd61ae7d-42bc-4a95-9a5a-217d648c2eb1",
+      "date": "2026-12-27",
+      "reportedAt": "2026-11-25T14:15:57.862Z"
     }
   ],
   "publishedWeeks": [

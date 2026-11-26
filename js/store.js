@@ -1306,6 +1306,9 @@ export const store = {
       // Wochentage, an denen diese Person immer dieselbe Schicht hat – dann muss sie sich nicht
       // jede Woche neu eintragen.
       festeSchichten: normalizeFesteSchichten(emp.festeSchichten),
+      // Urlaubsanspruch in Arbeitstagen pro Jahr. 0 = nicht hinterlegt; dann steht in der Uebersicht
+      // nur, was genommen wurde, und kein erfundener Rest.
+      urlaubsanspruch: Number(emp.urlaubsanspruch) || 0,
       istStoreManagerin: !!emp.istStoreManagerin,
     };
     data.employees.push(e);
@@ -1320,6 +1323,7 @@ export const store = {
     if (!e) return;
     Object.assign(e, patch);
     if (patch.festeSchichten !== undefined) e.festeSchichten = normalizeFesteSchichten(patch.festeSchichten);
+    if (patch.urlaubsanspruch !== undefined) e.urlaubsanspruch = Math.max(0, Number(patch.urlaubsanspruch) || 0);
     if (patch.istStoreManagerin !== undefined) e.istStoreManagerin = !!patch.istStoreManagerin;
     // Name oder Rolle koennen hier korrigiert worden sein – dann passt die Person jetzt vielleicht
     // zu einem offenen Eintrag aus dem neuen Plan.
@@ -2409,6 +2413,52 @@ export const store = {
     resolveDayAvailability(d);
     persist();
     return true;
+  },
+  /**
+   * Urlaubsuebersicht eines Jahres: wer wie viel hat, wie viel genommen und wie viel noch offen ist.
+   *
+   * Gezaehlt werden ARBEITSTAGE, nicht Kalendertage. Eine Abwesenheit liegt im System als Eintrag je
+   * Tag vor – auch fuer Sonntage, an denen die Person ohnehin frei gehabt haette. Wer vom 1. bis 14.
+   * Urlaub nimmt, hat nicht 14 Urlaubstage verbraucht.
+   *
+   * Welche Tage Arbeitstage sind, sagen die festen Schichten: wer montags bis mittwochs arbeitet,
+   * verbraucht in einer Urlaubswoche drei Tage. Hat jemand keine festen Schichten hinterlegt, ist das
+   * nicht zu entscheiden – dann werden die Kalendertage gezaehlt und die Zeile als geschaetzt
+   * gekennzeichnet, statt eine Zahl zu erfinden, mit der jemand spaeter rechnet.
+   */
+  urlaubsUebersicht(jahr = Number(todayStr().slice(0, 4))) {
+    const von = `${jahr}-01-01`;
+    const bis = `${jahr}-12-31`;
+    const heute = todayStr();
+    const urlaube = data.absences.filter((a) => a.art === "urlaub" && a.date >= von && a.date <= bis);
+    return this.getEmployees()
+      .map((e) => {
+        const meine = urlaube.filter((a) => a.employeeId === e.id);
+        const hatFeste = (e.festeSchichten || []).length > 0;
+        const zaehlt = (datum) => {
+          if (!hatFeste) return true; // ohne feste Schichten nicht entscheidbar – siehe Kommentar oben
+          const wd = weekdayIndexOfDate(datum);
+          return e.festeSchichten.some((f) => f.weekday === wd && festeSchichtGilt(f, datum));
+        };
+        const tage = meine.filter((a) => zaehlt(a.date)).map((a) => a.date).sort();
+        const genommen = tage.filter((d) => d <= heute).length;
+        const geplant = tage.filter((d) => d > heute).length;
+        const anspruch = Number(e.urlaubsanspruch) || 0;
+        return {
+          id: e.id,
+          name: e.name,
+          role: e.role,
+          anspruch,
+          genommen,
+          geplant,
+          // Rest nur, wenn ein Anspruch hinterlegt ist – sonst waere 0 - genommen eine Falschaussage.
+          rest: anspruch > 0 ? anspruch - genommen - geplant : null,
+          geschaetzt: !hatFeste && tage.length > 0,
+          kalendertage: meine.length,
+          tage,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   },
   /** Abwesenheiten in einem Zeitraum (beide Grenzen inklusive), aufsteigend nach Datum. */
   getAbsences(from, to) {

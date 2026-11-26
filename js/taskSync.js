@@ -1105,12 +1105,16 @@ async function performTaskSync() {
   // Bei jedem Abgleich mit aufraeumen: ein iPad steht oft tagelang offen, und jeden Tag wird ein
   // weiterer Tag alt genug zum Auslagern. Tut nichts, solange nichts faellig ist.
   store.raeumeAlteAufgabenAuf();
+  // Urlaub: die Rechnung macht das iPad, der Laptop zeigt sie nur. Dort liegen weder alle
+  // Abwesenheiten des Jahres noch die festen Schichten, aus denen die Arbeitstage kommen.
+  const urlaub = store.urlaubsUebersicht();
   const schichtPlaene = store.getSchichtPlaene();
   await pushLocalState(cfg, {
     employees: employees.map((e) => e.name),
     employeeRoles,
     shiftSlots,
     schichtPlaene,
+    urlaub,
     tasks: pushTasks,
     shiftsInService,
     financials,

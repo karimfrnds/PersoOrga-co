@@ -50,7 +50,7 @@ const EVENING_HOUR = 19; // Europe/Berlin, Ortszeit
 // Wird bei jeder Aenderung hochgezaehlt und an der Wurzel-Adresse ausgegeben. Damit laesst sich von
 // aussen pruefen, welcher Stand in Cloudflare wirklich laeuft – sonst sucht man Fehler in der App,
 // waehrend in Wahrheit nur ein alter Worker eingefuegt ist.
-const WORKER_VERSION = "2026-11-11.1";
+const WORKER_VERSION = "2026-11-26.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -337,6 +337,7 @@ const EMPTY_STATE = {
   verbrauch: [], // Verbrauch und Reichweite je Artikel, gerechnet auf dem Haupt-Tablet
   produktionsStammChanges: [], // Warteschlange: Änderungen an Produkten/Behältern aus der Küche
   schichtplanChanges: [], // Warteschlange: geänderte Schichtzeiten aus dem Chef-Bereich
+  urlaub: [], // fertig gerechnete Urlaubsübersicht vom iPad: [{name, anspruch, genommen, geplant, rest}]
   // Hinweise der Küche an die nächste Schicht ("Gurken fehlen"), vom iPad.
   kuechenNotizen: [],
   // --- Produktionsküche ---
@@ -455,6 +456,7 @@ async function getState(env) {
       verbrauch: Array.isArray(parsed.verbrauch) ? parsed.verbrauch : [],
       produktionsStammChanges: Array.isArray(parsed.produktionsStammChanges) ? parsed.produktionsStammChanges : [],
       schichtplanChanges: Array.isArray(parsed.schichtplanChanges) ? parsed.schichtplanChanges : [],
+      urlaub: Array.isArray(parsed.urlaub) ? parsed.urlaub : [],
       kuechenNotizen: Array.isArray(parsed.kuechenNotizen) ? parsed.kuechenNotizen : [],
       produkte: Array.isArray(parsed.produkte) ? parsed.produkte : [],
       produktionsProdukte: Array.isArray(parsed.produktionsProdukte) ? parsed.produktionsProdukte : [],
@@ -5922,6 +5924,7 @@ async function handleState(request, env) {
     // Nur setzen, wenn mitgeschickt – ein iPad mit aelterem Stand wuerde die Liste sonst loeschen und
     // am Laptop waeren alle Wochen wieder mit den Schichten von heute gezeichnet.
     if (Array.isArray(body.schichtPlaene)) patch.schichtPlaene = body.schichtPlaene;
+    if (Array.isArray(body.urlaub)) patch.urlaub = body.urlaub;
     if (Array.isArray(body.employeeDetails)) patch.employeeDetails = body.employeeDetails;
     // Abgeschlossene Wochen: das iPad hat die Freigaben aus der Warteschlange übernommen und schickt hier
     // seinen maßgeblichen Stand zurück. Nur setzen, wenn wirklich mitgeschickt – sonst würde ein älteres

@@ -43,6 +43,65 @@ function renderEmployees() {
     container.appendChild(build());
   }
 
+  /** Wer wie viele Urlaubstage hat, genommen hat und noch offen hat – fuers laufende Jahr. */
+  function buildUrlaubsUebersicht() {
+    const jahr = Number(todayStr().slice(0, 4));
+    const zeilen = store.urlaubsUebersicht(jahr);
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>🏖 Urlaub ${jahr}</h2>
+      <p class="muted small">Gezählt sind Arbeitstage, keine Kalendertage: Tage, an denen die Person laut
+      ihren festen Schichten gearbeitet hätte. Den Anspruch trägst du beim Mitarbeiter ein.</p>`;
+
+    const mitAnspruch = zeilen.filter((z) => z.anspruch > 0 || z.genommen > 0 || z.geplant > 0);
+    if (mitAnspruch.length === 0) {
+      const leer = document.createElement("p");
+      leer.className = "muted small";
+      leer.textContent = "Noch nichts hinterlegt und noch kein Urlaub eingetragen.";
+      card.appendChild(leer);
+      return card;
+    }
+
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    const t = document.createElement("table");
+    t.className = "plan-table";
+    t.innerHTML = `<thead><tr><th>Mitarbeiter</th><th>Anspruch</th><th>Genommen</th><th>Geplant</th><th>Rest</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    for (const z of mitAnspruch) {
+      const tr = document.createElement("tr");
+      const restText =
+        z.rest === null
+          ? `<span class="muted">kein Anspruch hinterlegt</span>`
+          : `<b class="${z.rest < 0 ? "res-warn" : ""}">${z.rest}</b>`;
+      tr.innerHTML =
+        `<td><b>${escapeHtml(z.name)}</b>${z.geschaetzt ? ` <span class="muted small">· geschätzt</span>` : ""}</td>` +
+        `<td>${z.anspruch > 0 ? z.anspruch : "<span class='muted'>–</span>"}</td>` +
+        `<td>${z.genommen}</td>` +
+        `<td>${z.geplant > 0 ? z.geplant : "<span class='muted'>–</span>"}</td>` +
+        `<td>${restText}</td>`;
+      tbody.appendChild(tr);
+    }
+    t.appendChild(tbody);
+    scroll.appendChild(t);
+    card.appendChild(scroll);
+
+    if (mitAnspruch.some((z) => z.geschaetzt)) {
+      const g = document.createElement("p");
+      g.className = "muted small";
+      g.textContent =
+        "„geschätzt“: Für diese Person sind keine festen Schichten hinterlegt – dann lässt sich nicht sagen, welche Urlaubstage Arbeitstage waren, und es sind die Kalendertage gezählt.";
+      card.appendChild(g);
+    }
+    if (mitAnspruch.some((z) => z.rest !== null && z.rest < 0)) {
+      const w = document.createElement("p");
+      w.className = "callout callout-warn";
+      w.textContent = "Bei den rot markierten Zeilen ist mehr Urlaub eingetragen als zusteht.";
+      card.appendChild(w);
+    }
+    return card;
+  }
+
   function buildRow(emp) {
     const row = document.createElement("div");
     row.className = "employee-row" + (emp.active ? "" : " inactive");
@@ -129,6 +188,8 @@ function renderEmployees() {
     for (const emp of active) list.appendChild(buildRow(emp));
     frag.appendChild(list);
 
+    frag.appendChild(buildUrlaubsUebersicht());
+
     const addBtn = document.createElement("button");
     addBtn.className = "btn btn-primary btn-huge";
     addBtn.textContent = "＋ Mitarbeiter hinzufügen";
@@ -180,6 +241,9 @@ function renderEmployees() {
         </label>
         <label class="field"><span>Stundenlohn (€)</span><input type="number" step="0.01" min="0" id="f-wage" value="${emp ? emp.hourlyWage : 12.82}" /></label>
         <label class="field"><span>PIN (mind. 4 Zeichen, zum Ein-/Ausstempeln)</span><input type="text" inputmode="numeric" id="f-pin" value="${emp?.pin ? escapeHtml(emp.pin) : ""}" placeholder="z.B. 4711" /></label>
+        <label class="field"><span>Urlaubstage pro Jahr</span><input type="number" step="1" min="0" max="60" id="f-urlaub" value="${
+          emp?.urlaubsanspruch || 0
+        }" /><span class="muted small">Arbeitstage, nicht Kalendertage. 0 = nicht hinterlegt, dann zeigt die Übersicht keinen Rest.</span></label>
         <label class="field-checkbox"><input type="checkbox" id="f-minijob" ${emp?.isMinijob ? "checked" : ""} /> Minijob (Verdienstgrenze überwachen)</label>
         <label class="field" id="f-limit-wrap" style="display:${emp?.isMinijob ? "block" : "none"}">
           <span>Minijob-Grenze pro Monat (€)</span><input type="number" step="1" min="0" id="f-limit" value="${emp ? emp.minijobLimit : 556}" />
@@ -311,6 +375,7 @@ function renderEmployees() {
         name,
         role: overlay.querySelector("#f-role").value,
         hourlyWage: Number(overlay.querySelector("#f-wage").value) || 0,
+        urlaubsanspruch: Math.max(0, Number(overlay.querySelector("#f-urlaub").value) || 0),
         pin: pinRaw || null,
         isMinijob: overlay.querySelector("#f-minijob").checked,
         minijobLimit: Number(overlay.querySelector("#f-limit").value) || 556,

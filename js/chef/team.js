@@ -42,8 +42,83 @@ function renderTeam(state, { onChanged }) {
       <h1>👥 Mitarbeiter</h1>
       <p class="muted">Stammdaten pflegen und Nachrichten schicken. Änderungen werden beim nächsten iPad-Abgleich übernommen.</p>`;
     frag.appendChild(buildListe());
+    frag.appendChild(buildUrlaub());
     frag.appendChild(buildNachricht());
     return frag;
+  }
+
+  /** Urlaub: wer wie viel hat, genommen hat und noch offen hat.
+   *
+   * Gerechnet wird auf dem iPad – nur dort liegen alle Abwesenheiten des Jahres und die festen
+   * Schichten, aus denen hervorgeht, welche Urlaubstage ueberhaupt Arbeitstage waren. Hier steht
+   * die fertige Zahl. */
+  function buildUrlaub() {
+    const zeilen = (state.urlaub || []).filter((z) => z.anspruch > 0 || z.genommen > 0 || z.geplant > 0);
+    const card = document.createElement("section");
+    card.className = "card";
+    const jahr = new Date().getFullYear();
+    card.innerHTML = `<h2>🏖 Urlaub ${jahr}</h2>
+      <p class="muted">Gezählt sind Arbeitstage, keine Kalendertage: Tage, an denen die Person laut ihren
+      festen Schichten gearbeitet hätte. Den Anspruch trägst du am iPad beim Mitarbeiter ein.</p>`;
+
+    if (zeilen.length === 0) {
+      const leer = document.createElement("p");
+      leer.className = "muted small";
+      leer.textContent =
+        (state.urlaub || []).length === 0
+          ? "Noch keine Zahlen da – das iPad muss sich einmal abgleichen."
+          : "Noch kein Anspruch hinterlegt und noch kein Urlaub eingetragen.";
+      card.appendChild(leer);
+      return card;
+    }
+
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    const t = document.createElement("table");
+    t.className = "plan-table";
+    t.innerHTML = `<thead><tr><th>Mitarbeiter</th><th>Anspruch</th><th>Genommen</th><th>Geplant</th><th>Rest</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    let summeAnspruch = 0;
+    let summeGenommen = 0;
+    let summeGeplant = 0;
+    for (const z of zeilen) {
+      summeAnspruch += z.anspruch || 0;
+      summeGenommen += z.genommen || 0;
+      summeGeplant += z.geplant || 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td><b>${escapeHtml(z.name)}</b>${z.geschaetzt ? ` <span class="muted small">· geschätzt</span>` : ""}</td>` +
+        `<td>${z.anspruch > 0 ? z.anspruch : `<span class="muted">–</span>`}</td>` +
+        `<td>${z.genommen}</td>` +
+        `<td>${z.geplant > 0 ? z.geplant : `<span class="muted">–</span>`}</td>` +
+        `<td>${
+          z.rest === null || z.rest === undefined
+            ? `<span class="muted">kein Anspruch hinterlegt</span>`
+            : `<b${z.rest < 0 ? ' class="res-warn"' : ""}>${z.rest}</b>`
+        }</td>`;
+      tbody.appendChild(tr);
+    }
+    const summe = document.createElement("tr");
+    summe.innerHTML = `<td><b>Zusammen</b></td><td><b>${summeAnspruch}</b></td><td><b>${summeGenommen}</b></td><td><b>${summeGeplant}</b></td><td></td>`;
+    tbody.appendChild(summe);
+    t.appendChild(tbody);
+    scroll.appendChild(t);
+    card.appendChild(scroll);
+
+    if (zeilen.some((z) => z.geschaetzt)) {
+      const g = document.createElement("p");
+      g.className = "muted small";
+      g.textContent =
+        "„geschätzt“: Für diese Person sind keine festen Schichten hinterlegt – dann lässt sich nicht sagen, welche Urlaubstage Arbeitstage waren, und es sind die Kalendertage gezählt.";
+      card.appendChild(g);
+    }
+    if (zeilen.some((z) => z.rest !== null && z.rest !== undefined && z.rest < 0)) {
+      const w = document.createElement("p");
+      w.className = "callout callout-warn";
+      w.textContent = "Bei den rot markierten Zeilen ist mehr Urlaub eingetragen als zusteht.";
+      card.appendChild(w);
+    }
+    return card;
   }
 
   function buildListe() {

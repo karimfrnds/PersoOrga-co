@@ -1356,14 +1356,14 @@
       "token": "",
       "lastBackupDate": "2026-11-27",
       "lastBackupAt": "2026-11-27T11:15:16.621Z",
-      "lastError": null
+      "lastError": "GitHub antwortete mit 409: {\n  \"message\": \"is at 5772d1c59d27c4f7768f8c6cff9c4cc68b6e1ef5 but expected 69b5368c997856ad5aded8b225c69d89d0997092\",\n  \"documentation_url\": \"https://docs.github.com/rest/repos/contents#create-or-upd"
     },
     "taskInbox": {
       "enabled": true,
       "workerUrl": "https://cafeaufgabenbot.karim-skeirek.workers.dev/",
       "workerSecret": "cafe-webhook-9x7k2m",
       "shareFinancials": true,
-      "lastSyncAt": "2026-11-27T13:43:22.835Z",
+      "lastSyncAt": "2026-11-27T17:52:40.358Z",
       "lastError": null,
       "knownRemoteState": [
         {
@@ -2979,8 +2979,6 @@
         "8d767b7a-1281-4e22-a3c5-5071897dcaaf"
       ],
       "appliedReservationIds": [
-        "bd7b3cde-b826-47e2-bf2f-27eac9b63913",
-        "60b0891a-f2bd-462c-b9e5-726ae1f7d020",
         "3069c929-014c-4b1c-bbd6-144fa1f58c5f",
         "4449cf72-fd31-4f48-9a0b-1fd889bd6d2e",
         "39411224-60fd-4452-a34e-9103ca022ad8",
@@ -3478,7 +3476,9 @@
         "7b2071e5-e39e-4bc1-84f4-e143b51f49e7",
         "cf863842-c0df-4d01-983e-cf8bdfc693ab",
         "28428832-ca29-4642-beb4-61ce3e10700b",
-        "5f5b7047-2c4d-43ef-af9b-fff427b8681e"
+        "5f5b7047-2c4d-43ef-af9b-fff427b8681e",
+        "b790b391-03c2-4a27-81b2-9b3715a9d3a8",
+        "34216b6e-ff2d-469e-b1d7-653b9e21c660"
       ],
       "appliedSchichtEreignisIds": [],
       "appliedProduktionsEreignisIds": [],
@@ -3916,7 +3916,7 @@
         ]
       }
     ],
-    "zuletztGespeichert": "2026-11-27T13:43:35.296Z"
+    "zuletztGespeichert": "2026-11-27T17:52:42.278Z"
   },
   "days": [
     {
@@ -71198,6 +71198,48 @@
       "status": "offen",
       "source": "web",
       "createdAt": "2026-11-27T07:31:20.040Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "be87990a-9f14-4a6a-9fcb-f4012078a67e",
+      "code": "CSCAM",
+      "date": "2026-11-29",
+      "time": "15:00",
+      "name": "Jette Hentschel",
+      "phone": "+4917621969921",
+      "guests": 3,
+      "area": "innen",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-27T17:52:39.454Z",
+      "arrivedAt": null,
+      "cancelReason": null,
+      "cancelNote": "",
+      "cancelledAt": null,
+      "cancelledBy": "",
+      "cancelNotified": false
+    },
+    {
+      "id": "66181a81-70a8-48be-bdb8-fb56794915e2",
+      "code": "TWH4N",
+      "date": "2026-12-04",
+      "time": "16:30",
+      "name": "Malte Engelhard",
+      "phone": "0157 53772568",
+      "guests": 2,
+      "area": "egal",
+      "note": "",
+      "tableIds": [],
+      "status": "offen",
+      "source": "web",
+      "createdAt": "2026-11-27T17:52:39.465Z",
       "arrivedAt": null,
       "cancelReason": null,
       "cancelNote": "",
